@@ -31,10 +31,12 @@ export default function HomePage() {
           <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-slate-900 text-white p-6 rounded-2xl border border-teal-800/40 shadow-sm relative overflow-hidden">
             <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-teal-500/10 to-transparent pointer-events-none" />
             <div className="relative z-10">
+              {/*
               <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30 mb-3">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Requisitos Funcionais & Técnicos 100% Implementados</span>
               </div>
+              */}
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
                 Sistema de Gestão & Cadastro de Pacientes
               </h2>
@@ -43,7 +45,9 @@ export default function HomePage() {
               </p>
 
               {/* Badges de Destaque */}
+              {/*
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-slate-800/80 text-xs">
+                
                 <div className="flex items-center gap-2 text-slate-300">
                   <Calculator className="w-4 h-4 text-teal-400 flex-shrink-0" />
                   <span>Idade Automática & Bloqueada</span>
@@ -60,7 +64,9 @@ export default function HomePage() {
                   <Trash2 className="w-4 h-4 text-teal-400 flex-shrink-0" />
                   <span>Soft Delete + Lixeira + RLS</span>
                 </div>
+                
               </div>
+              */}
             </div>
           </div>
 

@@ -27,9 +27,11 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
                   Produção
                 </span>
               </div>
+              {/*
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Next.js App Router • Supabase PostgreSQL • Zod Validation • Server Actions
               </p>
+              */}
             </div>
           </div>
 
