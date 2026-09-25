@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Copy, Check, FileCode2, Database, FolderTree, Terminal, Shield, CheckCircle2 } from "lucide-react";
+import { Copy, Check, FileCode2, Database, FolderTree, Terminal, Shield, CheckCircle2, KeyRound } from "lucide-react";
 
 interface DeliverableItem {
   id: string;
@@ -241,13 +241,13 @@ export interface ActionResponse<T = void> {
 ├── next.config.ts                   # Configurações do Next.js
 │
 ├── actions/                         # ⚡ Server Actions (Mutação e Consultas Server-Side)
-│   └── client-actions.ts            # CRUD de clientes com "use server" e revalidação de cache
+│   └── client-actions.ts            # CRUD de pacientes com "use server" e revalidação de cache
 │
 ├── app/                             # 🌐 Next.js App Router (Rotas, Layouts e Páginas)
 │   ├── layout.tsx                   # Layout Raiz com Providers e Tipografia
 │   ├── globals.css                  # Estilos globais Tailwind v4
-│   ├── page.tsx                     # Página principal (Dashboard & Gestão de Clientes)
-│   └── clientes/
+│   ├── page.tsx                     # Página principal (Dashboard & Gestão de Pacientes)
+│   └── pacientes/
 │       ├── [id]/                    # Rota de detalhes com Server Component
 │       │   └── page.tsx
 │       └── novo/                    # Rota dedicada de cadastro
@@ -256,7 +256,7 @@ export interface ActionResponse<T = void> {
 ├── components/                      # 🧩 Componentes React
 │   ├── ui/                          # Componentes base atômicos (Shadcn UI / Radix)
 │   │   ├── button.tsx, input.tsx, select.tsx, dialog.tsx, badge.tsx
-│   ├── clients/                     # Componentes de domínio de Clientes / Pacientes
+│   ├── clients/                     # Componentes de domínio de Pacientes
 │   │   ├── client-form-modal.tsx    # Modal/Formulário de cadastro e edição
 │   │   ├── client-table.tsx         # Tabela responsiva com paginação
 │   │   ├── client-filters.tsx       # Barra de busca em tempo real e filtros de status
@@ -279,7 +279,7 @@ export interface ActionResponse<T = void> {
 │       └── client-schema.ts         # Schema Zod com mensagens em pt-BR e cálculo de idade
 │
 ├── sql/                             # 🗄️ Scripts de Banco de Dados e Migrations
-│   └── supabase-schema.sql          # DDL da tabela clientes, RLS, triggers e índices
+│   └── supabase-schema.sql          # DDL da tabela pacientes, RLS, triggers e índices
 │
 └── types/                           # 🏷️ Definições de Tipos TypeScript
     └── client.ts                    # Tipagens inferidas do Zod e entidades do banco`,
@@ -292,13 +292,13 @@ export interface ActionResponse<T = void> {
       icon: <Database className="w-4 h-4 text-purple-500" />,
       filePath: "sql/supabase-schema.sql",
       description:
-        "Criação da tabela public.clientes, trigger de updated_at, índices parciais de CPF ativo, exclusão lógica (deleted_at) e Row Level Security.",
+        "Criação da tabela public.pacientes, trigger de updated_at, índices parciais de CPF ativo, exclusão lógica (deleted_at) e Row Level Security.",
       code: `-- 1. Habilitar extensões necessárias
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
--- 2. Criação da tabela public.clientes
-CREATE TABLE IF NOT EXISTS public.clientes (
+-- 2. Criação da tabela public.pacientes
+CREATE TABLE IF NOT EXISTS public.pacientes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nome VARCHAR(120) NOT NULL,
     data_nascimento DATE NOT NULL,
@@ -323,13 +323,13 @@ CREATE TABLE IF NOT EXISTS public.clientes (
 
 -- 3. Índices de alta performance
 -- CPF único condicional apenas para registros não deletados
-CREATE UNIQUE INDEX IF NOT EXISTS idx_clientes_cpf_active 
-ON public.clientes (cpf) 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pacientes_cpf_active 
+ON public.pacientes (cpf) 
 WHERE deleted_at IS NULL;
 
 -- Índice para soft delete
-CREATE INDEX IF NOT EXISTS idx_clientes_deleted_at 
-ON public.clientes (deleted_at);
+CREATE INDEX IF NOT EXISTS idx_pacientes_deleted_at 
+ON public.pacientes (deleted_at);
 
 -- 4. Trigger de updated_at automático
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
@@ -340,24 +340,24 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER set_clientes_updated_at
-    BEFORE UPDATE ON public.clientes
+CREATE TRIGGER set_pacientes_updated_at
+    BEFORE UPDATE ON public.pacientes
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_updated_at();
 
 -- 5. Row Level Security (RLS)
-ALTER TABLE public.clientes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pacientes ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Permitir leitura de clientes ativos para autenticados" 
-ON public.clientes FOR SELECT TO authenticated
+CREATE POLICY "Permitir leitura de pacientes ativos para autenticados" 
+ON public.pacientes FOR SELECT TO authenticated
 USING (deleted_at IS NULL);
 
 CREATE POLICY "Permitir insercao para autenticados" 
-ON public.clientes FOR INSERT TO authenticated
+ON public.pacientes FOR INSERT TO authenticated
 WITH CHECK (true);
 
 CREATE POLICY "Permitir atualizacao para autenticados" 
-ON public.clientes FOR UPDATE TO authenticated
+ON public.pacientes FOR UPDATE TO authenticated
 USING (deleted_at IS NULL)
 WITH CHECK (true);`,
     },
@@ -383,7 +383,7 @@ export async function getClientsAction(filters: Partial<ClientFilter>): Promise<
   const supabase = getSupabaseAdminClient();
   const { search, status, page, pageSize, sortBy, sortOrder } = clientFilterSchema.parse(filters);
 
-  let query = supabase.from("clientes").select("*", { count: "exact" });
+  let query = supabase.from("pacientes").select("*", { count: "exact" });
 
   if (status === "excluidos") {
     query = query.not("deleted_at", "is", null);
@@ -427,7 +427,7 @@ export async function createClientAction(rawInput: unknown): Promise<ActionRespo
   validData.idade = calculateAge(validData.data_nascimento)!;
 
   const supabase = getSupabaseAdminClient();
-  const { data, error } = await supabase.from("clientes").insert([validData]).select().single();
+  const { data, error } = await supabase.from("pacientes").insert([validData]).select().single();
 
   if (error) return { success: false, message: error.message };
 
@@ -441,7 +441,7 @@ export async function softDeleteClientAction(id: string): Promise<ActionResponse
   const now = new Date().toISOString();
 
   const { error } = await supabase
-    .from("clientes")
+    .from("pacientes")
     .update({ deleted_at: now, status: "Inativo" })
     .eq("id", id);
 
@@ -461,7 +461,7 @@ export async function softDeleteClientAction(id: string): Promise<ActionResponse
       description:
         "Declaração completa de variáveis de ambiente do Supabase (URL, Anon Key, Service Role Key, JWT Secret e PostgreSQL Connection Strings).",
       code: `# ==============================================================================
-# VARIÁVEIS DE AMBIENTE - PROJETO GESTÃO DE CLIENTES & PACIENTES
+# VARIÁVEIS DE AMBIENTE - PROJETO GESTÃO DE PACIENTES
 # ==============================================================================
 # Copie este arquivo como .env.local para executar localmente:
 #   cp .env.example .env.local
@@ -506,6 +506,63 @@ DATABASE_URL="postgresql://postgres.your-project-id:[YOUR-PASSWORD]@aws-0-sa-eas
 # String de conexão direta (porta 5432) para executar scripts DDL, migrations e triggers
 DIRECT_URL="postgresql://postgres.your-project-id:[YOUR-PASSWORD]@aws-0-sa-east-1.pooler.supabase.com:5432/postgres"`,
     },
+    {
+      id: "auth",
+      title: "7. Autenticação JWT, Bcrypt e Proteção de Rotas / CRUD",
+      shortTitle: "7. Autenticação JWT",
+      badge: "JWT + Bcrypt",
+      icon: <KeyRound className="w-4 h-4 text-emerald-500" />,
+      filePath: "actions/auth-actions.ts",
+      description:
+        "Sistema completo de autenticação com registro, login, logout, emissão de JWT assinado via jose (HS256), senhas hasheadas com Bcrypt (salt rounds 10) e proteção estrita em Server Actions.",
+      code: `"use server";
+
+import { loginSchema, registerSchema, LoginInput, RegisterInput } from "@/lib/validations/auth-schema";
+import { findUserByEmail, comparePassword, createUserRecord } from "@/lib/auth/users-store";
+import { createAuthToken } from "@/lib/auth/jwt";
+import { setSessionCookie, removeSessionCookie, getSession } from "@/lib/auth/session";
+
+// 1. Login com verificação de credenciais e emissão de JWT
+export async function loginAction(rawInput: unknown) {
+  const { email, password } = loginSchema.parse(rawInput);
+  const user = await findUserByEmail(email);
+
+  if (!user || !(await comparePassword(password, user.passwordHash))) {
+    return { success: false, message: "E-mail ou senha incorretos." };
+  }
+
+  const token = await createAuthToken(user);
+  await setSessionCookie(token); // Cookie HttpOnly SameSite=Lax (7 dias)
+  return { success: true, message: \`Bem-vindo(a), \${user.name}!\`, user };
+}
+
+// 2. Registro com validação Zod e Hash Bcrypt (10 rounds)
+export async function registerAction(rawInput: unknown) {
+  const data = registerSchema.parse(rawInput);
+  const existing = await findUserByEmail(data.email);
+  if (existing) return { success: false, message: "E-mail já cadastrado." };
+
+  const newUser = await createUserRecord(data);
+  const token = await createAuthToken(newUser);
+  await setSessionCookie(token);
+  return { success: true, message: "Conta criada com sucesso!", user: newUser };
+}
+
+// 3. Logout com limpeza segura de cookies
+export async function logoutAction() {
+  await removeSessionCookie();
+  return { success: true, message: "Sessão encerrada com sucesso." };
+}
+
+// 4. Proteção de Rotas e Mutações CRUD (em actions/client-actions.ts)
+export async function createClientAction(rawInput: unknown) {
+  const sessionUser = await getSession();
+  if (!sessionUser) {
+    return { success: false, message: "Acesso não autorizado. É necessário fazer login para cadastrar pacientes." };
+  }
+  // Executa mutação no Supabase / PostgreSQL...
+}`,
+    },
   ];
 
   const currentDeliverable = deliverables.find((d) => d.id === activeTab) || deliverables[0];
@@ -520,7 +577,7 @@ DIRECT_URL="postgresql://postgres.your-project-id:[YOUR-PASSWORD]@aws-0-sa-east-
               <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 dark:bg-teal-950/70 dark:text-teal-300">
                 Arquitetura & Especificações Técnicas
               </span>
-              <span className="text-xs text-slate-500">• 6 Entregáveis Prontos</span>
+              <span className="text-xs text-slate-500">• 7 Entregáveis Prontos</span>
             </div>
             <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">
               Documentação e Código-Fonte Gerado

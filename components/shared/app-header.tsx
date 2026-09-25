@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Users, FileCode2, ShieldCheck, Database, Layers } from "lucide-react";
+import { UserMenu } from "@/components/auth/user-menu";
 
 interface AppHeaderProps {
   currentTab: "app" | "deliverables";
@@ -35,33 +36,38 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 self-start md:self-auto">
-            <button
-              id="nav-tab-app"
-              onClick={() => onTabChange("app")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                currentTab === "app"
-                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Painel de Gestão</span>
-            </button>
+          {/* Navigation Tabs & User Profile */}
+          <div className="flex items-center gap-3 self-stretch md:self-auto justify-between md:justify-end">
+            <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+              <button
+                id="nav-tab-app"
+                onClick={() => onTabChange("app")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  currentTab === "app"
+                    ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Painel de Gestão</span>
+              </button>
 
-            <button
-              id="nav-tab-deliverables"
-              onClick={() => onTabChange("deliverables")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                currentTab === "deliverables"
-                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <FileCode2 className="w-3.5 h-3.5" />
-              <span>Entregáveis Técnicos & Scripts</span>
-            </button>
+              <button
+                id="nav-tab-deliverables"
+                onClick={() => onTabChange("deliverables")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  currentTab === "deliverables"
+                    ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                <FileCode2 className="w-3.5 h-3.5" />
+                <span>Entregáveis Técnicos & Scripts</span>
+              </button>
+            </div>
+
+            {/* Menu de Autenticação / Perfil */}
+            <UserMenu />
           </div>
         </div>
       </div>

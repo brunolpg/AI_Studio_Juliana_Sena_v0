@@ -1,5 +1,5 @@
 -- ==============================================================================
--- SCRIPT DDL: CRIAÇÃO DA TABELA DE CLIENTES / PACIENTES NO SUPABASE (POSTGRESQL)
+-- SCRIPT DDL: CRIAÇÃO DA TABELA DE PACIENTES NO SUPABASE (POSTGRESQL)
 -- Inclui: Validações, Constraints, Índices de Performance, Trigger de updated_at,
 -- Suporte a Soft Delete (deleted_at) e Políticas de Row Level Security (RLS).
 -- ==============================================================================
@@ -8,8 +8,8 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm"; -- Opcional, para buscas textuais otimizadas
 
--- 2. Criação da tabela public.clientes
-CREATE TABLE IF NOT EXISTS public.clientes (
+-- 2. Criação da tabela pacientes.pacientes
+CREATE TABLE IF NOT EXISTS pacientes.pacientes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nome VARCHAR(120) NOT NULL,
     data_nascimento DATE NOT NULL,
@@ -38,34 +38,34 @@ CREATE TABLE IF NOT EXISTS public.clientes (
 -- 3. ÍNDICES E CONSTRAINTS DE ALTA PERFORMANCE
 -- ==============================================================================
 
--- CPF Único Parcial: Garante que apenas clientes ativos ou não deletados tenham CPF único.
--- Isso permite regras de conformidade sem travar histórico de clientes deletados.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_clientes_cpf_active 
-ON public.clientes (cpf) 
+-- CPF Único Parcial: Garante que apenas pacientes ativos ou não deletados tenham CPF único.
+-- Isso permite regras de conformidade sem travar histórico de pacientes deletados.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pacientes_cpf_active 
+ON pacientes.pacientes (cpf) 
 WHERE deleted_at IS NULL;
 
 -- Índice para filtragem rápida por Soft Delete (deleted_at IS NULL)
-CREATE INDEX IF NOT EXISTS idx_clientes_deleted_at 
-ON public.clientes (deleted_at);
+CREATE INDEX IF NOT EXISTS idx_pacientes_deleted_at 
+ON pacientes.pacientes (deleted_at);
 
 -- Índice composto para consultas frequentes de status e data de criação
-CREATE INDEX IF NOT EXISTS idx_clientes_status_created 
-ON public.clientes (status, created_at DESC) 
+CREATE INDEX IF NOT EXISTS idx_pacientes_status_created 
+ON pacientes.pacientes (status, created_at DESC) 
 WHERE deleted_at IS NULL;
 
 -- Índice para busca textual rápida por Nome e Email
-CREATE INDEX IF NOT EXISTS idx_clientes_nome_trgm 
-ON public.clientes USING gin (nome gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_pacientes_nome_trgm 
+ON pacientes.pacientes USING gin (nome gin_trgm_ops);
 
-CREATE INDEX IF NOT EXISTS idx_clientes_email 
-ON public.clientes (email) 
+CREATE INDEX IF NOT EXISTS idx_pacientes_email 
+ON pacientes.pacientes (email) 
 WHERE deleted_at IS NULL;
 
 -- ==============================================================================
 -- 4. TRIGGER PARA ATUALIZAÇÃO AUTOMÁTICA DA COLUNA updated_at
 -- ==============================================================================
 
-CREATE OR REPLACE FUNCTION public.handle_updated_at()
+CREATE OR REPLACE FUNCTION pacientes.handle_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = timezone('utc'::text, now());
@@ -73,38 +73,38 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS set_clientes_updated_at ON public.clientes;
+DROP TRIGGER IF EXISTS set_pacientes_updated_at ON pacientes.pacientes;
 
-CREATE TRIGGER set_clientes_updated_at
-    BEFORE UPDATE ON public.clientes
+CREATE TRIGGER set_pacientes_updated_at
+    BEFORE UPDATE ON pacientes.pacientes
     FOR EACH ROW
-    EXECUTE FUNCTION public.handle_updated_at();
+    EXECUTE FUNCTION pacientes.handle_updated_at();
 
 -- ==============================================================================
 -- 5. CONFIGURAÇÃO DE SEGURANÇA (ROW LEVEL SECURITY - RLS)
 -- ==============================================================================
 
 -- Ativação do RLS na tabela
-ALTER TABLE public.clientes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pacientes.pacientes ENABLE ROW LEVEL SECURITY;
 
--- Política 1: Leitura de Clientes Ativos (Apenas registros onde deleted_at IS NULL)
--- Usuários autenticados podem consultar clientes não excluídos
-CREATE POLICY "Permitir leitura de clientes ativos para usuarios autenticados" 
-ON public.clientes
+-- Política 1: Leitura de Pacientes Ativos (Apenas registros onde deleted_at IS NULL)
+-- Usuários autenticados podem consultar pacientes não excluídos
+CREATE POLICY "Permitir leitura de pacientes ativos para usuarios autenticados" 
+ON pacientes.pacientes
 FOR SELECT 
 TO authenticated
 USING (deleted_at IS NULL);
 
--- Política 2: Inserção de novos clientes por usuários autenticados
+-- Política 2: Inserção de novos pacientes por usuários autenticados
 CREATE POLICY "Permitir insercao para usuarios autenticados" 
-ON public.clientes
+ON pacientes.pacientes
 FOR INSERT 
 TO authenticated
 WITH CHECK (true);
 
--- Política 3: Atualização de clientes por usuários autenticados
+-- Política 3: Atualização de pacientes por usuários autenticados
 CREATE POLICY "Permitir atualizacao para usuarios autenticados" 
-ON public.clientes
+ON pacientes.pacientes
 FOR UPDATE 
 TO authenticated
 USING (deleted_at IS NULL)
@@ -113,7 +113,7 @@ WITH CHECK (true);
 -- Política 4: Soft Delete (Atualização do campo deleted_at)
 -- Recomendado bloquear DELETE físico direto e direcionar para UPDATE no deleted_at
 CREATE POLICY "Bloquear delecao fisica direta para usuarios comuns" 
-ON public.clientes
+ON pacientes.pacientes
 FOR DELETE 
 TO authenticated
 USING (false);
@@ -126,10 +126,10 @@ USING (false);
 -- 6. FUNÇÃO RPC AUXILIAR PARA SOFT DELETE ATÔMICO
 -- ==============================================================================
 
-CREATE OR REPLACE FUNCTION public.soft_delete_cliente(client_uuid UUID)
+CREATE OR REPLACE FUNCTION pacientes.soft_delete_cliente(client_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
-    UPDATE public.clientes
+    UPDATE pacientes.pacientes
     SET 
         deleted_at = timezone('utc'::text, now()),
         status = 'Inativo'

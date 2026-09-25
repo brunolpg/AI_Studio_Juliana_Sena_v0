@@ -9,7 +9,7 @@ export const GenderEnum = z.enum(["Masculino", "Feminino", "Outros"]);
 export const StatusEnum = z.enum(["Ativo", "Inativo"]);
 
 /**
- * Schema Zod principal para validação de Clientes / Pacientes
+ * Schema Zod principal para validação de Pacientes
  * Contém mensagens amigáveis em português e regras de negócio estritas.
  */
 export const clientSchema = z

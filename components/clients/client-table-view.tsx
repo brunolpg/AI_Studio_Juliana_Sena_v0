@@ -16,16 +16,21 @@ import {
   AlertCircle,
   Archive,
   RefreshCw,
+  Lock,
+  ShieldCheck,
+  LogIn,
 } from "lucide-react";
 import { getClientsAction, restoreClientAction } from "@/actions/client-actions";
 import { ClientFormModal } from "./client-form-modal";
 import { ClientDetailsModal } from "./client-details-modal";
 import { DeleteConfirmModal } from "./delete-confirm-modal";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/auth/auth-context";
 import type { Client, ClientFilter, PaginatedResult } from "@/types/client";
 
 export function ClientTableView() {
   const { toast } = useToast();
+  const { user, requireAuth, openAuthModal } = useAuth();
 
   // Estados de dados e filtros
   const [isPending, startTransition] = useTransition();
@@ -82,7 +87,7 @@ export function ClientTableView() {
         } else {
           toast({
             type: "error",
-            title: "Erro ao buscar clientes",
+            title: "Erro ao buscar pacientes",
             description: res.message,
           });
         }
@@ -91,7 +96,7 @@ export function ClientTableView() {
         toast({
           type: "error",
           title: "Erro de conexão",
-          description: "Falha ao sincronizar lista de clientes.",
+          description: "Falha ao sincronizar lista de pacientes.",
         });
       }
     });
@@ -101,15 +106,19 @@ export function ClientTableView() {
     loadClients();
   }, [loadClients]);
 
-  // Ações de linha
+  // Ações de linha protegidas por autenticação
   const handleOpenCreate = () => {
-    setClientToEdit(null);
-    setIsFormModalOpen(true);
+    requireAuth(() => {
+      setClientToEdit(null);
+      setIsFormModalOpen(true);
+    });
   };
 
   const handleOpenEdit = (client: Client) => {
-    setClientToEdit(client);
-    setIsFormModalOpen(true);
+    requireAuth(() => {
+      setClientToEdit(client);
+      setIsFormModalOpen(true);
+    });
   };
 
   const handleOpenDetails = (client: Client) => {
@@ -118,45 +127,86 @@ export function ClientTableView() {
   };
 
   const handleOpenSoftDelete = (client: Client) => {
-    setClientToDelete(client);
-    setIsPermanentDelete(false);
-    setIsDeleteModalOpen(true);
+    requireAuth(() => {
+      setClientToDelete(client);
+      setIsPermanentDelete(false);
+      setIsDeleteModalOpen(true);
+    });
   };
 
   const handleOpenPermanentDelete = (client: Client) => {
-    setClientToDelete(client);
-    setIsPermanentDelete(true);
-    setIsDeleteModalOpen(true);
+    requireAuth(() => {
+      setClientToDelete(client);
+      setIsPermanentDelete(true);
+      setIsDeleteModalOpen(true);
+    });
   };
 
   const handleRestore = async (client: Client) => {
-    try {
-      const res = await restoreClientAction(client.id);
-      if (res.success) {
-        toast({
-          type: "success",
-          title: "Paciente restaurado",
-          description: `O cadastro de ${client.nome} voltou para a lista ativa.`,
-        });
-        loadClients();
-      } else {
+    requireAuth(async () => {
+      try {
+        const res = await restoreClientAction(client.id);
+        if (res.success) {
+          toast({
+            type: "success",
+            title: "Paciente restaurado",
+            description: `O cadastro de ${client.nome} voltou para a lista ativa.`,
+          });
+          loadClients();
+        } else {
+          toast({
+            type: "error",
+            title: "Erro ao restaurar",
+            description: res.message,
+          });
+        }
+      } catch (error) {
         toast({
           type: "error",
-          title: "Erro ao restaurar",
-          description: res.message,
+          title: "Erro interno",
+          description: "Não foi possível restaurar o paciente.",
         });
       }
-    } catch (error) {
-      toast({
-        type: "error",
-        title: "Erro interno",
-        description: "Não foi possível restaurar o paciente.",
-      });
-    }
+    });
   };
 
   return (
     <div className="space-y-4">
+      {/* Banner de Status de Autenticação & Autorização */}
+      {!user ? (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 px-4 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 rounded-2xl text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-amber-100 dark:bg-amber-900/60 rounded-lg text-amber-700 dark:text-amber-300">
+              <Lock className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-semibold block sm:inline">Modo Somente Leitura: </span>
+              <span className="text-amber-800/90 dark:text-amber-300/90">
+                Faça login para cadastrar pacientes, editar prontuários ou efetuar exclusões lógicas.
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => openAuthModal("login")}
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-2xs self-start sm:self-auto transition-all"
+          >
+            <LogIn className="w-3.5 h-3.5" />
+            <span>Fazer Login</span>
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 px-4 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl text-xs text-emerald-900 dark:text-emerald-200">
+          <div className="flex items-center gap-2">
+            <div className="p-1 bg-emerald-100 dark:bg-emerald-900/60 rounded-lg text-emerald-700 dark:text-emerald-300">
+              <ShieldCheck className="w-3.5 h-3.5" />
+            </div>
+            <span>
+              <strong>Usuário Autenticado:</strong> {user.name} ({user.roleLabel}) • Permissões de escrita e exclusão ativas via JWT
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Barra Superior com Busca e Filtros */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
         {/* Campo de Busca em Tempo Real */}
@@ -265,7 +315,7 @@ export function ClientTableView() {
         </div>
       </div>
 
-      {/* Tabela de Clientes */}
+      {/* Tabela de pacientes */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -298,7 +348,7 @@ export function ClientTableView() {
                         <UserX className="w-6 h-6" />
                       </div>
                       <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">
-                        Nenhum cliente encontrado
+                        Nenhum paciente encontrado
                       </h4>
                       <p className="text-xs text-slate-500 mt-1">
                         {statusFilter === "excluidos"
@@ -469,7 +519,7 @@ export function ClientTableView() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2">
             <span>
-              Mostrando {paginatedData.data.length} de {paginatedData.total} clientes
+              Mostrando {paginatedData.data.length} de {paginatedData.total} pacientes
             </span>
             <span>•</span>
             <div className="flex items-center gap-1.5">

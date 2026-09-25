@@ -1,6 +1,6 @@
 {
   "name": "Juliana Sena - Gestão de Pacientes",
-  "description": "Sistema moderno para cadastro, consulta e gestão de clientes e pacientes com validação Zod, cálculo automático de idade, soft delete e integração Supabase.",
+  "description": "Sistema moderno para cadastro, consulta e gestão de pacientes com validação Zod, cálculo automático de idade, soft delete e integração Supabase.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

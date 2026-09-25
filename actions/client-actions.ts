@@ -5,6 +5,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase/client";
 import { clientSchema, clientFilterSchema } from "@/lib/validations/client-schema";
 import { calculateAge } from "@/lib/brazil-data";
 import { INITIAL_CLIENTS } from "@/lib/mock-data";
+import { getSession } from "@/lib/auth/session";
 import type {
   Client,
   ClientInput,
@@ -56,7 +57,7 @@ export async function getClientsAction(
 
     // Se o Supabase estiver configurado, executa queries nativas no PostgreSQL
     if (supabase) {
-      let query = supabase.from("clientes").select("*", { count: "exact" });
+      let query = supabase.from("pacientes").select("*", { count: "exact" });
 
       // Filtro de Soft Delete e Status
       if (status === "excluidos") {
@@ -180,7 +181,7 @@ export async function getClientByIdAction(id: string): Promise<ActionResponse<Cl
 
     if (supabase) {
       const { data, error } = await supabase
-        .from("clientes")
+        .from("pacientes")
         .select("*")
         .eq("id", id)
         .single();
@@ -197,25 +198,34 @@ export async function getClientByIdAction(id: string): Promise<ActionResponse<Cl
 
     const found = memoryClients.find((c) => c.id === id);
     if (!found) {
-      return { success: false, message: "Cliente não encontrado." };
+      return { success: false, message: "Paciente não encontrado." };
     }
 
     return { success: true, data: found };
   } catch (error) {
     return {
       success: false,
-      message: `Erro ao buscar cliente: ${(error as Error).message}`,
+      message: `Erro ao buscar paciente: ${(error as Error).message}`,
     };
   }
 }
 
 /**
- * 3. CRIAÇÃO DE CLIENTE COM VALIDAÇÃO ZOD E CÁLCULO SEGURO DE IDADE
+ * 3. CRIAÇÃO DE PACIENTE COM VALIDAÇÃO ZOD E CÁLCULO SEGURO DE IDADE
  */
 export async function createClientAction(
   rawInput: unknown
 ): Promise<ActionResponse<Client>> {
   try {
+    // 0. Verificação de autorização baseada em sessão JWT
+    const sessionUser = await getSession();
+    if (!sessionUser) {
+      return {
+        success: false,
+        message: "Acesso não autorizado. É necessário fazer login para cadastrar pacientes.",
+      };
+    }
+
     // 1. Validação estrita dos dados recebidos via Zod
     const validationResult = clientSchema.safeParse(rawInput);
     if (!validationResult.success) {
@@ -245,7 +255,7 @@ export async function createClientAction(
     if (supabase) {
       // Verifica duplicidade de CPF ativo
       const { data: existingCpf } = await supabase
-        .from("clientes")
+        .from("pacientes")
         .select("id")
         .eq("cpf", validData.cpf)
         .is("deleted_at", null)
@@ -254,13 +264,13 @@ export async function createClientAction(
       if (existingCpf) {
         return {
           success: false,
-          message: "Já existe um cliente ativo cadastrado com este CPF.",
-          errors: { cpf: ["Este CPF já está registrado para outro cliente ativo."] },
+          message: "Já existe um paciente ativo cadastrado com este CPF.",
+          errors: { cpf: ["Este CPF já está registrado para outro paciente ativo."] },
         };
       }
 
       const { data, error } = await supabase
-        .from("clientes")
+        .from("pacientes")
         .insert([
           {
             ...validData,
@@ -274,7 +284,7 @@ export async function createClientAction(
         console.error("Erro Supabase createClient:", error);
         return {
           success: false,
-          message: `Erro ao salvar cliente no Supabase: ${error.message}`,
+          message: `Erro ao salvar paciente no Supabase: ${error.message}`,
         };
       }
 
@@ -293,7 +303,7 @@ export async function createClientAction(
     if (cpfConflict) {
       return {
         success: false,
-        message: "Já existe um cliente ativo com este CPF.",
+        message: "Já existe um paciente ativo com este CPF.",
         errors: { cpf: ["Este CPF já está em uso."] },
       };
     }
@@ -325,7 +335,7 @@ export async function createClientAction(
 }
 
 /**
- * 4. ATUALIZAÇÃO DE CLIENTE (EDIÇÃO COMPLETA)
+ * 4. ATUALIZAÇÃO DE PACIENTE (EDIÇÃO COMPLETA)
  */
 export async function updateClientAction(
   id: string,
@@ -333,7 +343,16 @@ export async function updateClientAction(
 ): Promise<ActionResponse<Client>> {
   try {
     if (!id) {
-      return { success: false, message: "ID do cliente é obrigatório." };
+      return { success: false, message: "ID do paciente é obrigatório." };
+    }
+
+    // 0. Verificação de autorização baseada em sessão JWT
+    const sessionUser = await getSession();
+    if (!sessionUser) {
+      return {
+        success: false,
+        message: "Acesso não autorizado. É necessário fazer login para editar dados de pacientes.",
+      };
     }
 
     // Validação Zod
@@ -362,9 +381,9 @@ export async function updateClientAction(
     const supabase = getSupabaseAdminClient();
 
     if (supabase) {
-      // Verifica duplicidade de CPF com outro cliente ativo
+      // Verifica duplicidade de CPF com outro paciente ativo
       const { data: existingCpf } = await supabase
-        .from("clientes")
+        .from("pacientes")
         .select("id")
         .eq("cpf", validData.cpf)
         .neq("id", id)
@@ -374,13 +393,13 @@ export async function updateClientAction(
       if (existingCpf) {
         return {
           success: false,
-          message: "Este CPF já está cadastrado para outro cliente.",
+          message: "Este CPF já está cadastrado para outro paciente.",
           errors: { cpf: ["CPF já em uso por outro cadastro."] },
         };
       }
 
       const { data, error } = await supabase
-        .from("clientes")
+        .from("pacientes")
         .update({
           ...validData,
           updated_at: new Date().toISOString(),
@@ -392,14 +411,14 @@ export async function updateClientAction(
       if (error) {
         return {
           success: false,
-          message: `Erro ao atualizar cliente: ${error.message}`,
+          message: `Erro ao atualizar paciente: ${error.message}`,
         };
       }
 
       revalidatePath("/");
       return {
         success: true,
-        message: "Dados do cliente atualizados com sucesso!",
+        message: "Dados do paciente atualizados com sucesso!",
         data: data as Client,
       };
     }
@@ -407,7 +426,7 @@ export async function updateClientAction(
     // Fallback de memória
     const index = memoryClients.findIndex((c) => c.id === id);
     if (index === -1) {
-      return { success: false, message: "Cliente não encontrado para edição." };
+      return { success: false, message: "Paciente não encontrado para edição." };
     }
 
     const cpfConflict = memoryClients.some(
@@ -416,7 +435,7 @@ export async function updateClientAction(
     if (cpfConflict) {
       return {
         success: false,
-        message: "CPF já em uso por outro cliente.",
+        message: "CPF já em uso por outro paciente.",
         errors: { cpf: ["CPF duplicado."] },
       };
     }
@@ -432,13 +451,13 @@ export async function updateClientAction(
 
     return {
       success: true,
-      message: "Dados do cliente atualizados com sucesso!",
+      message: "Dados do paciente atualizados com sucesso!",
       data: updatedClient,
     };
   } catch (error) {
     return {
       success: false,
-      message: `Erro ao atualizar cliente: ${(error as Error).message}`,
+      message: `Erro ao atualizar paciente: ${(error as Error).message}`,
     };
   }
 }
@@ -451,7 +470,16 @@ export async function updateClientAction(
 export async function softDeleteClientAction(id: string): Promise<ActionResponse<void>> {
   try {
     if (!id) {
-      return { success: false, message: "ID do cliente é obrigatório." };
+      return { success: false, message: "ID do paciente é obrigatório." };
+    }
+
+    // 0. Verificação de autorização baseada em sessão JWT
+    const sessionUser = await getSession();
+    if (!sessionUser) {
+      return {
+        success: false,
+        message: "Acesso não autorizado. É necessário fazer login para mover pacientes para a lixeira.",
+      };
     }
 
     const supabase = getSupabaseAdminClient();
@@ -459,7 +487,7 @@ export async function softDeleteClientAction(id: string): Promise<ActionResponse
     if (supabase) {
       const now = new Date().toISOString();
       const { error } = await supabase
-        .from("clientes")
+        .from("pacientes")
         .update({
           deleted_at: now,
           status: "Inativo",
@@ -470,21 +498,21 @@ export async function softDeleteClientAction(id: string): Promise<ActionResponse
       if (error) {
         return {
           success: false,
-          message: `Erro ao inativar cliente: ${error.message}`,
+          message: `Erro ao inativar paciente: ${error.message}`,
         };
       }
 
       revalidatePath("/");
       return {
         success: true,
-        message: "Cliente excluído logicamente com sucesso!",
+        message: "Paciente movido para a lixeira com sucesso!",
       };
     }
 
     // Fallback de memória
     const client = memoryClients.find((c) => c.id === id);
     if (!client) {
-      return { success: false, message: "Cliente não localizado." };
+      return { success: false, message: "Paciente não localizado." };
     }
 
     client.deleted_at = new Date().toISOString();
@@ -494,7 +522,7 @@ export async function softDeleteClientAction(id: string): Promise<ActionResponse
     revalidatePath("/");
     return {
       success: true,
-      message: "Cliente movido para a lixeira (exclusão lógica) com sucesso!",
+      message: "Paciente movido para a lixeira (exclusão lógica) com sucesso!",
     };
   } catch (error) {
     return {
@@ -505,16 +533,25 @@ export async function softDeleteClientAction(id: string): Promise<ActionResponse
 }
 
 /**
- * 6. RESTAURAÇÃO DE CLIENTE EXCLUÍDO
+ * 6. RESTAURAÇÃO DE PACIENTE EXCLUÍDO
  */
 export async function restoreClientAction(id: string): Promise<ActionResponse<void>> {
   try {
+    // 0. Verificação de autorização baseada em sessão JWT
+    const sessionUser = await getSession();
+    if (!sessionUser) {
+      return {
+        success: false,
+        message: "Acesso não autorizado. É necessário fazer login para restaurar pacientes.",
+      };
+    }
+
     const supabase = getSupabaseAdminClient();
 
     if (supabase) {
       const now = new Date().toISOString();
       const { error } = await supabase
-        .from("clientes")
+        .from("pacientes")
         .update({
           deleted_at: null,
           status: "Ativo",
@@ -532,13 +569,13 @@ export async function restoreClientAction(id: string): Promise<ActionResponse<vo
       revalidatePath("/");
       return {
         success: true,
-        message: "Cliente restaurado com sucesso!",
+        message: "Paciente restaurado com sucesso!",
       };
     }
 
     const client = memoryClients.find((c) => c.id === id);
     if (!client) {
-      return { success: false, message: "Cliente não localizado." };
+      return { success: false, message: "Paciente não localizado." };
     }
 
     client.deleted_at = null;
@@ -548,7 +585,7 @@ export async function restoreClientAction(id: string): Promise<ActionResponse<vo
     revalidatePath("/");
     return {
       success: true,
-      message: "Cliente restaurado com sucesso para a lista ativa!",
+      message: "Paciente restaurado com sucesso para a lista ativa!",
     };
   } catch (error) {
     return {
@@ -563,10 +600,19 @@ export async function restoreClientAction(id: string): Promise<ActionResponse<vo
  */
 export async function permanentDeleteClientAction(id: string): Promise<ActionResponse<void>> {
   try {
+    // 0. Verificação de autorização baseada em sessão JWT
+    const sessionUser = await getSession();
+    if (!sessionUser) {
+      return {
+        success: false,
+        message: "Acesso não autorizado. É necessário fazer login para excluir registros permanentemente.",
+      };
+    }
+
     const supabase = getSupabaseAdminClient();
 
     if (supabase) {
-      const { error } = await supabase.from("clientes").delete().eq("id", id);
+      const { error } = await supabase.from("pacientes").delete().eq("id", id);
       if (error) {
         return {
           success: false,
