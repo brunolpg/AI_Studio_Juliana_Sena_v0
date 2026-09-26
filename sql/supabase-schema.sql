@@ -126,7 +126,7 @@ USING (false);
 -- 6. FUNÇÃO RPC AUXILIAR PARA SOFT DELETE ATÔMICO
 -- ==============================================================================
 
-CREATE OR REPLACE FUNCTION pacientes.soft_delete_cliente(client_uuid UUID)
+CREATE OR REPLACE FUNCTION pacientes.soft_delete_paciente(client_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
     UPDATE pacientes.pacientes

@@ -1,27 +1,25 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { INITIAL_APPOINTMENTS, STANDARD_TIME_SLOTS } from "@/lib/appointment-mock-data";
+import { createClient } from "@/lib/supabase/server";
+import {
+  STANDARD_TIME_SLOTS,
+  type Appointment,
+  type AppointmentInput,
+  type AppointmentFilter,
+  type TimeSlot,
+} from "@/types/appointment";
 import {
   createGoogleCalendarEvent,
+  deleteGoogleCalendarEvent,
+  updateGoogleCalendarEvent,
   listGoogleCalendarEventsForDate,
   generateGoogleCalendarTemplateUrl,
   getGoogleCalendarCredentials,
 } from "@/lib/google-calendar/calendar-service";
-import type {
-  Appointment,
-  AppointmentInput,
-  AppointmentFilter,
-  AppointmentFilterTab,
-  TimeSlot,
-} from "@/types/appointment";
 import type { ActionResponse, PaginatedResult } from "@/types/client";
 
-// Armazenamento em memória para demonstração / runtime
-let memoryAppointments: Appointment[] = [...INITIAL_APPOINTMENTS];
-
 function getTodayString(): string {
-  // Retorna YYYY-MM-DD
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -29,13 +27,73 @@ function getTodayString(): string {
   return `${year}-${month}-${day}`;
 }
 
+interface RawAppointmentRow {
+  id: string;
+  client_id: string;
+  data: string;
+  horario_inicio: string;
+  horario_fim: string;
+  procedimento: string;
+  observacoes: string | null;
+  status: string;
+  google_event_id: string | null;
+  google_html_link: string | null;
+  synced_with_google: boolean | null;
+  created_at: string;
+  updated_at: string;
+  pacientes?: {
+    id?: string;
+    nome?: string;
+    email?: string;
+    telefone?: string;
+  } | Array<{
+    id?: string;
+    nome?: string;
+    email?: string;
+    telefone?: string;
+  }> | null;
+}
+
+function mapRowToAppointment(row: RawAppointmentRow): Appointment {
+  const patientData = Array.isArray(row.pacientes)
+    ? row.pacientes[0]
+    : row.pacientes;
+
+  return {
+    id: row.id,
+    client_id: row.client_id,
+    client_nome: patientData?.nome || "Paciente Cadastrado",
+    client_email: patientData?.email || "",
+    client_telefone: patientData?.telefone || "",
+    data: row.data,
+    horario_inicio: row.horario_inicio,
+    horario_fim: row.horario_fim,
+    procedimento: row.procedimento,
+    observacoes: row.observacoes || null,
+    status: row.status as Appointment["status"],
+    google_event_id: row.google_event_id || null,
+    google_html_link: row.google_html_link || null,
+    synced_with_google: Boolean(row.synced_with_google),
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
 /**
- * Consulta de Agendamentos com Busca, Filtros por Tab e Paginação
+ * 1. LISTAGEM COM BUSCA, FILTROS POR ABA E PAGINAÇÃO NO SUPABASE
  */
 export async function getAppointmentsAction(
   filter: AppointmentFilter = {}
 ): Promise<ActionResponse<PaginatedResult<Appointment>>> {
   try {
+    const supabase = createClient();
+    if (!supabase) {
+      return {
+        success: false,
+        message: "Cliente Supabase não configurado. Verifique as credenciais no .env.local.",
+      };
+    }
+
     const {
       search = "",
       tab = "todos",
@@ -45,57 +103,111 @@ export async function getAppointmentsAction(
     } = filter;
 
     const todayStr = getTodayString();
-    let filtered = [...memoryAppointments];
 
-    // 1. Filtro por Abas Rápidas
+    let query = supabase.from("appointments").select(
+      `
+        id,
+        client_id,
+        data,
+        horario_inicio,
+        horario_fim,
+        procedimento,
+        observacoes,
+        status,
+        google_event_id,
+        google_html_link,
+        synced_with_google,
+        created_at,
+        updated_at,
+        pacientes (
+          id,
+          nome,
+          email,
+          telefone
+        )
+      `,
+      { count: "exact" }
+    );
+
+    // 1. Filtros por Tab
     if (tab === "hoje") {
-      filtered = filtered.filter((apt) => apt.data === todayStr && apt.status !== "Cancelado");
+      query = query.eq("data", todayStr).neq("status", "Cancelado");
     } else if (tab === "proximos") {
-      filtered = filtered.filter(
-        (apt) => apt.data >= todayStr && apt.status !== "Cancelado" && apt.status !== "Concluído"
-      );
+      query = query
+        .gte("data", todayStr)
+        .not("status", "in", '("Cancelado","Concluído")');
     } else if (tab === "concluidos") {
-      filtered = filtered.filter((apt) => apt.status === "Concluído");
+      query = query.eq("status", "Concluído");
     } else if (tab === "cancelados") {
-      filtered = filtered.filter((apt) => apt.status === "Cancelado");
+      query = query.eq("status", "Cancelado");
     }
 
-    // 2. Filtro específico por data se fornecido
+    // 2. Filtro de data específica
     if (dateFilter) {
-      filtered = filtered.filter((apt) => apt.data === dateFilter);
+      query = query.eq("data", dateFilter);
     }
 
-    // 3. Busca textual
+    // 3. Busca textual inteligente (procedimento, data ou nome/contato do paciente)
     if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      filtered = filtered.filter(
-        (apt) =>
-          apt.client_nome.toLowerCase().includes(q) ||
-          apt.client_email.toLowerCase().includes(q) ||
-          apt.client_telefone.includes(q) ||
-          apt.procedimento.toLowerCase().includes(q) ||
-          apt.data.includes(q) ||
-          apt.horario_inicio.includes(q)
-      );
+      const term = search.trim();
+
+      // Busca IDs de pacientes correspondentes para busca ampla
+      const { data: matchedPatients } = await supabase
+        .from("pacientes")
+        .select("id")
+        .or(`nome.ilike.%${term}%,email.ilike.%${term}%,telefone.ilike.%${term}%,cpf.ilike.%${term}%`);
+
+      const patientIds = matchedPatients?.map((p) => p.id) || [];
+
+      if (patientIds.length > 0) {
+        query = query.or(
+          `procedimento.ilike.%${term}%,data.ilike.%${term}%,client_id.in.(${patientIds.join(",")})`
+        );
+      } else {
+        query = query.or(`procedimento.ilike.%${term}%,data.ilike.%${term}%`);
+      }
     }
 
-    // 4. Ordenação: datas mais próximas primeiro
-    filtered.sort((a, b) => {
-      const dateTimeA = `${a.data}T${a.horario_inicio}`;
-      const dateTimeB = `${b.data}T${b.horario_inicio}`;
-      return dateTimeB.localeCompare(dateTimeA);
-    });
+    // 4. Ordenação
+    if (tab === "proximos" || tab === "hoje") {
+      query = query
+        .order("data", { ascending: true })
+        .order("horario_inicio", { ascending: true });
+    } else {
+      query = query
+        .order("data", { ascending: false })
+        .order("horario_inicio", { ascending: false });
+    }
 
-    const total = filtered.length;
+    // 5. Paginação via Range
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Erro Supabase getAppointmentsAction:", error);
+      const isMissingTable =
+        error.message?.includes("relation") || error.code === "42P01";
+
+      return {
+        success: false,
+        message: isMissingTable
+          ? "A tabela 'appointments' ainda não existe no seu banco de dados Supabase. Execute a migration SQL disponível na aba 'Entregáveis' no SQL Editor do Supabase."
+          : `Falha ao consultar agendamentos no Supabase: ${error.message}`,
+      };
+    }
+
+    const total = count ?? 0;
     const totalPages = Math.ceil(total / pageSize) || 1;
     const currentPage = Math.max(1, Math.min(page, totalPages));
-    const offset = (currentPage - 1) * pageSize;
-    const paginatedData = filtered.slice(offset, offset + pageSize);
+    const appointments = ((data as unknown as RawAppointmentRow[]) || []).map(mapRowToAppointment);
 
     return {
       success: true,
       data: {
-        data: paginatedData,
+        data: appointments,
         total,
         page: currentPage,
         pageSize,
@@ -104,43 +216,74 @@ export async function getAppointmentsAction(
       },
     };
   } catch (error) {
-    console.error("Erro ao listar agendamentos:", error);
+    console.error("Erro inesperado ao listar agendamentos:", error);
     return {
       success: false,
-      message: "Erro ao consultar a lista de agendamentos.",
+      message: "Erro de conexão ao consultar a lista de agendamentos no banco de dados.",
     };
   }
 }
 
 /**
- * Consulta horários disponíveis para uma data específica (08:00 às 17:00 em intervalos de 1h)
+ * 2. CONSULTA HORÁRIOS DISPONÍVEIS NA GRADE (08:00 às 17:00) DIRETAMENTE NO SUPABASE
  */
 export async function getTimeSlotsForDateAction(
   dateStr: string
 ): Promise<ActionResponse<TimeSlot[]>> {
   try {
-    // Horários ocupados no banco/memória local
-    const activeAppointments = memoryAppointments.filter(
-      (apt) => apt.data === dateStr && apt.status !== "Cancelado"
-    );
+    const supabase = createClient();
+    if (!supabase) {
+      return {
+        success: false,
+        message: "Banco de dados Supabase não configurado.",
+      };
+    }
 
-    // Consulta na Google Calendar API se configurada
+    // Consulta no Supabase todos os agendamentos ativos na data especificada
+    const { data: dbAppointments, error } = await supabase
+      .from("appointments")
+      .select(
+        `
+          id,
+          horario_inicio,
+          horario_fim,
+          status,
+          client_id,
+          pacientes (
+            nome
+          )
+        `
+      )
+      .eq("data", dateStr)
+      .neq("status", "Cancelado");
+
+    if (error) {
+      console.warn("Aviso ao buscar slots no Supabase:", error.message);
+    }
+
+    const activeDbList = (dbAppointments as unknown as RawAppointmentRow[]) || [];
+
+    // Consulta paralela na Google Calendar API se configurada
     const { events: googleEvents } = await listGoogleCalendarEventsForDate(dateStr);
 
     const timeSlots: TimeSlot[] = STANDARD_TIME_SLOTS.map(({ slot, endSlot, label }) => {
-      // Verifica se há consulta local ativa
-      const localMatch = activeAppointments.find((apt) => apt.horario_inicio === slot);
-      if (localMatch) {
+      // 1. Verifica colisão com o banco de dados Supabase
+      const dbMatch = activeDbList.find((apt) => apt.horario_inicio === slot);
+      if (dbMatch) {
+        const patientData = Array.isArray(dbMatch.pacientes)
+          ? dbMatch.pacientes[0]
+          : dbMatch.pacientes;
+
         return {
           slot,
           endSlot,
           label,
           isOccupied: true,
-          occupiedPatientName: localMatch.client_nome,
+          occupiedPatientName: patientData?.nome || "Consulta Agendada",
         };
       }
 
-      // Verifica se há evento do Google Calendar colidindo
+      // 2. Verifica colisão com eventos da Google Calendar API
       const slotHour = Number(slot.split(":")[0]);
       const googleMatch = googleEvents.find((evt) => {
         if (!evt.start?.dateTime) return false;
@@ -181,12 +324,20 @@ export async function getTimeSlotsForDateAction(
 }
 
 /**
- * Criação de Agendamento com Conflito Check e Sincronização Google Calendar
+ * 3. CRIAÇÃO DE AGENDAMENTO COM PERSISTÊNCIA NO SUPABASE E BLOQUEIO DE CONFLITO
  */
 export async function createAppointmentAction(
   input: AppointmentInput
 ): Promise<ActionResponse<Appointment>> {
   try {
+    const supabase = createClient();
+    if (!supabase) {
+      return {
+        success: false,
+        message: "Banco de dados Supabase não configurado. Verifique as credenciais no .env.local.",
+      };
+    }
+
     if (!input.client_id || !input.data || !input.horario_inicio || !input.procedimento) {
       return {
         success: false,
@@ -199,29 +350,27 @@ export async function createAppointmentAction(
     const endHour = String(startHour + 1).padStart(2, "0");
     const horario_fim = `${endHour}:00`;
 
-    // Validação de conflito de horário
-    const hasConflict = memoryAppointments.some(
-      (apt) =>
-        apt.data === input.data &&
-        apt.horario_inicio === input.horario_inicio &&
-        apt.status !== "Cancelado"
-    );
+    // 1. Verificação de conflito no Supabase (horário já reservado na data com status != Cancelado)
+    const { data: conflict } = await supabase
+      .from("appointments")
+      .select("id")
+      .eq("data", input.data)
+      .eq("horario_inicio", input.horario_inicio)
+      .neq("status", "Cancelado")
+      .maybeSingle();
 
-    if (hasConflict) {
+    if (conflict) {
       return {
         success: false,
         message: `O horário ${input.horario_inicio} já está reservado para outro atendimento nesta data.`,
       };
     }
 
-    const appointmentId = `apt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const nowIso = new Date().toISOString();
-
     let googleEventId: string | null = null;
     let googleHtmlLink: string | null = null;
     let syncedWithGoogle = false;
 
-    // Sincronização com Google Agenda
+    // 2. Integração com a Google Calendar API
     if (input.sync_google) {
       const gcalRes = await createGoogleCalendarEvent({
         patientName: input.client_nome,
@@ -250,113 +399,208 @@ export async function createAppointmentAction(
       });
     }
 
-    const newAppointment: Appointment = {
-      id: appointmentId,
-      client_id: input.client_id,
-      client_nome: input.client_nome,
-      client_email: input.client_email,
-      client_telefone: input.client_telefone,
-      data: input.data,
-      horario_inicio: input.horario_inicio,
-      horario_fim,
-      procedimento: input.procedimento,
-      observacoes: input.observacoes || null,
-      status: "Confirmado",
-      google_event_id: googleEventId,
-      google_html_link: googleHtmlLink,
-      synced_with_google: syncedWithGoogle,
-      created_at: nowIso,
-      updated_at: nowIso,
-    };
+    // 3. Inserção definitiva na tabela appointments do Supabase
+    const { data: inserted, error: insertError } = await supabase
+      .from("appointments")
+      .insert({
+        client_id: input.client_id,
+        data: input.data,
+        horario_inicio: input.horario_inicio,
+        horario_fim,
+        procedimento: input.procedimento,
+        observacoes: input.observacoes || null,
+        status: "Confirmado",
+        google_event_id: googleEventId,
+        google_html_link: googleHtmlLink,
+        synced_with_google: syncedWithGoogle,
+      })
+      .select(
+        `
+          id,
+          client_id,
+          data,
+          horario_inicio,
+          horario_fim,
+          procedimento,
+          observacoes,
+          status,
+          google_event_id,
+          google_html_link,
+          synced_with_google,
+          created_at,
+          updated_at,
+          pacientes (
+            id,
+            nome,
+            email,
+            telefone
+          )
+        `
+      )
+      .single();
 
-    memoryAppointments.unshift(newAppointment);
+    if (insertError) {
+      console.error("Erro Supabase createAppointmentAction:", insertError);
+      return {
+        success: false,
+        message: `Erro ao gravar agendamento no Supabase: ${insertError.message}. Certifique-se de aplicar a migration em sql/supabase-appointments-schema.sql.`,
+      };
+    }
+
+    const newAppointment = mapRowToAppointment(inserted as unknown as RawAppointmentRow);
 
     revalidatePath("/");
 
     return {
       success: true,
-      message: "Consulta agendada com sucesso!",
+      message: "Consulta agendada e persistida no Supabase com sucesso!",
       data: newAppointment,
     };
   } catch (error) {
-    console.error("Erro ao criar agendamento:", error);
+    console.error("Erro inesperado ao criar agendamento:", error);
     return {
       success: false,
-      message: "Ocorreu um erro interno ao salvar o agendamento.",
+      message: "Ocorreu um erro interno de conexão ao salvar o agendamento.",
     };
   }
 }
 
 /**
- * Cancelar Agendamento
+ * 4. CANCELAMENTO DE AGENDAMENTO NO SUPABASE E GOOGLE CALENDAR
  */
 export async function cancelAppointmentAction(
   appointmentId: string
 ): Promise<ActionResponse<void>> {
   try {
-    const idx = memoryAppointments.findIndex((a) => a.id === appointmentId);
-    if (idx === -1) {
+    const supabase = createClient();
+    if (!supabase) {
       return {
         success: false,
-        message: "Agendamento não encontrado.",
+        message: "Banco de dados Supabase não configurado.",
       };
     }
 
-    memoryAppointments[idx] = {
-      ...memoryAppointments[idx],
-      status: "Cancelado",
-      updated_at: new Date().toISOString(),
-    };
+    // 1. Busca dados do agendamento para verificar existência e ID do evento Google
+    const { data: current, error: getError } = await supabase
+      .from("appointments")
+      .select("id, status, google_event_id")
+      .eq("id", appointmentId)
+      .single();
+
+    if (getError || !current) {
+      return {
+        success: false,
+        message: "Agendamento não encontrado no banco de dados.",
+      };
+    }
+
+    // 2. Atualiza o status para Cancelado diretamente no Supabase
+    const { error: updateError } = await supabase
+      .from("appointments")
+      .update({
+        status: "Cancelado",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", appointmentId);
+
+    if (updateError) {
+      console.error("Erro ao cancelar agendamento no Supabase:", updateError);
+      return {
+        success: false,
+        message: `Falha ao cancelar agendamento: ${updateError.message}`,
+      };
+    }
+
+    // 3. Sincroniza cancelamento na Google Calendar API se houver evento registrado
+    if (current.google_event_id) {
+      await deleteGoogleCalendarEvent(current.google_event_id);
+    }
 
     revalidatePath("/");
 
     return {
       success: true,
-      message: "Agendamento cancelado com sucesso.",
+      message: "Agendamento cancelado com sucesso no Supabase.",
     };
   } catch (error) {
-    console.error("Erro ao cancelar agendamento:", error);
+    console.error("Erro inesperado ao cancelar agendamento:", error);
     return {
       success: false,
-      message: "Falha ao cancelar o agendamento.",
+      message: "Falha de conexão ao cancelar o agendamento.",
     };
   }
 }
 
 /**
- * Atualizar Horário ou Dados do Agendamento
+ * 5. ATUALIZAR HORÁRIO OU DADOS DO AGENDAMENTO NO SUPABASE E GOOGLE CALENDAR
  */
 export async function updateAppointmentAction(
   appointmentId: string,
   updates: Partial<Pick<Appointment, "data" | "horario_inicio" | "procedimento" | "observacoes" | "status">>
 ): Promise<ActionResponse<Appointment>> {
   try {
-    const idx = memoryAppointments.findIndex((a) => a.id === appointmentId);
-    if (idx === -1) {
+    const supabase = createClient();
+    if (!supabase) {
       return {
         success: false,
-        message: "Agendamento não encontrado.",
+        message: "Banco de dados Supabase não configurado.",
       };
     }
 
-    const current = memoryAppointments[idx];
+    // 1. Busca registro atual
+    const { data: current, error: getError } = await supabase
+      .from("appointments")
+      .select(
+        `
+          id,
+          client_id,
+          data,
+          horario_inicio,
+          horario_fim,
+          procedimento,
+          observacoes,
+          status,
+          google_event_id,
+          google_html_link,
+          synced_with_google,
+          created_at,
+          updated_at,
+          pacientes (
+            id,
+            nome,
+            email,
+            telefone
+          )
+        `
+      )
+      .eq("id", appointmentId)
+      .single();
+
+    if (getError || !current) {
+      return {
+        success: false,
+        message: "Agendamento não encontrado no banco de dados.",
+      };
+    }
+
     const targetDate = updates.data || current.data;
     const targetStart = updates.horario_inicio || current.horario_inicio;
 
-    // Se mudou data ou hora, verifica colisão
+    // 2. Se mudou data ou horário, verifica colisão no Supabase
     if (targetDate !== current.data || targetStart !== current.horario_inicio) {
-      const conflict = memoryAppointments.some(
-        (a) =>
-          a.id !== appointmentId &&
-          a.data === targetDate &&
-          a.horario_inicio === targetStart &&
-          a.status !== "Cancelado"
-      );
+      const { data: conflict } = await supabase
+        .from("appointments")
+        .select("id")
+        .neq("id", appointmentId)
+        .eq("data", targetDate)
+        .eq("horario_inicio", targetStart)
+        .neq("status", "Cancelado")
+        .maybeSingle();
 
       if (conflict) {
         return {
           success: false,
-          message: `O horário ${targetStart} nesta data já está ocupado.`,
+          message: `O horário ${targetStart} no dia ${targetDate} já está ocupado.`,
         };
       }
     }
@@ -367,33 +611,88 @@ export async function updateAppointmentAction(
       targetEnd = `${String(startHour + 1).padStart(2, "0")}:00`;
     }
 
-    const updated: Appointment = {
-      ...current,
+    const payloadToUpdate: Record<string, unknown> = {
       ...updates,
       horario_fim: targetEnd,
       updated_at: new Date().toISOString(),
     };
 
-    memoryAppointments[idx] = updated;
+    // 3. Atualiza no Supabase
+    const { data: updated, error: updateError } = await supabase
+      .from("appointments")
+      .update(payloadToUpdate)
+      .eq("id", appointmentId)
+      .select(
+        `
+          id,
+          client_id,
+          data,
+          horario_inicio,
+          horario_fim,
+          procedimento,
+          observacoes,
+          status,
+          google_event_id,
+          google_html_link,
+          synced_with_google,
+          created_at,
+          updated_at,
+          pacientes (
+            id,
+            nome,
+            email,
+            telefone
+          )
+        `
+      )
+      .single();
+
+    if (updateError) {
+      console.error("Erro ao atualizar agendamento no Supabase:", updateError);
+      return {
+        success: false,
+        message: `Falha ao atualizar agendamento: ${updateError.message}`,
+      };
+    }
+
+    const mapped = mapRowToAppointment(updated as unknown as RawAppointmentRow);
+
+    // 4. Sincroniza atualização no Google Calendar se houver evento vinculado
+    if (current.google_event_id) {
+      const patientData = Array.isArray(current.pacientes)
+        ? current.pacientes[0]
+        : current.pacientes;
+
+      await updateGoogleCalendarEvent(current.google_event_id, {
+        patientName: patientData?.nome || "Paciente",
+        patientEmail: patientData?.email || "",
+        patientPhone: patientData?.telefone || "",
+        procedimento: updates.procedimento || current.procedimento,
+        date: targetDate,
+        startTime: targetStart,
+        endTime: targetEnd,
+        observacoes: updates.observacoes !== undefined ? updates.observacoes : current.observacoes,
+      });
+    }
 
     revalidatePath("/");
 
     return {
       success: true,
-      message: "Agendamento atualizado com sucesso.",
-      data: updated,
+      message: "Agendamento atualizado com sucesso no Supabase.",
+      data: mapped,
     };
   } catch (error) {
-    console.error("Erro ao atualizar agendamento:", error);
+    console.error("Erro inesperado ao atualizar agendamento:", error);
     return {
       success: false,
-      message: "Falha ao atualizar o agendamento.",
+      message: "Falha ao atualizar o agendamento no banco de dados.",
     };
   }
 }
 
 /**
- * Informações do status de integração com o Google Calendar
+ * 6. INFORMAÇÕES DO STATUS DE INTEGRAÇÃO COM O GOOGLE CALENDAR
  */
 export async function getCalendarIntegrationStatusAction() {
   const creds = getGoogleCalendarCredentials();

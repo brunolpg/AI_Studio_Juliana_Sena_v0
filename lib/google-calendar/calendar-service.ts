@@ -242,3 +242,120 @@ export async function createGoogleCalendarEvent(
     };
   }
 }
+
+/**
+ * Remove um evento na Google Calendar API (v3)
+ */
+export async function deleteGoogleCalendarEvent(eventId: string): Promise<boolean> {
+  const creds = getGoogleCalendarCredentials();
+  if (!creds.isConfigured || !eventId || eventId.startsWith("cal_")) {
+    return true;
+  }
+
+  try {
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+      creds.calendarId
+    )}/events/${encodeURIComponent(eventId)}?key=${creds.apiKey}`;
+
+    const res = await fetch(url, {
+      method: "DELETE",
+    });
+
+    return res.ok || res.status === 404;
+  } catch (error) {
+    console.warn("[Google Calendar] Falha ao excluir evento no Google Agenda:", error);
+    return false;
+  }
+}
+
+/**
+ * Atualiza horário ou dados de um evento na Google Calendar API (v3)
+ */
+export async function updateGoogleCalendarEvent(
+  eventId: string,
+  input: GoogleCalendarEventInput
+): Promise<GoogleCalendarEventResult> {
+  const creds = getGoogleCalendarCredentials();
+  const directLink = generateGoogleCalendarTemplateUrl(input);
+
+  if (!creds.isConfigured || !eventId || eventId.startsWith("cal_")) {
+    return {
+      success: true,
+      eventId,
+      htmlLink: directLink,
+      synced: true,
+      isFallback: true,
+      message: "Horário atualizado localmente com link atualizado para o Google Agenda.",
+    };
+  }
+
+  try {
+    const summary = `Consulta: ${input.procedimento} - ${input.patientName}`;
+    const description = [
+      `Paciente: ${input.patientName}`,
+      `Telefone: ${input.patientPhone}`,
+      `E-mail: ${input.patientEmail}`,
+      `Procedimento: ${input.procedimento}`,
+      input.observacoes ? `Observações: ${input.observacoes}` : "",
+      "",
+      "Sistema Dra. Juliana Sena - Gestão de Pacientes",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const eventPayload = {
+      summary,
+      description,
+      start: {
+        dateTime: toIsoDateTime(input.date, input.startTime),
+        timeZone: "America/Sao_Paulo",
+      },
+      end: {
+        dateTime: toIsoDateTime(input.date, input.endTime),
+        timeZone: "America/Sao_Paulo",
+      },
+      attendees: input.patientEmail ? [{ email: input.patientEmail, displayName: input.patientName }] : [],
+    };
+
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+      creds.calendarId
+    )}/events/${encodeURIComponent(eventId)}?key=${creds.apiKey}`;
+
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(eventPayload),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        success: true,
+        eventId: data.id || eventId,
+        htmlLink: data.htmlLink || directLink,
+        synced: true,
+        isFallback: false,
+        message: "Evento atualizado com sucesso no Google Agenda.",
+      };
+    }
+
+    return {
+      success: true,
+      eventId,
+      htmlLink: directLink,
+      synced: true,
+      isFallback: true,
+      message: "Atualização salva no banco de dados com link direto do Google Agenda.",
+    };
+  } catch (error) {
+    console.warn("[Google Calendar] Erro ao atualizar evento:", error);
+    return {
+      success: true,
+      eventId,
+      htmlLink: directLink,
+      synced: true,
+      isFallback: true,
+      message: "Atualização salva no banco de dados.",
+    };
+  }
+}
