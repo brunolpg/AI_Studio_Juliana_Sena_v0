@@ -19,11 +19,13 @@ import {
   Lock,
   ShieldCheck,
   LogIn,
+  Calendar,
 } from "lucide-react";
 import { getClientsAction, restoreClientAction } from "@/actions/client-actions";
 import { ClientFormModal } from "./client-form-modal";
 import { ClientDetailsModal } from "./client-details-modal";
 import { DeleteConfirmModal } from "./delete-confirm-modal";
+import { AppointmentFormModal } from "@/components/appointments/appointment-form-modal";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/auth/auth-context";
 import type { Client, ClientFilter, PaginatedResult } from "@/types/client";
@@ -58,6 +60,9 @@ export function ClientTableView() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [isPermanentDelete, setIsPermanentDelete] = useState(false);
+
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [patientToSchedule, setPatientToSchedule] = useState<Client | null>(null);
 
   // Debounce da busca
   useEffect(() => {
@@ -461,13 +466,24 @@ export function ClientTableView() {
                             id={`view-details-${client.id}`}
                             onClick={() => handleOpenDetails(client)}
                             className="p-1.5 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                            title="Visualizar detalhes do prontuário"
+                            title="Visualizar Prontuário, Histórico Clínico & Evoluções"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
 
                           {!client.deleted_at ? (
                             <>
+                              <button
+                                id={`schedule-client-${client.id}`}
+                                onClick={() => {
+                                  setPatientToSchedule(client);
+                                  setIsScheduleModalOpen(true);
+                                }}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/40 transition-colors"
+                                title="Agendar Consulta no Google Agenda"
+                              >
+                                <Calendar className="w-4 h-4 text-teal-600" />
+                              </button>
                               <button
                                 id={`edit-client-${client.id}`}
                                 onClick={() => handleOpenEdit(client)}
@@ -592,6 +608,18 @@ export function ClientTableView() {
         client={clientToDelete}
         onSuccess={loadClients}
         isPermanent={isPermanentDelete}
+      />
+
+      <AppointmentFormModal
+        isOpen={isScheduleModalOpen}
+        initialPatient={patientToSchedule}
+        onClose={() => {
+          setIsScheduleModalOpen(false);
+          setPatientToSchedule(null);
+        }}
+        onSuccess={() => {
+          loadClients();
+        }}
       />
     </div>
   );

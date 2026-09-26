@@ -1,12 +1,14 @@
 "use client";
 
 import React from "react";
-import { Users, FileCode2, ShieldCheck, Database, Layers } from "lucide-react";
+import { Users, Calendar, FileCode2, Stethoscope, ShieldCheck, Database, Layers } from "lucide-react";
 import { UserMenu } from "@/components/auth/user-menu";
 
+export type DashboardTab = "pacientes" | "prontuarios" | "agendamentos" | "deliverables";
+
 interface AppHeaderProps {
-  currentTab: "app" | "deliverables";
-  onTabChange: (tab: "app" | "deliverables") => void;
+  currentTab: DashboardTab;
+  onTabChange: (tab: DashboardTab) => void;
 }
 
 export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
@@ -28,11 +30,6 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
                   Produção
                 </span>
               </div>
-              {/*
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Next.js App Router • Supabase PostgreSQL • Zod Validation • Server Actions
-              </p>
-              */}
             </div>
           </div>
 
@@ -40,29 +37,57 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
           <div className="flex items-center gap-3 self-stretch md:self-auto justify-between md:justify-end">
             <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
               <button
-                id="nav-tab-app"
-                onClick={() => onTabChange("app")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  currentTab === "app"
+                id="nav-tab-pacientes"
+                onClick={() => onTabChange("pacientes")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  currentTab === "pacientes"
                     ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
                 <Users className="w-3.5 h-3.5" />
-                <span>Painel de Gestão</span>
+                <span>Pacientes</span>
+              </button>
+
+              <button
+                id="nav-tab-prontuarios"
+                onClick={() => onTabChange("prontuarios")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  currentTab === "prontuarios"
+                    ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                <Stethoscope className="w-3.5 h-3.5" />
+                <span>Prontuários & Evoluções</span>
+              </button>
+
+              <button
+                id="nav-tab-agendamentos"
+                onClick={() => onTabChange("agendamentos")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer relative ${
+                  currentTab === "agendamentos"
+                    ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Agendamentos</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block animate-pulse" />
               </button>
 
               <button
                 id="nav-tab-deliverables"
                 onClick={() => onTabChange("deliverables")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                   currentTab === "deliverables"
                     ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
                 <FileCode2 className="w-3.5 h-3.5" />
-                <span>Entregáveis Técnicos & Scripts</span>
+                <span className="hidden sm:inline">Entregáveis</span>
+                <span className="sm:hidden">Docs</span>
               </button>
             </div>
 
@@ -74,3 +99,5 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
     </header>
   );
 }
+
+
