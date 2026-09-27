@@ -5,8 +5,8 @@
 
 export interface GoogleCalendarEventInput {
   patientName: string;
-  patientEmail: string;
-  patientPhone: string;
+  patientEmail?: string;
+  patientPhone?: string;
   procedimento: string;
   date: string; // YYYY-MM-DD
   startTime: string; // "14:00"

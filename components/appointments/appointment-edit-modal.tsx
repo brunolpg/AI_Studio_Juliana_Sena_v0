@@ -7,6 +7,11 @@ import { TimeSlotGrid } from "./time-slot-grid";
 import { getTimeSlotsForDateAction, updateAppointmentAction } from "@/actions/appointment-actions";
 import { useToast } from "@/components/ui/toast";
 import type { Appointment, AppointmentStatus, TimeSlot } from "@/types/appointment";
+import {
+  isAllowedAppointmentDay,
+  getAllowedStartTimesForDate,
+  getDayScheduleDescription,
+} from "@/types/appointment";
 
 interface AppointmentEditModalProps {
   isOpen: boolean;
@@ -68,8 +73,23 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!date) {
+      setErrorMsg("Selecione a data do agendamento.");
+      return;
+    }
+
+    if (!isAllowedAppointmentDay(date)) {
+      setErrorMsg("Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.");
+      return;
+    }
+
     if (!selectedSlot) {
       setErrorMsg("Selecione um horário.");
+      return;
+    }
+
+    if (!getAllowedStartTimesForDate(date).includes(selectedSlot)) {
+      setErrorMsg("Horário fora da grade de atendimento permitida para este dia.");
       return;
     }
 
@@ -184,6 +204,7 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
               selectedSlot={selectedSlot}
               onSelectSlot={(s) => setSelectedSlot(s)}
               isLoading={isLoadingSlots}
+              dateStr={date}
             />
           </div>
         </div>

@@ -22,8 +22,8 @@ export interface Appointment {
 export interface AppointmentInput {
   client_id: string;
   client_nome: string;
-  client_email: string;
-  client_telefone: string;
+  client_email?: string;
+  client_telefone?: string;
   data: string;
   horario_inicio: string;
   procedimento: string;
@@ -42,18 +42,26 @@ export interface AppointmentFilter {
 }
 
 export interface TimeSlot {
-  slot: string; // "08:00"
-  endSlot: string; // "09:00"
-  label: string; // "08:00 - 09:00"
+  slot: string; // "09:00"
+  endSlot: string; // "10:00"
+  label: string; // "09:00 - 10:00"
   isOccupied: boolean;
   occupiedPatientName?: string;
 }
 
 /**
- * Grade padrão de atendimentos clínicos (08:00 às 17:00, intervalos de 1h)
+ * Dias da semana permitidos para agendamento com a Dra. Juliana Sena:
+ * 1 = Segunda-feira (09:00 às 16:00, sessões de 1h)
+ * 4 = Quinta-feira  (09:00 às 16:00, sessões de 1h)
+ * 6 = Sábado        (13:00 às 18:00, sessões de 1h)
  */
-export const STANDARD_TIME_SLOTS: Array<{ slot: string; endSlot: string; label: string }> = [
-  { slot: "08:00", endSlot: "09:00", label: "08:00 - 09:00" },
+export const ALLOWED_APPOINTMENT_DAYS = [1, 4, 6] as const;
+export type AllowedDayOfWeek = typeof ALLOWED_APPOINTMENT_DAYS[number];
+
+/**
+ * Grade de Segundas e Quintas-feiras: 09:00 às 16:00 (intervalos de 1h, último às 15:00)
+ */
+export const MONDAY_THURSDAY_SLOTS: Array<{ slot: string; endSlot: string; label: string }> = [
   { slot: "09:00", endSlot: "10:00", label: "09:00 - 10:00" },
   { slot: "10:00", endSlot: "11:00", label: "10:00 - 11:00" },
   { slot: "11:00", endSlot: "12:00", label: "11:00 - 12:00" },
@@ -61,8 +69,135 @@ export const STANDARD_TIME_SLOTS: Array<{ slot: string; endSlot: string; label: 
   { slot: "13:00", endSlot: "14:00", label: "13:00 - 14:00" },
   { slot: "14:00", endSlot: "15:00", label: "14:00 - 15:00" },
   { slot: "15:00", endSlot: "16:00", label: "15:00 - 16:00" },
-  { slot: "16:00", endSlot: "17:00", label: "16:00 - 17:00" },
 ];
+
+/**
+ * Grade de Sábados: 13:00 às 18:00 (intervalos de 1h, último às 17:00)
+ */
+export const SATURDAY_SLOTS: Array<{ slot: string; endSlot: string; label: string }> = [
+  { slot: "13:00", endSlot: "14:00", label: "13:00 - 14:00" },
+  { slot: "14:00", endSlot: "15:00", label: "14:00 - 15:00" },
+  { slot: "15:00", endSlot: "16:00", label: "15:00 - 16:00" },
+  { slot: "16:00", endSlot: "17:00", label: "16:00 - 17:00" },
+  { slot: "17:00", endSlot: "18:00", label: "17:00 - 18:00" },
+];
+
+/**
+ * Fallback para compatibilidade geral
+ */
+export const STANDARD_TIME_SLOTS = MONDAY_THURSDAY_SLOTS;
+
+/**
+ * Mapeia o dia da semana a partir de uma data YYYY-MM-DD com proteção estrita contra desvios de fuso horário UTC.
+ * 0 = Domingo, 1 = Segunda, 2 = Terça, 3 = Quarta, 4 = Quinta, 5 = Sexta, 6 = Sábado.
+ */
+export function getDayOfWeekFromDateString(dateStr: string): number {
+  if (!dateStr) return -1;
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return -1;
+  const [year, month, day] = parts;
+  // Meio-dia (12:00) previne qualquer deslocamento causado por horário de verão ou timezones UTC
+  const d = new Date(year, month - 1, day, 12, 0, 0);
+  return d.getDay();
+}
+
+/**
+ * Verifica se a data informada cai em um dia de atendimento permitido (Segunda, Quinta ou Sábado)
+ */
+export function isAllowedAppointmentDay(dateStr: string): boolean {
+  const dayOfWeek = getDayOfWeekFromDateString(dateStr);
+  return ALLOWED_APPOINTMENT_DAYS.includes(dayOfWeek as AllowedDayOfWeek);
+}
+
+/**
+ * Retorna a grade de slots configurada para o dia da semana
+ */
+export function getTimeSlotsForDayOfWeek(
+  dayOfWeek: number
+): Array<{ slot: string; endSlot: string; label: string }> {
+  if (dayOfWeek === 1 || dayOfWeek === 4) {
+    return MONDAY_THURSDAY_SLOTS;
+  }
+  if (dayOfWeek === 6) {
+    return SATURDAY_SLOTS;
+  }
+  return [];
+}
+
+/**
+ * Retorna os slots padrão permitidos para uma data específica YYYY-MM-DD
+ */
+export function getAllowedSlotsForDate(
+  dateStr: string
+): Array<{ slot: string; endSlot: string; label: string }> {
+  const dayOfWeek = getDayOfWeekFromDateString(dateStr);
+  return getTimeSlotsForDayOfWeek(dayOfWeek);
+}
+
+/**
+ * Retorna a lista de horários de início válidos para a data (ex: ["09:00", "10:00", ...])
+ */
+export function getAllowedStartTimesForDate(dateStr: string): string[] {
+  return getAllowedSlotsForDate(dateStr).map((s) => s.slot);
+}
+
+/**
+ * Retorna a próxima data válida (Segunda, Quinta ou Sábado) a partir de uma data de referência
+ */
+export function getNextAllowedAppointmentDate(startDateStr?: string): string {
+  const now = startDateStr ? new Date(startDateStr + "T12:00:00") : new Date();
+  let cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+
+  for (let i = 0; i < 14; i++) {
+    const dayOfWeek = cursor.getDay();
+    if (ALLOWED_APPOINTMENT_DAYS.includes(dayOfWeek as AllowedDayOfWeek)) {
+      const year = cursor.getFullYear();
+      const month = String(cursor.getMonth() + 1).padStart(2, "0");
+      const day = String(cursor.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return startDateStr || "";
+}
+
+/**
+ * Fornece metadados informativos para a interface sobre o expediente do dia
+ */
+export function getDayScheduleDescription(dateStr: string): {
+  isOpen: boolean;
+  dayName: string;
+  hoursDescription: string;
+} {
+  const dayOfWeek = getDayOfWeekFromDateString(dateStr);
+  switch (dayOfWeek) {
+    case 1:
+      return {
+        isOpen: true,
+        dayName: "Segunda-feira",
+        hoursDescription: "09:00 às 16:00 (sessões de 1 em 1 hora)",
+      };
+    case 4:
+      return {
+        isOpen: true,
+        dayName: "Quinta-feira",
+        hoursDescription: "09:00 às 16:00 (sessões de 1 em 1 hora)",
+      };
+    case 6:
+      return {
+        isOpen: true,
+        dayName: "Sábado",
+        hoursDescription: "13:00 às 18:00 (sessões de 1 em 1 hora)",
+      };
+    default:
+      return {
+        isOpen: false,
+        dayName: ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][dayOfWeek] || "Dia",
+        hoursDescription: "Sem expediente. Atendimentos apenas segundas, quintas e sábados.",
+      };
+  }
+}
 
 export interface GoogleCalendarConfig {
   hasCredentials: boolean;

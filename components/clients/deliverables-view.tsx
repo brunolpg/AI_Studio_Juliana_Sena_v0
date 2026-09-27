@@ -725,6 +725,51 @@ FOR DELETE
 TO authenticated
 USING (true);`,
     },
+    {
+      id: "zod-appointments",
+      title: "10. Schema Zod de Agendamentos & Regras Rígidas de Horários",
+      shortTitle: "10. Zod Agendamentos",
+      badge: "Zod Refine / Grade Rígida",
+      icon: <FileCode2 className="w-4 h-4 text-emerald-500" />,
+      filePath: "lib/validations/appointment-schema.ts",
+      description:
+        "Validação estrita de agendamentos com Zod .refine() bloqueando dias sem expediente (apenas Segundas e Quintas 09h-16h e Sábados 13h-18h) e horários fora das grades de 1h.",
+      code: `import { z } from "zod";
+import {
+  isAllowedAppointmentDay,
+  getAllowedStartTimesForDate,
+} from "@/types/appointment";
+
+export const appointmentSchema = z
+  .object({
+    client_id: z.string().min(1, "Selecione um paciente para o agendamento."),
+    client_nome: z.string().min(1, "Nome do paciente é obrigatório."),
+    client_email: z.string().email("E-mail inválido").or(z.literal("")).optional(),
+    client_telefone: z.string().optional(),
+    data: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/, "Data deve estar no formato AAAA-MM-DD."),
+    horario_inicio: z.string().regex(/^\\d{2}:\\d{2}$/, "Horário deve estar no formato HH:MM."),
+    procedimento: z.string().trim().min(2, "Informe o procedimento ou especialidade."),
+    observacoes: z.string().trim().max(500).optional(),
+    sync_google: z.boolean().default(false),
+  })
+  .refine(
+    (val) => isAllowedAppointmentDay(val.data),
+    {
+      message: "Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.",
+      path: ["data"],
+    }
+  )
+  .refine(
+    (val) => {
+      const allowedTimes = getAllowedStartTimesForDate(val.data);
+      return allowedTimes.includes(val.horario_inicio);
+    },
+    {
+      message: "Horário fora da grade de atendimento permitida para este dia.",
+      path: ["horario_inicio"],
+    }
+  );`,
+    },
   ];
 
   const currentDeliverable = deliverables.find((d) => d.id === activeTab) || deliverables[0];

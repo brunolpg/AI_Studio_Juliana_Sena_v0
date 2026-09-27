@@ -375,10 +375,11 @@ export function ClientTableView() {
                 </tr>
               ) : (
                 paginatedData.data.map((client) => {
-                  const birthFormatted = new Date(client.data_nascimento + "T00:00:00").toLocaleDateString(
-                    "pt-BR",
-                    { day: "2-digit", month: "2-digit", year: "numeric" }
-                  );
+                  const birthParts = client.data_nascimento ? client.data_nascimento.split("-") : [];
+                  const birthFormatted =
+                    birthParts.length === 3
+                      ? `${birthParts[2]}/${birthParts[1]}/${birthParts[0]}`
+                      : client.data_nascimento;
 
                   return (
                     <tr

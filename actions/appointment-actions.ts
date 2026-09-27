@@ -3,12 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
-  STANDARD_TIME_SLOTS,
+  isAllowedAppointmentDay,
+  getAllowedSlotsForDate,
+  getAllowedStartTimesForDate,
+  getDayScheduleDescription,
   type Appointment,
   type AppointmentInput,
   type AppointmentFilter,
   type TimeSlot,
 } from "@/types/appointment";
+import { appointmentSchema, appointmentUpdateSchema } from "@/lib/validations/appointment-schema";
 import {
   createGoogleCalendarEvent,
   deleteGoogleCalendarEvent,
@@ -224,49 +228,111 @@ export async function getAppointmentsAction(
   }
 }
 
+export interface PatientSummary {
+  id: string;
+  nome: string;
+  cpf: string;
+  email: string | null;
+  telefone: string | null;
+}
+
 /**
- * 2. CONSULTA HORÁRIOS DISPONÍVEIS NA GRADE (08:00 às 17:00) DIRETAMENTE NO SUPABASE
+ * Busca pacientes ativos diretamente na tabela 'pacientes' do Supabase para agendamento.
+ * Sem dados mockados: se a tabela estiver vazia, retorna lista vazia.
+ */
+export async function getActivePatientsForSchedulingAction(): Promise<ActionResponse<PatientSummary[]>> {
+  try {
+    const supabase = createClient();
+    if (!supabase) {
+      return {
+        success: true,
+        data: [],
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("pacientes")
+      .select("id, nome, cpf, email, telefone")
+      .is("deleted_at", null)
+      .order("nome", { ascending: true });
+
+    if (error) {
+      console.error("Erro ao buscar pacientes no Supabase:", error.message);
+      return {
+        success: false,
+        message: `Falha ao carregar pacientes: ${error.message}`,
+        data: [],
+      };
+    }
+
+    return {
+      success: true,
+      data: (data as PatientSummary[]) || [],
+    };
+  } catch (err) {
+    console.error("Erro interno ao buscar pacientes no Supabase:", err);
+    return {
+      success: false,
+      message: "Falha ao consultar pacientes no banco de dados.",
+      data: [],
+    };
+  }
+}
+
+/**
+ * 2. CONSULTA HORÁRIOS DISPONÍVEIS NA GRADE CONFORME O DIA DA SEMANA
+ * - Segundas e Quintas: 09:00 às 16:00 (último atendimento 15:00-16:00)
+ * - Sábados: 13:00 às 18:00 (último atendimento 17:00-18:00)
+ * - Demais dias: Sem expediente (retorna lista vazia de horários)
  */
 export async function getTimeSlotsForDateAction(
   dateStr: string
 ): Promise<ActionResponse<TimeSlot[]>> {
   try {
-    const supabase = createClient();
-    if (!supabase) {
+    if (!dateStr || !isAllowedAppointmentDay(dateStr)) {
+      const schedule = getDayScheduleDescription(dateStr);
       return {
-        success: false,
-        message: "Banco de dados Supabase não configurado.",
+        success: true,
+        data: [],
+        message: `Sem expediente na ${schedule.dayName}. Atendimentos ocorrem exclusivamente às segundas, quintas (09h às 16h) e sábados (13h às 18h).`,
       };
     }
 
-    // Consulta no Supabase todos os agendamentos ativos na data especificada
-    const { data: dbAppointments, error } = await supabase
-      .from("appointments")
-      .select(
-        `
-          id,
-          horario_inicio,
-          horario_fim,
-          status,
-          client_id,
-          pacientes (
-            nome
-          )
-        `
-      )
-      .eq("data", dateStr)
-      .neq("status", "Cancelado");
+    const standardDaySlots = getAllowedSlotsForDate(dateStr);
 
-    if (error) {
-      console.warn("Aviso ao buscar slots no Supabase:", error.message);
+    const supabase = createClient();
+    let activeDbList: RawAppointmentRow[] = [];
+
+    if (supabase) {
+      // Consulta no Supabase todos os agendamentos ativos na data especificada
+      const { data: dbAppointments, error } = await supabase
+        .from("appointments")
+        .select(
+          `
+            id,
+            horario_inicio,
+            horario_fim,
+            status,
+            client_id,
+            pacientes (
+              nome
+            )
+          `
+        )
+        .eq("data", dateStr)
+        .neq("status", "Cancelado");
+
+      if (error) {
+        console.warn("Aviso ao buscar slots no Supabase:", error.message);
+      } else if (dbAppointments) {
+        activeDbList = dbAppointments as unknown as RawAppointmentRow[];
+      }
     }
-
-    const activeDbList = (dbAppointments as unknown as RawAppointmentRow[]) || [];
 
     // Consulta paralela na Google Calendar API se configurada
     const { events: googleEvents } = await listGoogleCalendarEventsForDate(dateStr);
 
-    const timeSlots: TimeSlot[] = STANDARD_TIME_SLOTS.map(({ slot, endSlot, label }) => {
+    const timeSlots: TimeSlot[] = standardDaySlots.map(({ slot, endSlot, label }) => {
       // 1. Verifica colisão com o banco de dados Supabase
       const dbMatch = activeDbList.find((apt) => apt.horario_inicio === slot);
       if (dbMatch) {
@@ -316,20 +382,55 @@ export async function getTimeSlotsForDateAction(
     };
   } catch (error) {
     console.error("Erro ao calcular time slots:", error);
+    // Em caso de erro transitório, devolve a grade padrão desocupada para não bloquear a UI
+    const fallbackSlots = getAllowedSlotsForDate(dateStr).map((s) => ({
+      ...s,
+      isOccupied: false,
+    }));
     return {
-      success: false,
-      message: "Falha ao verificar horários disponíveis.",
+      success: true,
+      data: fallbackSlots,
+      message: "Horários carregados em modo de contingência.",
     };
   }
 }
 
 /**
- * 3. CRIAÇÃO DE AGENDAMENTO COM PERSISTÊNCIA NO SUPABASE E BLOQUEIO DE CONFLITO
+ * 3. CRIAÇÃO DE AGENDAMENTO COM PERSISTÊNCIA NO SUPABASE E BLOQUEIO RÍGIDO DE CONFLITO
  */
 export async function createAppointmentAction(
   input: AppointmentInput
 ): Promise<ActionResponse<Appointment>> {
   try {
+    // 0. Validação estrita via Zod Schema
+    const validationResult = appointmentSchema.safeParse(input);
+    if (!validationResult.success) {
+      const firstErrorMessage =
+        validationResult.error.issues[0]?.message ||
+        "Por favor, verifique os dados informados.";
+      return {
+        success: false,
+        message: firstErrorMessage,
+      };
+    }
+
+    // 1. Validação rígida do dia da semana (Segunda, Quinta ou Sábado)
+    if (!isAllowedAppointmentDay(input.data)) {
+      return {
+        success: false,
+        message: "Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.",
+      };
+    }
+
+    // 2. Validação rígida do horário conforme o dia
+    const allowedTimes = getAllowedStartTimesForDate(input.data);
+    if (!allowedTimes.includes(input.horario_inicio)) {
+      return {
+        success: false,
+        message: "Horário fora da grade de atendimento permitida para este dia.",
+      };
+    }
+
     const supabase = createClient();
     if (!supabase) {
       return {
@@ -338,19 +439,12 @@ export async function createAppointmentAction(
       };
     }
 
-    if (!input.client_id || !input.data || !input.horario_inicio || !input.procedimento) {
-      return {
-        success: false,
-        message: "Todos os campos obrigatórios devem ser preenchidos.",
-      };
-    }
-
     // Calcula horário fim (1 hora após o início)
     const startHour = Number(input.horario_inicio.split(":")[0]);
     const endHour = String(startHour + 1).padStart(2, "0");
     const horario_fim = `${endHour}:00`;
 
-    // 1. Verificação de conflito no Supabase (horário já reservado na data com status != Cancelado)
+    // 3. Verificação de conflito no Supabase (horário já reservado na data com status != Cancelado)
     const { data: conflict } = await supabase
       .from("appointments")
       .select("id")
@@ -370,12 +464,12 @@ export async function createAppointmentAction(
     let googleHtmlLink: string | null = null;
     let syncedWithGoogle = false;
 
-    // 2. Integração com a Google Calendar API
+    // 4. Integração com a Google Calendar API
     if (input.sync_google) {
       const gcalRes = await createGoogleCalendarEvent({
         patientName: input.client_nome,
-        patientEmail: input.client_email,
-        patientPhone: input.client_telefone,
+        patientEmail: input.client_email || "",
+        patientPhone: input.client_telefone || "",
         procedimento: input.procedimento,
         date: input.data,
         startTime: input.horario_inicio,
@@ -389,8 +483,8 @@ export async function createAppointmentAction(
     } else {
       googleHtmlLink = generateGoogleCalendarTemplateUrl({
         patientName: input.client_nome,
-        patientEmail: input.client_email,
-        patientPhone: input.client_telefone,
+        patientEmail: input.client_email || "",
+        patientPhone: input.client_telefone || "",
         procedimento: input.procedimento,
         date: input.data,
         startTime: input.horario_inicio,
@@ -399,7 +493,7 @@ export async function createAppointmentAction(
       });
     }
 
-    // 3. Inserção definitiva na tabela appointments do Supabase
+    // 5. Inserção definitiva na tabela appointments do Supabase
     const { data: inserted, error: insertError } = await supabase
       .from("appointments")
       .insert({
@@ -585,6 +679,22 @@ export async function updateAppointmentAction(
 
     const targetDate = updates.data || current.data;
     const targetStart = updates.horario_inicio || current.horario_inicio;
+
+    // Validação rígida de dia permitido na edição/reagendamento
+    if (updates.data && !isAllowedAppointmentDay(targetDate)) {
+      return {
+        success: false,
+        message: "Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.",
+      };
+    }
+
+    // Validação rígida de horário permitido na edição/reagendamento
+    if ((updates.data || updates.horario_inicio) && !getAllowedStartTimesForDate(targetDate).includes(targetStart)) {
+      return {
+        success: false,
+        message: "Horário fora da grade de atendimento permitida para este dia.",
+      };
+    }
 
     // 2. Se mudou data ou horário, verifica colisão no Supabase
     if (targetDate !== current.data || targetStart !== current.horario_inicio) {

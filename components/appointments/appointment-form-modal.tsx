@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   X,
   Calendar as CalendarIcon,
@@ -9,21 +9,36 @@ import {
   Check,
   CalendarCheck2,
   AlertCircle,
+  UserX,
+  UserCheck,
+  Users,
 } from "lucide-react";
 import { AppointmentCalendarPicker } from "./appointment-calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
-import { getTimeSlotsForDateAction, createAppointmentAction } from "@/actions/appointment-actions";
-import { INITIAL_CLIENTS } from "@/lib/mock-data";
+import {
+  getTimeSlotsForDateAction,
+  createAppointmentAction,
+  getActivePatientsForSchedulingAction,
+  type PatientSummary,
+} from "@/actions/appointment-actions";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import type { Client } from "@/types/client";
 import type { TimeSlot, AppointmentInput } from "@/types/appointment";
+import {
+  getNextAllowedAppointmentDate,
+  isAllowedAppointmentDay,
+  getAllowedStartTimesForDate,
+  getDayScheduleDescription,
+} from "@/types/appointment";
+
+export type SelectablePatient = PatientSummary | Client;
 
 interface AppointmentFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  availablePatients?: Client[];
-  initialPatient?: Client | null;
+  initialPatient?: SelectablePatient | null;
 }
 
 const PROCEDIMENTO_PRESETS = [
@@ -38,60 +53,131 @@ const PROCEDIMENTO_PRESETS = [
 interface FormContentProps {
   onClose: () => void;
   onSuccess: () => void;
-  availablePatients: Client[];
-  initialPatient: Client | null;
+  initialPatient: SelectablePatient | null;
 }
 
 function AppointmentFormModalContent({
   onClose,
   onSuccess,
-  availablePatients,
   initialPatient,
 }: FormContentProps) {
   const { toast } = useToast();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Data padrão: hoje formatado
-  const todayStr = useMemo(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+  // Data padrão: próximo dia de atendimento permitido (Segunda, Quinta ou Sábado)
+  const defaultDate = useMemo(() => {
+    return getNextAllowedAppointmentDate();
   }, []);
 
-  // Estados do formulário
-  const [selectedPatient, setSelectedPatient] = useState<Client | null>(initialPatient);
+  // Estados dos pacientes reais via Supabase (SEM MOCK DATA)
+  const [patients, setPatients] = useState<PatientSummary[]>([]);
+  const [isLoadingPatients, setIsLoadingPatients] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<SelectablePatient | null>(initialPatient);
   const [patientSearch, setPatientSearch] = useState("");
   const [isPatientDropdownOpen, setIsPatientDropdownOpen] = useState(false);
 
-  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
+  // Estados de data e grade de horários
+  const [selectedDate, setSelectedDate] = useState<string>(defaultDate);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
+  // Estados dos demais campos
   const [procedimento, setProcedimento] = useState(PROCEDIMENTO_PRESETS[0]);
   const [observacoes, setObservacoes] = useState("");
   const [syncGoogle, setSyncGoogle] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Carrega slots sempre que a data selecionada mudar
+  const scheduleInfo = useMemo(() => {
+    return selectedDate ? getDayScheduleDescription(selectedDate) : null;
+  }, [selectedDate]);
+
+  // Fecha o dropdown se o usuário clicar fora
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsPatientDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // 1. CARREGAMENTO REAL DE PACIENTES DO SUPABASE (Sem dados mockados)
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchPatientsFromSupabase() {
+      setIsLoadingPatients(true);
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          // Consulta direta no Supabase conforme especificação:
+          // supabase.from('pacientes').select('id, nome, cpf, email, telefone').is('deleted_at', null).order('nome', { ascending: true })
+          const { data, error } = await supabase
+            .from("pacientes")
+            .select("id, nome, cpf, email, telefone")
+            .is("deleted_at", null)
+            .order("nome", { ascending: true });
+
+          if (!error && data && isMounted) {
+            setPatients(data as PatientSummary[]);
+            return;
+          }
+        }
+
+        // Fallback seguro via Server Action (com service role caso anon key do browser precise)
+        const res = await getActivePatientsForSchedulingAction();
+        if (isMounted) {
+          if (res.success && res.data) {
+            setPatients(res.data);
+          } else {
+            setPatients([]);
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao consultar pacientes no Supabase:", err);
+        if (isMounted) setPatients([]);
+      } finally {
+        if (isMounted) setIsLoadingPatients(false);
+      }
+    }
+
+    fetchPatientsFromSupabase();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // 2. CARREGAMENTO DE SLOTS DA GRADE
   useEffect(() => {
     let isMounted = true;
     async function loadSlots() {
+      if (!selectedDate) return;
       setIsLoadingSlots(true);
       setErrorMsg(null);
       try {
         const res = await getTimeSlotsForDateAction(selectedDate);
-        if (isMounted && res.success && res.data) {
-          const loadedSlots = res.data;
-          setSlots(loadedSlots);
-          // Se o slot atualmente selecionado estiver ocupado na nova data, limpa a seleção
-          setSelectedSlot((prev) => {
-            if (!prev) return null;
-            const currentSlotObj = loadedSlots.find((s) => s.slot === prev);
-            return currentSlotObj?.isOccupied ? null : prev;
-          });
+        if (isMounted) {
+          if (res.success && res.data) {
+            const loadedSlots = res.data;
+            setSlots(loadedSlots);
+            // Se o slot atualmente selecionado estiver ocupado na nova data, limpa a seleção
+            setSelectedSlot((prev) => {
+              if (!prev) return null;
+              const currentSlotObj = loadedSlots.find((s) => s.slot === prev);
+              return currentSlotObj?.isOccupied ? null : prev;
+            });
+          } else {
+            setSlots([]);
+            if (res.message) {
+              setErrorMsg(res.message);
+            }
+          }
         }
       } catch (err) {
         console.error(err);
@@ -107,27 +193,32 @@ function AppointmentFormModalContent({
     };
   }, [selectedDate]);
 
-  // Filtra pacientes no autocomplete
+  // 3. BUSCA DINÂMICA E RESPONSIVA (Case-insensitive em nome, CPF ou e-mail nos dados reais do Supabase)
   const filteredPatients = useMemo(() => {
-    if (!patientSearch.trim()) return availablePatients.slice(0, 6);
+    if (!patientSearch.trim()) return patients.slice(0, 8);
     const q = patientSearch.toLowerCase().trim();
-    return availablePatients
-      .filter(
-        (p) =>
-          p.nome.toLowerCase().includes(q) ||
-          p.cpf.includes(q) ||
-          p.email.toLowerCase().includes(q) ||
-          p.telefone.includes(q)
-      )
-      .slice(0, 8);
-  }, [patientSearch, availablePatients]);
+    const digitsOnly = q.replace(/\D/g, "");
 
+    return patients.filter((p) => {
+      const nomeMatch = p.nome ? p.nome.toLowerCase().includes(q) : false;
+      const emailMatch = p.email ? p.email.toLowerCase().includes(q) : false;
+      const cpfRaw = p.cpf ? p.cpf.toLowerCase() : "";
+      const cpfDigits = p.cpf ? p.cpf.replace(/\D/g, "") : "";
+      const cpfMatch = cpfRaw.includes(q) || (digitsOnly.length > 0 && cpfDigits.includes(digitsOnly));
+      const telDigits = p.telefone ? p.telefone.replace(/\D/g, "") : "";
+      const telMatch = (p.telefone && p.telefone.includes(q)) || (digitsOnly.length > 0 && telDigits.includes(digitsOnly));
+
+      return nomeMatch || emailMatch || cpfMatch || telMatch;
+    });
+  }, [patientSearch, patients]);
+
+  // 4. SUBMISSÃO DO AGENDAMENTO (Garante integridade com appointments_client_id_fkey)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!selectedPatient) {
-      setErrorMsg("Selecione um paciente para o agendamento.");
+    if (!selectedPatient || !selectedPatient.id) {
+      setErrorMsg("Selecione um paciente cadastrado para o agendamento.");
       return;
     }
 
@@ -136,8 +227,21 @@ function AppointmentFormModalContent({
       return;
     }
 
+    // Validação de dias permitidos (Segunda, Quinta ou Sábado)
+    if (!isAllowedAppointmentDay(selectedDate)) {
+      setErrorMsg("A Dra. Juliana atende apenas às segundas, quintas (09h-16h) e sábados (13h-18h).");
+      return;
+    }
+
     if (!selectedSlot) {
       setErrorMsg("Selecione um dos horários disponíveis na grade.");
+      return;
+    }
+
+    // Validação de horário permitido para o dia
+    const allowedTimes = getAllowedStartTimesForDate(selectedDate);
+    if (!allowedTimes.includes(selectedSlot)) {
+      setErrorMsg("Horário fora da grade de atendimento permitida para este dia.");
       return;
     }
 
@@ -148,11 +252,12 @@ function AppointmentFormModalContent({
 
     setIsSubmitting(true);
     try {
+      // client_id recebe obrigatoriamente o UUID real do paciente da tabela pacientes
       const payload: AppointmentInput = {
         client_id: selectedPatient.id,
         client_nome: selectedPatient.nome,
-        client_email: selectedPatient.email,
-        client_telefone: selectedPatient.telefone,
+        client_email: selectedPatient.email || undefined,
+        client_telefone: selectedPatient.telefone || undefined,
         data: selectedDate,
         horario_inicio: selectedSlot,
         procedimento: procedimento.trim(),
@@ -165,7 +270,7 @@ function AppointmentFormModalContent({
       if (res.success && res.data) {
         toast({
           type: "success",
-          title: "Consulta Agendada!",
+          title: "Consulta Agendada com Sucesso!",
           description: `Horário ${res.data.horario_inicio} reservado para ${res.data.client_nome} no dia ${selectedDate.split("-").reverse().join("/")}.`,
         });
         onSuccess();
@@ -175,7 +280,7 @@ function AppointmentFormModalContent({
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg("Ocorreu um erro interno de conexão.");
+      setErrorMsg("Ocorreu um erro interno de conexão ao salvar o agendamento.");
     } finally {
       setIsSubmitting(false);
     }
@@ -194,7 +299,7 @@ function AppointmentFormModalContent({
               Novo Agendamento de Consulta
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Dra. Juliana Sena • Gestão de Horários & Google Agenda
+              Dra. Juliana Sena • Gestão de Horários & Integração Supabase
             </p>
           </div>
         </div>
@@ -216,18 +321,22 @@ function AppointmentFormModalContent({
       )}
 
       <form onSubmit={handleSubmit} className="p-6 space-y-5">
-        {/* 1. SELEÇÃO DE PACIENTE (Autocomplete) */}
-        <div className="space-y-1.5 relative">
+        {/* 1. SELEÇÃO DE PACIENTE (Consulta Real Supabase + Autocomplete) */}
+        <div className="space-y-1.5 relative" ref={dropdownRef}>
           <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-between">
-            <span>Paciente Cadastrado *</span>
+            <span className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-teal-600" />
+              <span>Paciente Cadastrado *</span>
+            </span>
             {selectedPatient && (
               <button
                 type="button"
                 onClick={() => {
                   setSelectedPatient(null);
                   setPatientSearch("");
+                  setIsPatientDropdownOpen(true);
                 }}
-                className="text-[11px] text-teal-600 dark:text-teal-400 hover:underline cursor-pointer"
+                className="text-[11px] text-teal-600 dark:text-teal-400 hover:underline cursor-pointer font-medium"
               >
                 Alterar paciente
               </button>
@@ -236,23 +345,33 @@ function AppointmentFormModalContent({
 
           {selectedPatient ? (
             <div className="flex items-center justify-between p-3 rounded-xl border border-teal-500/40 bg-teal-50/50 dark:bg-teal-950/30 text-slate-900 dark:text-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-teal-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs">
-                  {selectedPatient.nome.charAt(0)}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-lg bg-teal-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs shrink-0">
+                  {selectedPatient.nome ? selectedPatient.nome.charAt(0).toUpperCase() : "P"}
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                <div className="truncate">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                     {selectedPatient.nome}
                   </h4>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    <span>CPF: {selectedPatient.cpf}</span>
-                    <span>•</span>
-                    <span>Tel: {selectedPatient.telefone}</span>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                    <span>CPF: {selectedPatient.cpf || "Não informado"}</span>
+                    {selectedPatient.email && (
+                      <>
+                        <span>•</span>
+                        <span className="truncate">{selectedPatient.email}</span>
+                      </>
+                    )}
+                    {selectedPatient.telefone && (
+                      <>
+                        <span>•</span>
+                        <span>{selectedPatient.telefone}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1 text-[11px] font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-teal-200 dark:border-teal-800">
-                <Check className="w-3.5 h-3.5 text-teal-600" />
+              <div className="flex items-center gap-1 text-[11px] font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-teal-200 dark:border-teal-800 shrink-0 ml-2">
+                <UserCheck className="w-3.5 h-3.5 text-teal-600" />
                 <span>Selecionado</span>
               </div>
             </div>
@@ -274,10 +393,27 @@ function AppointmentFormModalContent({
               </div>
 
               {isPatientDropdownOpen && (
-                <div className="absolute z-20 top-full left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredPatients.length === 0 ? (
-                    <div className="p-3 text-center text-xs text-slate-500">
-                      Nenhum paciente cadastrado com esse termo.
+                <div className="absolute z-30 top-full left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
+                  {isLoadingPatients ? (
+                    <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2">
+                      <div className="w-3.5 h-3.5 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
+                      <span>Carregando pacientes cadastrados no Supabase...</span>
+                    </div>
+                  ) : filteredPatients.length === 0 ? (
+                    <div className="p-4 text-center space-y-1.5">
+                      <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center">
+                        <UserX className="w-4 h-4" />
+                      </div>
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {patients.length === 0
+                          ? "Nenhum paciente cadastrado encontrado."
+                          : "Nenhum paciente encontrado para esta busca."}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                        {patients.length === 0
+                          ? "Nenhum paciente cadastrado encontrado. Cadastre o paciente na aba Pacientes antes de agendar."
+                          : "Verifique se digitou o nome, CPF ou e-mail corretamente."}
+                      </p>
                     </div>
                   ) : (
                     filteredPatients.map((p) => (
@@ -287,23 +423,24 @@ function AppointmentFormModalContent({
                         onClick={() => {
                           setSelectedPatient(p);
                           setIsPatientDropdownOpen(false);
+                          setPatientSearch("");
                         }}
-                        className="w-full text-left p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/80 flex items-center justify-between transition-colors cursor-pointer"
+                        className="w-full text-left p-2.5 hover:bg-teal-50/70 dark:hover:bg-teal-950/40 flex items-center justify-between transition-colors cursor-pointer"
                       >
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-lg bg-teal-500/10 text-teal-600 font-bold text-xs flex items-center justify-center">
-                            {p.nome.charAt(0)}
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold text-xs flex items-center justify-center shrink-0">
+                            {p.nome ? p.nome.charAt(0).toUpperCase() : "P"}
                           </div>
-                          <div>
-                            <div className="text-xs font-semibold text-slate-900 dark:text-white">
+                          <div className="truncate">
+                            <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                               {p.nome}
                             </div>
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                              CPF: {p.cpf} • {p.cidade}/{p.estado}
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                              CPF: {p.cpf || "Sem CPF"} {p.email ? `• ${p.email}` : ""} {p.telefone ? `• ${p.telefone}` : ""}
                             </div>
                           </div>
                         </div>
-                        <span className="text-[10px] text-teal-600 dark:text-teal-400 font-medium">
+                        <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 shrink-0 ml-2">
                           Selecionar
                         </span>
                       </button>
@@ -319,28 +456,47 @@ function AppointmentFormModalContent({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
           {/* Seletor Visual de Calendário */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-              <CalendarIcon className="w-3.5 h-3.5 text-teal-600" />
-              <span>Data do Atendimento *</span>
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <CalendarIcon className="w-3.5 h-3.5 text-teal-600" />
+                <span>Data do Atendimento *</span>
+              </span>
+              {scheduleInfo?.isOpen && (
+                <span className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded-full border border-teal-200 dark:border-teal-800">
+                  {scheduleInfo.dayName}
+                </span>
+              )}
             </label>
+
             <AppointmentCalendarPicker
               selectedDate={selectedDate}
               onSelectDate={(d) => setSelectedDate(d)}
-              minDate={todayStr}
+              minDate={defaultDate}
             />
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 px-1">
-              Data selecionada:{" "}
-              <strong className="text-teal-600 dark:text-teal-400">
-                {selectedDate.split("-").reverse().join("/")}
-              </strong>
-            </p>
+
+            <div className="flex items-center justify-between text-[11px] px-1">
+              <p className="text-slate-500 dark:text-slate-400">
+                Data selecionada:{" "}
+                <strong className="text-teal-600 dark:text-teal-400 font-bold">
+                  {selectedDate ? selectedDate.split("-").reverse().join("/") : "Nenhuma"}
+                </strong>
+                {scheduleInfo?.dayName ? ` (${scheduleInfo.dayName})` : ""}
+              </p>
+            </div>
           </div>
 
-          {/* Grade de Horários Disponíveis */}
+          {/* Grade de Horários Disponíveis em Chips (Início de Sessão de 1 em 1 hora) */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-teal-600" />
-              <span>Horário Disponível *</span>
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-teal-600" />
+                <span>Horários Disponíveis (Início da Sessão) *</span>
+              </div>
+              {selectedSlot && (
+                <span className="text-[11px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/70 px-2 py-0.5 rounded-full border border-teal-300 dark:border-teal-700">
+                  {selectedSlot} selecionado
+                </span>
+              )}
             </label>
 
             <TimeSlotGrid
@@ -348,26 +504,27 @@ function AppointmentFormModalContent({
               selectedSlot={selectedSlot}
               onSelectSlot={(s) => setSelectedSlot(s)}
               isLoading={isLoadingSlots}
+              dateStr={selectedDate}
             />
           </div>
         </div>
 
-        {/* 3. PROCEDIMENTO & OBSERVAÇÕES */}
-        <div className="space-y-3 pt-1 border-t border-slate-100 dark:border-slate-800">
-          <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1.5">
+        {/* 3. PROCEDIMENTO / ESPECIALIDADE & OBSERVAÇÕES */}
+        <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
               Procedimento / Especialidade *
             </label>
             <div className="flex flex-wrap gap-1.5 mb-2">
-              {PROCEDIMENTO_PRESETS.slice(0, 4).map((preset) => (
+              {PROCEDIMENTO_PRESETS.map((preset) => (
                 <button
                   key={preset}
                   type="button"
                   onClick={() => setProcedimento(preset)}
                   className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
                     procedimento === preset
-                      ? "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-teal-500 font-semibold"
-                      : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300"
+                      ? "bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/40 font-semibold"
+                      : "bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
                   }`}
                 >
                   {preset}
@@ -376,16 +533,16 @@ function AppointmentFormModalContent({
             </div>
             <input
               type="text"
-              placeholder="Ex: Consulta Dermatológica, Retorno Clínico..."
+              required
               value={procedimento}
               onChange={(e) => setProcedimento(e.target.value)}
-              required
+              placeholder="Ex: Consulta Dermatológica Inicial"
               className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
             />
           </div>
 
-          <div>
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
               Observações Clínicas (Opcional)
             </label>
             <textarea
@@ -457,7 +614,6 @@ export function AppointmentFormModal({
   isOpen,
   onClose,
   onSuccess,
-  availablePatients = INITIAL_CLIENTS,
   initialPatient = null,
 }: AppointmentFormModalProps) {
   if (!isOpen) return null;
@@ -468,7 +624,6 @@ export function AppointmentFormModal({
         key={initialPatient?.id || "new-appointment"}
         onClose={onClose}
         onSuccess={onSuccess}
-        availablePatients={availablePatients}
         initialPatient={initialPatient}
       />
     </div>

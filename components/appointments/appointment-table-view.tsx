@@ -68,6 +68,8 @@ export function AppointmentTableView() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Debounce busca
   useEffect(() => {
@@ -127,20 +129,22 @@ export function AppointmentTableView() {
   }, [loadAppointments]);
 
   // Ação de Cancelamento
-  const handleCancelAppointment = async (appointment: Appointment) => {
-    const confirmed = window.confirm(
-      `Deseja realmente cancelar o agendamento de ${appointment.client_nome} marcado para ${appointment.data} às ${appointment.horario_inicio}?`
-    );
-    if (!confirmed) return;
+  const handleCancelAppointment = (appointment: Appointment) => {
+    setAppointmentToCancel(appointment);
+  };
 
+  const handleConfirmCancel = async () => {
+    if (!appointmentToCancel) return;
+    setIsCancelling(true);
     try {
-      const res = await cancelAppointmentAction(appointment.id);
+      const res = await cancelAppointmentAction(appointmentToCancel.id);
       if (res.success) {
         toast({
           type: "success",
           title: "Agendamento Cancelado",
-          description: `O horário de ${appointment.client_nome} foi liberado.`,
+          description: `O horário de ${appointmentToCancel.client_nome} foi liberado.`,
         });
+        setAppointmentToCancel(null);
         loadAppointments();
       } else {
         toast({
@@ -155,6 +159,8 @@ export function AppointmentTableView() {
         title: "Erro interno",
         description: "Não foi possível cancelar o agendamento.",
       });
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -650,6 +656,69 @@ export function AppointmentTableView() {
           setIsEditModalOpen(true);
         }}
       />
+
+      {/* Modal de Confirmação de Cancelamento */}
+      {appointmentToCancel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <XCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  Cancelar Agendamento
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Esta ação liberará o horário na agenda.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs space-y-1">
+              <p className="text-slate-700 dark:text-slate-300">
+                <strong>Paciente:</strong> {appointmentToCancel.client_nome}
+              </p>
+              <p className="text-slate-700 dark:text-slate-300">
+                <strong>Data e Horário:</strong> {appointmentToCancel.data} às {appointmentToCancel.horario_inicio} - {appointmentToCancel.horario_fim}
+              </p>
+              <p className="text-slate-700 dark:text-slate-300">
+                <strong>Procedimento:</strong> {appointmentToCancel.procedimento}
+              </p>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Tem certeza que deseja cancelar esta consulta? O status será alterado para cancelado.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setAppointmentToCancel(null)}
+                disabled={isCancelling}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancel}
+                disabled={isCancelling}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors cursor-pointer shadow-xs"
+              >
+                {isCancelling ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Cancelando...</span>
+                  </>
+                ) : (
+                  <span>Confirmar Cancelamento</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
