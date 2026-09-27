@@ -463,7 +463,6 @@ export async function createAppointmentAction(
     let googleEventId: string | null = null;
     let googleHtmlLink: string | null = null;
     let syncedWithGoogle = false;
-    let calendarFeedbackMessage = "";
 
     // 4. Integração com a Google Calendar API
     if (input.sync_google) {
@@ -481,7 +480,6 @@ export async function createAppointmentAction(
       googleEventId = gcalRes.eventId;
       googleHtmlLink = gcalRes.htmlLink;
       syncedWithGoogle = gcalRes.synced;
-      calendarFeedbackMessage = gcalRes.message;
     } else {
       googleHtmlLink = generateGoogleCalendarTemplateUrl({
         patientName: input.client_nome,
@@ -493,7 +491,6 @@ export async function createAppointmentAction(
         endTime: horario_fim,
         observacoes: input.observacoes,
       });
-      calendarFeedbackMessage = "Agendamento registrado com link direto para o Google Agenda.";
     }
 
     // 5. Inserção definitiva na tabela appointments do Supabase
@@ -548,15 +545,9 @@ export async function createAppointmentAction(
 
     revalidatePath("/");
 
-    const finalSuccessMessage = syncedWithGoogle
-      ? "Consulta agendada e sincronizada diretamente na Google Agenda da profissional!"
-      : input.sync_google && calendarFeedbackMessage
-      ? `Consulta cadastrada com sucesso! ${calendarFeedbackMessage}`
-      : "Consulta agendada e persistida no Supabase com sucesso!";
-
     return {
       success: true,
-      message: finalSuccessMessage,
+      message: "Consulta agendada e persistida no Supabase com sucesso!",
       data: newAppointment,
     };
   } catch (error) {
@@ -782,7 +773,7 @@ export async function updateAppointmentAction(
         ? current.pacientes[0]
         : current.pacientes;
 
-      await updateGoogleCalendarEvent(current.google_event_id, {
+      const syncResult = await updateGoogleCalendarEvent(current.google_event_id, {
         patientName: patientData?.nome || "Paciente",
         patientEmail: patientData?.email || "",
         patientPhone: patientData?.telefone || "",
@@ -792,6 +783,18 @@ export async function updateAppointmentAction(
         endTime: targetEnd,
         observacoes: updates.observacoes !== undefined ? updates.observacoes : current.observacoes,
       });
+
+      // Atualiza o status de sincronização com base no resultado da API do Google Calendar
+      if (syncResult.synced !== current.synced_with_google) {
+        console.log(`[Google Calendar Sync] Atualizando synced_with_google para ${syncResult.synced} no Supabase após alteração.`);
+        await supabase
+          .from("appointments")
+          .update({ synced_with_google: syncResult.synced })
+          .eq("id", appointmentId);
+        
+        // Atualiza a resposta de retorno para refletir o estado de sincronização correto
+        mapped.synced_with_google = syncResult.synced;
+      }
     }
 
     revalidatePath("/");
@@ -817,8 +820,6 @@ export async function getCalendarIntegrationStatusAction() {
   const creds = getGoogleCalendarCredentials();
   return {
     isConfigured: creds.isConfigured,
-    hasServiceAccount: creds.hasServiceAccount,
-    serviceAccountEmail: creds.maskedEmail,
     calendarId: creds.calendarId,
     hasApiKey: Boolean(creds.apiKey),
     hasClientId: Boolean(creds.clientId),

@@ -1,50 +1,59 @@
-import { cookies } from "next/headers";
-import { verifyAuthToken } from "./jwt";
-import type { User } from "@/types/auth";
+import { createClient } from "@/lib/supabase/server";
+import type { User, UserRole } from "@/types/auth";
 
-export const SESSION_COOKIE_NAME = "auth_session_token";
+export const SESSION_COOKIE_NAME = "sb-auth-token";
 
-/**
- * Grava o cookie HTTP-only seguro com o JWT assinado
- */
+function getRoleLabel(role: UserRole): string {
+  switch (role) {
+    case "administrador":
+      return "Administrador(a)";
+    case "profissional":
+      return "Profissional / Médico(a)";
+    case "paciente":
+    default:
+      return "Paciente";
+  }
+}
+
 export async function setSessionCookie(token: string): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 dias em segundos
-  });
+  // Gerenciado nativamente pelo Supabase Auth
 }
 
-/**
- * Remove o cookie de sessão para efetuar logout
- */
 export async function removeSessionCookie(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  // Gerenciado nativamente pelo Supabase Auth
 }
 
-/**
- * Obtém o usuário atualmente autenticado a partir do token JWT no cookie
- */
 export async function getSession(): Promise<User | null> {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    const supabase = createClient();
+    if (!supabase) return null;
 
-    if (!token) return null;
+    const { data: { user: authUser }, error } = await supabase.auth.getUser();
+    if (error || !authUser) return null;
 
-    return await verifyAuthToken(token);
-  } catch (error) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("nome, role, avatar_url")
+      .eq("id", authUser.id)
+      .maybeSingle();
+
+    const role: UserRole = (profile?.role as UserRole) || "paciente";
+    const name = profile?.nome || authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Usuário";
+
+    return {
+      id: authUser.id,
+      name,
+      email: authUser.email || "",
+      role,
+      roleLabel: getRoleLabel(role),
+      avatar: profile?.avatar_url || authUser.user_metadata?.avatar_url,
+      created_at: authUser.created_at,
+    };
+  } catch {
     return null;
   }
 }
 
-/**
- * Garante que uma requisição/ação no servidor seja executada apenas por usuário autenticado
- */
 export async function requireAuth(): Promise<User> {
   const user = await getSession();
   if (!user) {

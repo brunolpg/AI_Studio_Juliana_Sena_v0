@@ -206,7 +206,7 @@ export function ClientTableView() {
               <ShieldCheck className="w-3.5 h-3.5" />
             </div>
             <span>
-              <strong>Usuário Autenticado:</strong> {user.name} ({user.roleLabel}) • Permissões de escrita e exclusão ativas via JWT
+              <strong>Usuário Autenticado:</strong> {user.name} ({user.roleLabel}) • Acesso autorizado
             </span>
           </div>
         </div>

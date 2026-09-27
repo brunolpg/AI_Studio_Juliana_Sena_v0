@@ -309,7 +309,7 @@ function AppointmentFormModalContent({
               Novo Agendamento de Consulta
             </h3>
             <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
-              Dra. Juliana Sena • Gestão de Horários & Supabase
+              Dra. Juliana Sena • Gestão de Horários & Consultas
             </p>
           </div>
         </div>
@@ -426,7 +426,7 @@ function AppointmentFormModalContent({
                     {isLoadingPatients ? (
                       <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2">
                         <div className="w-3.5 h-3.5 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
-                        <span>Carregando pacientes cadastrados no Supabase...</span>
+                        <span>Carregando pacientes cadastrados...</span>
                       </div>
                     ) : filteredPatients.length === 0 ? (
                       <div className="p-4 text-center space-y-1.5">

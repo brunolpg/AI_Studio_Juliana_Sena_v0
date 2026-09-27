@@ -10,7 +10,7 @@ function getRoleLabel(role: UserRole): string {
     case "administrador":
       return "Administrador(a)";
     case "profissional":
-      return "Profissional / Especialista";
+      return "Profissional / Médico(a)";
     case "paciente":
     default:
       return "Paciente";
