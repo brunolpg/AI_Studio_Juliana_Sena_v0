@@ -19,7 +19,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Standalone output removed to use standard Next.js build with next start
+  output: 'standalone',
+  distDir: process.env.NODE_ENV === 'development' ? '.next-dev' : '.next',
   transpilePackages: ['motion'],
   webpack: (config, {dev}) => {
     // HMR is disabled in AI Studio via DISABLE_HMR env var.

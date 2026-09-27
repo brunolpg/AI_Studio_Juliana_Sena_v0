@@ -100,7 +100,7 @@ export async function getAppointmentsAction(
 
     const {
       search = "",
-      tab = "todos",
+      tab = "proximos",
       page = 1,
       pageSize = 10,
       data: dateFilter,

@@ -40,7 +40,7 @@ export function AppointmentTableView() {
   // Estados de busca e filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [activeFilterTab, setActiveFilterTab] = useState<AppointmentFilterTab>("todos");
+  const [activeFilterTab, setActiveFilterTab] = useState<AppointmentFilterTab>("proximos");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
