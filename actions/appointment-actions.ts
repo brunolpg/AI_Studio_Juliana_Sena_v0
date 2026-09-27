@@ -463,6 +463,7 @@ export async function createAppointmentAction(
     let googleEventId: string | null = null;
     let googleHtmlLink: string | null = null;
     let syncedWithGoogle = false;
+    let calendarFeedbackMessage = "";
 
     // 4. Integração com a Google Calendar API
     if (input.sync_google) {
@@ -480,6 +481,7 @@ export async function createAppointmentAction(
       googleEventId = gcalRes.eventId;
       googleHtmlLink = gcalRes.htmlLink;
       syncedWithGoogle = gcalRes.synced;
+      calendarFeedbackMessage = gcalRes.message;
     } else {
       googleHtmlLink = generateGoogleCalendarTemplateUrl({
         patientName: input.client_nome,
@@ -491,6 +493,7 @@ export async function createAppointmentAction(
         endTime: horario_fim,
         observacoes: input.observacoes,
       });
+      calendarFeedbackMessage = "Agendamento registrado com link direto para o Google Agenda.";
     }
 
     // 5. Inserção definitiva na tabela appointments do Supabase
@@ -545,9 +548,15 @@ export async function createAppointmentAction(
 
     revalidatePath("/");
 
+    const finalSuccessMessage = syncedWithGoogle
+      ? "Consulta agendada e sincronizada diretamente na Google Agenda da profissional!"
+      : input.sync_google && calendarFeedbackMessage
+      ? `Consulta cadastrada com sucesso! ${calendarFeedbackMessage}`
+      : "Consulta agendada e persistida no Supabase com sucesso!";
+
     return {
       success: true,
-      message: "Consulta agendada e persistida no Supabase com sucesso!",
+      message: finalSuccessMessage,
       data: newAppointment,
     };
   } catch (error) {
@@ -808,6 +817,8 @@ export async function getCalendarIntegrationStatusAction() {
   const creds = getGoogleCalendarCredentials();
   return {
     isConfigured: creds.isConfigured,
+    hasServiceAccount: creds.hasServiceAccount,
+    serviceAccountEmail: creds.maskedEmail,
     calendarId: creds.calendarId,
     hasApiKey: Boolean(creds.apiKey),
     hasClientId: Boolean(creds.clientId),

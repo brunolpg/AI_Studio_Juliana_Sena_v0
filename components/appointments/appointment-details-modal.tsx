@@ -144,17 +144,32 @@ export function AppointmentDetailsModal({
           {/* Integração Google Agenda */}
           <div className="p-4 rounded-xl border border-teal-200/80 dark:border-teal-900/60 bg-teal-50/50 dark:bg-teal-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center shrink-0">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                appointment.synced_with_google
+                  ? "bg-emerald-600 text-white"
+                  : "bg-teal-600 text-white"
+              }`}>
                 <CalendarDays className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-teal-950 dark:text-teal-100">
-                  Google Agenda
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-teal-950 dark:text-teal-100">
+                    Google Agenda
+                  </span>
+                  {appointment.synced_with_google ? (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-semibold border border-emerald-300 dark:border-emerald-800">
+                      Sincronizado na Agenda Oficial
+                    </span>
+                  ) : (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 font-semibold border border-amber-300 dark:border-amber-800">
+                      Link Direto Disponível
+                    </span>
+                  )}
                 </div>
-                <div className="text-[11px] text-teal-700 dark:text-teal-300">
+                <div className="text-[11px] text-teal-700 dark:text-teal-300 mt-0.5">
                   {appointment.synced_with_google
-                    ? "Evento configurado para o Google Calendar"
-                    : "Agendamento local"}
+                    ? "Evento criado diretamente na agenda profissional da médica"
+                    : "Agendamento registrado no sistema com link de inclusão no Google Agenda"}
                 </div>
               </div>
             </div>
@@ -166,7 +181,7 @@ export function AppointmentDetailsModal({
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 shadow-2xs transition-all shrink-0 cursor-pointer"
               >
-                <span>Abrir no Google Agenda</span>
+                <span>{appointment.synced_with_google ? "Ver no Google Agenda" : "Abrir no Google Agenda"}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             )}

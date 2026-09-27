@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 import {
   getGoogleCalendarCredentials,
@@ -17,13 +18,17 @@ export async function GET(req: NextRequest) {
     const result = await listGoogleCalendarEventsForDate(date);
     return NextResponse.json({
       configured: creds.isConfigured,
+      hasServiceAccount: creds.hasServiceAccount,
       calendarId: creds.calendarId,
       events: result.events,
+      error: result.error,
     });
   }
 
   return NextResponse.json({
     configured: creds.isConfigured,
+    hasServiceAccount: creds.hasServiceAccount,
+    serviceAccountEmail: creds.maskedEmail,
     calendarId: creds.calendarId,
     hasClientId: Boolean(creds.clientId),
     hasApiKey: Boolean(creds.apiKey),
@@ -36,7 +41,7 @@ export async function POST(req: NextRequest) {
     const result = await createGoogleCalendarEvent(body);
     return NextResponse.json(result);
   } catch (error) {
-    console.error("API Calendar POST error:", error);
+    console.error("[API Calendar POST Server Error]:", error);
     return NextResponse.json(
       {
         success: false,
