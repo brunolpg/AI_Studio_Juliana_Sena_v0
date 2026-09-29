@@ -1,5 +1,7 @@
 import type {Metadata} from 'next';
 import './globals.css'; // Global styles
+import { ToastProvider } from "@/components/ui/toast";
+import { AuthProvider } from "@/components/auth/auth-context";
 
 export const metadata: Metadata = {
   title: 'Juliana Sena - Gestão de Pacientes',
@@ -19,7 +21,13 @@ export const metadata: Metadata = {
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <ToastProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ToastProvider>
+      </body>
     </html>
   );
 }

@@ -10,7 +10,7 @@ import {
  * - Refine 1: Atendimento restrito a Segundas, Quintas e Sábados
  * - Refine 2: Horário restrito à grade do dia (Seg/Qui: 09:00 às 15:00; Sáb: 13:00 às 17:00)
  */
-export const appointmentSchema = z
+const appointmentBaseSchema = z
   .object({
     client_id: z
       .string()
@@ -45,7 +45,9 @@ export const appointmentSchema = z
     observacoes: z.string().trim().max(500, { message: "Observações não podem exceder 500 caracteres." }).optional(),
 
     sync_google: z.boolean().default(false),
-  })
+  });
+
+export const appointmentSchema = appointmentBaseSchema
   .refine(
     (val) => isAllowedAppointmentDay(val.data),
     {
@@ -66,7 +68,7 @@ export const appointmentSchema = z
 
 export type AppointmentSchemaInput = z.infer<typeof appointmentSchema>;
 
-export const appointmentUpdateSchema = z
+const appointmentUpdateBaseSchema = z
   .object({
     data: z
       .string()
@@ -88,7 +90,9 @@ export const appointmentUpdateSchema = z
     observacoes: z.string().trim().max(500).optional().nullable(),
 
     status: z.enum(["Confirmado", "Pendente", "Concluído", "Cancelado"]).optional(),
-  })
+  });
+
+export const appointmentUpdateSchema = appointmentUpdateBaseSchema
   .refine(
     (val) => {
       if (val.data) {

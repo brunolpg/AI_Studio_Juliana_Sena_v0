@@ -12,7 +12,7 @@ export const StatusEnum = z.enum(["Ativo", "Inativo"]);
  * Schema Zod principal para validação de Pacientes
  * Contém mensagens amigáveis em português e regras de negócio estritas.
  */
-export const clientSchema = z
+const clientBaseSchema = z
   .object({
     nome: z
       .string()
@@ -24,14 +24,14 @@ export const clientSchema = z
       .string()
       .min(1, { message: "Informe uma data de nascimento válida." })
       .refine(
-        (val) => {
+        (val: string) => {
           const date = new Date(val);
           return !isNaN(date.getTime());
         },
         { message: "Formato de data inválido." }
       )
       .refine(
-        (val) => {
+        (val: string) => {
           const birthDate = new Date(val);
           const today = new Date();
           return birthDate <= today;
@@ -39,7 +39,7 @@ export const clientSchema = z
         { message: "A data de nascimento não pode ser futura." }
       )
       .refine(
-        (val) => {
+        (val: string) => {
           const age = calculateAge(val);
           return age !== null && age <= 130;
         },
@@ -66,7 +66,7 @@ export const clientSchema = z
       .string()
       .trim()
       .refine(
-        (val) => {
+        (val: string) => {
           const digits = val.replace(/\D/g, "");
           return digits.length === 10 || digits.length === 11;
         },
@@ -76,7 +76,7 @@ export const clientSchema = z
     cpf: z
       .string()
       .trim()
-      .refine((val) => isValidCPF(val), {
+      .refine((val: string) => isValidCPF(val), {
         message: "CPF inválido. Verifique os dígitos digitados.",
       }),
 
@@ -84,7 +84,7 @@ export const clientSchema = z
       .string()
       .trim()
       .refine(
-        (val) => {
+        (val: string) => {
           if (!val) return true;
           const digits = val.replace(/\D/g, "");
           return digits.length === 8;
@@ -93,7 +93,7 @@ export const clientSchema = z
       )
       .optional()
       .nullable()
-      .transform((val) => (val && val.length > 0 ? val : null)),
+      .transform((val: string | null | undefined) => (val && val.length > 0 ? val : null)),
 
     logradouro: z
       .string()
@@ -113,7 +113,7 @@ export const clientSchema = z
       .max(100, { message: "O complemento não pode exceder 100 caracteres." })
       .optional()
       .nullable()
-      .transform((val) => (val && val.length > 0 ? val : null)),
+      .transform((val: string | null | undefined) => (val && val.length > 0 ? val : null)),
 
     estado: z
       .string()
@@ -131,7 +131,7 @@ export const clientSchema = z
       .max(100, { message: "A profissão não pode exceder 100 caracteres." })
       .optional()
       .nullable()
-      .transform((val) => (val && val.length > 0 ? val : null)),
+      .transform((val: string | null | undefined) => (val && val.length > 0 ? val : null)),
 
     status: StatusEnum.default("Ativo"),
 
@@ -141,19 +141,20 @@ export const clientSchema = z
       .max(1000, { message: "As observações não podem exceder 1000 caracteres." })
       .optional()
       .nullable()
-      .transform((val) => (val && val.length > 0 ? val : null)),
-  })
-  .refine(
-    (data) => {
-      // Regra de integridade: a idade informada deve corresponder à data de nascimento
-      const calculated = calculateAge(data.data_nascimento);
-      return calculated !== null && calculated === data.idade;
-    },
-    {
-      message: "A idade calculada não confere com a data de nascimento informada.",
-      path: ["idade"],
-    }
-  );
+      .transform((val: string | null | undefined) => (val && val.length > 0 ? val : null)),
+  });
+
+export const clientSchema = clientBaseSchema.refine(
+  (data) => {
+    // Regra de integridade: a idade informada deve corresponder à data de nascimento
+    const calculated = calculateAge(data.data_nascimento);
+    return calculated !== null && calculated === data.idade;
+  },
+  {
+    message: "A idade calculada não confere com a data de nascimento informada.",
+    path: ["idade"],
+  }
+);
 
 /**
  * Schema para busca e filtros de listagem
