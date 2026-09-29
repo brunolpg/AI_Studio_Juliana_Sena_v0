@@ -1,7 +1,8 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient, SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Singleton do Supabase Client para uso no Client-side e Server-side
+ * Singleton do Supabase Client para uso no Client-side usando @supabase/ssr
  */
 let supabaseInstance: SupabaseClient | null = null;
 
@@ -16,7 +17,7 @@ export function getSupabaseClient(): SupabaseClient | null {
     return null;
   }
 
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey);
   return supabaseInstance;
 }
 
@@ -31,7 +32,7 @@ export function getSupabaseAdminClient(): SupabaseClient | null {
     return null;
   }
 
-  return createClient(supabaseUrl, serviceKey, {
+  return createSupabaseClient(supabaseUrl, serviceKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

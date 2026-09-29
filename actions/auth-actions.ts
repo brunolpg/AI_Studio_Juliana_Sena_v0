@@ -27,7 +27,7 @@ export async function loginAction(rawInput: unknown): Promise<AuthResponse> {
       };
     }
     const { email, password } = parseResult.data;
-    const supabase = createClient();
+    const supabase = await createClient();
     if (!supabase) {
       return {
         success: false,
@@ -90,7 +90,7 @@ export async function registerAction(rawInput: unknown): Promise<AuthResponse> {
       };
     }
     const { name, email, password, role } = parseResult.data;
-    const supabase = createClient();
+    const supabase = await createClient();
     if (!supabase) {
       return {
         success: false,
@@ -143,7 +143,7 @@ export async function registerAction(rawInput: unknown): Promise<AuthResponse> {
 
 export async function logoutAction(): Promise<{ success: boolean; message: string }> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     if (supabase) {
       await supabase.auth.signOut();
     }
@@ -162,7 +162,7 @@ export async function logoutAction(): Promise<{ success: boolean; message: strin
 
 export async function getCurrentUserAction(): Promise<User | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     if (!supabase) return null;
 
     const { data: { user: authUser }, error } = await supabase.auth.getUser();

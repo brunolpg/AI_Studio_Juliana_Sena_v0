@@ -25,7 +25,7 @@ export async function removeSessionCookie(): Promise<void> {
 
 export async function getSession(): Promise<User | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     if (!supabase) return null;
 
     const { data: { user: authUser }, error } = await supabase.auth.getUser();

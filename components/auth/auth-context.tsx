@@ -56,8 +56,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     loadInitialSession();
 
+    // Ouvinte em tempo real para sincronização de estado com o Supabase Auth (e.g. Google Login)
+    const { getSupabaseClient } = require("@/lib/supabase/client");
+    const supabase = getSupabaseClient();
+    let authListener: any = null;
+
+    if (supabase) {
+      const { data } = supabase.auth.onAuthStateChange(async (event: string) => {
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+          const currentUser = await getCurrentUserAction();
+          if (isMounted) {
+            setUser(currentUser);
+          }
+        } else if (event === "SIGNED_OUT") {
+          if (isMounted) {
+            setUser(null);
+          }
+        }
+      });
+      authListener = data?.subscription;
+    }
+
     return () => {
       isMounted = false;
+      if (authListener) {
+        authListener.unsubscribe();
+      }
     };
   }, []);
 

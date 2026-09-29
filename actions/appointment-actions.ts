@@ -90,7 +90,7 @@ export async function getAppointmentsAction(
   filter: AppointmentFilter = {}
 ): Promise<ActionResponse<PaginatedResult<Appointment>>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     if (!supabase) {
       return {
         success: false,
@@ -242,7 +242,7 @@ export interface PatientSummary {
  */
 export async function getActivePatientsForSchedulingAction(): Promise<ActionResponse<PatientSummary[]>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     if (!supabase) {
       return {
         success: true,
@@ -300,7 +300,7 @@ export async function getTimeSlotsForDateAction(
 
     const standardDaySlots = getAllowedSlotsForDate(dateStr);
 
-    const supabase = createClient();
+    const supabase = await createClient();
     let activeDbList: RawAppointmentRow[] = [];
 
     if (supabase) {
@@ -431,7 +431,7 @@ export async function createAppointmentAction(
       };
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     if (!supabase) {
       return {
         success: false,
@@ -566,7 +566,7 @@ export async function cancelAppointmentAction(
   appointmentId: string
 ): Promise<ActionResponse<void>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     if (!supabase) {
       return {
         success: false,
@@ -633,7 +633,7 @@ export async function updateAppointmentAction(
   updates: Partial<Pick<Appointment, "data" | "horario_inicio" | "procedimento" | "observacoes" | "status">>
 ): Promise<ActionResponse<Appointment>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     if (!supabase) {
       return {
         success: false,

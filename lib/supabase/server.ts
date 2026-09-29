@@ -1,23 +1,36 @@
-import { createClient as createSupabaseClient, SupabaseClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Cria uma instância do cliente Supabase para execução segura no servidor (Server Actions / Server Components).
- * Utiliza SUPABASE_SERVICE_ROLE_KEY com fallback para NEXT_PUBLIC_SUPABASE_ANON_KEY.
+ * Utiliza o gerenciamento de cookies nativo do @supabase/ssr.
  */
-export function createClient(): SupabaseClient | null {
+export async function createClient(): Promise<SupabaseClient | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !serviceKey || supabaseUrl.includes("your-project")) {
+  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes("your-project")) {
     return null;
   }
 
-  return createSupabaseClient(supabaseUrl, serviceKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
+  const cookieStore = await cookies();
+
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        } catch {
+          // Trata o caso em que setAll é chamado dentro de um Server Component
+          // onde a escrita de cookies não é permitida.
+        }
+      },
     },
   });
 }

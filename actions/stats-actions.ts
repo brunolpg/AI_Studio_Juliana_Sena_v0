@@ -19,7 +19,7 @@ export interface DashboardStats {
  */
 export async function getDashboardStatsAction(): Promise<ActionResponse<DashboardStats>> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     if (supabase) {
       const now = new Date();
