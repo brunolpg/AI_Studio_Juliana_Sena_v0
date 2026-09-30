@@ -11,7 +11,6 @@ import {
   EyeOff,
   LogIn,
   UserPlus,
-  KeyRound,
   Shield,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
@@ -81,7 +80,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
         toast({
           type: "error",
           title: "Erro",
-          description: "Supabase não configurado.",
+          description: "Sistema de conexão não disponível.",
         });
         return;
       }
@@ -94,7 +93,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
       if (error) {
         toast({
           type: "error",
-          title: "Erro no Google OAuth",
+          title: "Erro de Conexão",
           description: error.message,
         });
       }
@@ -102,7 +101,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
       toast({
         type: "error",
         title: "Erro",
-        description: "Falha ao iniciar autenticação com Google.",
+        description: "Falha ao iniciar acesso com o Google.",
       });
     }
   };
@@ -127,18 +126,17 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
           </div>
           <div>
             <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30">
-              <KeyRound className="w-3 h-3" />
-              <span>Autenticação Supabase</span>
+              <span>Identificação</span>
             </div>
             <h3 className="text-lg font-bold text-white mt-1">
-              {activeTab === "login" ? "Acesso ao Sistema" : "Criar Nova Conta"}
+              {activeTab === "login" ? "Acesso ao Consultório" : "Criar Nova Conta"}
             </h3>
           </div>
         </div>
         <p className="text-xs text-slate-300 mt-2 leading-relaxed">
           {activeTab === "login"
-            ? "Autentique-se com sua conta para acessar os recursos da clínica."
-            : "Cadastre-se informando seus dados e perfil de acesso desejado."}
+            ? "Identifique-se com sua conta cadastrada para acessar os seus dados."
+            : "Preencha os campos abaixo para criar sua conta de acesso."}
         </p>
       </div>
 
@@ -204,7 +202,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                 d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.24 0 3.17 2.64 1.2 6.6l4.08 3.15c.95-2.84 3.6-4.95 6.72-4.95z"
               />
             </svg>
-            <span>Continuar com Google OAuth</span>
+            <span>Acessar com o Google</span>
           </button>
           <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
@@ -238,7 +236,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="ex: seu.email@clinica.com"
+                  placeholder="ex: seu.email@provedor.com"
                   className={`w-full pl-9 pr-3 py-2 text-xs rounded-xl border ${
                     formErrors.email
                       ? "border-rose-500 bg-rose-50/30"
@@ -294,7 +292,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Entrando...</span>
+                  <span>Acessando...</span>
                 </>
               ) : (
                 <>
@@ -326,7 +324,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                   required
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
-                  placeholder="ex: Dr. Carlos Silva"
+                  placeholder="Seu nome"
                   className={`w-full pl-9 pr-3 py-2 text-xs rounded-xl border ${
                     formErrors.name
                       ? "border-rose-500 bg-rose-50/30"
@@ -352,7 +350,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                   required
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
-                  placeholder="ex: carlos@clinica.com"
+                  placeholder="ex: seu.email@provedor.com"
                   className={`w-full pl-9 pr-3 py-2 text-xs rounded-xl border ${
                     formErrors.email
                       ? "border-rose-500 bg-rose-50/30"
@@ -470,13 +468,13 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
           </form>
         )}
 
-        {/* Rodapé de Segurança */}
+        {/* Rodapé */}
         <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
           <span className="flex items-center gap-1">
             <Shield className="w-3.5 h-3.5 text-teal-600" />
-            <span>Ambiente Seguro</span>
+            <span>Acesso Protegido</span>
           </span>
-          <span>Criptografia de Ponta a Ponta</span>
+          <span>Juliana Sena • Consultório</span>
         </div>
       </div>
     </div>

@@ -373,7 +373,7 @@ WITH CHECK (true);`,
       code: `"use server";
 
 import { revalidatePath } from "next/cache";
-import { getSupabaseAdminClient } from "@/lib/supabase/client";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { clientSchema, clientFilterSchema } from "@/lib/validations/client-schema";
 import { calculateAge } from "@/lib/brazil-data";
 import type { Client, ClientInput, ClientFilter, PaginatedResult, ActionResponse } from "@/types/client";

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSupabaseAdminClient } from "@/lib/supabase/client";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { clientSchema, clientFilterSchema } from "@/lib/validations/client-schema";
 import { calculateAge } from "@/lib/brazil-data";
 import { INITIAL_CLIENTS } from "@/lib/mock-data";

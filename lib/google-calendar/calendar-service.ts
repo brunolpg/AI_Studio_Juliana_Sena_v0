@@ -1,13 +1,13 @@
-/**
- * Serviço de Integração com a Google Calendar API (v3)
- * Executado estritamente no lado do servidor (Node.js / Server Actions / Route Handlers)
- * utilizando a biblioteca oficial 'googleapis' e autenticação via Service Account (JWT).
- * 
- * Inclui sanitização robusta de chaves privadas (quebras de linha \n, aspas, base64),
- * tratamento de erros com feedback visual amigável e contingência graciosa.
- */
+import type { AppointmentInput } from "@/types/appointment";
+import crypto from "crypto";
 
-import { google } from "googleapis";
+export interface GoogleCalendarApiEvent {
+  id: string;
+  summary: string;
+  start: { dateTime?: string; date?: string };
+  end: { dateTime?: string; date?: string };
+  htmlLink?: string;
+}
 
 export interface GoogleCalendarEventInput {
   patientName: string;
@@ -15,8 +15,8 @@ export interface GoogleCalendarEventInput {
   patientPhone?: string;
   procedimento: string;
   date: string; // YYYY-MM-DD
-  startTime: string; // "14:00"
-  endTime: string; // "15:00"
+  startTime: string; // HH:MM
+  endTime: string; // HH:MM
   observacoes?: string | null;
 }
 
@@ -27,192 +27,49 @@ export interface GoogleCalendarEventResult {
   synced: boolean;
   isFallback: boolean;
   message: string;
-  errorDetails?: string;
 }
 
-export interface GoogleCalendarApiEvent {
-  id: string;
-  summary: string;
-  start: { dateTime?: string; date?: string };
-  end: { dateTime?: string; date?: string };
-}
-
-/**
- * Sanitiza a chave privada da Service Account do Google, tratando:
- * - Quebras de linha literais (\n escapados em string)
- * - Aspas simples ou duplas ao redor do valor
- * - Chaves codificadas em base64
- * - Espaços e caracteres invisíveis nas extremidades
- */
-export function sanitizePrivateKey(rawKey?: string): string {
-  if (!rawKey) return "";
-  let key = rawKey.trim();
-
-  // 1. Remove aspas simples ou duplas que envolvem a string
-  if (
-    (key.startsWith('"') && key.endsWith('"')) ||
-    (key.startsWith("'") && key.endsWith("'"))
-  ) {
-    key = key.substring(1, key.length - 1).trim();
-  }
-
-  // 2. Se a chave estiver codificada em base64 (sem marcadores BEGIN/END), decodifica
-  if (
-    !key.includes("BEGIN") &&
-    (key.startsWith("LS0t") || key.length > 200)
-  ) {
-    try {
-      const decoded = Buffer.from(key, "base64").toString("utf-8");
-      if (decoded.includes("PRIVATE KEY")) {
-        key = decoded.trim();
-      }
-    } catch {
-      // Se falhar a decodificação base64, segue com a chave original
-    }
-  }
-
-  // 3. Converte \n literais para quebras de linha reais
-  key = key.replace(/\\n/g, "\n");
-
-  // 4. Garante que termine com nova linha para parsing estrito do OpenSSL
-  if (!key.endsWith("\n")) {
-    key += "\n";
-  }
-
-  return key;
-}
-
-/**
- * Mascara strings sensíveis como e-mail de service account para logs e status público
- */
-function maskEmail(email: string): string {
-  if (!email || !email.includes("@")) return "";
-  const [user, domain] = email.split("@");
-  const visible = user.length > 3 ? user.substring(0, 3) + "***" : user + "***";
-  return `${visible}@${domain}`;
-}
-
-/**
- * Retorna as credenciais configuradas e sanitizadas no ambiente do servidor
- */
 export function getGoogleCalendarCredentials() {
-  const serviceAccountEmail = (
-    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
-    process.env.GOOGLE_CLIENT_EMAIL ||
-    process.env.GOOGLE_SERVICE_ACCOUNT ||
-    ""
-  ).trim();
-
-  const rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY || "";
-  const privateKey = sanitizePrivateKey(rawPrivateKey);
-
-  let calendarId = (
-    process.env.GOOGLE_CALENDAR_ID ||
-    process.env.GOOGLE_CALENDAR_EMAIL ||
-    "primary"
-  ).trim();
-
-  // Remove aspas se houver
-  if (
-    (calendarId.startsWith('"') && calendarId.endsWith('"')) ||
-    (calendarId.startsWith("'") && calendarId.endsWith("'"))
-  ) {
-    calendarId = calendarId.substring(1, calendarId.length - 1).trim();
-  }
-  if (!calendarId) {
-    calendarId = "primary";
-  }
-
-  const clientId = (process.env.GOOGLE_CLIENT_ID || "").trim();
-  const apiKey = (process.env.GOOGLE_API_KEY || "").trim();
-
-  const hasServiceAccount = Boolean(
-    serviceAccountEmail &&
-    serviceAccountEmail.includes("@") &&
-    privateKey &&
-    privateKey.includes("PRIVATE KEY")
-  );
-
-  const isConfigured = hasServiceAccount || Boolean(apiKey && apiKey.length > 5);
+  const calendarId = process.env.GOOGLE_CALENDAR_ID || process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_ID || "";
+  const apiKey = process.env.GOOGLE_CALENDAR_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_CALENDAR_API_KEY || "";
+  const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN || "";
+  const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY || "";
 
   return {
-    serviceAccountEmail,
-    maskedEmail: maskEmail(serviceAccountEmail),
-    privateKey,
     calendarId,
-    clientId,
     apiKey,
-    hasServiceAccount,
-    isConfigured,
+    clientId,
+    refreshToken,
+    serviceAccountEmail,
+    privateKey,
+    isConfigured: Boolean(calendarId && (apiKey || clientId || (serviceAccountEmail && privateKey))),
   };
 }
 
-/**
- * Instancia o cliente oficial da Google Calendar API (v3) autenticado via JWT de Service Account
- */
-function getCalendarClient() {
-  const creds = getGoogleCalendarCredentials();
-  if (!creds.hasServiceAccount) {
-    return null;
-  }
-
-  try {
-    const auth = new google.auth.JWT({
-      email: creds.serviceAccountEmail,
-      key: creds.privateKey,
-      scopes: [
-        "https://www.googleapis.com/auth/calendar",
-        "https://www.googleapis.com/auth/calendar.events",
-      ],
-    });
-
-    return google.calendar({ version: "v3", auth });
-  } catch (error) {
-    console.error("[Google Calendar Server Error] Falha ao instanciar google.auth.JWT:", error);
-    return null;
-  }
+function toIsoDateTime(dateStr: string, timeStr: string): string {
+  return `${dateStr}T${timeStr}:00-03:00`;
 }
 
-/**
- * Converte data e hora para formato ISO 8601 com timezone de Brasília (-03:00)
- */
-function toIsoDateTime(date: string, time: string): string {
-  return `${date}T${time}:00-03:00`;
-}
-
-/**
- * Converte data e hora para o formato compacto do Google Calendar Template URL: YYYYMMDDTHHMMSSZ
- */
-function toCompactUtcFormat(date: string, time: string): string {
-  const [year, month, day] = date.split("-").map(Number);
-  const [hours, minutes] = time.split(":").map(Number);
-  // UTC = Brasília + 3 horas
-  const utcDate = new Date(Date.UTC(year, month - 1, day, hours + 3, minutes, 0));
-  return utcDate.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-}
-
-/**
- * Gera um link universal direto para adicionar/abrir no Google Agenda (Web)
- * Funciona imediatamente sem depender de autenticação do servidor
- */
 export function generateGoogleCalendarTemplateUrl(input: GoogleCalendarEventInput): string {
+  const startIso = toIsoDateTime(input.date, input.startTime).replace(/[-:]/g, "").replace(".000", "");
+  const endIso = toIsoDateTime(input.date, input.endTime).replace(/[-:]/g, "").replace(".000", "");
+  const startCompact = startIso.substring(0, 15) + "Z";
+  const endCompact = endIso.substring(0, 15) + "Z";
+
   const summary = `Consulta: ${input.procedimento} - ${input.patientName}`;
-  const startCompact = toCompactUtcFormat(input.date, input.startTime);
-  const endCompact = toCompactUtcFormat(input.date, input.endTime);
   const details = [
     `Paciente: ${input.patientName}`,
+    `Telefone: ${input.patientPhone || "Não informado"}`,
+    `E-mail: ${input.patientEmail || "Não informado"}`,
     `Procedimento: ${input.procedimento}`,
-    input.patientPhone ? `Telefone / WhatsApp: ${input.patientPhone}` : "",
-    input.patientEmail ? `E-mail: ${input.patientEmail}` : "",
-    input.observacoes ? `Observações Clínicas: ${input.observacoes}` : "",
-    "",
-    "Agendado pelo Sistema Dra. Juliana Sena - Gestão de Pacientes",
+    input.observacoes ? `Observações: ${input.observacoes}` : "",
   ]
     .filter(Boolean)
     .join("\n");
 
-  const location = "Consultório Dra. Juliana Sena - São Paulo/SP";
-
+  const location = "Consultório de Atendimento - São Paulo/SP";
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
     summary
   )}&dates=${startCompact}/${endCompact}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(
@@ -220,66 +77,191 @@ export function generateGoogleCalendarTemplateUrl(input: GoogleCalendarEventInpu
   )}`;
 }
 
-/**
- * Consulta eventos do Google Agenda para uma data específica (para detecção de conflitos de horário na grade)
- */
-export async function listGoogleCalendarEventsForDate(
-  dateStr: string
-): Promise<{ events: GoogleCalendarApiEvent[]; isConfigured: boolean; error?: string }> {
-  const creds = getGoogleCalendarCredentials();
-
-  if (!creds.hasServiceAccount) {
-    return { events: [], isConfigured: false };
-  }
-
+async function refreshGoogleOAuthToken(refreshToken: string): Promise<string | null> {
   try {
-    const calendar = getCalendarClient();
-    if (!calendar) {
-      return { events: [], isConfigured: false };
+    const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      console.warn("[Google Calendar] Falha ao renovar token OAuth: GOOGLE_CLIENT_ID ou GOOGLE_CLIENT_SECRET ausentes.");
+      return null;
     }
 
-    const timeMin = `${dateStr}T00:00:00-03:00`;
-    const timeMax = `${dateStr}T23:59:59-03:00`;
-
-    const response = await calendar.events.list({
-      calendarId: creds.calendarId,
-      timeMin,
-      timeMax,
-      singleEvents: true,
-      orderBy: "startTime",
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }),
     });
-
-    const items: GoogleCalendarApiEvent[] = (response.data.items || []).map((item) => ({
-      id: item.id || "",
-      summary: item.summary || "Google Agenda",
-      start: {
-        dateTime: item.start?.dateTime || undefined,
-        date: item.start?.date || undefined,
-      },
-      end: {
-        dateTime: item.end?.dateTime || undefined,
-        date: item.end?.date || undefined,
-      },
-    }));
-
-    return { events: items, isConfigured: true };
-  } catch (error: unknown) {
-    const err = error as { message?: string; response?: { data?: unknown; status?: number } };
-    console.error("[Google Calendar Server Error] Erro ao consultar eventos da agenda:", {
-      dateStr,
-      calendarId: creds.calendarId,
-      message: err?.message,
-      status: err?.response?.status,
-    });
-    return { events: [], isConfigured: true, error: err?.message };
+    if (res.ok) {
+      const data = await res.json();
+      return data.access_token || null;
+    }
+    const errText = await res.text().catch(() => res.statusText);
+    console.error(`[Google Calendar] Falha na renovação do refresh token: ${res.status}. Motivo: ${errText}`);
+    return null;
+  } catch (err) {
+    console.error("[Google Calendar] Erro ao renovar token OAuth:", err);
+    return null;
   }
 }
 
 /**
- * Cria um evento diretamente na Google Calendar API (v3) da profissional através de Service Account.
- * Se a API for bem-sucedida, retorna o google_event_id e htmlLink com status sincronizado.
- * Se ocorrer erro de autenticação ou permissão, registra no console do servidor e gera contingência
- * com link direto amigável sem travar o cadastro.
+ * Gera um token de acesso para a conta de serviço Google assinado com RSA-SHA256
+ */
+async function getServiceAccountToken(email: string, privateKey: string): Promise<string | null> {
+  try {
+    const formattedKey = privateKey.replace(/\\n/g, "\n").replace(/^"|"$/g, "");
+    
+    // Header
+    const header = {
+      alg: "RS256",
+      typ: "JWT"
+    };
+    
+    // Claim set
+    const now = Math.floor(Date.now() / 1000);
+    const claimSet = {
+      iss: email,
+      scope: "https://www.googleapis.com/auth/calendar",
+      aud: "https://oauth2.googleapis.com/token",
+      exp: now + 3600,
+      iat: now
+    };
+    
+    const base64UrlEncode = (str: string) => {
+      return Buffer.from(str)
+        .toString("base64")
+        .replace(/=/g, "")
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_");
+    };
+    
+    const encodedHeader = base64UrlEncode(JSON.stringify(header));
+    const encodedClaimSet = base64UrlEncode(JSON.stringify(claimSet));
+    
+    const signatureInput = `${encodedHeader}.${encodedClaimSet}`;
+    
+    const signer = crypto.createSign("RSA-SHA256");
+    signer.update(signatureInput);
+    const signature = signer.sign(formattedKey, "base64")
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+      
+    const jwt = `${signatureInput}.${signature}`;
+    
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwt
+      })
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      return data.access_token || null;
+    } else {
+      const errorText = await res.text().catch(() => res.statusText);
+      console.error("[Google Calendar] Falha na troca do token de Conta de Serviço:", res.status, errorText);
+      return null;
+    }
+  } catch (err) {
+    console.error("[Google Calendar] Exceção na geração do token da Conta de Serviço:", err);
+    return null;
+  }
+}
+
+/**
+ * Obtém um token de acesso ativo (por Conta de Serviço ou Refresh Token OAuth)
+ */
+export async function getGoogleCalendarAccessToken(): Promise<string | null> {
+  const creds = getGoogleCalendarCredentials();
+  
+  if (creds.serviceAccountEmail && creds.privateKey) {
+    console.log("[Google Calendar] Usando conta de serviço para autenticação...");
+    return await getServiceAccountToken(creds.serviceAccountEmail, creds.privateKey);
+  }
+  
+  if (creds.refreshToken) {
+    console.log("[Google Calendar] Usando refresh token para autenticação...");
+    return await refreshGoogleOAuthToken(creds.refreshToken);
+  }
+  
+  return null;
+}
+
+export async function listGoogleCalendarEventsForDate(
+  dateStr: string
+): Promise<{ events: GoogleCalendarApiEvent[]; isConfigured: boolean }> {
+  const creds = getGoogleCalendarCredentials();
+  if (!creds.isConfigured) {
+    return { events: [], isConfigured: false };
+  }
+  try {
+    const timeMin = `${dateStr}T00:00:00-03:00`;
+    const timeMax = `${dateStr}T23:59:59-03:00`;
+    
+    const accessToken = await getGoogleCalendarAccessToken();
+    let res: Response;
+
+    if (accessToken) {
+      const url = new URL(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(creds.calendarId)}/events`
+      );
+      url.searchParams.set("timeMin", timeMin);
+      url.searchParams.set("timeMax", timeMax);
+      url.searchParams.set("singleEvents", "true");
+      url.searchParams.set("orderBy", "startTime");
+      
+      res = await fetch(url.toString(), {
+        method: "GET",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        next: { revalidate: 30 },
+      });
+    } else {
+      const url = new URL(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(creds.calendarId)}/events`
+      );
+      url.searchParams.set("key", creds.apiKey);
+      url.searchParams.set("timeMin", timeMin);
+      url.searchParams.set("timeMax", timeMax);
+      url.searchParams.set("singleEvents", "true");
+      url.searchParams.set("orderBy", "startTime");
+
+      res = await fetch(url.toString(), {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        next: { revalidate: 30 },
+      });
+    }
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => res.statusText);
+      console.warn(`[Google Calendar] Falha na consulta de eventos (Status ${res.status}): ${errorText}`);
+      return { events: [], isConfigured: true };
+    }
+    const data = await res.json();
+    const items: GoogleCalendarApiEvent[] = data.items || [];
+    return { events: items, isConfigured: true };
+  } catch (error) {
+    console.error("[Google Calendar] Erro ao consultar eventos:", error);
+    return { events: [], isConfigured: true };
+  }
+}
+
+/**
+ * Criação de evento na Google Calendar API.
+ * Correção crítica: synced é TRUE APENAS se a API retornar status 200/201 E um event.id válido.
+ * Se houver falha, erro de rede ou token expirado, synced permanece FALSE e o erro é registrado detalhadamente.
  */
 export async function createGoogleCalendarEvent(
   input: GoogleCalendarEventInput
@@ -287,171 +269,148 @@ export async function createGoogleCalendarEvent(
   const creds = getGoogleCalendarCredentials();
   const directLink = generateGoogleCalendarTemplateUrl(input);
 
-  // 1. Se a Service Account não estiver configurada no .env
-  if (!creds.hasServiceAccount) {
-    console.warn(
-      "[Google Calendar Server] GOOGLE_SERVICE_ACCOUNT_EMAIL e/ou GOOGLE_PRIVATE_KEY não configuradas. Gerando link de agendamento resiliente."
-    );
+  if (!creds.isConfigured) {
+    console.warn("[Google Calendar] API não configurada. Sincronização automática não realizada (synced: false).");
     return {
       success: true,
       eventId: null,
       htmlLink: directLink,
       synced: false,
       isFallback: true,
-      message:
-        "Agendamento registrado no sistema. Configure GOOGLE_SERVICE_ACCOUNT_EMAIL e GOOGLE_PRIVATE_KEY no ambiente para sincronização direta na agenda.",
+      message: "Agendamento registrado. Google Calendar não configurado para sincronização automática.",
     };
   }
 
-  // 2. Executa a criação oficial via Service Account
   try {
-    const calendar = getCalendarClient();
-    if (!calendar) {
-      throw new Error("Cliente oficial do Google Calendar não pôde ser instanciado.");
-    }
-
     const summary = `Consulta: ${input.procedimento} - ${input.patientName}`;
     const description = [
       `Paciente: ${input.patientName}`,
-      input.patientPhone ? `Telefone / WhatsApp: ${input.patientPhone}` : "",
-      input.patientEmail ? `E-mail: ${input.patientEmail}` : "",
+      `Telefone: ${input.patientPhone || "Não informado"}`,
+      `E-mail: ${input.patientEmail || "Não informado"}`,
       `Procedimento: ${input.procedimento}`,
-      input.observacoes ? `Observações Clínicas: ${input.observacoes}` : "",
-      "",
-      "--------------------------------------------------",
-      "Agendamento criado via Sistema Dra. Juliana Sena - Gestão de Pacientes",
+      input.observacoes ? `Observações: ${input.observacoes}` : "",
     ]
       .filter(Boolean)
       .join("\n");
 
-    const startDateTime = toIsoDateTime(input.date, input.startTime);
-    const endDateTime = toIsoDateTime(input.date, input.endTime);
-
-    const attendees = input.patientEmail
-      ? [{ email: input.patientEmail, displayName: input.patientName }]
-      : undefined;
-
-    const response = await calendar.events.insert({
-      calendarId: creds.calendarId,
-      sendUpdates: attendees ? "all" : "none",
-      requestBody: {
-        summary,
-        description,
-        location: "Consultório Dra. Juliana Sena - São Paulo/SP",
-        start: {
-          dateTime: startDateTime,
-          timeZone: "America/Sao_Paulo",
-        },
-        end: {
-          dateTime: endDateTime,
-          timeZone: "America/Sao_Paulo",
-        },
-        attendees,
-        reminders: {
-          useDefault: false,
-          overrides: [
-            { method: "email", minutes: 24 * 60 }, // Alerta por e-mail 24h antes
-            { method: "popup", minutes: 60 },      // Alerta na tela 1h antes
-          ],
-        },
+    const eventPayload = {
+      summary,
+      description,
+      start: {
+        dateTime: toIsoDateTime(input.date, input.startTime),
+        timeZone: "America/Sao_Paulo",
       },
-    });
-
-    const event = response.data;
-    if (event.id) {
-      console.log(`[Google Calendar] Evento sincronizado com sucesso na agenda (${creds.calendarId})! ID: ${event.id}`);
-      return {
-        success: true,
-        eventId: event.id,
-        htmlLink: event.htmlLink || directLink,
-        synced: true,
-        isFallback: false,
-        message: "Evento criado e sincronizado diretamente na Google Agenda da profissional!",
-      };
-    }
-
-    throw new Error("A API do Google Calendar respondeu sem ID de evento.");
-  } catch (error: unknown) {
-    const err = error as {
-      message?: string;
-      code?: number;
-      response?: { data?: { error?: { message?: string } }; status?: number };
+      end: {
+        dateTime: toIsoDateTime(input.date, input.endTime),
+        timeZone: "America/Sao_Paulo",
+      },
+      attendees: input.patientEmail ? [{ email: input.patientEmail, displayName: input.patientName }] : [],
     };
 
-    const status = err?.response?.status;
-    const apiErrMsg = err?.response?.data?.error?.message || err?.message || "Erro desconhecido";
-
-    // Log detalhado e auditável no console do servidor
-    console.error("[Google Calendar Server Error] Falha na sincronização direta:", {
-      calendarId: creds.calendarId,
-      serviceAccount: creds.maskedEmail,
-      httpStatus: status,
-      apiErrorMessage: apiErrMsg,
-    });
-
-    let friendlyMessage = "Erro ao sincronizar com o Google Calendar.";
-    if (status === 404 || apiErrMsg.toLowerCase().includes("not found")) {
-      friendlyMessage = `Agenda "${creds.calendarId}" não encontrada. Verifique se o ID está correto e compartilhado com a Service Account (${creds.serviceAccountEmail}).`;
-    } else if (status === 403 || apiErrMsg.toLowerCase().includes("permission") || apiErrMsg.toLowerCase().includes("forbidden")) {
-      friendlyMessage = `Permissão negada na agenda "${creds.calendarId}". Adicione o e-mail da Service Account (${creds.serviceAccountEmail}) nas configurações da agenda do Google com permissão de "Fazer alterações nos eventos".`;
-    } else if (status === 401 || apiErrMsg.toLowerCase().includes("invalid_grant") || apiErrMsg.toLowerCase().includes("key")) {
-      friendlyMessage = "Falha de autenticação da Service Account. Verifique se GOOGLE_PRIVATE_KEY está configurada corretamente no .env.local.";
+    // Obter token de acesso válido (Service Account ou Refresh Token OAuth)
+    const accessToken = await getGoogleCalendarAccessToken();
+    let res: Response;
+    
+    if (accessToken) {
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+        creds.calendarId
+      )}/events`;
+      console.log("[Google Calendar] Enviando requisição de criação com token OAuth...");
+      res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(eventPayload),
+      });
     } else {
-      friendlyMessage = `Falha na Google Calendar API (${apiErrMsg}). O agendamento foi salvo no sistema e um link direto foi preparado.`;
+      console.warn("[Google Calendar] Nenhum token OAuth/Service Account disponível. Tentando com API Key...");
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+        creds.calendarId
+      )}/events?key=${creds.apiKey}`;
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(eventPayload),
+      });
     }
 
-    // Retorna fallback resiliente sem quebrar a operação do banco de dados
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.id) {
+        console.log(`[Google Calendar] Evento criado com sucesso. ID: ${data.id}`);
+        return {
+          success: true,
+          eventId: data.id,
+          htmlLink: data.htmlLink || directLink,
+          synced: true, // Confirmado sucesso na API
+          isFallback: false,
+          message: "Evento sincronizado com sucesso na Google Calendar API.",
+        };
+      }
+    }
+
+    const errorDetails = await res.text().catch(() => res.statusText);
+    console.error(`[Google Calendar] FALHA NA SINCRONIZAÇÃO. Status: ${res.status}. Motivo: ${errorDetails}`);
     return {
-      success: true,
+      success: false,
       eventId: null,
       htmlLink: directLink,
-      synced: false,
+      synced: false, // Mantido estritamente false na falha
       isFallback: true,
-      message: friendlyMessage,
-      errorDetails: friendlyMessage,
+      message: `Falha na API do Google Calendar (Status ${res.status}): ${errorDetails}`,
+    };
+  } catch (error) {
+    console.error("[Google Calendar] EXCEÇÃO CRÍTICA AO CRIAR EVENTO:", error);
+    return {
+      success: false,
+      eventId: null,
+      htmlLink: directLink,
+      synced: false, // Mantido estritamente false na exceção
+      isFallback: true,
+      message: `Erro de rede ou exceção ao sincronizar: ${(error as Error).message}`,
     };
   }
 }
 
-/**
- * Remove um evento na Google Calendar API (v3) ao cancelar um agendamento
- */
 export async function deleteGoogleCalendarEvent(eventId: string): Promise<boolean> {
   const creds = getGoogleCalendarCredentials();
-  if (!creds.hasServiceAccount || !eventId || eventId.startsWith("cal_")) {
+  if (!creds.isConfigured || !eventId || eventId.startsWith("cal_")) {
     return true;
   }
-
   try {
-    const calendar = getCalendarClient();
-    if (!calendar) return false;
+    const accessToken = await getGoogleCalendarAccessToken();
+    let res: Response;
 
-    await calendar.events.delete({
-      calendarId: creds.calendarId,
-      eventId,
-      sendUpdates: "all",
-    });
-
-    console.log(`[Google Calendar] Evento ${eventId} cancelado/removido na agenda.`);
-    return true;
-  } catch (error: unknown) {
-    const err = error as { response?: { status?: number; data?: unknown }; message?: string };
-    // Se o evento já foi removido (404 ou 410 Gone), considera cancelamento concluído
-    if (err?.response?.status === 404 || err?.response?.status === 410) {
-      return true;
+    if (accessToken) {
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+        creds.calendarId
+      )}/events/${encodeURIComponent(eventId)}`;
+      res = await fetch(url, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+    } else {
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+        creds.calendarId
+      )}/events/${encodeURIComponent(eventId)}?key=${creds.apiKey}`;
+      res = await fetch(url, { method: "DELETE" });
     }
-    console.error("[Google Calendar Server Error] Erro ao excluir evento:", {
-      eventId,
-      status: err?.response?.status,
-      message: err?.message,
-    });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => res.statusText);
+      console.warn(`[Google Calendar] Falha ao excluir evento no Google Agenda (Status ${res.status}): ${errorText}`);
+    }
+    return res.ok || res.status === 404;
+  } catch (error) {
+    console.warn("[Google Calendar] Exceção ao excluir evento no Google Agenda:", error);
     return false;
   }
 }
 
-/**
- * Atualiza horário ou dados de um evento na Google Calendar API (v3)
- */
 export async function updateGoogleCalendarEvent(
   eventId: string,
   input: GoogleCalendarEventInput
@@ -459,85 +418,103 @@ export async function updateGoogleCalendarEvent(
   const creds = getGoogleCalendarCredentials();
   const directLink = generateGoogleCalendarTemplateUrl(input);
 
-  if (!creds.hasServiceAccount || !eventId || eventId.startsWith("cal_")) {
+  if (!creds.isConfigured || !eventId || eventId.startsWith("cal_")) {
     return {
       success: true,
-      eventId: null,
+      eventId: eventId || null,
       htmlLink: directLink,
       synced: false,
       isFallback: true,
-      message: "Horário atualizado no sistema local.",
+      message: "Atualização registrada sem sincronização automática com API.",
     };
   }
 
   try {
-    const calendar = getCalendarClient();
-    if (!calendar) {
-      throw new Error("Cliente Google Calendar indisponível.");
-    }
-
     const summary = `Consulta: ${input.procedimento} - ${input.patientName}`;
     const description = [
       `Paciente: ${input.patientName}`,
-      input.patientPhone ? `Telefone / WhatsApp: ${input.patientPhone}` : "",
-      input.patientEmail ? `E-mail: ${input.patientEmail}` : "",
+      `Telefone: ${input.patientPhone || "Não informado"}`,
+      `E-mail: ${input.patientEmail || "Não informado"}`,
       `Procedimento: ${input.procedimento}`,
-      input.observacoes ? `Observações Clínicas: ${input.observacoes}` : "",
-      "",
-      "--------------------------------------------------",
-      "Agendamento atualizado via Sistema Dra. Juliana Sena - Gestão de Pacientes",
+      input.observacoes ? `Observações: ${input.observacoes}` : "",
     ]
       .filter(Boolean)
       .join("\n");
 
-    const startDateTime = toIsoDateTime(input.date, input.startTime);
-    const endDateTime = toIsoDateTime(input.date, input.endTime);
-
-    const response = await calendar.events.patch({
-      calendarId: creds.calendarId,
-      eventId,
-      sendUpdates: "all",
-      requestBody: {
-        summary,
-        description,
-        start: {
-          dateTime: startDateTime,
-          timeZone: "America/Sao_Paulo",
-        },
-        end: {
-          dateTime: endDateTime,
-          timeZone: "America/Sao_Paulo",
-        },
+    const eventPayload = {
+      summary,
+      description,
+      start: {
+        dateTime: toIsoDateTime(input.date, input.startTime),
+        timeZone: "America/Sao_Paulo",
       },
-    });
-
-    const updated = response.data;
-    console.log(`[Google Calendar] Evento ${eventId} atualizado com sucesso na agenda.`);
-
-    return {
-      success: true,
-      eventId: updated.id || eventId,
-      htmlLink: updated.htmlLink || directLink,
-      synced: true,
-      isFallback: false,
-      message: "Evento atualizado com sucesso no Google Agenda!",
+      end: {
+        dateTime: toIsoDateTime(input.date, input.endTime),
+        timeZone: "America/Sao_Paulo",
+      },
+      attendees: input.patientEmail ? [{ email: input.patientEmail, displayName: input.patientName }] : [],
     };
-  } catch (error: unknown) {
-    const err = error as { message?: string; response?: { data?: unknown; status?: number } };
-    console.error("[Google Calendar Server Error] Erro ao atualizar evento na agenda:", {
-      eventId,
-      message: err?.message,
-      status: err?.response?.status,
-    });
 
+    const accessToken = await getGoogleCalendarAccessToken();
+    let res: Response;
+
+    if (accessToken) {
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+        creds.calendarId
+      )}/events/${encodeURIComponent(eventId)}`;
+      console.log("[Google Calendar] Enviando requisição de atualização com token OAuth...");
+      res = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(eventPayload),
+      });
+    } else {
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+        creds.calendarId
+      )}/events/${encodeURIComponent(eventId)}?key=${creds.apiKey}`;
+      res = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(eventPayload),
+      });
+    }
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.id) {
+        return {
+          success: true,
+          eventId: data.id,
+          htmlLink: data.htmlLink || directLink,
+          synced: true,
+          isFallback: false,
+          message: "Evento atualizado com sucesso no Google Agenda.",
+        };
+      }
+    }
+
+    const errorDetails = await res.text().catch(() => res.statusText);
+    console.error(`[Google Calendar] FALHA NA ATUALIZAÇÃO DO EVENTO. Status: ${res.status}. Motivo: ${errorDetails}`);
     return {
-      success: true,
+      success: false,
       eventId,
       htmlLink: directLink,
       synced: false,
       isFallback: true,
-      message: "Atualização salva no banco. Não foi possível sincronizar com o Google Agenda.",
-      errorDetails: err?.message,
+      message: `Falha ao atualizar no Google Calendar: ${errorDetails}`,
+    };
+  } catch (error) {
+    console.error("[Google Calendar] EXCEÇÃO AO ATUALIZAR EVENTO:", error);
+    return {
+      success: false,
+      eventId,
+      htmlLink: directLink,
+      synced: false,
+      isFallback: true,
+      message: `Erro ao atualizar evento: ${(error as Error).message}`,
     };
   }
 }

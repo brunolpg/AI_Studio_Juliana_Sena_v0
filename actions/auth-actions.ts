@@ -53,7 +53,8 @@ export async function loginAction(rawInput: unknown): Promise<AuthResponse> {
       .eq("id", data.user.id)
       .maybeSingle();
 
-    const role: UserRole = (profile?.role as UserRole) || (email.includes("admin") ? "administrador" : "paciente");
+    // const role: UserRole = (profile?.role as UserRole) || (email.includes("admin") ? "administrador" : "paciente");
+    const role: UserRole = (profile?.role as UserRole) ?? "paciente";
     const name = profile?.nome || data.user.user_metadata?.full_name || email.split("@")[0];
 
     const user: User = {
@@ -98,7 +99,7 @@ export async function registerAction(rawInput: unknown): Promise<AuthResponse> {
       };
     }
 
-    const assignedRole: UserRole = role;
+    const assignedRole: UserRole = "paciente";
 
     const { data, error } = await supabase.auth.signUp({
       email,
