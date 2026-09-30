@@ -28,7 +28,10 @@ export async function getSession(): Promise<User | null> {
     const supabase = await createClient();
     if (!supabase) return null;
 
-    const { data: { user: authUser }, error } = await supabase.auth.getUser();
+    const {
+      data: { user: authUser },
+      error,
+    } = await supabase.auth.getUser();
     if (error || !authUser) return null;
 
     const { data: profile } = await supabase
@@ -37,8 +40,21 @@ export async function getSession(): Promise<User | null> {
       .eq("id", authUser.id)
       .maybeSingle();
 
-    const role: UserRole = (profile?.role as UserRole) || "paciente";
-    const name = profile?.nome || authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Usuário";
+    // Obtém o perfil da base de dados ou aplica a regra de contingência para a conta de administração
+    let role: UserRole = profile?.role as UserRole;
+    if (!role) {
+      role =
+        authUser.email?.toLowerCase() === "brunolpg@gmail.com"
+          ? "administrador"
+          : "paciente";
+    }
+
+    const name =
+      profile?.nome ||
+      authUser.user_metadata?.full_name ||
+      authUser.user_metadata?.nome ||
+      authUser.email?.split("@")[0] ||
+      "Usuário";
 
     return {
       id: authUser.id,

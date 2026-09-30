@@ -175,7 +175,14 @@ export async function getCurrentUserAction(): Promise<User | null> {
       .eq("id", authUser.id)
       .maybeSingle();
 
-    const role: UserRole = (profile?.role as UserRole) || "paciente";
+    // Prioriza o perfil da base de dados; se vier nulo ou pendente, confere o e-mail administrativo
+    let role: UserRole = (profile?.role as UserRole);
+    if (!role) {
+      role = authUser.email?.toLowerCase() === "brunolpg@gmail.com" 
+        ? "administrador" 
+        : "paciente";
+    }
+
     const name = profile?.nome || authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Usuário";
 
     return {
