@@ -184,9 +184,18 @@ export async function performFullSync() {
 
     const googleEvents = eventsRes.data.items || [];
 
-    // Busca clientes existentes para fazer o match pelo nome se necessário
+    // Busca todos os pacientes existentes para fazer o match pelo nome
     const { data: clients } = await supabase.from("pacientes").select("id, nome");
-    const defaultClientId = clients && clients.length > 0 ? clients[0].id : null;
+    
+    // Cria um mapa (Dicionário) de pacientes para busca rápida, normalizando os nomes
+    const patientMap = new Map<string, string>();
+    if (clients) {
+      clients.forEach(client => {
+         // Remove acentos, espaços extras e deixa em minúsculo para facilitar o match
+         const normalizedName = client.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+         patientMap.set(normalizedName, client.id);
+      });
+    }
 
     for (const ev of googleEvents) {
       if (!ev.id || !ev.start?.dateTime || !ev.summary) continue;
@@ -198,30 +207,45 @@ export async function performFullSync() {
         .eq("google_event_id", ev.id)
         .maybeSingle();
 
-      if (!existingApt && defaultClientId) {
-        const startDt = new Date(ev.start.dateTime);
-        const endDt = ev.end?.dateTime ? new Date(ev.end.dateTime) : new Date(startDt.getTime() + 3600000);
+      if (!existingApt) {
+        
+        let foundClientId = null;
+        
+        // Extrai o nome do paciente da descrição do evento (formato: "Paciente: Nome")
+        if (ev.description) {
+           const match = ev.description.match(/Paciente:\s*(.+?)(?:\r?\n|$)/i);
+           if (match && match[1]) {
+               const extractedName = match[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+               foundClientId = patientMap.get(extractedName) || null;
+           }
+        }
+        
+        // Só importa se encontrou um paciente válido no banco de dados correspondente à descrição
+        if (foundClientId) {
+            const startDt = new Date(ev.start.dateTime);
+            const endDt = ev.end?.dateTime ? new Date(ev.end.dateTime) : new Date(startDt.getTime() + 3600000);
 
-        // Data no fuso de São Paulo (evita virar o dia por causa do UTC)
-        const dataStr = startDt.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-        const startHorario = startDt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
-        const endHorario = endDt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+            // Data no fuso de São Paulo (evita virar o dia por causa do UTC)
+            const dataStr = startDt.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+            const startHorario = startDt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+            const endHorario = endDt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 
-        const { error: insErr } = await supabase.from("appointments").insert({
-          client_id: defaultClientId,
-          data: dataStr,
-          horario_inicio: startHorario,
-          horario_fim: endHorario,
-          procedimento: ev.summary,
-          observacoes: ev.description || "Importado do Google Calendar",
-          status: "Confirmado",
-          google_event_id: ev.id,
-          google_html_link: ev.htmlLink || null,
-          synced_with_google: true,
-        });
+            const { error: insErr } = await supabase.from("appointments").insert({
+              client_id: foundClientId, // Usa o ID do paciente encontrado
+              data: dataStr,
+              horario_inicio: startHorario,
+              horario_fim: endHorario,
+              procedimento: ev.summary,
+              observacoes: ev.description || "Importado do Google Calendar",
+              status: "Confirmado",
+              google_event_id: ev.id,
+              google_html_link: ev.htmlLink || null,
+              synced_with_google: true,
+            });
 
-        if (!insErr) imported++;
-        else errors++;
+            if (!insErr) imported++;
+            else errors++;
+        }
       }
     }
 
