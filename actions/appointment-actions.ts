@@ -7,6 +7,7 @@ import {
   getAllowedSlotsForDate,
   getAllowedStartTimesForDate,
   getDayScheduleDescription,
+  getTodaySaoPauloDateString,
   type Appointment,
   type AppointmentInput,
   type AppointmentFilter,
@@ -414,6 +415,24 @@ export async function createAppointmentAction(
       };
     }
 
+    // Validação estrita de antecedência mínima de 2 dias corridos (considerando o fuso de America/Sao_Paulo)
+    const todayStr = getTodaySaoPauloDateString();
+    const partsToday = todayStr.split("-").map(Number);
+    const partsTarget = input.data.split("-").map(Number);
+    
+    const dToday = new Date(partsToday[0], partsToday[1] - 1, partsToday[2]);
+    const dTarget = new Date(partsTarget[0], partsTarget[1] - 1, partsTarget[2]);
+    
+    const diffTime = dTarget.getTime() - dToday.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 2) {
+      return {
+        success: false,
+        message: "Os agendamentos devem ser solicitados com no mínimo 2 dias de antecedência.",
+      };
+    }
+
     // 1. Validação rígida do dia da semana (Segunda, Quinta ou Sábado)
     if (!isAllowedAppointmentDay(input.data)) {
       return {
@@ -679,6 +698,26 @@ export async function updateAppointmentAction(
 
     const targetDate = updates.data || current.data;
     const targetStart = updates.horario_inicio || current.horario_inicio;
+
+    // Validação estrita de antecedência mínima de 2 dias corridos para reagendamentos (alteração de data)
+    if (updates.data && updates.data !== current.data) {
+      const todayStr = getTodaySaoPauloDateString();
+      const partsToday = todayStr.split("-").map(Number);
+      const partsTarget = updates.data.split("-").map(Number);
+      
+      const dToday = new Date(partsToday[0], partsToday[1] - 1, partsToday[2]);
+      const dTarget = new Date(partsTarget[0], partsTarget[1] - 1, partsTarget[2]);
+      
+      const diffTime = dTarget.getTime() - dToday.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 2) {
+        return {
+          success: false,
+          message: "Os agendamentos devem ser solicitados com no mínimo 2 dias de antecedência.",
+        };
+      }
+    }
 
     // Validação rígida de dia permitido na edição/reagendamento
     if (updates.data && !isAllowedAppointmentDay(targetDate)) {

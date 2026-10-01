@@ -87,6 +87,28 @@ export const SATURDAY_SLOTS: Array<{ slot: string; endSlot: string; label: strin
  */
 export const STANDARD_TIME_SLOTS = MONDAY_THURSDAY_SLOTS;
 
+export function getTodaySaoPauloDateString(): string {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(new Date());
+}
+
+export function getMinSelectableAppointmentDateString(): string {
+  const todayStr = getTodaySaoPauloDateString();
+  const [year, month, day] = todayStr.split("-").map(Number);
+  const dateObj = new Date(year, month - 1, day);
+  dateObj.setDate(dateObj.getDate() + 2);
+  
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const d = String(dateObj.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 /**
  * Mapeia o dia da semana a partir de uma data YYYY-MM-DD com proteção estrita contra desvios de fuso horário UTC.
  * 0 = Domingo, 1 = Segunda, 2 = Terça, 3 = Quarta, 4 = Quinta, 5 = Sexta, 6 = Sábado.

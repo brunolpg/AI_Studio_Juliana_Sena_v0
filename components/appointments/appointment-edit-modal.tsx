@@ -11,6 +11,7 @@ import {
   isAllowedAppointmentDay,
   getAllowedStartTimesForDate,
   getDayScheduleDescription,
+  getMinSelectableAppointmentDateString,
 } from "@/types/appointment";
 
 interface AppointmentEditModalProps {
@@ -75,6 +76,13 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
     e.preventDefault();
     if (!date) {
       setErrorMsg("Selecione a data do agendamento.");
+      return;
+    }
+
+    // Validação de antecedência mínima de 2 dias corridos para reagendamentos
+    const minAllowedDate = getMinSelectableAppointmentDateString();
+    if (date !== appointment.data && date < minAllowedDate) {
+      setErrorMsg("Os agendamentos devem ser solicitados com no mínimo 2 dias de antecedência.");
       return;
     }
 
@@ -192,6 +200,7 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
             <AppointmentCalendarPicker
               selectedDate={date}
               onSelectDate={(d) => setDate(d)}
+              minDate={getMinSelectableAppointmentDateString()}
             />
           </div>
 

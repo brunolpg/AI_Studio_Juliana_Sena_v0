@@ -30,6 +30,7 @@ import {
   isAllowedAppointmentDay,
   getAllowedStartTimesForDate,
   getDayScheduleDescription,
+  getMinSelectableAppointmentDateString,
 } from "@/types/appointment";
 
 export type SelectablePatient = PatientSummary | Client;
@@ -65,10 +66,15 @@ function AppointmentFormModalContent({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Data padrão: próximo dia de atendimento permitido (Segunda, Quinta ou Sábado)
-  const defaultDate = useMemo(() => {
-    return getNextAllowedAppointmentDate();
+  // Data mínima selecionável (hoje + 2 dias)
+  const minDate = useMemo(() => {
+    return getMinSelectableAppointmentDateString();
   }, []);
+
+  // Data padrão: próximo dia de atendimento permitido a partir da data mínima
+  const defaultDate = useMemo(() => {
+    return getNextAllowedAppointmentDate(minDate);
+  }, [minDate]);
 
   // Estados dos pacientes reais via Supabase (SEM MOCK DATA)
   const [patients, setPatients] = useState<PatientSummary[]>([]);
@@ -230,6 +236,13 @@ function AppointmentFormModalContent({
 
     if (!selectedDate) {
       setErrorMsg("Selecione a data da consulta.");
+      return;
+    }
+
+    // Validação de antecedência mínima de 2 dias corridos
+    const minAllowedDate = getMinSelectableAppointmentDateString();
+    if (selectedDate < minAllowedDate) {
+      setErrorMsg("Os agendamentos devem ser solicitados com no mínimo 2 dias de antecedência.");
       return;
     }
 
@@ -500,7 +513,7 @@ function AppointmentFormModalContent({
               <AppointmentCalendarPicker
                 selectedDate={selectedDate}
                 onSelectDate={(d) => setSelectedDate(d)}
-                minDate={defaultDate}
+                minDate={minDate}
               />
 
               <div className="flex items-center justify-between text-[11px] px-1">
