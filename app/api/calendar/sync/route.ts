@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { performFullSync } from "@/lib/google-calendar/oauth-sync-service";
+import { performFullSync } from "@/lib/google-calendar/calendar-sync-service";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await performFullSync(user.id);
+    const result = await performFullSync();
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json({

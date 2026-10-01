@@ -1,98 +1,55 @@
 import { google } from "googleapis";
 import { createClient } from "@/lib/supabase/server";
-
-export function getOAuthClient() {
-  const clientId = process.env.GOOGLE_CLIENT_ID || "";
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.NEXT_PUBLIC_SITE_URL || ""}/api/google/callback`;
-
-  return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
-}
-
-export async function getStoredTokenForUser(userId: string) {
-  const supabase = await createClient();
-  if (!supabase) return null;
-
-  const { data, error } = await supabase
-    .from("google_tokens")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return data;
-}
-
-export async function saveTokenForUser(userId: string, tokens: {
-  access_token?: string | null;
-  refresh_token?: string | null;
-  expiry_date?: number | null;
-  scope?: string | null;
-  token_type?: string | null;
-}) {
-  const supabase = await createClient();
-  if (!supabase) return false;
-
-  // Busca token existente para preservar refresh_token caso o Google não envie um novo na renovação
-  const existing = await getStoredTokenForUser(userId);
-  const refreshToken = tokens.refresh_token || existing?.refresh_token || null;
-  const accessToken = tokens.access_token || existing?.access_token;
-
-  if (!accessToken) return false;
-
-  const { error } = await supabase
-    .from("google_tokens")
-    .upsert({
-      user_id: userId,
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      expiry_date: tokens.expiry_date || existing?.expiry_date,
-      scope: tokens.scope || existing?.scope,
-      token_type: tokens.token_type || existing?.token_type,
-      calendar_id: existing?.calendar_id || "primary",
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id" });
-
-  return !error;
-}
+import { getGoogleCalendarCredentials } from "@/lib/google-calendar/calendar-service";
 
 /**
- * Retorna um cliente OAuth2 autenticado e com token renovado para o usuário
+ * Sincronização com a agenda ESPECÍFICA da Dra. Juliana Sena, usando uma
+ * Conta de Serviço (sem login pessoal de ninguém).
+ *
+ * Variáveis de ambiente necessárias:
+ *  - GOOGLE_SERVICE_ACCOUNT_EMAIL  (client_email do JSON da conta de serviço)
+ *  - GOOGLE_PRIVATE_KEY            (private_key do JSON da conta de serviço)
+ *  - GOOGLE_CALENDAR_ID            (ID da agenda, termina em @group.calendar.google.com)
+ *
+ * A agenda precisa estar compartilhada com o e-mail da conta de serviço com a
+ * permissão "Fazer alterações nos eventos".
  */
-export async function getAuthenticatedOAuthClient(userId: string) {
-  const tokenRecord = await getStoredTokenForUser(userId);
-  if (!tokenRecord || !tokenRecord.refresh_token) {
-    return { client: null, status: "needs_reconnect", message: "Reconectar Google Agenda" };
+
+const CALENDAR_SCOPES = ["https://www.googleapis.com/auth/calendar"];
+
+export type CalendarConnectionStatus = "connected" | "not_configured";
+
+export function getServiceAccountCalendar() {
+  const { calendarId, serviceAccountEmail, privateKey } = getGoogleCalendarCredentials();
+
+  if (!calendarId || !serviceAccountEmail || !privateKey) {
+    return {
+      calendar: null,
+      calendarId,
+      status: "not_configured" as const,
+      message:
+        "Google Agenda não configurado: defina GOOGLE_CALENDAR_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL e GOOGLE_PRIVATE_KEY.",
+    };
   }
 
-  const oauth2Client = getOAuthClient();
-  oauth2Client.setCredentials({
-    access_token: tokenRecord.access_token,
-    refresh_token: tokenRecord.refresh_token,
-    expiry_date: tokenRecord.expiry_date,
-    token_type: tokenRecord.token_type || "Bearer",
-    scope: tokenRecord.scope,
+  const auth = new google.auth.JWT({
+    email: serviceAccountEmail,
+    key: privateKey.replace(/\\n/g, "\n").replace(/^"|"$/g, ""),
+    scopes: CALENDAR_SCOPES,
   });
 
-  // Verifica se o token expirou e tenta renovar
-  try {
-    const now = Date.now();
-    if (tokenRecord.expiry_date && tokenRecord.expiry_date <= now + 60000) {
-      const { credentials } = await oauth2Client.refreshAccessToken();
-      await saveTokenForUser(userId, credentials);
-      oauth2Client.setCredentials(credentials);
-    }
-    return { client: oauth2Client, status: "connected", message: "Sincronizado" };
-  } catch (error) {
-    console.error("Erro ao renovar token do Google:", error);
-    return { client: null, status: "error", message: "Reconectar Google Agenda" };
-  }
+  return {
+    calendar: google.calendar({ version: "v3", auth }),
+    calendarId,
+    status: "connected" as const,
+    message: "Sincronizado",
+  };
 }
 
 /**
- * Sincroniza um agendamento individual para o Google Calendar (Criação ou Atualização)
+ * Sincroniza um agendamento individual para a agenda da Dra. Juliana (criação ou atualização)
  */
-export async function syncSingleAppointmentToGoogle(userId: string, appointmentId: string) {
+export async function syncSingleAppointmentToGoogle(appointmentId: string) {
   const supabase = await createClient();
   if (!supabase) return { success: false, message: "Supabase não configurado" };
 
@@ -106,14 +63,11 @@ export async function syncSingleAppointmentToGoogle(userId: string, appointmentI
     return { success: false, message: "Agendamento não encontrado" };
   }
 
-  const { client, status } = await getAuthenticatedOAuthClient(userId);
-  if (!client) {
+  const { calendar, calendarId, message: configMsg } = getServiceAccountCalendar();
+  if (!calendar) {
     await supabase.from("appointments").update({ synced_with_google: false }).eq("id", appointmentId);
-    return { success: false, message: status === "needs_reconnect" ? "Reconectar Google Agenda" : "Erro de Autenticação Google" };
+    return { success: false, message: configMsg };
   }
-
-  const calendar = google.calendar({ version: "v3", auth: client });
-  const calendarId = "primary";
 
   // Monta horário no fuso America/Sao_Paulo
   const startDateTime = `${apt.data}T${apt.horario_inicio}:00-03:00`;
@@ -144,18 +98,12 @@ export async function syncSingleAppointmentToGoogle(userId: string, appointmentI
         htmlLink = res.data.htmlLink || null;
       } catch {
         // Se o evento não existir mais no Google, cria um novo
-        const res = await calendar.events.insert({
-          calendarId,
-          requestBody: eventBody,
-        });
+        const res = await calendar.events.insert({ calendarId, requestBody: eventBody });
         googleEventId = res.data.id || null;
         htmlLink = res.data.htmlLink || null;
       }
     } else {
-      const res = await calendar.events.insert({
-        calendarId,
-        requestBody: eventBody,
-      });
+      const res = await calendar.events.insert({ calendarId, requestBody: eventBody });
       googleEventId = res.data.id || null;
       htmlLink = res.data.htmlLink || null;
     }
@@ -178,19 +126,15 @@ export async function syncSingleAppointmentToGoogle(userId: string, appointmentI
 }
 
 /**
- * Remove um evento do Google Calendar quando o agendamento é excluído
+ * Remove um evento da agenda da Dra. Juliana quando o agendamento é excluído
  */
-export async function deleteAppointmentFromGoogle(userId: string, googleEventId: string) {
+export async function deleteAppointmentFromGoogle(googleEventId: string) {
   if (!googleEventId) return { success: true };
-  const { client } = await getAuthenticatedOAuthClient(userId);
-  if (!client) return { success: false, message: "Google não conectado" };
+  const { calendar, calendarId, message } = getServiceAccountCalendar();
+  if (!calendar) return { success: false, message };
 
   try {
-    const calendar = google.calendar({ version: "v3", auth: client });
-    await calendar.events.delete({
-      calendarId: "primary",
-      eventId: googleEventId,
-    });
+    await calendar.events.delete({ calendarId, eventId: googleEventId });
     return { success: true };
   } catch (error) {
     console.error("Erro ao excluir evento do Google Calendar:", error);
@@ -199,15 +143,15 @@ export async function deleteAppointmentFromGoogle(userId: string, googleEventId:
 }
 
 /**
- * Realiza a sincronização bidirecional completa (envia locais e importa novos do Google)
+ * Realiza a sincronização bidirecional completa (envia locais e importa novos da agenda)
  */
-export async function performFullSync(userId: string) {
+export async function performFullSync() {
   const supabase = await createClient();
   if (!supabase) return { success: false, sent: 0, imported: 0, errors: 1, message: "Supabase indisponível" };
 
-  const { client, status, message: authMsg } = await getAuthenticatedOAuthClient(userId);
-  if (!client) {
-    return { success: false, sent: 0, imported: 0, errors: 1, message: authMsg };
+  const { calendar, calendarId, message: configMsg } = getServiceAccountCalendar();
+  if (!calendar) {
+    return { success: false, sent: 0, imported: 0, errors: 1, message: configMsg };
   }
 
   let sent = 0;
@@ -223,24 +167,23 @@ export async function performFullSync(userId: string) {
 
     if (localUnsynced && localUnsynced.length > 0) {
       for (const item of localUnsynced) {
-        const res = await syncSingleAppointmentToGoogle(userId, item.id);
+        const res = await syncSingleAppointmentToGoogle(item.id);
         if (res.success) sent++;
         else errors++;
       }
     }
 
-    // 2. Importa eventos novos do Google Calendar ("primary") para o Supabase
-    const calendar = google.calendar({ version: "v3", auth: client });
-    const nowISO = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(); // últimos 30 dias
+    // 2. Importa eventos novos da agenda da Dra. Juliana para o Supabase
+    const timeMin = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(); // últimos 30 dias
     const eventsRes = await calendar.events.list({
-      calendarId: "primary",
-      timeMin: nowISO,
+      calendarId,
+      timeMin,
       singleEvents: true,
       orderBy: "startTime",
     });
 
     const googleEvents = eventsRes.data.items || [];
-    
+
     // Busca clientes existentes para fazer o match pelo nome se necessário
     const { data: clients } = await supabase.from("pacientes").select("id, nome");
     const defaultClientId = clients && clients.length > 0 ? clients[0].id : null;
@@ -256,15 +199,14 @@ export async function performFullSync(userId: string) {
         .maybeSingle();
 
       if (!existingApt && defaultClientId) {
-        // Extrai data e horário
         const startDt = new Date(ev.start.dateTime);
         const endDt = ev.end?.dateTime ? new Date(ev.end.dateTime) : new Date(startDt.getTime() + 3600000);
 
-        const dataStr = startDt.toISOString().split("T")[0];
+        // Data no fuso de São Paulo (evita virar o dia por causa do UTC)
+        const dataStr = startDt.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
         const startHorario = startDt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
         const endHorario = endDt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
 
-        // Insere no Supabase como evento importado
         const { error: insErr } = await supabase.from("appointments").insert({
           client_id: defaultClientId,
           data: dataStr,

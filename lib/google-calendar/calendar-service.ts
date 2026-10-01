@@ -304,7 +304,8 @@ export async function createGoogleCalendarEvent(
         dateTime: toIsoDateTime(input.date, input.endTime),
         timeZone: "America/Sao_Paulo",
       },
-      attendees: input.patientEmail ? [{ email: input.patientEmail, displayName: input.patientName }] : [],
+      // Sem "attendees": contas de serviço não podem convidar participantes (erro 403
+      // forbiddenForServiceAccounts). O e-mail do paciente já consta na descrição.
     };
 
     // Obter token de acesso válido (Service Account ou Refresh Token OAuth)
@@ -452,7 +453,8 @@ export async function updateGoogleCalendarEvent(
         dateTime: toIsoDateTime(input.date, input.endTime),
         timeZone: "America/Sao_Paulo",
       },
-      attendees: input.patientEmail ? [{ email: input.patientEmail, displayName: input.patientName }] : [],
+      // Sem "attendees": contas de serviço não podem convidar participantes (erro 403
+      // forbiddenForServiceAccounts). O e-mail do paciente já consta na descrição.
     };
 
     const accessToken = await getGoogleCalendarAccessToken();
