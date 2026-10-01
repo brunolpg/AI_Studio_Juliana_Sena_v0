@@ -7,9 +7,9 @@ import { getGoogleCalendarCredentials } from "@/lib/google-calendar/calendar-ser
  * Conta de Serviço (sem login pessoal de ninguém).
  *
  * Variáveis de ambiente necessárias:
- *  - GOOGLE_SERVICE_ACCOUNT_EMAIL  (client_email do JSON da conta de serviço)
- *  - GOOGLE_PRIVATE_KEY            (private_key do JSON da conta de serviço)
- *  - GOOGLE_CALENDAR_ID            (ID da agenda, termina em @group.calendar.google.com)
+ * - GOOGLE_SERVICE_ACCOUNT_EMAIL (client_email do JSON da conta de serviço)
+ * - GOOGLE_PRIVATE_KEY           (private_key do JSON da conta de serviço)
+ * - GOOGLE_CALENDAR_ID           (ID da agenda, termina em @group.calendar.google.com)
  *
  * A agenda precisa estar compartilhada com o e-mail da conta de serviço com a
  * permissão "Fazer alterações nos eventos".
@@ -48,6 +48,7 @@ export function getServiceAccountCalendar() {
 
 /**
  * Sincroniza um agendamento individual para a agenda da Dra. Juliana (criação ou atualização)
+ * Inclui o e-mail do paciente nos convidados (attendees) e envia notificação.
  */
 export async function syncSingleAppointmentToGoogle(appointmentId: string) {
   const supabase = await createClient();
@@ -74,15 +75,21 @@ export async function syncSingleAppointmentToGoogle(appointmentId: string) {
   const endDateTime = `${apt.data}T${apt.horario_fim}:00-03:00`;
 
   const patientName = apt.pacientes?.nome || "Paciente";
+  const patientEmail = apt.pacientes?.email;
   const summary = `Consulta: ${patientName} - ${apt.procedimento}`;
-  const description = `Paciente: ${patientName}\nTelefone: ${apt.pacientes?.telefone || "N/A"}\nProcedimento: ${apt.procedimento}\nObservações: ${apt.observacoes || "Nenhuma"}`;
+  const description = `Paciente: ${patientName}\nTelefone: ${apt.pacientes?.telefone || "N/A"}\nE-mail: ${patientEmail || "N/A"}\nProcedimento: ${apt.procedimento}\nObservações: ${apt.observacoes || "Nenhuma"}`;
 
-  const eventBody = {
+  const eventBody: any = {
     summary,
     description,
     start: { dateTime: startDateTime, timeZone: "America/Sao_Paulo" },
     end: { dateTime: endDateTime, timeZone: "America/Sao_Paulo" },
   };
+
+  // Inclui o paciente como convidado do evento caso possua e-mail cadastrado
+  if (patientEmail) {
+    eventBody.attendees = [{ email: patientEmail, displayName: patientName }];
+  }
 
   try {
     let googleEventId = apt.google_event_id;
@@ -94,16 +101,25 @@ export async function syncSingleAppointmentToGoogle(appointmentId: string) {
           calendarId,
           eventId: googleEventId,
           requestBody: eventBody,
+          sendUpdates: "all",
         });
         htmlLink = res.data.htmlLink || null;
       } catch {
         // Se o evento não existir mais no Google, cria um novo
-        const res = await calendar.events.insert({ calendarId, requestBody: eventBody });
+        const res = await calendar.events.insert({
+          calendarId,
+          requestBody: eventBody,
+          sendUpdates: "all",
+        });
         googleEventId = res.data.id || null;
         htmlLink = res.data.htmlLink || null;
       }
     } else {
-      const res = await calendar.events.insert({ calendarId, requestBody: eventBody });
+      const res = await calendar.events.insert({
+        calendarId,
+        requestBody: eventBody,
+        sendUpdates: "all",
+      });
       googleEventId = res.data.id || null;
       htmlLink = res.data.htmlLink || null;
     }
@@ -143,7 +159,10 @@ export async function deleteAppointmentFromGoogle(googleEventId: string) {
 }
 
 /**
- * Realiza a sincronização bidirecional completa (envia locais e importa novos da agenda)
+ * Realiza a sincronização bidirecional completa:
+ * 1. Envia agendamentos locais para a agenda.
+ * 2. Importa eventos da agenda para o Supabase SOMENTE se a descrição contiver o nome
+ *    de um paciente já cadastrado no banco de dados.
  */
 export async function performFullSync() {
   const supabase = await createClient();
@@ -184,23 +203,26 @@ export async function performFullSync() {
 
     const googleEvents = eventsRes.data.items || [];
 
-    // Busca todos os pacientes existentes para fazer o match pelo nome
+    // Busca todos os pacientes existentes para construir o índice de comparação por nome
     const { data: clients } = await supabase.from("pacientes").select("id, nome");
-    
-    // Cria um mapa (Dicionário) de pacientes para busca rápida, normalizando os nomes
+
     const patientMap = new Map<string, string>();
     if (clients) {
-      clients.forEach(client => {
-         // Remove acentos, espaços extras e deixa em minúsculo para facilitar o match
-         const normalizedName = client.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
-         patientMap.set(normalizedName, client.id);
+      clients.forEach((client) => {
+        // Normaliza removendo acentos e espaços extras para garantir a correspondência
+        const normalizedName = client.nome
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim()
+          .toLowerCase();
+        patientMap.set(normalizedName, client.id);
       });
     }
 
     for (const ev of googleEvents) {
       if (!ev.id || !ev.start?.dateTime || !ev.summary) continue;
 
-      // Verifica se já existe no Supabase por google_event_id
+      // Verifica se o evento já existe registrado no banco
       const { data: existingApt } = await supabase
         .from("appointments")
         .select("id")
@@ -208,43 +230,54 @@ export async function performFullSync() {
         .maybeSingle();
 
       if (!existingApt) {
-        
-        let foundClientId = null;
-        
-        // Extrai o nome do paciente da descrição do evento (formato: "Paciente: Nome")
+        let foundClientId: string | null = null;
+
+        // Procura pelo padrão "Paciente: [Nome]" na descrição do evento
         if (ev.description) {
-           const match = ev.description.match(/Paciente:\s*(.+?)(?:\r?\n|$)/i);
-           if (match && match[1]) {
-               const extractedName = match[1].normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
-               foundClientId = patientMap.get(extractedName) || null;
-           }
+          const match = ev.description.match(/Paciente:\s*(.+?)(?:\r?\n|$)/i);
+          if (match && match[1]) {
+            const extractedName = match[1]
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .trim()
+              .toLowerCase();
+            foundClientId = patientMap.get(extractedName) || null;
+          }
         }
-        
-        // Só importa se encontrou um paciente válido no banco de dados correspondente à descrição
+
+        // Importa apenas se o paciente foi identificado e existe no banco de dados
         if (foundClientId) {
-            const startDt = new Date(ev.start.dateTime);
-            const endDt = ev.end?.dateTime ? new Date(ev.end.dateTime) : new Date(startDt.getTime() + 3600000);
+          const startDt = new Date(ev.start.dateTime);
+          const endDt = ev.end?.dateTime ? new Date(ev.end.dateTime) : new Date(startDt.getTime() + 3600000);
 
-            // Data no fuso de São Paulo (evita virar o dia por causa do UTC)
-            const dataStr = startDt.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-            const startHorario = startDt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
-            const endHorario = endDt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+          // Data e horários preservando o fuso de São Paulo
+          const dataStr = startDt.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+          const startHorario = startDt.toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "America/Sao_Paulo",
+          });
+          const endHorario = endDt.toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "America/Sao_Paulo",
+          });
 
-            const { error: insErr } = await supabase.from("appointments").insert({
-              client_id: foundClientId, // Usa o ID do paciente encontrado
-              data: dataStr,
-              horario_inicio: startHorario,
-              horario_fim: endHorario,
-              procedimento: ev.summary,
-              observacoes: ev.description || "Importado do Google Calendar",
-              status: "Confirmado",
-              google_event_id: ev.id,
-              google_html_link: ev.htmlLink || null,
-              synced_with_google: true,
-            });
+          const { error: insErr } = await supabase.from("appointments").insert({
+            client_id: foundClientId,
+            data: dataStr,
+            horario_inicio: startHorario,
+            horario_fim: endHorario,
+            procedimento: ev.summary,
+            observacoes: ev.description || "Importado do Google Calendar",
+            status: "Confirmado",
+            google_event_id: ev.id,
+            google_html_link: ev.htmlLink || null,
+            synced_with_google: true,
+          });
 
-            if (!insErr) imported++;
-            else errors++;
+          if (!insErr) imported++;
+          else errors++;
         }
       }
     }
@@ -258,6 +291,12 @@ export async function performFullSync() {
     };
   } catch (error) {
     console.error("Erro na sincronização bidirecional:", error);
-    return { success: false, sent, imported, errors: errors + 1, message: (error as Error).message || "Erro na sincronização" };
+    return {
+      success: false,
+      sent,
+      imported,
+      errors: errors + 1,
+      message: (error as Error).message || "Erro na sincronização",
+    };
   }
 }
