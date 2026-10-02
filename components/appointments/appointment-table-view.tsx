@@ -30,11 +30,14 @@ import { AppointmentFormModal } from "./appointment-form-modal";
 import { AppointmentEditModal } from "./appointment-edit-modal";
 import { AppointmentDetailsModal } from "./appointment-details-modal";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/auth/auth-context";
 import type { Appointment, AppointmentFilterTab } from "@/types/appointment";
 import type { PaginatedResult } from "@/types/client";
 
 export function AppointmentTableView() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isPatient = user?.role === "paciente";
   const [isPending, startTransition] = useTransition();
 
   // Estados de busca e filtros
@@ -316,6 +319,14 @@ export function AppointmentTableView() {
           )}
         </div>
       </div>
+
+      {/* Orientação informativa para Pacientes */}
+      {isPatient && (
+        <div className="p-4 rounded-2xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-xs text-teal-900 dark:text-teal-200 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-teal-600 shrink-0" />
+          <span>Para cancelamentos ou reagendamentos, entre em contato diretamente com a clínica.</span>
+        </div>
+      )}
 
       {/* A. Barra Superior de Controle e Busca */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
@@ -631,8 +642,8 @@ export function AppointmentTableView() {
                             </button>
                           )}
 
-                          {/* Cancelar Agendamento */}
-                          {appointment.status !== "Cancelado" && (
+                          {/* Cancelar Agendamento (Apenas para Admin e Profissional) */}
+                          {!isPatient && appointment.status !== "Cancelado" && (
                             <button
                               type="button"
                               onClick={() => handleCancelAppointment(appointment)}

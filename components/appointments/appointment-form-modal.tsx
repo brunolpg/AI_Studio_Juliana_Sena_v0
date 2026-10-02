@@ -23,6 +23,7 @@ import {
 } from "@/actions/appointment-actions";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/auth/auth-context";
 import type { Client } from "@/types/client";
 import type { TimeSlot, AppointmentInput } from "@/types/appointment";
 import {
@@ -31,6 +32,7 @@ import {
   getAllowedStartTimesForDate,
   getDayScheduleDescription,
   getMinSelectableAppointmentDateString,
+  getTodaySaoPauloDateString,
 } from "@/types/appointment";
 
 export type SelectablePatient = PatientSummary | Client;
@@ -63,18 +65,26 @@ function AppointmentFormModalContent({
   initialPatient,
 }: FormContentProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isPatient = user?.role === "paciente";
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Data mínima selecionável (hoje + 2 dias)
+  // Data mínima selecionável (hoje + 2 dias se paciente, hoje caso contrário)
   const minDate = useMemo(() => {
-    return getMinSelectableAppointmentDateString();
-  }, []);
+    return isPatient ? getMinSelectableAppointmentDateString() : getTodaySaoPauloDateString();
+  }, [isPatient]);
 
   // Data padrão: próximo dia de atendimento permitido a partir da data mínima
   const defaultDate = useMemo(() => {
     return getNextAllowedAppointmentDate(minDate);
   }, [minDate]);
+
+  useEffect(() => {
+    if (defaultDate) {
+      setSelectedDate(defaultDate);
+    }
+  }, [defaultDate]);
 
   // Estados dos pacientes reais via Supabase (SEM MOCK DATA)
   const [patients, setPatients] = useState<PatientSummary[]>([]);
@@ -239,11 +249,13 @@ function AppointmentFormModalContent({
       return;
     }
 
-    // Validação de antecedência mínima de 2 dias corridos
-    const minAllowedDate = getMinSelectableAppointmentDateString();
-    if (selectedDate < minAllowedDate) {
-      setErrorMsg("Os agendamentos devem ser solicitados com no mínimo 2 dias de antecedência.");
-      return;
+    // Validação de antecedência mínima de 2 dias corridos apenas para pacientes
+    if (isPatient) {
+      const minAllowedDate = getMinSelectableAppointmentDateString();
+      if (selectedDate < minAllowedDate) {
+        setErrorMsg("Os agendamentos por pacientes devem ser feitos com no mínimo 2 dias de antecedência.");
+        return;
+      }
     }
 
     // Validação de dias permitidos (Segunda, Quinta ou Sábado)

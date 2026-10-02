@@ -23,6 +23,25 @@ import {
   getGoogleCalendarCredentials,
 } from "@/lib/google-calendar/calendar-service";
 import type { ActionResponse, PaginatedResult } from "@/types/client";
+import type { UserRole } from "@/types/auth";
+
+async function getAuthUserRole(): Promise<UserRole | null> {
+  const supabase = await createClient();
+  if (!supabase) return null;
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  if (!authUser) return null;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", authUser.id)
+    .maybeSingle();
+
+  let role = profile?.role as UserRole;
+  if (!role) {
+    role = authUser.email?.toLowerCase() === "brunolpg@gmail.com" ? "administrador" : "paciente";
+  }
+  return role;
+}
 
 function getTodayString(): string {
   const now = new Date();
@@ -415,22 +434,25 @@ export async function createAppointmentAction(
       };
     }
 
-    // Validação estrita de antecedência mínima de 2 dias corridos (considerando o fuso de America/Sao_Paulo)
-    const todayStr = getTodaySaoPauloDateString();
-    const partsToday = todayStr.split("-").map(Number);
-    const partsTarget = input.data.split("-").map(Number);
-    
-    const dToday = new Date(partsToday[0], partsToday[1] - 1, partsToday[2]);
-    const dTarget = new Date(partsTarget[0], partsTarget[1] - 1, partsTarget[2]);
-    
-    const diffTime = dTarget.getTime() - dToday.getTime();
-    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 2) {
-      return {
-        success: false,
-        message: "Os agendamentos devem ser solicitados com no mínimo 2 dias de antecedência.",
-      };
+    // Validação estrita de antecedência mínima de 2 dias corridos apenas para o perfil "paciente"
+    const userRole = await getAuthUserRole();
+    if (userRole === "paciente") {
+      const todayStr = getTodaySaoPauloDateString();
+      const partsToday = todayStr.split("-").map(Number);
+      const partsTarget = input.data.split("-").map(Number);
+      
+      const dToday = new Date(partsToday[0], partsToday[1] - 1, partsToday[2]);
+      const dTarget = new Date(partsTarget[0], partsTarget[1] - 1, partsTarget[2]);
+      
+      const diffTime = dTarget.getTime() - dToday.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 2) {
+        return {
+          success: false,
+          message: "Os agendamentos por pacientes devem ser feitos com no mínimo 2 dias de antecedência.",
+        };
+      }
     }
 
     // 1. Validação rígida do dia da semana (Segunda, Quinta ou Sábado)
@@ -585,6 +607,14 @@ export async function cancelAppointmentAction(
   appointmentId: string
 ): Promise<ActionResponse<void>> {
   try {
+    const userRole = await getAuthUserRole();
+    if (userRole === "paciente") {
+      return {
+        success: false,
+        message: "Pacientes não têm permissão para cancelar agendamentos pelo portal. Favor entrar em contato diretamente com a clínica.",
+      };
+    }
+
     const supabase = await createClient();
     if (!supabase) {
       return {
@@ -652,6 +682,14 @@ export async function updateAppointmentAction(
   updates: Partial<Pick<Appointment, "data" | "horario_inicio" | "procedimento" | "observacoes" | "status">>
 ): Promise<ActionResponse<Appointment>> {
   try {
+    const userRole = await getAuthUserRole();
+    if (updates.status === "Cancelado" && userRole === "paciente") {
+      return {
+        success: false,
+        message: "Pacientes não têm permissão para cancelar agendamentos pelo portal. Favor entrar em contato diretamente com a clínica.",
+      };
+    }
+
     const supabase = await createClient();
     if (!supabase) {
       return {
@@ -699,8 +737,8 @@ export async function updateAppointmentAction(
     const targetDate = updates.data || current.data;
     const targetStart = updates.horario_inicio || current.horario_inicio;
 
-    // Validação estrita de antecedência mínima de 2 dias corridos para reagendamentos (alteração de data)
-    if (updates.data && updates.data !== current.data) {
+    // Validação estrita de antecedência mínima de 2 dias corridos apenas para pacientes ao reagendar (alteração de data)
+    if (userRole === "paciente" && updates.data && updates.data !== current.data) {
       const todayStr = getTodaySaoPauloDateString();
       const partsToday = todayStr.split("-").map(Number);
       const partsTarget = updates.data.split("-").map(Number);
@@ -714,7 +752,7 @@ export async function updateAppointmentAction(
       if (diffDays < 2) {
         return {
           success: false,
-          message: "Os agendamentos devem ser solicitados com no mínimo 2 dias de antecedência.",
+          message: "Os agendamentos por pacientes devem ser feitos com no mínimo 2 dias de antecedência.",
         };
       }
     }

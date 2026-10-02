@@ -6,6 +6,7 @@ import { AppointmentCalendarPicker } from "./appointment-calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
 import { getTimeSlotsForDateAction, updateAppointmentAction } from "@/actions/appointment-actions";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/auth/auth-context";
 import type { Appointment, AppointmentStatus, TimeSlot } from "@/types/appointment";
 import {
   isAllowedAppointmentDay,
@@ -31,6 +32,12 @@ interface EditContentProps {
 
 function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditContentProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isPatient = user?.role === "paciente";
+
+  const availableStatusOptions = isPatient
+    ? STATUS_OPTIONS.filter((opt) => opt !== "Cancelado")
+    : STATUS_OPTIONS;
 
   const [date, setDate] = useState<string>(appointment.data);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(appointment.horario_inicio);
@@ -79,11 +86,18 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
       return;
     }
 
-    // Validação de antecedência mínima de 2 dias corridos para reagendamentos
-    const minAllowedDate = getMinSelectableAppointmentDateString();
-    if (date !== appointment.data && date < minAllowedDate) {
-      setErrorMsg("Os agendamentos devem ser solicitados com no mínimo 2 dias de antecedência.");
+    if (isPatient && status === "Cancelado") {
+      setErrorMsg("Pacientes não têm permissão para cancelar agendamentos pelo portal. Favor entrar em contato diretamente com a clínica.");
       return;
+    }
+
+    // Validação de antecedência mínima de 2 dias corridos apenas para pacientes ao reagendar
+    if (isPatient && date !== appointment.data) {
+      const minAllowedDate = getMinSelectableAppointmentDateString();
+      if (date < minAllowedDate) {
+        setErrorMsg("Os agendamentos por pacientes devem ser feitos com no mínimo 2 dias de antecedência.");
+        return;
+      }
     }
 
     if (!isAllowedAppointmentDay(date)) {
@@ -161,13 +175,21 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
 
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 overscroll-contain">
+        {/* Orientação informativa para Pacientes */}
+        {isPatient && (
+          <div className="p-3.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-xs text-teal-900 dark:text-teal-200 flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 text-teal-600 shrink-0" />
+            <span>Para cancelamentos ou reagendamentos, entre em contato diretamente com a clínica.</span>
+          </div>
+        )}
+
         {/* Status */}
         <div>
           <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1.5">
             Status do Atendimento
           </label>
-          <div className="grid grid-cols-4 gap-2">
-            {STATUS_OPTIONS.map((opt) => (
+          <div className={`grid grid-cols-${availableStatusOptions.length} gap-2`}>
+            {availableStatusOptions.map((opt) => (
               <button
                 key={opt}
                 type="button"
