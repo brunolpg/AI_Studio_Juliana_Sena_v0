@@ -95,33 +95,62 @@ export async function syncSingleAppointmentToGoogle(appointmentId: string) {
     let googleEventId = apt.google_event_id;
     let htmlLink = apt.google_html_link;
 
-    if (googleEventId) {
-      try {
-        const res = await calendar.events.update({
-          calendarId,
-          eventId: googleEventId,
-          requestBody: eventBody,
-          sendUpdates: "all",
-        });
-        htmlLink = res.data.htmlLink || null;
-      } catch {
-        // Se o evento não existir mais no Google, cria um novo
+    const callInsertOrUpdate = async (body: any) => {
+      if (googleEventId) {
+        try {
+          const res = await calendar.events.update({
+            calendarId,
+            eventId: googleEventId,
+            requestBody: body,
+            sendUpdates: "all",
+          });
+          return { eventId: googleEventId, htmlLink: res.data.htmlLink || null };
+        } catch (updateErr: any) {
+          // Se o evento não existir mais no Google, tenta inserir novo
+          const isNotFound = updateErr?.code === 404 || updateErr?.status === 404 || updateErr?.message?.includes("Not Found");
+          if (isNotFound) {
+            const res = await calendar.events.insert({
+              calendarId,
+              requestBody: body,
+              sendUpdates: "all",
+            });
+            return { eventId: res.data.id || null, htmlLink: res.data.htmlLink || null };
+          }
+          throw updateErr;
+        }
+      } else {
         const res = await calendar.events.insert({
           calendarId,
-          requestBody: eventBody,
+          requestBody: body,
           sendUpdates: "all",
         });
-        googleEventId = res.data.id || null;
-        htmlLink = res.data.htmlLink || null;
+        return { eventId: res.data.id || null, htmlLink: res.data.htmlLink || null };
       }
-    } else {
-      const res = await calendar.events.insert({
-        calendarId,
-        requestBody: eventBody,
-        sendUpdates: "all",
-      });
-      googleEventId = res.data.id || null;
-      htmlLink = res.data.htmlLink || null;
+    };
+
+    try {
+      const result = await callInsertOrUpdate(eventBody);
+      googleEventId = result.eventId;
+      htmlLink = result.htmlLink;
+    } catch (apiErr: any) {
+      const errMessage = apiErr?.message || String(apiErr);
+      const errCode = apiErr?.code || apiErr?.status;
+      const isForbiddenServiceAccount =
+        errCode === 403 ||
+        errMessage.includes("forbiddenForServiceAccounts") ||
+        errMessage.includes("403") ||
+        errMessage.includes("Forbidden");
+
+      if (eventBody.attendees && isForbiddenServiceAccount) {
+        console.warn("[Google Calendar] Conta de serviço sem permissão para adicionar attendees (403 forbiddenForServiceAccounts). Tentando sem attendees...");
+        const fallbackBody = { ...eventBody };
+        delete fallbackBody.attendees;
+        const fallbackResult = await callInsertOrUpdate(fallbackBody);
+        googleEventId = fallbackResult.eventId;
+        htmlLink = fallbackResult.htmlLink;
+      } else {
+        throw apiErr;
+      }
     }
 
     await supabase
