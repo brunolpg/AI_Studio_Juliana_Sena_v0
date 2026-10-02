@@ -19,6 +19,7 @@ import {
   getTimeSlotsForDateAction,
   createAppointmentAction,
   getActivePatientsForSchedulingAction,
+  getProcedimentosAction,
   type PatientSummary,
 } from "@/actions/appointment-actions";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -27,6 +28,7 @@ import { useAuth } from "@/components/auth/auth-context";
 import type { Client } from "@/types/client";
 import type { TimeSlot, AppointmentInput, Appointment } from "@/types/appointment";
 import { generateGoogleCalendarTemplateUrl } from "@/lib/google-calendar/calendar-service";
+import { PROCEDIMENTO_CATEGORIES, type Procedimento } from "@/lib/procedimentos-mock";
 import {
   getNextAllowedAppointmentDate,
   isAllowedAppointmentDay,
@@ -100,12 +102,39 @@ function AppointmentFormModalContent({
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
+  // Estados de procedimentos dinâmicos
+  const [procedimentos, setProcedimentos] = useState<Procedimento[]>([]);
+  const [isLoadingProcedimentos, setIsLoadingProcedimentos] = useState(false);
+  const [selectedCategoria, setSelectedCategoria] = useState("Consulta");
+  const [procedimentoSearch, setProcedimentoSearch] = useState("");
+
   // Estados dos demais campos
-  const [procedimento, setProcedimento] = useState(PROCEDIMENTO_PRESETS[0]);
+  const [procedimento, setProcedimento] = useState("Consulta Estética");
   const [observacoes, setObservacoes] = useState("");
   const [syncGoogle, setSyncGoogle] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadProcedimentos() {
+      setIsLoadingProcedimentos(true);
+      try {
+        const res = await getProcedimentosAction();
+        if (res.success && res.data) {
+          setProcedimentos(res.data);
+          if (res.data.length > 0) {
+            setProcedimento(res.data[0].procedimento);
+            setSelectedCategoria(res.data[0].categoria);
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao carregar procedimentos:", err);
+      } finally {
+        setIsLoadingProcedimentos(false);
+      }
+    }
+    loadProcedimentos();
+  }, []);
   const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
   const [hasAddedToCalendar, setHasAddedToCalendar] = useState<boolean>(false);
 
@@ -675,34 +704,107 @@ function AppointmentFormModalContent({
 
           {/* 3. PROCEDIMENTO / ESPECIALIDADE & OBSERVAÇÕES */}
           <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
                 4. Procedimento / Especialidade *
               </label>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {PROCEDIMENTO_PRESETS.map((preset) => (
+
+              {/* Campo de Busca de Procedimentos */}
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Pesquise o procedimento desejado..."
+                  value={procedimentoSearch}
+                  onChange={(e) => setProcedimentoSearch(e.target.value)}
+                  className="w-full pl-9 pr-3.5 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                />
+              </div>
+
+              {/* Abas de Categorias */}
+              <div className="flex flex-wrap gap-1.5 py-1">
+                {PROCEDIMENTO_CATEGORIES.map((cat) => (
                   <button
-                    key={preset}
+                    key={cat}
                     type="button"
-                    onClick={() => setProcedimento(preset)}
-                    className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                      procedimento === preset
-                        ? "bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/40 font-semibold"
-                        : "bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                    onClick={() => {
+                      setSelectedCategoria(cat);
+                      setProcedimentoSearch("");
+                    }}
+                    className={`text-[10px] sm:text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      selectedCategoria === cat && !procedimentoSearch
+                        ? "bg-teal-600 text-white border-teal-600 font-semibold shadow-xs"
+                        : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
                     }`}
                   >
-                    {preset}
+                    {cat}
                   </button>
                 ))}
               </div>
-              <input
-                type="text"
-                required
-                value={procedimento}
-                onChange={(e) => setProcedimento(e.target.value)}
-                placeholder="Ex: Consulta Dermatológica Inicial"
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
+
+              {/* Lista Dinâmica de Procedimentos */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                {isLoadingProcedimentos ? (
+                  <div className="col-span-full py-4 text-center text-xs text-slate-400">
+                    <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-1.5" />
+                    <span>Carregando procedimentos...</span>
+                  </div>
+                ) : (() => {
+                  const query = procedimentoSearch.toLowerCase().trim();
+                  const filteredList = procedimentos.filter((p) => {
+                    const matchesSearch = p.procedimento.toLowerCase().includes(query) || p.categoria.toLowerCase().includes(query);
+                    const matchesCategory = p.categoria === selectedCategoria;
+                    return query ? matchesSearch : matchesCategory;
+                  });
+
+                  if (filteredList.length === 0) {
+                    return (
+                      <div className="col-span-full py-4 text-center text-xs text-slate-500">
+                        Nenhum procedimento encontrado.
+                      </div>
+                    );
+                  }
+
+                  return filteredList.map((p) => {
+                    const isSelected = procedimento === p.procedimento;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setProcedimento(p.procedimento)}
+                        className={`text-left p-2.5 rounded-xl border transition-all flex flex-col justify-between cursor-pointer ${
+                          isSelected
+                            ? "bg-teal-500/10 border-teal-500 text-teal-950 dark:text-teal-200 font-semibold"
+                            : "bg-slate-50/50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 hover:bg-slate-100/70"
+                        }`}
+                      >
+                        <div className="text-xs font-semibold truncate w-full">
+                          {p.procedimento}
+                        </div>
+                        <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500 dark:text-slate-400 w-full">
+                          <span>Duração: <strong className="font-semibold text-slate-700 dark:text-slate-200">{p.duracao}h</strong></span>
+                          <span className="font-bold text-teal-600 dark:text-teal-400">
+                            R$ {Number(p.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Campo Selecionado / Customizado */}
+              <div className="space-y-1 pt-1">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">Procedimento selecionado:</span>
+                <input
+                  type="text"
+                  required
+                  value={procedimento}
+                  onChange={(e) => setProcedimento(e.target.value)}
+                  placeholder="Selecione acima ou digite um procedimento personalizado"
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 font-semibold text-teal-700 dark:text-teal-300"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">

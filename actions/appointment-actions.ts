@@ -481,9 +481,13 @@ export async function createAppointmentAction(
       };
     }
 
-    // Calcula horário fim (1 hora após o início)
+    // Busca a duração do procedimento cadastrado (padrão: 1 hora)
+    const matchedProc = PROCEDIMENTOS_CADASTRAIS.find(p => p.procedimento === input.procedimento);
+    const duracaoHoras = matchedProc ? Number(matchedProc.duracao) : 1;
+
+    // Calcula horário fim com base na duração real do procedimento
     const startHour = Number(input.horario_inicio.split(":")[0]);
-    const endHour = String(startHour + 1).padStart(2, "0");
+    const endHour = String(startHour + duracaoHoras).padStart(2, "0");
     const horario_fim = `${endHour}:00`;
 
     // 3. Verificação de conflito no Supabase (horário já reservado na data com status != Cancelado)
@@ -801,9 +805,14 @@ export async function updateAppointmentAction(
     }
 
     let targetEnd = current.horario_fim;
-    if (updates.horario_inicio) {
-      const startHour = Number(updates.horario_inicio.split(":")[0]);
-      targetEnd = `${String(startHour + 1).padStart(2, "0")}:00`;
+    if (updates.horario_inicio || updates.procedimento) {
+      const procName = updates.procedimento || current.procedimento;
+      const matchedProc = PROCEDIMENTOS_CADASTRAIS.find(p => p.procedimento === procName);
+      const duracaoHoras = matchedProc ? Number(matchedProc.duracao) : 1;
+      
+      const startSlot = updates.horario_inicio || current.horario_inicio;
+      const startHour = Number(startSlot.split(":")[0]);
+      targetEnd = `${String(startHour + duracaoHoras).padStart(2, "0")}:00`;
     }
 
     const payloadToUpdate: Record<string, unknown> = {
@@ -909,4 +918,51 @@ export async function getCalendarIntegrationStatusAction() {
     hasApiKey: Boolean(creds.apiKey),
     hasClientId: Boolean(creds.clientId),
   };
+}
+
+/**
+ * 7. LISTAGEM DINÂMICA DE PROCEDIMENTOS DO SUPABASE (COM FALLBACK SEGURO PARA MOCK LOCAL)
+ */
+import { PROCEDIMENTOS_CADASTRAIS, type Procedimento } from "@/lib/procedimentos-mock";
+
+export async function getProcedimentosAction(): Promise<ActionResponse<Procedimento[]>> {
+  try {
+    const supabase = await createClient();
+    if (!supabase) {
+      console.warn("[getProcedimentosAction] Supabase não configurado. Retornando dados cadastrais mockados de contingência.");
+      return {
+        success: true,
+        message: "Dados carregados da lista de contingência local.",
+        data: PROCEDIMENTOS_CADASTRAIS,
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("procedimentos")
+      .select("*")
+      .order("categoria", { ascending: true })
+      .order("procedimento", { ascending: true });
+
+    if (error) {
+      console.warn(`[getProcedimentosAction] Erro ao buscar da tabela 'procedimentos' (${error.message}). Utilizando fallback cadastral.`);
+      return {
+        success: true,
+        message: "Dados carregados da lista de contingência local.",
+        data: PROCEDIMENTOS_CADASTRAIS,
+      };
+    }
+
+    return {
+      success: true,
+      message: "Procedimentos carregados com sucesso do Supabase.",
+      data: data as Procedimento[],
+    };
+  } catch (error) {
+    console.warn("[getProcedimentosAction] Exceção na busca de procedimentos. Utilizando fallback cadastral:", error);
+    return {
+      success: true,
+      message: "Dados carregados da lista de contingência local.",
+      data: PROCEDIMENTOS_CADASTRAIS,
+    };
+  }
 }
