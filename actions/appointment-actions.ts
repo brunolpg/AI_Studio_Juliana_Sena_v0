@@ -22,6 +22,7 @@ import {
   generateGoogleCalendarTemplateUrl,
   getGoogleCalendarCredentials,
 } from "@/lib/google-calendar/calendar-service";
+import { deleteAppointmentFromGoogle } from "@/lib/google-calendar/calendar-sync-service";
 import type { ActionResponse, PaginatedResult } from "@/types/client";
 import type { UserRole } from "@/types/auth";
 
@@ -637,7 +638,19 @@ export async function cancelAppointmentAction(
       };
     }
 
-    // 2. Atualiza o status para Cancelado diretamente no Supabase
+    // 2. Antes de atualizar no banco, remove do Google Calendar se houver google_event_id
+    if (current.google_event_id) {
+      try {
+        const googleRes = await deleteAppointmentFromGoogle(current.google_event_id);
+        if (!googleRes.success) {
+          console.warn(`[Google Calendar] Aviso ao excluir evento ${current.google_event_id} do Google Calendar:`, googleRes.message);
+        }
+      } catch (googleErr: any) {
+        console.warn("[Google Calendar] Erro 404 ou falha de rede ao excluir evento do Google Calendar, prosseguindo com o cancelamento no Supabase:", googleErr);
+      }
+    }
+
+    // 3. Atualiza o status para Cancelado diretamente no Supabase
     const { error: updateError } = await supabase
       .from("appointments")
       .update({
@@ -652,11 +665,6 @@ export async function cancelAppointmentAction(
         success: false,
         message: `Falha ao cancelar agendamento: ${updateError.message}`,
       };
-    }
-
-    // 3. Sincroniza cancelamento na Google Calendar API se houver evento registrado
-    if (current.google_event_id) {
-      await deleteGoogleCalendarEvent(current.google_event_id);
     }
 
     revalidatePath("/");
