@@ -204,6 +204,7 @@ export async function performFullSync() {
 
   let sent = 0;
   let imported = 0;
+  let cancelled = 0;
   let errors = 0;
 
   try {
@@ -221,16 +222,18 @@ export async function performFullSync() {
       }
     }
 
-    // 2. Importa eventos novos da agenda da Dra. Juliana para o Supabase
+    // 2. Importa eventos novos e verifica cancelamentos/exclusões da agenda da Dra. Juliana para o Supabase
     const timeMin = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(); // últimos 30 dias
     const eventsRes = await calendar.events.list({
       calendarId,
       timeMin,
       singleEvents: true,
+      showDeleted: true,
       orderBy: "startTime",
     });
 
     const googleEvents = eventsRes.data.items || [];
+    const activeGoogleEventIds = new Set<string>();
 
     // Busca todos os pacientes existentes para construir o índice de comparação por nome
     const { data: clients } = await supabase.from("pacientes").select("id, nome");
@@ -249,7 +252,30 @@ export async function performFullSync() {
     }
 
     for (const ev of googleEvents) {
-      if (!ev.id || !ev.start?.dateTime || !ev.summary) continue;
+      if (!ev.id) continue;
+
+      // Se o evento foi cancelado/excluído no Google Calendar
+      if (ev.status === "cancelled") {
+        const { error: cancelErr } = await supabase
+          .from("appointments")
+          .update({
+            status: "Cancelado",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("google_event_id", ev.id)
+          .neq("status", "Cancelado");
+
+        if (!cancelErr) {
+          cancelled++;
+          console.log(`[Google Sync] Evento ${ev.id} marcado como 'Cancelado' no Supabase (cancelado no Google Calendar).`);
+        }
+        continue;
+      }
+
+      // Registra ID como evento ativo
+      activeGoogleEventIds.add(ev.id);
+
+      if (!ev.start?.dateTime || !ev.summary) continue;
 
       // Verifica se o evento já existe registrado no banco
       const { data: existingApt } = await supabase
@@ -311,12 +337,40 @@ export async function performFullSync() {
       }
     }
 
+    // 3. Tratamento de agendamentos futuros no Supabase com google_event_id preenchido cujo ID não consta mais na lista ativa do Google Calendar
+    const { data: localSyncedApts } = await supabase
+      .from("appointments")
+      .select("id, google_event_id, status, data")
+      .not("google_event_id", "is", null)
+      .neq("status", "Cancelado")
+      .gte("data", timeMin.split("T")[0]);
+
+    if (localSyncedApts && localSyncedApts.length > 0) {
+      for (const apt of localSyncedApts) {
+        if (apt.google_event_id && !activeGoogleEventIds.has(apt.google_event_id)) {
+          const { error: missingErr } = await supabase
+            .from("appointments")
+            .update({
+              status: "Cancelado",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", apt.id);
+
+          if (!missingErr) {
+            cancelled++;
+            console.log(`[Google Sync] Agendamento local ${apt.id} (Google ID: ${apt.google_event_id}) marcado como 'Cancelado' por ausência na agenda ativa do Google.`);
+          }
+        }
+      }
+    }
+
     return {
       success: true,
       sent,
       imported,
+      cancelled,
       errors,
-      message: `Sincronização concluída: ${sent} enviados, ${imported} importados, ${errors} erros.`,
+      message: `Sincronização concluída: ${sent} enviados, ${imported} importados, ${cancelled} cancelados, ${errors} erros.`,
     };
   } catch (error) {
     console.error("Erro na sincronização bidirecional:", error);
@@ -324,6 +378,7 @@ export async function performFullSync() {
       success: false,
       sent,
       imported,
+      cancelled,
       errors: errors + 1,
       message: (error as Error).message || "Erro na sincronização",
     };
