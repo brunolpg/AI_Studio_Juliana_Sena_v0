@@ -15,11 +15,15 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      # Passo 2: Envia os arquivos soltos/descompactados para o Drive
-      - name: Enviar arquivos soltos
-        uses: marcosvilela/google-drive-upload@v1.0.3
-        with:
-          credentials: ${{ secrets.GCP_CREDENTIALS }}
-          folderId: ${{ secrets.DRIVE_FOLDER_ID }}
-          # Indica que você quer enviar a raiz do projeto e manter a estrutura de pastas
-          targetPath: '.' 
+      # Passo 2: Instala e configura o rclone de forma oficial
+      - name: Configurar ferramenta de sincronização
+        uses: rclone/rclone-action@v1
+
+      # Passo 3: Cria o arquivo de conexão usando sua credencial JSON e envia os arquivos soltos
+      - name: Sincronizar arquivos soltos com o Google Drive
+        run: |
+          # Escreve a credencial temporariamente no servidor para autenticação
+          echo '${{ secrets.GCP_CREDENTIALS }}' > gdrive_key.json
+          
+          # Executa a sincronização forçando a cópia arquivo por arquivo descompactado
+          rclone sync . :drive: --drive-service-account-file=gdrive_key.json --drive-team-drive="" --drive-root-folder-id="${{ secrets.DRIVE_FOLDER_ID }}" --exclude ".git/**" --exclude ".github/**" -v
