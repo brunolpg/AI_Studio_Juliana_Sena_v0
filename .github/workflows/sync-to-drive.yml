@@ -15,22 +15,17 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      # Passo 2: Instala o rclone diretamente pelo gerenciador do Linux (APT)
-      - name: Instalar rclone no sistema
-        run: sudo apt-get update && sudo apt-get install -y rclone
+      # Passo 2: Configura o ambiente Node.js
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-size: 20
 
-      # Passo 3: Cria a credencial, configura e força a sincronização contornando a cota da conta de serviço
-      - name: Sincronizar arquivos soltos com o Google Drive
-        run: |
-          # Escreve a credencial JSON temporariamente para a autenticação
-          echo '${{ secrets.GCP_CREDENTIALS }}' > gdrive_key.json
-          
-          # Executa o espelhamento forçando o uso da cota da conta que compartilha a pasta
-          rclone sync . :drive: \
-            --drive-service-account-file=gdrive_key.json \
-            --drive-root-folder-id="${{ secrets.DRIVE_FOLDER_ID }}" \
-            --drive-upload-cutoff 0 \
-            --exclude ".git/**" \
-            --exclude ".github/**" \
-            --exclude "gdrive_key.json" \
-            -v
+      # Passo 3: Envia os arquivos soltos simulando seu usuário pessoal
+      - name: Enviar arquivos soltos
+        uses: tpaschalis/google-drive-upload-action@v1.2.0
+        with:
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+          folderId: ${{ secrets.DRIVE_FOLDER_ID }}
+          filename: '.' # Indica que vai ler a pasta atual de forma descompactada
+          force: true
