@@ -25,7 +25,8 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/auth/auth-context";
 import type { Client } from "@/types/client";
-import type { TimeSlot, AppointmentInput } from "@/types/appointment";
+import type { TimeSlot, AppointmentInput, Appointment } from "@/types/appointment";
+import { generateGoogleCalendarTemplateUrl } from "@/lib/google-calendar/calendar-service";
 import {
   getNextAllowedAppointmentDate,
   isAllowedAppointmentDay,
@@ -105,6 +106,64 @@ function AppointmentFormModalContent({
   const [syncGoogle, setSyncGoogle] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
+  const [hasAddedToCalendar, setHasAddedToCalendar] = useState<boolean>(false);
+
+  const calendarUrl = useMemo(() => {
+    if (!confirmedAppointment) return "";
+    return generateGoogleCalendarTemplateUrl({
+      patientName: confirmedAppointment.client_nome,
+      patientEmail: confirmedAppointment.client_email || undefined,
+      patientPhone: confirmedAppointment.client_telefone || undefined,
+      procedimento: confirmedAppointment.procedimento,
+      date: confirmedAppointment.data,
+      startTime: confirmedAppointment.horario_inicio,
+      endTime: confirmedAppointment.horario_fim,
+      observacoes: confirmedAppointment.observacoes,
+    });
+  }, [confirmedAppointment]);
+
+  const handleAddToCalendar = () => {
+    setHasAddedToCalendar(true);
+    if (calendarUrl) {
+      window.open(calendarUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!confirmedAppointment) return;
+    const phoneDigits = confirmedAppointment.client_telefone ? confirmedAppointment.client_telefone.replace(/\D/g, "") : "";
+    const formattedDate = confirmedAppointment.data.split("-").reverse().join("/");
+    const text = encodeURIComponent(
+      `Olá ${confirmedAppointment.client_nome}! Seu agendamento na Clínica Dra. Juliana Sena para *${confirmedAppointment.procedimento}* foi confirmado para o dia *${formattedDate}* às *${confirmedAppointment.horario_inicio}*.\n\nAdicionar ao Google Agenda:\n${calendarUrl}`
+    );
+    const waUrl = phoneDigits ? `https://wa.me/55${phoneDigits}?text=${text}` : `https://wa.me/?text=${text}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleCloseSuccess = async () => {
+    if (confirmedAppointment && !hasAddedToCalendar && confirmedAppointment.client_email) {
+      try {
+        await fetch("/api/send-confirmation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            patientName: confirmedAppointment.client_nome,
+            patientEmail: confirmedAppointment.client_email,
+            date: confirmedAppointment.data,
+            startTime: confirmedAppointment.horario_inicio,
+            endTime: confirmedAppointment.horario_fim,
+            procedimento: confirmedAppointment.procedimento,
+            observacoes: confirmedAppointment.observacoes,
+          }),
+        });
+      } catch (err) {
+        console.error("Erro ao enviar e-mail de contingência:", err);
+      }
+    }
+    onSuccess();
+    onClose();
+  };
 
   const scheduleInfo = useMemo(() => {
     return selectedDate ? getDayScheduleDescription(selectedDate) : null;
@@ -298,18 +357,12 @@ function AppointmentFormModalContent({
       const res = await createAppointmentAction(payload);
 
       if (res.success && res.data) {
-        const isSynced = res.data.synced_with_google;
+        setConfirmedAppointment(res.data);
         toast({
-          type: isSynced ? "success" : "info",
-          title: isSynced
-            ? "Consulta Sincronizada no Google Agenda!"
-            : "Consulta Agendada com Sucesso!",
-          description:
-            res.message ||
-            `Horário ${res.data.horario_inicio} reservado para ${res.data.client_nome} no dia ${selectedDate.split("-").reverse().join("/")}.`,
+          type: "success",
+          title: "Consulta Agendada com Sucesso!",
+          description: `Horário ${res.data.horario_inicio} reservado para ${res.data.client_nome}.`,
         });
-        onSuccess();
-        onClose();
       } else {
         setErrorMsg(res.message || "Não foi possível concluir o agendamento.");
       }
@@ -320,6 +373,63 @@ function AppointmentFormModalContent({
       setIsSubmitting(false);
     }
   };
+
+  if (confirmedAppointment) {
+    const formattedDate = confirmedAppointment.data.split("-").reverse().join("/");
+    return (
+      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-auto flex flex-col p-6 text-center">
+        <div className="w-14 h-14 bg-teal-100 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CalendarCheck2 className="w-7 h-7" />
+        </div>
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+          Agendamento Confirmado!
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">
+          Olá, <strong>{confirmedAppointment.client_nome}</strong>! Sua consulta foi registrada com sucesso.
+        </p>
+
+        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 text-left text-xs space-y-2 mb-6 border border-slate-100 dark:border-slate-800">
+          <p className="text-slate-700 dark:text-slate-300">
+            <strong>Procedimento:</strong> {confirmedAppointment.procedimento}
+          </p>
+          <p className="text-slate-700 dark:text-slate-300">
+            <strong>Data:</strong> {formattedDate} às {confirmedAppointment.horario_inicio} - {confirmedAppointment.horario_fim}
+          </p>
+          {confirmedAppointment.observacoes && (
+            <p className="text-slate-700 dark:text-slate-300">
+              <strong>Observações:</strong> {confirmedAppointment.observacoes}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2.5">
+          <button
+            type="button"
+            onClick={handleAddToCalendar}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all cursor-pointer"
+          >
+            📅 Adicionar ao Google Agenda
+          </button>
+          
+          <button
+            type="button"
+            onClick={handleSendWhatsApp}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 rounded-xl transition-all cursor-pointer"
+          >
+            📲 Enviar detalhes para meu WhatsApp
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCloseSuccess}
+            className="w-full py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+          >
+            Concluir
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-1rem)] sm:max-h-[90vh] flex flex-col">

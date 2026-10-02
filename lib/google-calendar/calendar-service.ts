@@ -306,40 +306,24 @@ export async function createGoogleCalendarEvent(
       },
     };
 
-    if (input.patientEmail) {
-      eventPayload.attendees = [{ email: input.patientEmail, displayName: input.patientName }];
-    }
-
     // Obter token de acesso válido (Service Account ou Refresh Token OAuth)
     const accessToken = await getGoogleCalendarAccessToken();
     
-    const sendRequest = async (payload: any) => {
-      let url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-        creds.calendarId
-      )}/events?sendUpdates=all`;
-      if (!accessToken) {
-        url += `&key=${creds.apiKey}`;
-      }
-      return await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
-    };
-
-    let res = await sendRequest(eventPayload);
-    if (!res.ok) {
-      const errorDetails = await res.text().catch(() => res.statusText);
-      if (eventPayload.attendees && (res.status === 403 || errorDetails.includes("forbiddenForServiceAccounts"))) {
-        console.warn("[Google Calendar] Falha com attendees (403 forbiddenForServiceAccounts) no create. Tentando sem attendees...");
-        const fallbackPayload = { ...eventPayload };
-        delete fallbackPayload.attendees;
-        res = await sendRequest(fallbackPayload);
-      }
+    let url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+      creds.calendarId
+    )}/events`;
+    if (!accessToken) {
+      url += `?key=${creds.apiKey}`;
     }
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify(eventPayload),
+    });
 
     if (res.ok) {
       const data = await res.json();
@@ -459,39 +443,22 @@ export async function updateGoogleCalendarEvent(
       },
     };
 
-    if (input.patientEmail) {
-      eventPayload.attendees = [{ email: input.patientEmail, displayName: input.patientName }];
-    }
-
     const accessToken = await getGoogleCalendarAccessToken();
-
-    const sendUpdateRequest = async (payload: any) => {
-      let url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
-        creds.calendarId
-      )}/events/${encodeURIComponent(eventId)}?sendUpdates=all`;
-      if (!accessToken) {
-        url += `&key=${creds.apiKey}`;
-      }
-      return await fetch(url, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
-    };
-
-    let res = await sendUpdateRequest(eventPayload);
-    if (!res.ok) {
-      const errorDetails = await res.text().catch(() => res.statusText);
-      if (eventPayload.attendees && (res.status === 403 || errorDetails.includes("forbiddenForServiceAccounts"))) {
-        console.warn("[Google Calendar] Falha com attendees (403 forbiddenForServiceAccounts) no update. Tentando sem attendees...");
-        const fallbackPayload = { ...eventPayload };
-        delete fallbackPayload.attendees;
-        res = await sendUpdateRequest(fallbackPayload);
-      }
+    let url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(
+      creds.calendarId
+    )}/events/${encodeURIComponent(eventId)}`;
+    if (!accessToken) {
+      url += `?key=${creds.apiKey}`;
     }
+
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify(eventPayload),
+    });
 
     if (res.ok) {
       const data = await res.json();
