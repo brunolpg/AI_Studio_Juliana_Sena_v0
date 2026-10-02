@@ -159,6 +159,7 @@ export function EvolutionFormModal({
             .from("appointments")
             .select("id, data, horario_inicio, horario_fim, procedimento, status")
             .eq("client_id", client.id)
+            .neq("status", "Cancelado")
             .order("data", { ascending: false });
           
           if (!error && dbData) {
@@ -323,7 +324,7 @@ export function EvolutionFormModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
-                  Nova Evolução Clínica (SOAP)
+                  Nova Evolução do Paciente
                 </h3>
                 <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200">
                   Prontuário
