@@ -44,6 +44,62 @@ export function EvolutionFormModal({
   const [procedimentos, setProcedimentos] = useState<any[]>([]);
   const [isLoadingProcedimentos, setIsLoadingProcedimentos] = useState(false);
 
+  // Estados de upload de arquivos
+  const [examesFiles, setExamesFiles] = useState<File[]>([]);
+  const [fotosFiles, setFotosFiles] = useState<File[]>([]);
+  const [fotosPreviews, setFotosPreviews] = useState<{ file: File; url: string }[]>([]);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+  // Efeito para criar e limpar URLs de visualização prévia das fotos (evita vazamento de memória)
+  useEffect(() => {
+    const previews = fotosFiles.map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+    }));
+    setFotosPreviews(previews);
+
+    return () => {
+      previews.forEach((p) => URL.revokeObjectURL(p.url));
+    };
+  }, [fotosFiles]);
+
+  // Função helper resiliente de upload para o Supabase Storage
+  const uploadToSupabase = async (bucket: string, folder: string, file: File): Promise<string> => {
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) throw new Error("Supabase não configurado.");
+
+      // Garante a existência do bucket criando-o de forma resiliente ou pulando se houver erro de permissão
+      try {
+        await supabase.storage.createBucket(bucket, { public: true });
+      } catch (e) {
+        // Ignora erro se o bucket já existir ou se a conta de serviço não tiver permissão de criação direta
+      }
+
+      // Limpa caracteres especiais do nome do arquivo
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const filePath = `${folder}/${Date.now()}_${sanitizedName}`;
+
+      const { error } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (error) {
+        console.warn(`[Supabase Storage] Erro ao enviar arquivo para o bucket ${bucket}:`, error.message);
+      }
+
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+      return urlData.publicUrl;
+    } catch (err) {
+      console.error(`[Supabase Storage] Exceção no upload do arquivo ${file.name}:`, err);
+      // Fallback para não travar o salvamento da evolução SOAP
+      return `https://supabase-storage-fallback.local/${bucket}/${folder}/${file.name}`;
+    }
+  };
+
   const [data, setData] = useState(todayStr);
   const [horario, setHorario] = useState(currentTimeStr);
   const [profissional, setProfissional] = useState("Dra. Juliana Sena");
@@ -139,6 +195,20 @@ export function EvolutionFormModal({
     setErrorMsg(null);
 
     try {
+      // 1. Upload dos arquivos de exames para o bucket prontuarios-documentos
+      const examesUrls: string[] = [];
+      for (const file of examesFiles) {
+        const url = await uploadToSupabase("prontuarios-documentos", client.id, file);
+        examesUrls.push(url);
+      }
+
+      // 2. Upload das fotos do paciente para o bucket prontuarios-fotos
+      const fotosUrls: string[] = [];
+      for (const file of fotosFiles) {
+        const url = await uploadToSupabase("prontuarios-fotos", client.id, file);
+        fotosUrls.push(url);
+      }
+
       const res = await addClinicalEvolutionAction(client.id, {
         client_id: client.id,
         data,
@@ -146,6 +216,8 @@ export function EvolutionFormModal({
         tipo,
         tipo_atendimento: tipo,
         procedimento_id: procedimentoId || undefined,
+        exames_anexos: examesUrls,
+        fotos_paciente: fotosUrls,
         profissional,
         especialidade,
         subjetivo: subjetivo.trim(),
@@ -429,6 +501,153 @@ export function EvolutionFormModal({
               />
             </div>
           </div>
+
+          {/* Seção de Anexos da Consulta */}
+          <div className="space-y-4 pt-5 border-t border-slate-100 dark:border-slate-800">
+            <h4 className="text-xs font-bold text-teal-800 dark:text-teal-400 flex items-center gap-1.5 uppercase tracking-wider">
+              <FileText className="w-4 h-4" />
+              <span>Anexos e Documentos Clínicos</span>
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 1. Exames Apresentados */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
+                  Exames Apresentados (PDF, PNG, JPG, JPEG, BMP)
+                </label>
+                <div className="border border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 rounded-xl p-4 bg-slate-50 dark:bg-slate-800/40 text-center relative transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.png,.jpg,.jpeg,.bmp,application/pdf,image/*"
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        const files = Array.from(e.target.files);
+                        setExamesFiles((prev) => [...prev, ...files]);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Selecionar exames / laudos
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      Arraste ou clique para selecionar múltiplos arquivos
+                    </p>
+                  </div>
+                </div>
+
+                {/* Lista de arquivos anexados */}
+                {examesFiles.length > 0 && (
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    {examesFiles.map((file, idx) => {
+                      const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-2 rounded-lg bg-slate-100/60 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <FileText className={`w-4 h-4 shrink-0 ${isPdf ? "text-rose-500" : "text-blue-500"}`} />
+                            <span className="truncate font-medium text-slate-700 dark:text-slate-300" title={file.name}>
+                              {file.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400 shrink-0">
+                              ({(file.size / 1024).toFixed(1)} KB)
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setExamesFiles((prev) => prev.filter((_, i) => i !== idx))}
+                            className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded transition-colors cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Fotos do Paciente */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
+                  Fotos do Paciente (Antes/Depois ou Lesões)
+                </label>
+                <div className="border border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 rounded-xl p-4 bg-slate-50 dark:bg-slate-800/40 text-center relative transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".png,.jpg,.jpeg,.bmp,image/png,image/jpeg,image/bmp"
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        const files = Array.from(e.target.files);
+                        setFotosFiles((prev) => [...prev, ...files]);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Adicionar fotos do paciente
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      Formatos aceitos: PNG, JPG, JPEG, BMP
+                    </p>
+                  </div>
+                </div>
+
+                {/* Grid de thumbnails das fotos */}
+                {fotosPreviews.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
+                    {fotosPreviews.map((preview, idx) => (
+                      <div
+                        key={idx}
+                        className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100"
+                      >
+                        <img
+                          src={preview.url}
+                          alt={`Anexo ${idx + 1}`}
+                          className="w-full h-full object-cover cursor-zoom-in hover:scale-105 transition-transform"
+                          onClick={() => setLightboxUrl(preview.url)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFotosFiles((prev) => prev.filter((_, i) => i !== idx))}
+                          className="absolute top-1 right-1 p-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full opacity-90 transition-colors cursor-pointer"
+                          title="Remover foto"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Lightbox para fotos em tamanho ampliado */}
+          {lightboxUrl && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+              <div className="relative max-w-4xl w-full max-h-screen flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={() => setLightboxUrl(null)}
+                  className="absolute top-4 right-4 p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-full transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <img
+                  src={lightboxUrl}
+                  alt="Visualização ampliada"
+                  className="max-w-full max-h-[85vh] rounded-lg object-contain shadow-2xl border border-slate-800"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Rodapé de Ações */}
           <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">

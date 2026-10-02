@@ -92,6 +92,8 @@ export async function addClinicalEvolutionAction(
       tipo: input.tipo || "Consulta",
       tipo_atendimento: input.tipo_atendimento || input.tipo,
       procedimento_id: input.procedimento_id,
+      exames_anexos: input.exames_anexos || [],
+      fotos_paciente: input.fotos_paciente || [],
       profissional: input.profissional || "Dra. Juliana Sena",
       especialidade: input.especialidade || "Clínica Geral",
       subjetivo: input.subjetivo || "Sem queixas ativas registradas.",

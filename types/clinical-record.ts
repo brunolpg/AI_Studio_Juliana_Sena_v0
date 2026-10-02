@@ -18,6 +18,8 @@ export interface ClinicalEvolution {
   tipo: EvolutionType;
   tipo_atendimento?: string;
   procedimento_id?: string;
+  exames_anexos?: string[];
+  fotos_paciente?: string[];
   profissional: string;
   especialidade: string;
   subjetivo: string; // Queixas, sintomas relatados pelo paciente
