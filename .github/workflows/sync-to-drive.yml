@@ -25,11 +25,10 @@ jobs:
           # Escreve a credencial JSON temporariamente para a autenticação
           echo '${{ secrets.GCP_CREDENTIALS }}' > gdrive_key.json
           
-          # Executa o espelhamento transferindo a propriedade do arquivo para você
+          # Executa o espelhamento forçando o uso da cota da conta que compartilha a pasta
           rclone sync . :drive: \
             --drive-service-account-file=gdrive_key.json \
             --drive-root-folder-id="${{ secrets.DRIVE_FOLDER_ID }}" \
-            --drive-supports-team-drives \
             --drive-upload-cutoff 0 \
             --exclude ".git/**" \
             --exclude ".github/**" \
