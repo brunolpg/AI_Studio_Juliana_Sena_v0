@@ -12,6 +12,7 @@ interface AppointmentCalendarPickerProps {
   selectedDate: string; // YYYY-MM-DD
   onSelectDate: (date: string) => void;
   minDate?: string;
+  isAdminOrProfessional?: boolean;
 }
 
 const MONTH_NAMES = [
@@ -43,6 +44,7 @@ export function AppointmentCalendarPicker({
   selectedDate,
   onSelectDate,
   minDate,
+  isAdminOrProfessional = false,
 }: AppointmentCalendarPickerProps) {
   // Parse data selecionada inicial
   const initial = selectedDate ? new Date(selectedDate + "T12:00:00") : new Date();
@@ -56,7 +58,17 @@ export function AppointmentCalendarPicker({
   // Dias do mês anterior para preencher a primeira semana
   const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
 
+  // Verificação de desabilitação do mês anterior para pacientes
+  const minDateObj = minDate ? new Date(minDate + "T12:00:00") : new Date();
+  const minYear = minDateObj.getFullYear();
+  const minMonth = minDateObj.getMonth();
+
+  const isPrevMonthDisabled = !isAdminOrProfessional && (
+    currentYear < minYear || (currentYear === minYear && currentMonth <= minMonth)
+  );
+
   const handlePrevMonth = () => {
+    if (isPrevMonthDisabled) return;
     if (currentMonth === 0) {
       setCurrentMonth(11);
       setCurrentYear((y) => y - 1);
@@ -103,8 +115,13 @@ export function AppointmentCalendarPicker({
           <button
             type="button"
             onClick={handlePrevMonth}
-            className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors cursor-pointer"
-            title="Mês anterior"
+            disabled={isPrevMonthDisabled}
+            className={`p-1 rounded-lg transition-colors ${
+              isPrevMonthDisabled
+                ? "text-slate-300 dark:text-slate-700 cursor-not-allowed opacity-40"
+                : "hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 cursor-pointer"
+            }`}
+            title={isPrevMonthDisabled ? "Navegação retroativa bloqueada para pacientes" : "Mês anterior"}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -164,7 +181,7 @@ export function AppointmentCalendarPicker({
 
           const isSelected = selectedDate === dayStr;
           const isToday = todayStr === dayStr;
-          const isPast = minDate ? dayStr < minDate : false;
+          const isPast = !isAdminOrProfessional && minDate ? dayStr < minDate : false;
           const isDisabled = isPast || !isAllowedDay;
 
           return (

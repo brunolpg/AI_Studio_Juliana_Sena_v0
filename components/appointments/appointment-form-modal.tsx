@@ -732,6 +732,7 @@ function AppointmentFormModalContent({
                 selectedDate={selectedDate}
                 onSelectDate={(d) => setSelectedDate(d)}
                 minDate={minDate}
+                isAdminOrProfessional={!isPatient}
               />
 
               <div className="flex items-center justify-between text-[11px] px-1">
