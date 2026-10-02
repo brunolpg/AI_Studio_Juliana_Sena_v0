@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   X,
   Stethoscope,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { addClinicalEvolutionAction } from "@/actions/clinical-actions";
 import { useToast } from "@/components/ui/toast";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Client } from "@/types/client";
 import type { EvolutionType } from "@/types/clinical-record";
 
@@ -25,14 +26,6 @@ interface EvolutionFormModalProps {
   onSuccess: () => void;
   client: Client;
 }
-
-const EVOLUTION_TYPES: EvolutionType[] = [
-  "Consulta",
-  "Retorno",
-  "Procedimento",
-  "Urgência",
-  "Teleatendimento",
-];
 
 export function EvolutionFormModal({
   isOpen,
@@ -46,11 +39,63 @@ export function EvolutionFormModal({
   const todayStr = now.toISOString().split("T")[0];
   const currentTimeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
-  const [tipo, setTipo] = useState<EvolutionType>("Consulta");
+  const [tipo, setTipo] = useState<EvolutionType>("");
+  const [procedimentoId, setProcedimentoId] = useState<string>("");
+  const [procedimentos, setProcedimentos] = useState<any[]>([]);
+  const [isLoadingProcedimentos, setIsLoadingProcedimentos] = useState(false);
+
   const [data, setData] = useState(todayStr);
   const [horario, setHorario] = useState(currentTimeStr);
   const [profissional, setProfissional] = useState("Dra. Juliana Sena");
   const [especialidade, setEspecialidade] = useState("Clínica Geral");
+
+  // Carrega procedimentos dinâmicos do Supabase com fallback
+  useEffect(() => {
+    async function loadProcedimentos() {
+      setIsLoadingProcedimentos(true);
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const { data: dbData, error } = await supabase
+            .from("procedimentos")
+            .select("id, procedimento, categoria")
+            .order("categoria", { ascending: true })
+            .order("procedimento", { ascending: true });
+          
+          if (!error && dbData) {
+            setProcedimentos(dbData);
+            return;
+          }
+        }
+        
+        // Fallback dinâmico seguro
+        const { getProcedimentosAction } = await import("@/actions/appointment-actions");
+        const res = await getProcedimentosAction();
+        if (res.success && res.data) {
+          setProcedimentos(res.data);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar procedimentos na evolução clínica:", err);
+      } finally {
+        setIsLoadingProcedimentos(false);
+      }
+    }
+    if (isOpen) {
+      loadProcedimentos();
+    }
+  }, [isOpen]);
+
+  // Agrupa os procedimentos por categoria para <optgroup>
+  const groupedProcedimentos = useMemo(() => {
+    const groups: Record<string, typeof procedimentos> = {};
+    procedimentos.forEach((p) => {
+      if (!groups[p.categoria]) {
+        groups[p.categoria] = [];
+      }
+      groups[p.categoria].push(p);
+    });
+    return groups;
+  }, [procedimentos]);
 
   // Sinais vitais
   const [pa, setPa] = useState("");
@@ -81,6 +126,10 @@ export function EvolutionFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!tipo) {
+      setErrorMsg("Selecione o procedimento / tipo de atendimento antes de salvar a evolução.");
+      return;
+    }
     if (!subjetivo.trim() || !avaliacao.trim() || !plano.trim()) {
       setErrorMsg("Preencha ao menos o relato subjetivo, a avaliação e o plano conduta.");
       return;
@@ -95,6 +144,8 @@ export function EvolutionFormModal({
         data,
         horario,
         tipo,
+        tipo_atendimento: tipo,
+        procedimento_id: procedimentoId || undefined,
         profissional,
         especialidade,
         subjetivo: subjetivo.trim(),
@@ -178,13 +229,26 @@ export function EvolutionFormModal({
               </label>
               <select
                 value={tipo}
-                onChange={(e) => setTipo(e.target.value as EvolutionType)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setTipo(val);
+                  const found = procedimentos.find((p) => p.procedimento === val);
+                  setProcedimentoId(found?.id || "");
+                }}
+                required
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
               >
-                {EVOLUTION_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
+                <option value="" disabled>
+                  {isLoadingProcedimentos ? "Carregando procedimentos..." : "Selecione o procedimento / tipo de atendimento..."}
+                </option>
+                {Object.entries(groupedProcedimentos).map(([categoria, items]) => (
+                  <optgroup key={categoria} label={categoria}>
+                    {items.map((item: any) => (
+                      <option key={item.id} value={item.procedimento}>
+                        {item.procedimento}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>

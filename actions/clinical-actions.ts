@@ -90,6 +90,8 @@ export async function addClinicalEvolutionAction(
         input.horario ||
         new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       tipo: input.tipo || "Consulta",
+      tipo_atendimento: input.tipo_atendimento || input.tipo,
+      procedimento_id: input.procedimento_id,
       profissional: input.profissional || "Dra. Juliana Sena",
       especialidade: input.especialidade || "Clínica Geral",
       subjetivo: input.subjetivo || "Sem queixas ativas registradas.",

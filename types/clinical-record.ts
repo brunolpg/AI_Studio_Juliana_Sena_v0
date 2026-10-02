@@ -1,4 +1,4 @@
-export type EvolutionType = "Consulta" | "Retorno" | "Urgência" | "Procedimento" | "Teleatendimento";
+export type EvolutionType = string;
 
 export interface VitalSigns {
   pressaoArterial?: string; // ex: "120/80"
@@ -16,6 +16,8 @@ export interface ClinicalEvolution {
   data: string; // YYYY-MM-DD ou ISO
   horario: string; // "14:30"
   tipo: EvolutionType;
+  tipo_atendimento?: string;
+  procedimento_id?: string;
   profissional: string;
   especialidade: string;
   subjetivo: string; // Queixas, sintomas relatados pelo paciente
