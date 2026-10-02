@@ -19,16 +19,18 @@ jobs:
       - name: Instalar rclone no sistema
         run: sudo apt-get update && sudo apt-get install -y rclone
 
-      # Passo 3: Cria a credencial, configura e força a sincronização arquivo por arquivo
+      # Passo 3: Cria a credencial, configura e força a sincronização contornando a cota da conta de serviço
       - name: Sincronizar arquivos soltos com o Google Drive
         run: |
           # Escreve a credencial JSON temporariamente para a autenticação
           echo '${{ secrets.GCP_CREDENTIALS }}' > gdrive_key.json
           
-          # Executa o espelhamento mantendo os arquivos descompactados e soltos
+          # Executa o espelhamento transferindo a propriedade do arquivo para você
           rclone sync . :drive: \
             --drive-service-account-file=gdrive_key.json \
             --drive-root-folder-id="${{ secrets.DRIVE_FOLDER_ID }}" \
+            --drive-supports-team-drives \
+            --drive-upload-cutoff 0 \
             --exclude ".git/**" \
             --exclude ".github/**" \
             --exclude "gdrive_key.json" \
