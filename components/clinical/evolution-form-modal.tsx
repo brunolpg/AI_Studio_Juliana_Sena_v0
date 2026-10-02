@@ -25,6 +25,7 @@ interface EvolutionFormModalProps {
   onClose: () => void;
   onSuccess: () => void;
   client: Client;
+  initialAppointmentId?: string;
 }
 
 export function EvolutionFormModal({
@@ -32,6 +33,7 @@ export function EvolutionFormModal({
   onClose,
   onSuccess,
   client,
+  initialAppointmentId,
 }: EvolutionFormModalProps) {
   const { toast } = useToast();
 
@@ -43,6 +45,11 @@ export function EvolutionFormModal({
   const [procedimentoId, setProcedimentoId] = useState<string>("");
   const [procedimentos, setProcedimentos] = useState<any[]>([]);
   const [isLoadingProcedimentos, setIsLoadingProcedimentos] = useState(false);
+
+  // Estados de agendamentos e vínculo
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>("");
 
   // Estados de upload de arquivos
   const [examesFiles, setExamesFiles] = useState<File[]>([]);
@@ -141,6 +148,56 @@ export function EvolutionFormModal({
     }
   }, [isOpen]);
 
+  // Carrega agendamentos do paciente atual
+  useEffect(() => {
+    async function loadAppointments() {
+      setIsLoadingAppointments(true);
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const { data: dbData, error } = await supabase
+            .from("appointments")
+            .select("id, data, horario_inicio, horario_fim, procedimento, status")
+            .eq("client_id", client.id)
+            .order("data", { ascending: false });
+          
+          if (!error && dbData) {
+            setAppointments(dbData);
+            if (initialAppointmentId) {
+              setSelectedAppointmentId(initialAppointmentId);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao carregar agendamentos do paciente na evolução:", err);
+      } finally {
+        setIsLoadingAppointments(false);
+      }
+    }
+    if (isOpen && client?.id) {
+      loadAppointments();
+    }
+  }, [isOpen, client?.id, initialAppointmentId]);
+
+  // Preenche e bloqueia os campos quando um agendamento for selecionado
+  useEffect(() => {
+    if (selectedAppointmentId) {
+      const apt = appointments.find((a) => a.id === selectedAppointmentId);
+      if (apt) {
+        setData(apt.data);
+        setHorario(apt.horario_inicio);
+        setTipo(apt.procedimento);
+        const proc = procedimentos.find((p) => p.procedimento === apt.procedimento);
+        setProcedimentoId(proc?.id || "");
+      }
+    } else {
+      setData(todayStr);
+      setHorario(currentTimeStr);
+      setTipo("");
+      setProcedimentoId("");
+    }
+  }, [selectedAppointmentId, appointments, procedimentos, todayStr, currentTimeStr]);
+
   // Agrupa os procedimentos por categoria para <optgroup>
   const groupedProcedimentos = useMemo(() => {
     const groups: Record<string, typeof procedimentos> = {};
@@ -216,6 +273,7 @@ export function EvolutionFormModal({
         tipo,
         tipo_atendimento: tipo,
         procedimento_id: procedimentoId || undefined,
+        appointment_id: selectedAppointmentId || null,
         exames_anexos: examesUrls,
         fotos_paciente: fotosUrls,
         profissional,
@@ -293,6 +351,34 @@ export function EvolutionFormModal({
         )}
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[78vh] overflow-y-auto">
+          {/* Seletor de Vínculo de Agendamento */}
+          <div className="space-y-1.5 p-3.5 rounded-xl border border-teal-200 dark:border-teal-900/40 bg-teal-50/10 dark:bg-teal-950/10">
+            <label className="text-xs font-bold text-teal-900 dark:text-teal-200 flex items-center justify-between">
+              <span>Vincular a um Agendamento (Opcional)</span>
+              {isLoadingAppointments && (
+                <span className="text-[10px] text-teal-600 dark:text-teal-400 font-normal animate-pulse">
+                  Carregando agendamentos...
+                </span>
+              )}
+            </label>
+            <select
+              value={selectedAppointmentId}
+              onChange={(e) => setSelectedAppointmentId(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold focus:outline-none"
+            >
+              <option value="">Atendimento Avulso / Sem agendamento prévio</option>
+              {appointments.map((apt) => {
+                const parts = apt.data.split("-");
+                const formattedDate = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : apt.data;
+                return (
+                  <option key={apt.id} value={apt.id}>
+                    [{formattedDate}] às {apt.horario_inicio} - {apt.procedimento} ({apt.status})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
           {/* Tipo de Atendimento & Metadados */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
@@ -308,7 +394,12 @@ export function EvolutionFormModal({
                   setProcedimentoId(found?.id || "");
                 }}
                 required
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                disabled={Boolean(selectedAppointmentId)}
+                className={`w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none ${
+                  selectedAppointmentId
+                    ? "bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed text-slate-500 dark:text-slate-400"
+                    : "bg-slate-50 dark:bg-slate-800"
+                }`}
               >
                 <option value="" disabled>
                   {isLoadingProcedimentos ? "Carregando procedimentos..." : "Selecione o procedimento / tipo de atendimento..."}
@@ -334,7 +425,12 @@ export function EvolutionFormModal({
                 value={data}
                 onChange={(e) => setData(e.target.value)}
                 required
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                readOnly={Boolean(selectedAppointmentId)}
+                className={`w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none ${
+                  selectedAppointmentId
+                    ? "bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed text-slate-500 dark:text-slate-400"
+                    : "bg-slate-50 dark:bg-slate-800"
+                }`}
               />
             </div>
 
@@ -347,7 +443,12 @@ export function EvolutionFormModal({
                 value={horario}
                 onChange={(e) => setHorario(e.target.value)}
                 required
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                readOnly={Boolean(selectedAppointmentId)}
+                className={`w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none ${
+                  selectedAppointmentId
+                    ? "bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed text-slate-500 dark:text-slate-400"
+                    : "bg-slate-50 dark:bg-slate-800"
+                }`}
               />
             </div>
           </div>

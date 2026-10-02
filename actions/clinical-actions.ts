@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
 import { INITIAL_CLINICAL_RECORDS, DEFAULT_MEDICAL_HISTORY } from "@/lib/clinical-mock-data";
 import type {
   PatientClinicalRecord,
@@ -92,6 +93,7 @@ export async function addClinicalEvolutionAction(
       tipo: input.tipo || "Consulta",
       tipo_atendimento: input.tipo_atendimento || input.tipo,
       procedimento_id: input.procedimento_id,
+      appointment_id: input.appointment_id || null,
       exames_anexos: input.exames_anexos || [],
       fotos_paciente: input.fotos_paciente || [],
       profissional: input.profissional || "Dra. Juliana Sena",
@@ -110,6 +112,26 @@ export async function addClinicalEvolutionAction(
     };
 
     record.evolutions.unshift(newEvolution);
+
+    // Se houver um agendamento vinculado, atualiza seu status para 'Realizado' no Supabase
+    if (input.appointment_id) {
+      try {
+        const supabase = await createClient();
+        if (supabase) {
+          const { error } = await supabase
+            .from("appointments")
+            .update({ status: "Realizado", updated_at: new Date().toISOString() })
+            .eq("id", input.appointment_id);
+          if (error) {
+            console.warn(`[addClinicalEvolutionAction] Erro ao atualizar status do agendamento ${input.appointment_id}:`, error.message);
+          } else {
+            console.log(`[addClinicalEvolutionAction] Agendamento ${input.appointment_id} atualizado para 'Realizado' com sucesso.`);
+          }
+        }
+      } catch (err) {
+        console.error(`[addClinicalEvolutionAction] Exceção ao atualizar agendamento ${input.appointment_id}:`, err);
+      }
+    }
 
     revalidatePath("/");
 

@@ -18,6 +18,7 @@ export interface ClinicalEvolution {
   tipo: EvolutionType;
   tipo_atendimento?: string;
   procedimento_id?: string;
+  appointment_id?: string | null;
   exames_anexos?: string[];
   fotos_paciente?: string[];
   profissional: string;
