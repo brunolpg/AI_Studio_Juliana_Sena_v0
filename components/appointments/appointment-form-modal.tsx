@@ -138,6 +138,72 @@ function AppointmentFormModalContent({
   const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
   const [hasAddedToCalendar, setHasAddedToCalendar] = useState<boolean>(false);
 
+  const selectedDuration = useMemo(() => {
+    const matched = procedimentos.find((p) => p.procedimento === procedimento);
+    return matched ? Number(matched.duracao) : 1;
+  }, [procedimento, procedimentos]);
+
+  const selectedEndTime = useMemo(() => {
+    if (!selectedSlot) return "";
+    const startHour = Number(selectedSlot.split(":")[0]);
+    const endHour = String(startHour + selectedDuration).padStart(2, "0");
+    return `${endHour}:00`;
+  }, [selectedSlot, selectedDuration]);
+
+  // Revalidação imediata do slot selecionado se a duração do procedimento ou slots mudar
+  useEffect(() => {
+    if (!selectedSlot || slots.length === 0) return;
+
+    const selectedIndex = slots.findIndex((s) => s.slot === selectedSlot);
+    if (selectedIndex === -1) {
+      setSelectedSlot(null);
+      return;
+    }
+
+    if (slots[selectedIndex].isOccupied) {
+      setSelectedSlot(null);
+      toast({
+        type: "error",
+        title: "Horário Indisponível",
+        description: "O horário selecionado não está mais disponível.",
+      });
+      return;
+    }
+
+    // 1. Limite do expediente do dia
+    const lastSlot = slots[slots.length - 1];
+    const H_f = lastSlot ? Number(lastSlot.endSlot.split(":")[0]) : 16;
+    const startHour = Number(selectedSlot.split(":")[0]);
+    if (startHour + selectedDuration > H_f) {
+      setSelectedSlot(null);
+      toast({
+        type: "error",
+        title: "Horário Inválido",
+        description: "A duração do novo procedimento excede o fim do expediente para o horário selecionado. Selecione um novo horário.",
+      });
+      return;
+    }
+
+    // 2. Slots consecutivos livres
+    let hasOverlap = false;
+    for (let offset = 0; offset < selectedDuration; offset++) {
+      const checkIndex = selectedIndex + offset;
+      if (checkIndex >= slots.length || slots[checkIndex].isOccupied) {
+        hasOverlap = true;
+        break;
+      }
+    }
+
+    if (hasOverlap) {
+      setSelectedSlot(null);
+      toast({
+        type: "error",
+        title: "Horário Inválido",
+        description: "Os horários consecutivos necessários para este procedimento não estão totalmente livres. Selecione um novo horário.",
+      });
+    }
+  }, [selectedDuration, slots, selectedSlot]);
+
   const calendarUrl = useMemo(() => {
     if (!confirmedAppointment) return "";
     return generateGoogleCalendarTemplateUrl({
@@ -378,9 +444,10 @@ function AppointmentFormModalContent({
         client_telefone: selectedPatient.telefone || undefined,
         data: selectedDate,
         horario_inicio: selectedSlot,
+        horario_fim: selectedEndTime,
         procedimento: procedimento.trim(),
         observacoes: observacoes.trim() || undefined,
-        sync_google: syncGoogle,
+        sync_google: true,
       };
 
       const res = await createAppointmentAction(payload);
@@ -686,8 +753,8 @@ function AppointmentFormModalContent({
                   <span>3. Horários Disponíveis *</span>
                 </div>
                 {selectedSlot && (
-                  <span className="text-[11px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/70 px-2 py-0.5 rounded-full border border-teal-300 dark:border-teal-700">
-                    {selectedSlot} selecionado
+                  <span className="text-[11px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/70 px-2.5 py-0.5 rounded-full border border-teal-300 dark:border-teal-700">
+                    {selectedSlot} às {selectedEndTime} ({selectedDuration}h)
                   </span>
                 )}
               </label>
@@ -698,6 +765,7 @@ function AppointmentFormModalContent({
                 onSelectSlot={(s) => setSelectedSlot(s)}
                 isLoading={isLoadingSlots}
                 dateStr={selectedDate}
+                duracao={selectedDuration}
               />
             </div>
           </div>
@@ -799,10 +867,10 @@ function AppointmentFormModalContent({
                 <input
                   type="text"
                   required
+                  readOnly
                   value={procedimento}
-                  onChange={(e) => setProcedimento(e.target.value)}
-                  placeholder="Selecione acima ou digite um procedimento personalizado"
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 font-semibold text-teal-700 dark:text-teal-300"
+                  placeholder="Selecione um dos procedimentos listados acima"
+                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:outline-none font-semibold text-teal-700 dark:text-teal-300 cursor-not-allowed select-none"
                 />
               </div>
             </div>
@@ -818,28 +886,6 @@ function AppointmentFormModalContent({
                 onChange={(e) => setObservacoes(e.target.value)}
                 className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 resize-none"
               />
-            </div>
-          </div>
-
-          {/* 4. OPÇÃO DE SINCRONIZAÇÃO COM O GOOGLE AGENDA */}
-          <div className="p-3.5 rounded-xl border border-teal-200/80 dark:border-teal-900/60 bg-teal-50/40 dark:bg-teal-950/20 flex items-start gap-3">
-            <input
-              id="sync-google-checkbox"
-              type="checkbox"
-              checked={syncGoogle}
-              onChange={(e) => setSyncGoogle(e.target.checked)}
-              className="mt-0.5 w-4 h-4 rounded text-teal-600 focus:ring-teal-500 border-slate-300 dark:border-slate-700 cursor-pointer"
-            />
-            <div className="text-xs">
-              <label
-                htmlFor="sync-google-checkbox"
-                className="font-bold text-teal-900 dark:text-teal-200 cursor-pointer block"
-              >
-                Sincronizar com a Google Agenda
-              </label>
-              <p className="text-[11px] text-teal-800/80 dark:text-teal-300/80 mt-0.5 leading-relaxed">
-                Cria o evento na agenda da profissional e disponibiliza link direto.
-              </p>
             </div>
           </div>
         </div>

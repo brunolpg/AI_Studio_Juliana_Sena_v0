@@ -482,13 +482,26 @@ export async function createAppointmentAction(
     }
 
     // Busca a duração do procedimento cadastrado (padrão: 1 hora)
+    let duracaoHoras = 1;
     const matchedProc = PROCEDIMENTOS_CADASTRAIS.find(p => p.procedimento === input.procedimento);
-    const duracaoHoras = matchedProc ? Number(matchedProc.duracao) : 1;
+    if (matchedProc) {
+      duracaoHoras = Number(matchedProc.duracao);
+    } else {
+      const { data: dbProc } = await supabase
+        .from("procedimentos")
+        .select("duracao")
+        .eq("procedimento", input.procedimento)
+        .maybeSingle();
+      if (dbProc?.duracao) {
+        duracaoHoras = Number(dbProc.duracao);
+      }
+    }
 
     // Calcula horário fim com base na duração real do procedimento
     const startHour = Number(input.horario_inicio.split(":")[0]);
     const endHour = String(startHour + duracaoHoras).padStart(2, "0");
-    const horario_fim = `${endHour}:00`;
+    const calculated_horario_fim = `${endHour}:00`;
+    const horario_fim = input.horario_fim || calculated_horario_fim;
 
     // 3. Verificação de conflito no Supabase (horário já reservado na data com status != Cancelado)
     const { data: conflict } = await supabase

@@ -26,6 +26,7 @@ export interface AppointmentInput {
   client_telefone?: string;
   data: string;
   horario_inicio: string;
+  horario_fim?: string;
   procedimento: string;
   observacoes?: string;
   sync_google: boolean;

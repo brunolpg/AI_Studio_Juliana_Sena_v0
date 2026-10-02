@@ -14,6 +14,7 @@ interface TimeSlotGridProps {
   onSelectSlot: (slot: string) => void;
   isLoading?: boolean;
   dateStr?: string;
+  duracao?: number;
 }
 
 export function TimeSlotGrid({
@@ -22,6 +23,7 @@ export function TimeSlotGrid({
   onSelectSlot,
   isLoading = false,
   dateStr,
+  duracao = 1,
 }: TimeSlotGridProps) {
   const scheduleInfo = dateStr ? getDayScheduleDescription(dateStr) : null;
   const isAllowedDay = dateStr ? isAllowedAppointmentDay(dateStr) : slots.length > 0;
@@ -82,9 +84,37 @@ export function TimeSlotGrid({
 
       {/* Chips com o horário de início de cada sessão (intervalos de 1h) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {slots.map((s) => {
-          const isSelected = selectedSlot === s.slot;
+        {slots.map((s, i) => {
+          // Determina H_f (fim do expediente do dia, ex: 16:00 ou 18:00)
+          const lastSlot = slots[slots.length - 1];
+          const H_f = lastSlot ? Number(lastSlot.endSlot.split(":")[0]) : 16;
+          
+          const startHour = Number(s.slot.split(":")[0]);
+          const exceedsShift = startHour + duracao > H_f;
 
+          // Verifica se existem overlaps nos blocos de 1h consecutivos necessários
+          let hasOverlap = false;
+          if (!s.isOccupied && !exceedsShift) {
+            for (let offset = 0; offset < duracao; offset++) {
+              const checkIndex = i + offset;
+              if (checkIndex >= slots.length) {
+                hasOverlap = true;
+                break;
+              }
+              if (slots[checkIndex].isOccupied) {
+                hasOverlap = true;
+                break;
+              }
+            }
+          }
+
+          // Verifica se este slot específico faz parte da seleção de múltiplos horários
+          const isSelected = selectedSlot !== null && (() => {
+            const selHour = Number(selectedSlot.split(":")[0]);
+            return startHour >= selHour && startHour < selHour + duracao;
+          })();
+
+          // 1. Ocupado de forma nativa
           if (s.isOccupied) {
             return (
               <div
@@ -103,6 +133,45 @@ export function TimeSlotGrid({
             );
           }
 
+          // 2. Bloqueio Preventivo: excede o expediente
+          if (exceedsShift) {
+            return (
+              <div
+                key={s.slot}
+                className="flex items-center justify-between px-3 py-2 rounded-xl border border-dashed border-rose-200/80 dark:border-rose-900/30 bg-rose-50/20 dark:bg-rose-950/10 text-rose-600/80 dark:text-rose-400/80 cursor-not-allowed select-none text-xs"
+                title={`Duração de ${duracao}h ultrapassa o expediente (${H_f}:00)`}
+              >
+                <div className="flex items-center gap-1.5 font-mono opacity-60">
+                  <Ban className="w-3.5 h-3.5" />
+                  <span className="font-bold">{s.slot}</span>
+                </div>
+                <span className="text-[9px] font-semibold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded border border-rose-200/50 dark:border-rose-800/30">
+                  Excede exp.
+                </span>
+              </div>
+            );
+          }
+
+          // 3. Bloqueio: horários subsequentes ocupados
+          if (hasOverlap) {
+            return (
+              <div
+                key={s.slot}
+                className="flex items-center justify-between px-3 py-2 rounded-xl border border-dashed border-amber-200/80 dark:border-amber-900/30 bg-amber-50/20 dark:bg-amber-950/10 text-amber-700/80 dark:text-amber-400/80 cursor-not-allowed select-none text-xs"
+                title={`Requer ${duracao} horas seguidas livres, mas os horários seguintes estão ocupados.`}
+              >
+                <div className="flex items-center gap-1.5 font-mono opacity-60">
+                  <Ban className="w-3.5 h-3.5" />
+                  <span className="font-bold">{s.slot}</span>
+                </div>
+                <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/30">
+                  Indisponível
+                </span>
+              </div>
+            );
+          }
+
+          // 4. Slot Disponível / Selecionado
           return (
             <button
               key={s.slot}
@@ -125,12 +194,21 @@ export function TimeSlotGrid({
 
               {isSelected ? (
                 <div className="flex items-center gap-1 text-[10px] font-bold">
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                  <span>Início</span>
+                  {selectedSlot === s.slot ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>Início</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3 text-teal-100 animate-pulse" />
+                      <span>Incluso</span>
+                    </>
+                  )}
                 </div>
               ) : (
                 <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/50">
-                  1h
+                  {duracao}h
                 </span>
               )}
             </button>

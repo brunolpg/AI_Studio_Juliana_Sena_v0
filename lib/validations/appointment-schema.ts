@@ -44,6 +44,8 @@ const appointmentBaseSchema = z
 
     observacoes: z.string().trim().max(500, { message: "Observações não podem exceder 500 caracteres." }).optional(),
 
+    horario_fim: z.string().optional(),
+
     sync_google: z.boolean().default(false),
   });
 
