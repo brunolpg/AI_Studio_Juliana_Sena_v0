@@ -8,7 +8,7 @@ import { ClientTableView } from "@/components/clients/client-table-view";
 import { AppointmentTableView } from "@/components/appointments/appointment-table-view";
 import { PatientClinicalDashboardView } from "@/components/clinical/patient-clinical-dashboard-view";
 import { DeliverablesView } from "@/components/clients/deliverables-view";
-import { ShieldCheck, CalendarCheck2, FileCode2, Calendar, Stethoscope } from "lucide-react";
+import { ShieldCheck, CalendarCheck2, FileCode2, Calendar, Stethoscope, Users } from "lucide-react";
 
 export function PatientDashboard() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("pacientes");
@@ -71,7 +71,7 @@ export function PatientDashboard() {
         </div>
 
         {/* Quick Metrics */}
-        <StatsOverview />
+        <StatsOverview activeTab={activeTab} />
 
         {/* Views Condicionais por Aba */}
         {activeTab === "pacientes" && (
@@ -110,6 +110,15 @@ export function PatientDashboard() {
           <div className="flex items-center gap-4 text-slate-600 dark:text-slate-400">
             <button
               type="button"
+              onClick={() => setActiveTab("pacientes")}
+              className="hover:underline flex items-center gap-1 font-medium cursor-pointer"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Pacientes</span>
+            </button>
+            <span>•</span>
+            <button
+              type="button"
               onClick={() => setActiveTab("prontuarios")}
               className="hover:underline flex items-center gap-1 font-medium cursor-pointer"
             >
@@ -124,15 +133,6 @@ export function PatientDashboard() {
             >
               <Calendar className="w-3.5 h-3.5" />
               <span>Agendamentos</span>
-            </button>
-            <span>•</span>
-            <button
-              type="button"
-              onClick={() => setActiveTab("deliverables")}
-              className="hover:underline flex items-center gap-1 font-medium cursor-pointer"
-            >
-              <FileCode2 className="w-3.5 h-3.5" />
-              <span>Ver Schema Zod & Scripts SQL</span>
             </button>
           </div>
         </div>
