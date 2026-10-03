@@ -204,7 +204,7 @@ export default function HomePage() {
         {/* Logotipo e Nomes no Topo */}
         <div className="flex flex-col items-center text-center space-y-3">
           <div className="w-[56px] h-[56px] rounded-[18px] bg-[#3B9E8C] text-white flex items-center justify-center shadow-md">
-            <Stethoscope className="w-[28px] h-[28px]" />
+            <Sparkles className="w-[28px] h-[28px]" />
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
