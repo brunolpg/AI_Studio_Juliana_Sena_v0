@@ -461,26 +461,7 @@ export default function HomePage() {
                 )}
               </div>
 
-              {/* Função / Cargo */}
-              <div className="space-y-1">
-                <label htmlFor="regRole" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Perfil de Acesso
-                </label>
-                <div className="relative">
-                  <UserCheck className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <select
-                    id="regRole"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value as any)}
-                    disabled={isSubmitting}
-                    className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-[#3B9E8C]/20 focus:border-[#3B9E8C] appearance-none"
-                  >
-                    <option value="paciente">Paciente</option>
-                    <option value="profissional">Profissional / Especialista</option>
-                    <option value="administrador">Administrador(a)</option>
-                  </select>
-                </div>
-              </div>
+
 
               {/* Senha */}
               <div className="space-y-1">

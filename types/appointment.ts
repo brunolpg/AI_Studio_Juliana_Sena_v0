@@ -10,6 +10,7 @@ export interface Appointment {
   horario_inicio: string; // "08:00"
   horario_fim: string; // "09:00"
   procedimento: string;
+  procedimento_id?: string | null;
   observacoes?: string | null;
   status: AppointmentStatus;
   google_event_id?: string | null;
@@ -28,6 +29,7 @@ export interface AppointmentInput {
   horario_inicio: string;
   horario_fim?: string;
   procedimento: string;
+  procedimento_id?: string;
   observacoes?: string;
   sync_google: boolean;
 }

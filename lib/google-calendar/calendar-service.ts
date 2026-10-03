@@ -7,6 +7,8 @@ export interface GoogleCalendarApiEvent {
   start: { dateTime?: string; date?: string };
   end: { dateTime?: string; date?: string };
   htmlLink?: string;
+  startTimeLocal?: string;
+  endTimeLocal?: string;
 }
 
 export interface GoogleCalendarEventInput {
@@ -50,6 +52,24 @@ export function getGoogleCalendarCredentials() {
 
 function toIsoDateTime(dateStr: string, timeStr: string): string {
   return `${dateStr}T${timeStr}:00-03:00`;
+}
+
+function formatToBrasiliaTime(dateTimeStr?: string, dateStr?: string, defaultTime: string = "00:00"): string {
+  if (dateTimeStr) {
+    try {
+      const date = new Date(dateTimeStr);
+      const formatter = new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      return formatter.format(date);
+    } catch (e) {
+      console.error("Error formatting date-time:", e);
+    }
+  }
+  return defaultTime;
 }
 
 export function generateGoogleCalendarTemplateUrl(input: GoogleCalendarEventInput): string {
@@ -251,7 +271,31 @@ export async function listGoogleCalendarEventsForDate(
     }
     const data = await res.json();
     const items: GoogleCalendarApiEvent[] = data.items || [];
-    return { events: items, isConfigured: true };
+
+    const processedEvents = items.map((evt) => {
+      let startTimeLocal = "00:00";
+      let endTimeLocal = "23:59";
+
+      if (evt.start?.dateTime) {
+        startTimeLocal = formatToBrasiliaTime(evt.start.dateTime, undefined, "00:00");
+      } else if (evt.start?.date) {
+        startTimeLocal = "00:00";
+      }
+
+      if (evt.end?.dateTime) {
+        endTimeLocal = formatToBrasiliaTime(evt.end.dateTime, undefined, "23:59");
+      } else if (evt.end?.date) {
+        endTimeLocal = "23:59";
+      }
+
+      return {
+        ...evt,
+        startTimeLocal,
+        endTimeLocal,
+      };
+    });
+
+    return { events: processedEvents, isConfigured: true };
   } catch (error) {
     console.error("[Google Calendar] Erro ao consultar eventos:", error);
     return { events: [], isConfigured: true };

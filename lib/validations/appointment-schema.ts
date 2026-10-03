@@ -36,6 +36,7 @@ const appointmentBaseSchema = z
       .string()
       .regex(/^\d{2}:\d{2}$/, { message: "Horário deve estar no formato HH:MM." }),
 
+    procedimento_id: z.string().uuid().optional(),
     procedimento: z
       .string()
       .trim()

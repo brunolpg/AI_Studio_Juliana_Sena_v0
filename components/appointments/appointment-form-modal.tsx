@@ -150,6 +150,13 @@ function AppointmentFormModalContent({
     return `${endHour}:00`;
   }, [selectedSlot, selectedDuration]);
 
+  // Categorias extraídas dinamicamente dos procedimentos
+  const categoriesList = useMemo(() => {
+    if (procedimentos.length === 0) return PROCEDIMENTO_CATEGORIES;
+    const uniq = Array.from(new Set(procedimentos.map((p) => p.categoria)));
+    return uniq;
+  }, [procedimentos, PROCEDIMENTO_CATEGORIES]);
+
   // Revalidação imediata do slot selecionado se a duração do procedimento ou slots mudar
   useEffect(() => {
     if (!selectedSlot || slots.length === 0) return;
@@ -437,6 +444,7 @@ function AppointmentFormModalContent({
 
     setIsSubmitting(true);
     try {
+      const matchedProc = procedimentos.find((p) => p.procedimento === procedimento);
       const payload: AppointmentInput = {
         client_id: selectedPatient.id,
         client_nome: selectedPatient.nome,
@@ -446,6 +454,7 @@ function AppointmentFormModalContent({
         horario_inicio: selectedSlot,
         horario_fim: selectedEndTime,
         procedimento: procedimento.trim(),
+        procedimento_id: matchedProc?.id || undefined,
         observacoes: observacoes.trim() || undefined,
         sync_google: true,
       };
@@ -792,7 +801,7 @@ function AppointmentFormModalContent({
 
               {/* Abas de Categorias */}
               <div className="flex flex-wrap gap-1.5 py-1">
-                {PROCEDIMENTO_CATEGORIES.map((cat) => (
+                {categoriesList.map((cat) => (
                   <button
                     key={cat}
                     type="button"
@@ -863,16 +872,40 @@ function AppointmentFormModalContent({
               </div>
 
               {/* Campo Selecionado / Customizado */}
-              <div className="space-y-1 pt-1">
-                <span className="text-[10px] text-slate-500 dark:text-slate-400">Procedimento selecionado:</span>
-                <input
-                  type="text"
-                  required
-                  readOnly
-                  value={procedimento}
-                  placeholder="Selecione um dos procedimentos listados acima"
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:outline-none font-semibold text-teal-700 dark:text-teal-300 cursor-not-allowed select-none"
-                />
+              <div className="space-y-2 pt-1">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Procedimento Selecionado:</span>
+                {(() => {
+                  const matched = procedimentos.find((p) => p.procedimento === procedimento);
+                  if (matched) {
+                    return (
+                      <div className="p-3.5 rounded-xl border border-teal-500/30 bg-teal-500/5 dark:bg-teal-950/20 flex items-center justify-between gap-3 shadow-xs">
+                        <div className="truncate">
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                            {matched.procedimento}
+                          </h4>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            Duração: <strong className="font-semibold text-slate-700 dark:text-slate-300">{matched.duracao}h</strong>
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-xs font-black text-teal-600 dark:text-teal-400">
+                            R$ {Number(matched.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <input
+                      type="text"
+                      required
+                      readOnly
+                      value={procedimento}
+                      placeholder="Selecione um dos procedimentos listados acima"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:outline-none font-semibold text-teal-700 dark:text-teal-300 cursor-not-allowed select-none"
+                    />
+                  );
+                })()}
               </div>
             </div>
 

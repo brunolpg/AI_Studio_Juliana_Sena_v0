@@ -59,6 +59,7 @@ interface RawAppointmentRow {
   horario_inicio: string;
   horario_fim: string;
   procedimento: string;
+  procedimento_id: string | null;
   observacoes: string | null;
   status: string;
   google_event_id: string | null;
@@ -94,6 +95,7 @@ function mapRowToAppointment(row: RawAppointmentRow): Appointment {
     horario_inicio: row.horario_inicio,
     horario_fim: row.horario_fim,
     procedimento: row.procedimento,
+    procedimento_id: row.procedimento_id || null,
     observacoes: row.observacoes || null,
     status: row.status as Appointment["status"],
     google_event_id: row.google_event_id || null,
@@ -137,6 +139,7 @@ export async function getAppointmentsAction(
         horario_inicio,
         horario_fim,
         procedimento,
+        procedimento_id,
         observacoes,
         status,
         google_event_id,
@@ -300,6 +303,20 @@ export async function getActivePatientsForSchedulingAction(): Promise<ActionResp
   }
 }
 
+function timeToDecimal(timeStr: string): number {
+  if (!timeStr) return 0;
+  const [h, m] = timeStr.split(":").map(Number);
+  return (isNaN(h) ? 0 : h) + (isNaN(m) ? 0 : m) / 60;
+}
+
+function hasOverlap(start1: string, end1: string, start2: string, end2: string): boolean {
+  const s1 = timeToDecimal(start1);
+  const e1 = timeToDecimal(end1);
+  const s2 = timeToDecimal(start2);
+  const e2 = timeToDecimal(end2);
+  return s1 < e2 && e1 > s2;
+}
+
 /**
  * 2. CONSULTA HORÁRIOS DISPONÍVEIS NA GRADE CONFORME O DIA DA SEMANA
  * - Segundas e Quintas: 09:00 às 16:00 (último atendimento 15:00-16:00)
@@ -355,7 +372,12 @@ export async function getTimeSlotsForDateAction(
 
     const timeSlots: TimeSlot[] = standardDaySlots.map(({ slot, endSlot, label }) => {
       // 1. Verifica colisão com o banco de dados Supabase
-      const dbMatch = activeDbList.find((apt) => apt.horario_inicio === slot);
+      const dbMatch = activeDbList.find((apt) => {
+        const aptInicio = apt.horario_inicio;
+        const aptFim = apt.horario_fim || `${String(Number(apt.horario_inicio.split(":")[0]) + 1).padStart(2, "0")}:00`;
+        return hasOverlap(slot, endSlot, aptInicio, aptFim);
+      });
+
       if (dbMatch) {
         const patientData = Array.isArray(dbMatch.pacientes)
           ? dbMatch.pacientes[0]
@@ -371,12 +393,10 @@ export async function getTimeSlotsForDateAction(
       }
 
       // 2. Verifica colisão com eventos da Google Calendar API
-      const slotHour = Number(slot.split(":")[0]);
       const googleMatch = googleEvents.find((evt) => {
-        if (!evt.start?.dateTime) return false;
-        const evtStart = new Date(evt.start.dateTime);
-        const evtHour = evtStart.getHours();
-        return evtHour === slotHour;
+        const evtInicio = evt.startTimeLocal || "00:00";
+        const evtFim = evt.endTimeLocal || "23:59";
+        return hasOverlap(slot, endSlot, evtInicio, evtFim);
       });
 
       if (googleMatch) {
@@ -530,6 +550,7 @@ export async function createAppointmentAction(
         patientEmail: input.client_email || "",
         patientPhone: input.client_telefone || "",
         procedimento: input.procedimento,
+        procedimento_id: input.procedimento_id || null,
         date: input.data,
         startTime: input.horario_inicio,
         endTime: horario_fim,
@@ -561,6 +582,7 @@ export async function createAppointmentAction(
         horario_inicio: input.horario_inicio,
         horario_fim,
         procedimento: input.procedimento,
+        procedimento_id: input.procedimento_id || null,
         observacoes: input.observacoes || null,
         status: "Confirmado",
         google_event_id: googleEventId,
@@ -575,6 +597,7 @@ export async function createAppointmentAction(
           horario_inicio,
           horario_fim,
           procedimento,
+          procedimento_id,
           observacoes,
           status,
           google_event_id,
@@ -734,6 +757,7 @@ export async function updateAppointmentAction(
           horario_inicio,
           horario_fim,
           procedimento,
+          procedimento_id,
           observacoes,
           status,
           google_event_id,
@@ -847,6 +871,7 @@ export async function updateAppointmentAction(
           horario_inicio,
           horario_fim,
           procedimento,
+          procedimento_id,
           observacoes,
           status,
           google_event_id,

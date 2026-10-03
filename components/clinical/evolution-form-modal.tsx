@@ -19,6 +19,7 @@ import { useToast } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Client } from "@/types/client";
 import type { EvolutionType } from "@/types/clinical-record";
+import { PROCEDIMENTOS_CADASTRAIS } from "@/lib/procedimentos-mock";
 
 interface EvolutionFormModalProps {
   isOpen: boolean;
@@ -139,6 +140,7 @@ export function EvolutionFormModal({
         }
       } catch (err) {
         console.error("Erro ao carregar procedimentos na evolução clínica:", err);
+        setProcedimentos(PROCEDIMENTOS_CADASTRAIS);
       } finally {
         setIsLoadingProcedimentos(false);
       }
@@ -187,9 +189,20 @@ export function EvolutionFormModal({
       if (apt) {
         setData(apt.data);
         setHorario(apt.horario_inicio);
-        setTipo(apt.procedimento);
-        const proc = procedimentos.find((p) => p.procedimento === apt.procedimento);
-        setProcedimentoId(proc?.id || "");
+        
+        // Vínculo Automático pelo ID do procedimento ou pelo nome
+        const proc = procedimentos.find((p) => 
+          (apt.procedimento_id && p.id === apt.procedimento_id) || 
+          (apt.procedimento && p.procedimento === apt.procedimento)
+        );
+        
+        if (proc) {
+          setTipo(proc.procedimento);
+          setProcedimentoId(proc.id);
+        } else {
+          setTipo(apt.procedimento || "");
+          setProcedimentoId("");
+        }
       }
     } else {
       setData(todayStr);
@@ -199,7 +212,7 @@ export function EvolutionFormModal({
     }
   }, [selectedAppointmentId, appointments, procedimentos, todayStr, currentTimeStr]);
 
-  // Agrupa os procedimentos por categoria para <optgroup>
+  // Agrupa os procedimentos por categoria para <optgroup> em ordem alfabética
   const groupedProcedimentos = useMemo(() => {
     const groups: Record<string, typeof procedimentos> = {};
     procedimentos.forEach((p) => {
@@ -208,7 +221,18 @@ export function EvolutionFormModal({
       }
       groups[p.categoria].push(p);
     });
-    return groups;
+
+    // Ordenar categorias em ordem alfabética
+    const sortedCategories = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+    
+    // Criar um novo objeto ordenado
+    const sortedGroups = {};
+    sortedCategories.forEach((cat) => {
+      // Ordenar os itens dentro de cada categoria em ordem alfabética por procedimento
+      sortedGroups[cat] = [...groups[cat]].sort((a, b) => a.procedimento.localeCompare(b.procedimento));
+    });
+
+    return sortedGroups;
   }, [procedimentos]);
 
   // Sinais vitais
