@@ -44,6 +44,46 @@ export async function getPatientClinicalRecordAction(
 
     const record = ensurePatientRecord(clientId);
 
+    // Tenta carregar dados da tabela historico_clinico do Supabase
+    try {
+      const supabase = await createClient();
+      if (supabase) {
+        const { data, error } = await supabase
+          .from("historico_clinico")
+          .select("*")
+          .eq("paciente_id", clientId)
+          .maybeSingle();
+
+        if (!error && data) {
+          record.medicalHistory = {
+            alergias: data.alergias || [],
+            comorbidades: data.comorbidades || [],
+            medicamentosUsoContinuo: data.medicamentos_uso_continuo || data.medicamentosUsoContinuo || [],
+            acompanhamentoMedico: data.acompanhamento_medico || [],
+            isotretinoina6Meses: Boolean(data.isotretinoina_6_meses),
+            lesoesDetalhes: data.lesoes_detalhes || "",
+            implantesDispositivos: data.implantes_dispositivos || [],
+            ingestaoAgua: data.ingestao_agua || "",
+            qualidadeSono: data.qualidade_sono || "",
+            funcionamentoIntestino: data.funcionamento_intestino || "",
+            fotosAreaTratada: data.fotos_area_tratada || [],
+            tipoSanguineo: data.tipo_sanguineo || data.tipoSanguineo || "Não informado",
+            historicoCirurgico: data.historico_cirurgico || data.historicoCirurgico || "",
+            historicoFamiliar: data.historico_familiar || data.historicoFamiliar || "",
+            habitosVida: data.habitos_vida || data.habitosVida || {
+              tabagismo: "Não fuma",
+              etilismo: "Não consome",
+              atividadeFisica: "Sedentário",
+            },
+            observacoesGerais: data.observacoes_gerais || data.observacoesGerais || "",
+            updated_at: data.updated_at,
+          };
+        }
+      }
+    } catch (dbErr) {
+      console.warn("Aviso ao buscar historico_clinico no Supabase:", dbErr);
+    }
+
     return {
       success: true,
       data: record,
@@ -167,6 +207,42 @@ export async function updateMedicalHistoryAction(
       ...history,
       updated_at: new Date().toISOString(),
     };
+
+    // Tenta gravar na tabela historico_clinico do Supabase (upsert)
+    try {
+      const supabase = await createClient();
+      if (supabase) {
+        const { error } = await supabase.from("historico_clinico").upsert(
+          {
+            paciente_id: clientId,
+            alergias: history.alergias,
+            comorbidades: history.comorbidades,
+            medicamentos_uso_continuo: history.medicamentosUsoContinuo,
+            acompanhamento_medico: history.acompanhamentoMedico || [],
+            isotretinoina_6_meses: Boolean(history.isotretinoina6Meses),
+            lesoes_detalhes: history.lesoesDetalhes || "",
+            implantes_dispositivos: history.implantesDispositivos || [],
+            ingestao_agua: history.ingestaoAgua || "",
+            qualidade_sono: history.qualidadeSono || "",
+            funcionamento_intestino: history.funcionamentoIntestino || "",
+            fotos_area_tratada: history.fotosAreaTratada || [],
+            tipo_sanguineo: history.tipoSanguineo,
+            historico_cirurgico: history.historicoCirurgico,
+            historico_familiar: history.historicoFamiliar,
+            habitos_vida: history.habitosVida,
+            observacoes_gerais: history.observacoesGerais || "",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "paciente_id" }
+        );
+
+        if (error) {
+          console.warn("Aviso ao salvar historico_clinico no Supabase:", error.message);
+        }
+      }
+    } catch (dbErr) {
+      console.warn("Exceção ao salvar historico_clinico no Supabase:", dbErr);
+    }
 
     revalidatePath("/");
 

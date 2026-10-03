@@ -161,7 +161,7 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
             }`}
           >
             <Pill className="w-3.5 h-3.5" />
-            <span>Receituário</span>
+            <span>Prescrições</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
               {prescriptions.filter((p) => p.ativo).length}
             </span>
@@ -206,14 +206,30 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
           )}
 
           {activeSubTab === "prescricoes" && (
-            <button
-              type="button"
-              onClick={() => setIsPrescriptionModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Prescrever Medicamento</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  console.log("Abrir cuidados & orientações");
+                  toast({
+                    type: "info",
+                    title: "Em desenvolvimento",
+                    description: "Módulo de Cuidados & Orientações será disponibilizado em breve.",
+                  });
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer shadow-2xs"
+              >
+                <span>+ Cuidados & Orientações</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPrescriptionModalOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Prescrever Receita</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -591,7 +607,7 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
                       onClick={() => setIsPrescriptionModalOpen(true)}
                       className="mt-4 px-4 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all cursor-pointer"
                     >
-                      + Prescrever Medicamento
+                      + Prescrever Receita
                     </button>
                   </div>
                 ) : (

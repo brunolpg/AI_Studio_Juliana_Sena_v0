@@ -35,6 +35,14 @@ export interface MedicalHistory {
   alergias: string[];
   comorbidades: string[];
   medicamentosUsoContinuo: string[];
+  acompanhamentoMedico?: string[];
+  isotretinoina6Meses?: boolean;
+  lesoesDetalhes?: string;
+  implantesDispositivos?: string[];
+  ingestaoAgua?: string;
+  qualidadeSono?: string;
+  funcionamentoIntestino?: string;
+  fotosAreaTratada?: string[];
   tipoSanguineo: "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-" | "Não informado";
   historicoCirurgico: string;
   historicoFamiliar: string;
