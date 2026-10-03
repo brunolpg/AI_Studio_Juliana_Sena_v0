@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Users, Calendar, Stethoscope } from "lucide-react";
+import { Users, Calendar, Stethoscope, Sparkles } from "lucide-react";
 import { UserMenu } from "@/components/auth/user-menu";
 
 export type DashboardTab = "pacientes" | "prontuarios" | "agendamentos";
@@ -19,7 +19,7 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
           {/* Logo & Info */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-teal-500/10">
-              <Users className="w-5 h-5" />
+              <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
