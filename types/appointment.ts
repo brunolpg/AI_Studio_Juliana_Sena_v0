@@ -68,7 +68,6 @@ export const MONDAY_THURSDAY_SLOTS: Array<{ slot: string; endSlot: string; label
   { slot: "09:00", endSlot: "10:00", label: "09:00 - 10:00" },
   { slot: "10:00", endSlot: "11:00", label: "10:00 - 11:00" },
   { slot: "11:00", endSlot: "12:00", label: "11:00 - 12:00" },
-  { slot: "12:00", endSlot: "13:00", label: "12:00 - 13:00" },
   { slot: "13:00", endSlot: "14:00", label: "13:00 - 14:00" },
   { slot: "14:00", endSlot: "15:00", label: "14:00 - 15:00" },
   { slot: "15:00", endSlot: "16:00", label: "15:00 - 16:00" },
