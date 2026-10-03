@@ -9,6 +9,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import {
   Stethoscope,
+  Sparkles,
   Mail,
   Lock,
   Eye,
@@ -173,7 +174,7 @@ export default function HomePage() {
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="relative">
             <div className="w-16 h-16 rounded-[20px] bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 flex items-center justify-center animate-pulse">
-              <Stethoscope className="w-8 h-8 text-[#3B9E8C]" />
+              <Sparkles className="w-8 h-8 text-[#3B9E8C]" />
             </div>
             <div className="absolute inset-0 rounded-[20px] border-2 border-[#3B9E8C] border-t-transparent animate-spin" />
           </div>

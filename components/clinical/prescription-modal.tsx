@@ -14,7 +14,7 @@ interface PrescriptionModalProps {
   client: Client;
 }
 
-const VIAS: PrescriptionItem["via"][] = ["Oral", "Tópico", "Inalatório", "Injetável", "Oftálmico"];
+const VIAS: PrescriptionItem["via"][] = ["Oral", "Tópico"];
 
 export function PrescriptionModal({
   isOpen,
@@ -90,7 +90,7 @@ export function PrescriptionModal({
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
-                Nova Prescrição Médica
+                Nova Prescrição
               </h3>
               <p className="text-xs text-slate-500">
                 Paciente: <strong>{client.nome}</strong>

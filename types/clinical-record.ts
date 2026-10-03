@@ -61,7 +61,7 @@ export interface PrescriptionItem {
   data: string;
   medicamento: string;
   dosagem: string;
-  via: "Oral" | "Tópico" | "Inalatório" | "Injetável" | "Oftálmico";
+  via: "Oral" | "Tópico";
   posologia: string;
   duracao: string;
   ativo: boolean;
