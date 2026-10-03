@@ -28,7 +28,7 @@ import { useAuth } from "@/components/auth/auth-context";
 import type { Client } from "@/types/client";
 import type { TimeSlot, AppointmentInput, Appointment } from "@/types/appointment";
 import { generateGoogleCalendarTemplateUrl } from "@/lib/google-calendar/calendar-service";
-import { PROCEDIMENTO_CATEGORIES, type Procedimento } from "@/lib/procedimentos-mock";
+import { PROCEDIMENTO_CATEGORIES, PROCEDIMENTOS_CADASTRAIS, type Procedimento } from "@/lib/procedimentos-mock";
 import {
   getNextAllowedAppointmentDate,
   isAllowedAppointmentDay,
@@ -103,7 +103,7 @@ function AppointmentFormModalContent({
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
   // Estados de procedimentos dinâmicos
-  const [procedimentos, setProcedimentos] = useState<Procedimento[]>([]);
+  const [procedimentosList, setProcedimentosList] = useState<Procedimento[]>(PROCEDIMENTOS_CADASTRAIS);
   const [isLoadingProcedimentos, setIsLoadingProcedimentos] = useState(false);
   const [selectedCategoria, setSelectedCategoria] = useState("Consulta");
   const [procedimentoSearch, setProcedimentoSearch] = useState("");
@@ -119,12 +119,17 @@ function AppointmentFormModalContent({
     async function loadProcedimentos() {
       setIsLoadingProcedimentos(true);
       try {
-        const res = await getProcedimentosAction();
-        if (res.success && res.data) {
-          setProcedimentos(res.data);
-          if (res.data.length > 0) {
-            setProcedimento(res.data[0].procedimento);
-            setSelectedCategoria(res.data[0].categoria);
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const { data, error } = await supabase
+            .from("procedimentos")
+            .select("id, procedimento, categoria, descricao, duracao, valor")
+            .order("categoria", { ascending: true })
+            .order("procedimento", { ascending: true });
+          
+          if (!error && data && data.length > 0) {
+            setProcedimentosList(data as Procedimento[]);
+            return;
           }
         }
       } catch (err) {
@@ -139,9 +144,9 @@ function AppointmentFormModalContent({
   const [hasAddedToCalendar, setHasAddedToCalendar] = useState<boolean>(false);
 
   const selectedDuration = useMemo(() => {
-    const matched = procedimentos.find((p) => p.procedimento === procedimento);
+    const matched = procedimentosList.find((p) => p.procedimento === procedimento);
     return matched ? Number(matched.duracao) : 1;
-  }, [procedimento, procedimentos]);
+  }, [procedimento, procedimentosList]);
 
   const selectedEndTime = useMemo(() => {
     if (!selectedSlot) return "";
@@ -152,10 +157,10 @@ function AppointmentFormModalContent({
 
   // Categorias extraídas dinamicamente dos procedimentos
   const categoriesList = useMemo(() => {
-    if (procedimentos.length === 0) return PROCEDIMENTO_CATEGORIES;
-    const uniq = Array.from(new Set(procedimentos.map((p) => p.categoria)));
+    if (procedimentosList.length === 0) return PROCEDIMENTO_CATEGORIES;
+    const uniq = Array.from(new Set(procedimentosList.map((p) => p.categoria)));
     return uniq;
-  }, [procedimentos, PROCEDIMENTO_CATEGORIES]);
+  }, [procedimentosList, PROCEDIMENTO_CATEGORIES]);
 
   // Revalidação imediata do slot selecionado se a duração do procedimento ou slots mudar
   useEffect(() => {
@@ -444,7 +449,7 @@ function AppointmentFormModalContent({
 
     setIsSubmitting(true);
     try {
-      const matchedProc = procedimentos.find((p) => p.procedimento === procedimento);
+      const matchedProc = procedimentosList.find((p) => p.procedimento === procedimento);
       const payload: AppointmentInput = {
         client_id: selectedPatient.id,
         client_nome: selectedPatient.nome,
@@ -829,7 +834,7 @@ function AppointmentFormModalContent({
                   </div>
                 ) : (() => {
                   const query = procedimentoSearch.toLowerCase().trim();
-                  const filteredList = procedimentos.filter((p) => {
+                  const filteredList = procedimentosList.filter((p) => {
                     const matchesSearch = p.procedimento.toLowerCase().includes(query) || p.categoria.toLowerCase().includes(query);
                     const matchesCategory = p.categoria === selectedCategoria;
                     return query ? matchesSearch : matchesCategory;
@@ -875,7 +880,7 @@ function AppointmentFormModalContent({
               <div className="space-y-2 pt-1">
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">Procedimento Selecionado:</span>
                 {(() => {
-                  const matched = procedimentos.find((p) => p.procedimento === procedimento);
+                  const matched = procedimentosList.find((p) => p.procedimento === procedimento);
                   if (matched) {
                     return (
                       <div className="p-3.5 rounded-xl border border-teal-500/30 bg-teal-500/5 dark:bg-teal-950/20 flex items-center justify-between gap-3 shadow-xs">

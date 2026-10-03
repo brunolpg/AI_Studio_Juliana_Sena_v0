@@ -44,7 +44,7 @@ export function EvolutionFormModal({
 
   const [tipo, setTipo] = useState<EvolutionType>("");
   const [procedimentoId, setProcedimentoId] = useState<string>("");
-  const [procedimentos, setProcedimentos] = useState<any[]>([]);
+  const [procedimentos, setProcedimentos] = useState<any[]>(PROCEDIMENTOS_CADASTRAIS);
   const [isLoadingProcedimentos, setIsLoadingProcedimentos] = useState(false);
 
   // Estados de agendamentos e vínculo
