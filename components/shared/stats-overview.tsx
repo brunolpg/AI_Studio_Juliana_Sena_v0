@@ -39,88 +39,88 @@ export function StatsOverview({ activeTab = "pacientes" }: StatsOverviewProps) {
   const isAgendamentos = activeTab === "agendamentos";
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
       {!isAgendamentos ? (
         <>
           {/* 1. Pacientes Ativos */}
-          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Pacientes Ativos</span>
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">Pacientes Ativos</span>
+              <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 ml-1">
                 <UserCheck className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
+            <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
               {loading ? (
-                <div className="h-8 w-12 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                <div className="h-7 w-10 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
               ) : (
-                <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                   {stats.pacientesAtivos}
                 </span>
               )}
-              <span className="text-[11px] text-slate-400">em acompanhamento</span>
+              <span className="text-[10px] sm:text-[11px] text-slate-400">em acompanhamento</span>
             </div>
           </div>
 
           {/* 2. Consultas Hoje */}
-          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Consultas Hoje</span>
-              <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
+              <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">Consultas Hoje</span>
+              <div className="p-1.5 sm:p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 shrink-0 ml-1">
                 <Calendar className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
+            <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
               {loading ? (
-                <div className="h-8 w-12 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                <div className="h-7 w-10 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
               ) : (
-                <span className="text-2xl font-bold text-teal-600 dark:text-teal-400">
+                <span className="text-xl sm:text-2xl font-bold text-teal-600 dark:text-teal-400">
                   {stats.consultasHoje}
                 </span>
               )}
-              <span className="text-[11px] text-slate-400">na agenda de hoje</span>
+              <span className="text-[10px] sm:text-[11px] text-slate-400">na agenda de hoje</span>
             </div>
           </div>
         </>
       ) : (
         <>
           {/* 1. Consultas Hoje */}
-          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Consultas Hoje</span>
-              <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
+              <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">Consultas Hoje</span>
+              <div className="p-1.5 sm:p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 shrink-0 ml-1">
                 <Calendar className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
+            <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
               {loading ? (
-                <div className="h-8 w-12 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                <div className="h-7 w-10 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
               ) : (
-                <span className="text-2xl font-bold text-teal-600 dark:text-teal-400">
+                <span className="text-xl sm:text-2xl font-bold text-teal-600 dark:text-teal-400">
                   {stats.consultasHoje}
                 </span>
               )}
-              <span className="text-[11px] text-slate-400">na agenda de hoje</span>
+              <span className="text-[10px] sm:text-[11px] text-slate-400">na agenda de hoje</span>
             </div>
           </div>
 
           {/* 2. Próximos Atendimentos */}
-          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Próximos Atendimentos</span>
-              <div className="p-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
+              <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">Próximos Atendimentos</span>
+              <div className="p-1.5 sm:p-2 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 shrink-0 ml-1">
                 <CalendarCheck2 className="w-4 h-4" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
+            <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
               {loading ? (
-                <div className="h-8 w-12 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                <div className="h-7 w-10 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
               ) : (
-                <span className="text-2xl font-bold text-sky-600 dark:text-sky-400">
+                <span className="text-xl sm:text-2xl font-bold text-sky-600 dark:text-sky-400">
                   {stats.proximosAtendimentos}
                 </span>
               )}
-              <span className="text-[11px] text-slate-400">Google Calendar</span>
+              <span className="text-[10px] sm:text-[11px] text-slate-400">Google Calendar</span>
             </div>
           </div>
         </>
