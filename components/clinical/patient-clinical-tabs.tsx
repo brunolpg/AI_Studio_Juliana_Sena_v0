@@ -23,6 +23,7 @@ import {
   FileText,
   BadgeAlert,
   Sparkles,
+  Image as ImageIcon,
 } from "lucide-react";
 import {
   getPatientClinicalRecordAction,
@@ -54,10 +55,11 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
   const [clinicalRecord, setClinicalRecord] = useState<PatientClinicalRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Modais
+  // Modais e Lightbox
   const [isEvolutionModalOpen, setIsEvolutionModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // Carrega prontuário do paciente
   const loadClinicalData = useCallback(() => {
@@ -512,6 +514,31 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
                   </div>
                 </div>
 
+                {/* Acompanhamento Médico (Especialidade) */}
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 space-y-2">
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Stethoscope className="w-4 h-4 text-teal-600" />
+                    <span>Acompanhamento Médico</span>
+                  </h4>
+
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {history?.acompanhamentoMedico && history.acompanhamentoMedico.length > 0 ? (
+                      history.acompanhamentoMedico.map((ac, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200"
+                        >
+                          {ac}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">
+                        Nenhum acompanhamento médico relatado.
+                      </span>
+                    )}
+                  </div>
+                </div>
+
                 {/* Tipo Sanguíneo & Hábitos de Vida */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60">
@@ -551,7 +578,63 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
                   </div>
                 </div>
 
-                {/* Histórico Cirúrgico e Familiar */}
+                {/* Grade de Hábitos de Vida & Fatores de Risco Adicionais */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                  <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60">
+                    <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">
+                      Isotretinoína (6m)
+                    </span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block ${history?.isotretinoina6Meses ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300"}`}>
+                      {history?.isotretinoina6Meses ? "Sim" : "Não"}
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60">
+                    <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">
+                      Implantes / Marcapasso
+                    </span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {history?.implantesDispositivos && history.implantesDispositivos.length > 0 ? (
+                        history.implantesDispositivos.map((imp, idx) => (
+                          <span key={idx} className="text-[10px] font-semibold px-2 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200">
+                            {imp}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Nenhum relatado</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60">
+                    <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">
+                      Ingestão de Água
+                    </span>
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      {history?.ingestaoAgua || "Não informado"}
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60">
+                    <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">
+                      Qualidade do Sono
+                    </span>
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      {history?.qualidadeSono || "Não informado"}
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60">
+                    <span className="text-[11px] font-semibold text-slate-400 block mb-0.5">
+                      Intestino
+                    </span>
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      {history?.funcionamentoIntestino || "Não informado"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Histórico Cirúrgico, Familiar e Lesões */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/50 space-y-1">
                     <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
@@ -572,6 +655,16 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
                   </div>
                 </div>
 
+                {/* Lesões (Local, Tratamento e Frequência) */}
+                <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/50 space-y-1">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                    Lesões (Local, Tratamento e Frequência)
+                  </span>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">
+                    {history?.lesoesDetalhes || "Nenhuma lesão relatada."}
+                  </p>
+                </div>
+
                 {/* Observações Gerais */}
                 {history?.observacoesGerais && (
                   <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
@@ -583,6 +676,32 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
                     </p>
                   </div>
                 )}
+
+                {/* Fotos da Área a Ser Tratada */}
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-teal-600" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                      Fotos da Área a Ser Tratada
+                    </span>
+                  </div>
+                  {history?.fotosAreaTratada && history.fotosAreaTratada.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {history.fotosAreaTratada.map((url, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 group">
+                          <img
+                            src={url}
+                            alt={`Área tratada ${idx + 1}`}
+                            className="w-full h-full object-cover cursor-zoom-in group-hover:scale-105 transition-transform"
+                            onClick={() => setLightboxUrl(url)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">Nenhuma foto anexada ao histórico.</p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -812,6 +931,26 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
         onSuccess={loadClinicalData}
         client={client}
       />
+
+      {/* Lightbox para fotos da área tratada */}
+      {lightboxUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
+          <div className="relative max-w-4xl w-full max-h-screen flex flex-col items-center">
+            <button
+              type="button"
+              onClick={() => setLightboxUrl(null)}
+              className="absolute top-4 right-4 p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-full transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src={lightboxUrl}
+              alt="Visualização ampliada"
+              className="max-w-full max-h-[85vh] rounded-lg object-contain shadow-2xl border border-slate-800"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
