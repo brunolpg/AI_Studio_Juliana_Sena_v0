@@ -160,6 +160,7 @@ export function PrintPrescriptionModal({
             border: none !important;
             background: white !important;
             color: black !important;
+            font-family: 'Metropolis', sans-serif !important;
           }
         }
       `}} />
@@ -254,6 +255,7 @@ export function PrintPrescriptionModal({
             style={{
               boxSizing: "border-box",
               aspectRatio: "1/1.414",
+              fontFamily: "'Metropolis', sans-serif",
             }}
           >
             <div>
