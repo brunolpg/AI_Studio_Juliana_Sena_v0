@@ -68,6 +68,7 @@ export function PrescriptionModal({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selectedFormulaId, setSelectedFormulaId] = useState<string | null>(null);
 
   // Carrega catálogos do Supabase
   useEffect(() => {
@@ -115,6 +116,7 @@ export function PrescriptionModal({
     const selected = formulas.find((f) => f.id === formulaId);
     if (!selected) return;
 
+    setSelectedFormulaId(selected.id);
     setNomeFormula(selected.nome);
     setDescricao(selected.descricao || "");
     setVia((selected.via || selected.tipo) as "oral" | "tópico");
@@ -265,6 +267,9 @@ export function PrescriptionModal({
 
         // Tenta encontrar ID de fórmula do catálogo se houver
         const matchedFormula = formulas.find((f) => f.nome.toLowerCase() === nomeFormula.toLowerCase().trim());
+        const formulaIdCandidate = selectedFormulaId || matchedFormula?.id;
+        const isValidUUID = (id?: string | null) => 
+          typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
         const componentsSnapshot = componentesRows.map((r) => ({
           nome: r.nome.trim(),
@@ -276,7 +281,7 @@ export function PrescriptionModal({
           .from("prescricao_itens")
           .insert({
             prescricao_id: prescricao.id,
-            formula_id: matchedFormula?.id || null,
+            formula_id: isValidUUID(formulaIdCandidate) ? formulaIdCandidate : null,
             nome_formula: nomeFormula.trim(),
             via,
             veiculo: veiculo.trim(),
