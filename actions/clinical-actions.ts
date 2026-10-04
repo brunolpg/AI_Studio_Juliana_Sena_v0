@@ -331,7 +331,7 @@ export async function togglePrescriptionStatusAction(
 // INTEGRAÇÃO DE FÓRMULAS, COMPONENTES E UNIDADES (SUPABASE COM RESILIÊNCIA)
 // =========================================================================
 
-export const MOCK_UNIDADES = [
+const MOCK_UNIDADES = [
   { id: "u1", sigla: "%" },
   { id: "u2", sigla: "g" },
   { id: "u3", sigla: "ml" },
@@ -339,7 +339,7 @@ export const MOCK_UNIDADES = [
   { id: "u5", sigla: "ui" },
 ];
 
-export const MOCK_COMPONENTES = [
+const MOCK_COMPONENTES = [
   { id: "c1", nome: "Ácido Glicólico", unidade_id: "u1" },
   { id: "c2", nome: "Ácido Hialurônico", unidade_id: "u1" },
   { id: "c3", nome: "Niacinamida", unidade_id: "u1" },
@@ -350,7 +350,7 @@ export const MOCK_COMPONENTES = [
   { id: "c8", nome: "Trans-resveratrol", unidade_id: "u4" },
 ];
 
-export const MOCK_FORMULAS = [
+const MOCK_FORMULAS = [
   {
     id: "f1",
     nome: "Fórmula Facial Anti-Idade e Clareadora",
