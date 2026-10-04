@@ -127,35 +127,45 @@ export function PrintPrescriptionModal({
       {/* Estilo dinâmico injetado para impressão resiliente em A4 */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
+          /* Oculta tudo que não faz parte da folha de receita */
           body * {
             visibility: hidden !important;
           }
-          #print-prescription-area, #print-prescription-area * {
+
+          /* Desbloqueia rolagem e containers pais do modal */
+          html, body, [data-radix-portal], [role='dialog'] {
+            overflow: visible !important;
+            height: auto !important;
+            background: white !important;
+            position: static !important;
+            inset: auto !important;
+          }
+
+          /* Torna visível exclusivamente o receituário */
+          #receituario-print-area,
+          #receituario-print-area * {
             visibility: visible !important;
           }
-          #print-prescription-area {
+
+          /* Fixa a folha no topo da página A4 */
+          #receituario-print-area {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: 210mm !important;
-            height: 297mm !important;
+            width: 100% !important;
             margin: 0 !important;
-            padding: 20mm !important;
+            padding: 1.5cm !important;
             box-shadow: none !important;
             border: none !important;
             background: white !important;
             color: black !important;
-            font-size: 12pt !important;
-          }
-          .no-print {
-            display: none !important;
           }
         }
       `}} />
 
-      <div className="relative w-full max-w-4xl bg-slate-100 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col md:flex-row h-[90vh] overflow-hidden no-print">
+      <div className="relative w-full max-w-4xl bg-slate-100 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col md:flex-row h-[90vh] overflow-hidden">
         {/* Painel Lateral com Ações */}
-        <div className="w-full md:w-80 bg-white dark:bg-slate-900 p-6 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0">
+        <div className="w-full md:w-80 bg-white dark:bg-slate-900 p-6 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 print:hidden">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -213,7 +223,7 @@ export function PrintPrescriptionModal({
         {/* Pré-visualização da Folha A4 */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center bg-slate-100 dark:bg-slate-950/40">
           <div
-            id="print-prescription-area"
+            id="receituario-print-area"
             ref={printAreaRef}
             className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between"
             style={{
