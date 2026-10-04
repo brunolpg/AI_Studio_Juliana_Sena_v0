@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useRef } from "react";
-import { X, Printer, FileText } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { X, Printer, FileText, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { PrescriptionItem } from "@/types/clinical-record";
 import type { Client } from "@/types/client";
 
@@ -38,6 +38,7 @@ export function PrintPrescriptionModal({
   client,
 }: PrintPrescriptionModalProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   if (!isOpen) return null;
 
@@ -163,9 +164,13 @@ export function PrintPrescriptionModal({
         }
       `}} />
 
-      <div className="relative w-full max-w-4xl bg-slate-100 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col md:flex-row h-[90vh] overflow-hidden">
+      <div className="relative w-[95vw] max-w-[1300px] h-[90vh] bg-slate-100 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col lg:flex-row overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Painel Lateral com Ações */}
-        <div className="w-full md:w-80 bg-white dark:bg-slate-900 p-6 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between shrink-0 print:hidden">
+        <div
+          className={`bg-white dark:bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between shrink-0 overflow-y-auto print:hidden transition-all duration-300 ${
+            isSidebarOpen ? "w-full lg:w-80" : "w-0 p-0 overflow-hidden border-0 hidden"
+          }`}
+        >
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -221,7 +226,27 @@ export function PrintPrescriptionModal({
         </div>
 
         {/* Pré-visualização da Folha A4 */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center bg-slate-100 dark:bg-slate-950/40">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 dark:bg-slate-950/40 flex justify-center items-start relative">
+          {/* Botão de Toggle para Ocultar / Mostrar Detalhes */}
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="absolute top-4 left-4 p-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-md cursor-pointer z-30 transition-all hover:scale-105 print:hidden"
+            title={isSidebarOpen ? "Ocultar Painel Lateral" : "Mostrar Painel Lateral"}
+          >
+            {isSidebarOpen ? (
+              <div className="flex items-center gap-1.5 text-xs font-semibold">
+                <PanelLeftClose className="w-4 h-4" />
+                <span className="hidden sm:inline">Ocultar Painel</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs font-semibold">
+                <PanelLeftOpen className="w-4 h-4" />
+                <span className="hidden sm:inline">Mostrar Painel</span>
+              </div>
+            )}
+          </button>
+
           <div
             id="receituario-print-area"
             ref={printAreaRef}
