@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { getClientsAction } from "@/actions/client-actions";
 import { PatientClinicalTabs } from "./patient-clinical-tabs";
-import { INITIAL_CLIENTS } from "@/lib/mock-data";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Client } from "@/types/client";
 
 interface PatientClinicalDashboardViewProps {
@@ -29,35 +29,57 @@ export function PatientClinicalDashboardView({
   initialClientId,
   onOpenAppointments,
 }: PatientClinicalDashboardViewProps) {
-  const [clients, setClients] = useState<Client[]>(INITIAL_CLIENTS);
-  const [selectedClientId, setSelectedClientId] = useState<string>(
-    initialClientId || INITIAL_CLIENTS[0]?.id || ""
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
+    initialClientId || null
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Carrega pacientes ativos
+  // Carrega pacientes ativos diretamente do Supabase
   useEffect(() => {
     async function loadPatients() {
       try {
-        const res = await getClientsAction({ status: "Ativo", pageSize: 50 });
-        if (res.success && res.data && res.data.data.length > 0) {
-          setClients(res.data.data);
-          if (!selectedClientId) {
-            setSelectedClientId(res.data.data[0].id);
+        const supabase = getSupabaseClient();
+        if (!supabase) return;
+
+        const { data: pacientes, error } = await supabase
+          .from("pacientes")
+          .select("*")
+          .is("deleted_at", null)
+          .order("nome", { ascending: true });
+
+        if (error) {
+          console.error("Erro ao carregar lista de pacientes do Supabase:", error);
+          return;
+        }
+
+        if (pacientes && pacientes.length > 0) {
+          setClients(pacientes as Client[]);
+          if (!selectedPatientId) {
+            setSelectedPatientId(pacientes[0].id);
+          } else {
+            const exists = pacientes.some((p) => p.id === selectedPatientId);
+            if (!exists) {
+              setSelectedPatientId(pacientes[0].id);
+            }
           }
+        } else {
+          setClients([]);
+          setSelectedPatientId(null);
         }
       } catch (err) {
         console.error("Erro ao carregar lista de pacientes:", err);
       }
     }
     loadPatients();
-  }, [selectedClientId]);
+  }, [selectedPatientId]);
 
   // Paciente selecionado
   const selectedPatient = useMemo(() => {
-    return clients.find((c) => c.id === selectedClientId) || clients[0] || null;
-  }, [clients, selectedClientId]);
+    if (!selectedPatientId) return null;
+    return clients.find((c) => c.id === selectedPatientId) || null;
+  }, [clients, selectedPatientId]);
 
   // Filtro do dropdown
   const filteredClients = useMemo(() => {
@@ -124,7 +146,7 @@ export function PatientClinicalDashboardView({
                     key={client.id}
                     type="button"
                     onClick={() => {
-                      setSelectedClientId(client.id);
+                      setSelectedPatientId(client.id);
                       setIsDropdownOpen(false);
                       setSearchTerm("");
                     }}
@@ -194,7 +216,7 @@ export function PatientClinicalDashboardView({
         />
       ) : (
         <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 text-slate-500">
-          Nenhum paciente selecionado para visualização do prontuário.
+          Nenhum paciente cadastrado.
         </div>
       )}
     </div>

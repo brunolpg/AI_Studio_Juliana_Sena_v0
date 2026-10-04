@@ -66,6 +66,15 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
 
   // Carrega prontuário do paciente
   const loadClinicalData = useCallback(() => {
+    const isValidUUID = (id?: string | null) => 
+      typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    if (!isValidUUID(client?.id)) {
+      setClinicalRecord(null);
+      setIsLoading(false);
+      return;
+    }
+
     startTransition(async () => {
       try {
         setIsLoading(true);
@@ -85,7 +94,7 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
         setIsLoading(false);
       }
     });
-  }, [client.id, toast]);
+  }, [client?.id, toast]);
 
   useEffect(() => {
     loadClinicalData();
