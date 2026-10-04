@@ -160,8 +160,22 @@ export function PrintPrescriptionModal({
             border: none !important;
             background: white !important;
             color: black !important;
-            font-family: 'Metropolis', sans-serif !important;
+            font-family: 'Metropolis', -apple-system, BlinkMacSystemFont, sans-serif !important;
           }
+        }
+      `}} />
+
+      <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/index.css"
+      />
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/index.css');
+
+        .font-metropolis, 
+        #receituario-print-area, 
+        #receituario-print-area * {
+          font-family: 'Metropolis', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
       `}} />
 
@@ -251,7 +265,7 @@ export function PrintPrescriptionModal({
           <div
             id="receituario-print-area"
             ref={printAreaRef}
-            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between"
+            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between font-metropolis"
             style={{
               boxSizing: "border-box",
               aspectRatio: "1/1.414",
@@ -260,33 +274,41 @@ export function PrintPrescriptionModal({
           >
             <div>
               {/* Cabeçalho */}
-              <div className="border-b-2 border-slate-800 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                {/* Lado Esquerdo */}
-                <div className="flex items-center gap-4">
-                  <img
-                    src="/logo-clinica.png"
-                    alt="Logo Clínica"
-                    className="h-16 w-auto object-contain shrink-0"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="flex flex-col">
-                    <span className="font-bold text-sm text-slate-900 leading-tight">
-                      Juliana Sena de Souza Vieira
-                    </span>
-                    <span className="text-xs text-slate-500 font-medium">
-                      Enfermeira Esteta
-                    </span>
-                  </div>
+              <div className="border-b-2 border-slate-800 pb-4 space-y-4">
+                {/* Linha 1: Título Principal */}
+                <div className="flex justify-between items-center">
+                  <h1 className="text-base sm:text-lg font-bold tracking-wide text-slate-800 whitespace-nowrap">
+                    RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL
+                  </h1>
+                  <div></div>
                 </div>
 
-                {/* Lado Direito */}
-                <div className="text-left sm:text-right flex flex-col sm:justify-center">
-                  <h2 className="text-xs sm:text-sm font-black tracking-widest text-slate-900 uppercase">
-                    RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL
-                  </h2>
-                  <span className="text-xs text-slate-700 font-bold mt-1">
-                    COREN-BA 366.344
-                  </span>
+                {/* Linha 2: Logo + Dados da Profissional */}
+                <div className="flex flex-row justify-between items-center gap-4">
+                  {/* Lado Esquerdo (Logo + Nome/Especialidade) */}
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="/logo-clinica.png"
+                      alt="Logo Clínica"
+                      className="h-16 w-auto object-contain shrink-0"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-bold text-sm sm:text-base text-slate-900 leading-tight whitespace-nowrap">
+                        Juliana Sena de Souza Vieira
+                      </span>
+                      <span className="text-xs text-slate-500 font-medium mt-0.5">
+                        Enfermeira Esteta
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Lado Direito (COREN) */}
+                  <div className="text-right shrink-0">
+                    <span className="text-xs sm:text-sm font-bold text-slate-700 tracking-wide">
+                      COREN-BA 366.344
+                    </span>
+                  </div>
                 </div>
               </div>
 
