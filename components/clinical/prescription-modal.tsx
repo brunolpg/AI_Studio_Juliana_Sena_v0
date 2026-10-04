@@ -246,6 +246,55 @@ export function PrescriptionModal({
         save_as_formula: saveAsFormula,
       };
 
+      // 1. Gravação no Banco ao Prescrever (Persistência Real)
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data: prescricao, error: errPresc } = await supabase
+          .from("prescricoes")
+          .insert({
+            paciente_id: client.id,
+            data_prescricao: new Date().toISOString().split("T")[0],
+            status: "Ativo",
+          })
+          .select()
+          .single();
+
+        if (errPresc || !prescricao) {
+          throw new Error(errPresc?.message || "Falha ao registrar cabeçalho de prescrição no Supabase.");
+        }
+
+        // Tenta encontrar ID de fórmula do catálogo se houver
+        const matchedFormula = formulas.find((f) => f.nome.toLowerCase() === nomeFormula.toLowerCase().trim());
+
+        const componentsSnapshot = componentesRows.map((r) => ({
+          nome: r.nome.trim(),
+          quantidade: parseFloat(r.quantidade),
+          unidade: r.unidade_sigla,
+        }));
+
+        const { error: errItem } = await supabase
+          .from("prescricao_itens")
+          .insert({
+            prescricao_id: prescricao.id,
+            formula_id: matchedFormula?.id || null,
+            nome_formula: nomeFormula.trim(),
+            via,
+            veiculo: veiculo.trim(),
+            dosagem: dosagemValor.trim(),
+            tipo_veiculo: via === "oral" ? tipoVeiculo : "g",
+            posologia: posologia.trim(),
+            duracao: totalVeiculo.trim(),
+            orient_paciente: orientPaciente.trim() || null,
+            orient_farmacia: orientFarmacia.trim() || null,
+            componentes_snapshot: componentsSnapshot,
+          });
+
+        if (errItem) {
+          throw new Error(errItem.message || "Falha ao registrar itens estruturados de prescrição no Supabase.");
+        }
+      }
+
+      // 2. Executa action para compatibilidade em memória e criação de novos modelos se selecionado
       const res = await addStructuredPrescriptionAction(client.id, payload);
 
       if (res.success) {
@@ -259,9 +308,9 @@ export function PrescriptionModal({
       } else {
         setErrorMsg(res.message || "Erro ao adicionar receita.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setErrorMsg("Erro de conexão ao enviar a prescrição.");
+      setErrorMsg(err.message || "Erro de conexão ao enviar a prescrição.");
     } finally {
       setIsSubmitting(false);
     }
