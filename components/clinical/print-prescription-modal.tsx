@@ -258,13 +258,33 @@ export function PrintPrescriptionModal({
           >
             <div>
               {/* Cabeçalho */}
-              <div className="border-b-2 border-slate-800 pb-3 flex flex-col gap-1">
-                <h2 className="text-base font-black tracking-widest text-slate-900 uppercase">
-                  RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL
-                </h2>
-                <div className="flex justify-between items-center text-xs text-slate-700 font-semibold">
-                  <span>Dra. Juliana Sena</span>
-                  <span>COREN-BA 366.344</span>
+              <div className="border-b-2 border-slate-800 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                {/* Lado Esquerdo */}
+                <div className="flex items-center gap-4">
+                  <img
+                    src="/logo-clinica.png"
+                    alt="Logo Clínica"
+                    className="h-16 w-auto object-contain shrink-0"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-sm text-slate-900 leading-tight">
+                      Juliana Sena de Souza Vieira
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium">
+                      Enfermeira Esteta
+                    </span>
+                  </div>
+                </div>
+
+                {/* Lado Direito */}
+                <div className="text-left sm:text-right flex flex-col sm:justify-center">
+                  <h2 className="text-xs sm:text-sm font-black tracking-widest text-slate-900 uppercase">
+                    RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL
+                  </h2>
+                  <span className="text-xs text-slate-700 font-bold mt-1">
+                    COREN-BA 366.344
+                  </span>
                 </div>
               </div>
 
@@ -391,13 +411,13 @@ export function PrintPrescriptionModal({
               {/* Bloco de Assinatura */}
               <div className="flex flex-col items-center">
                 <div className="w-72 border-b border-slate-400"></div>
-                <span className="text-xs font-bold text-slate-950 mt-1.5">Juliana Sena</span>
+                <span className="text-xs font-bold text-slate-950 mt-1.5">Juliana Sena de Souza Vieira</span>
                 <span className="text-[10px] text-slate-500">Enfermeira Esteta • COREN-BA 366.344</span>
               </div>
 
               {/* Rodapé Institucional sutil */}
               <div className="text-center text-[9px] text-slate-400 border-t border-slate-200 pt-3">
-                Dra. Juliana Sena • Estética Avançada e Regenerativa • Salvador - BA • Telefone: (71) 99999-9999 • COREN-BA 366.344
+                Juliana Sena de Souza Vieira • Estética Avançada e Regenerativa • Salvador - BA • Telefone: (71) 99999-9999 • COREN-BA 366.344
               </div>
             </div>
           </div>
