@@ -399,28 +399,33 @@ export function PrescriptionModal({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           {/* Seletor de Fórmulas Salvas */}
-          {formulas.length > 0 && (
-            <div className="p-3.5 rounded-xl border border-teal-200 dark:border-teal-900/40 bg-teal-50/10 dark:bg-teal-950/10 space-y-1.5">
-              <label className="text-[11px] font-bold text-teal-950 dark:text-teal-200 block">
-                Carregar Modelo de Fórmula Salva
-              </label>
-              <select
-                onChange={(e) => {
-                  if (e.target.value) handleSelectFormula(e.target.value);
-                  e.target.value = "";
-                }}
-                defaultValue=""
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold focus:outline-none"
-              >
-                <option value="" disabled>Escolha um modelo pronto para preenchimento rápido...</option>
-                {formulas.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    [{(f.via || f.tipo || "tópico").toUpperCase()}] {f.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="p-3.5 rounded-xl border border-teal-200 dark:border-teal-900/40 bg-teal-50/10 dark:bg-teal-950/10 space-y-1.5">
+            <label className="text-[11px] font-bold text-teal-950 dark:text-teal-200 block">
+              Carregar Modelo de Fórmula Salva
+            </label>
+            <select
+              onChange={(e) => {
+                if (e.target.value) handleSelectFormula(e.target.value);
+                e.target.value = "";
+              }}
+              defaultValue=""
+              disabled={formulas.length === 0}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold focus:outline-none disabled:opacity-60"
+            >
+              {formulas.length === 0 ? (
+                <option value="" disabled>Nenhum modelo cadastrado no banco</option>
+              ) : (
+                <>
+                  <option value="" disabled>Escolha um modelo pronto para preenchimento rápido...</option>
+                  {formulas.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      [{(f.via || f.tipo || "tópico").toUpperCase()}] {f.nome}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+          </div>
 
           {/* Nome & Descrição */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

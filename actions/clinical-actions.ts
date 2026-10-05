@@ -411,8 +411,15 @@ export async function getFormulasAction(): Promise<ActionResponse<any[]>> {
       .select("*")
       .order("nome", { ascending: true });
 
-    if (formulasErr || !dbFormulas) {
+    if (formulasErr) {
       return { success: true, message: "Modo de contingência ativo.", data: MOCK_FORMULAS };
+    }
+
+    if (!dbFormulas || dbFormulas.length === 0) {
+      return {
+        success: true,
+        data: [],
+      };
     }
 
     // Busca relações e componentes de forma a juntar tudo
@@ -446,7 +453,7 @@ export async function getFormulasAction(): Promise<ActionResponse<any[]>> {
 
     return {
       success: true,
-      data: formulasCompletas.length > 0 ? formulasCompletas : MOCK_FORMULAS,
+      data: formulasCompletas,
     };
   } catch (err) {
     console.error("Erro em getFormulasAction:", err);
@@ -469,11 +476,11 @@ export async function getComponentesAction(): Promise<ActionResponse<any[]>> {
       .select("*")
       .order("nome", { ascending: true });
 
-    if (error || !data) {
+    if (error) {
       return { success: true, data: MOCK_COMPONENTES };
     }
 
-    return { success: true, data };
+    return { success: true, data: data || [] };
   } catch (err) {
     return { success: true, data: MOCK_COMPONENTES };
   }
