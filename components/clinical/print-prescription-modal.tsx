@@ -327,7 +327,7 @@ export function PrintPrescriptionModal({
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] font-bold text-slate-500 block uppercase">CPF</span>
-                  <span className="font-mono font-bold text-slate-800">{formatCPF(client.cpf)}</span>
+                  <span className="font-bold text-slate-800">{formatCPF(client.cpf)}</span>
                 </div>
               </div>
 
@@ -359,7 +359,7 @@ export function PrintPrescriptionModal({
                           {rxDetails.componentes.map((comp, idx) => (
                             <tr key={idx}>
                               <td className="px-4 py-2 font-medium text-slate-800">{comp.nome}</td>
-                              <td className="px-4 py-2 text-right font-mono font-bold text-slate-700">{comp.qtd}</td>
+                              <td className="px-4 py-2 text-right font-bold text-slate-700">{comp.qtd}</td>
                             </tr>
                           ))}
                         </tbody>
