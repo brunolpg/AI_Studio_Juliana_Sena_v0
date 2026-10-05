@@ -70,6 +70,44 @@ export function PrescriptionModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedFormulaId, setSelectedFormulaId] = useState<string | null>(null);
 
+  const [unidadesList, setUnidadesList] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function loadUnidades() {
+      try {
+        const supabase = getSupabaseClient();
+        if (!supabase) {
+          setUnidadesList(['%', 'g', 'mcg', 'mg', 'ml', 'ui']);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('unidades')
+          .select('*');
+
+        if (data && !error && data.length > 0) {
+          const first = data[0];
+          const keyToMap = ('unidade' in first) ? 'unidade' : ('sigla' in first) ? 'sigla' : null;
+          
+          if (keyToMap) {
+            const mapped = data.map((u: any) => u[keyToMap]).filter(Boolean);
+            const uniqueUnits = Array.from(new Set([...mapped, 'mcg']));
+            uniqueUnits.sort();
+            setUnidadesList(uniqueUnits);
+          } else {
+            setUnidadesList(['%', 'g', 'mcg', 'mg', 'ml', 'ui']);
+          }
+        } else {
+          setUnidadesList(['%', 'g', 'mcg', 'mg', 'ml', 'ui']);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar unidades do Supabase:", err);
+        setUnidadesList(['%', 'g', 'mcg', 'mg', 'ml', 'ui']);
+      }
+    }
+    loadUnidades();
+  }, []);
+
   // Carrega catálogos do Supabase
   useEffect(() => {
     async function loadCatalogs() {
@@ -192,8 +230,12 @@ export function PrescriptionModal({
         }
         
         if (field === "unidade_id") {
-          const match = dbUnidades.find((u) => u.id === value);
-          return { ...row, unidade_id: value, unidade_sigla: match ? match.sigla : "" };
+          const match = dbUnidades.find((u) => u.id === value || u.sigla === value || u.unidade === value);
+          return { 
+            ...row, 
+            unidade_id: match ? match.id : value, 
+            unidade_sigla: match ? match.sigla || match.unidade || value : value 
+          };
         }
 
         return { ...row, [field]: value };
@@ -485,14 +527,14 @@ export function PrescriptionModal({
                   {/* Unidade */}
                   <div className="w-24">
                     <select
-                      value={row.unidade_id}
+                      value={row.unidade_sigla}
                       onChange={(e) => handleRowChange(row.key, "unidade_id", e.target.value)}
                       className="w-full py-1 text-xs border-0 border-b border-slate-200 dark:border-slate-700 focus:outline-none bg-transparent text-slate-900 dark:text-slate-100"
                     >
                       <option value="" disabled>Unidade</option>
-                      {dbUnidades.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.sigla}
+                      {unidadesList.map((u) => (
+                        <option key={u} value={u}>
+                          {u}
                         </option>
                       ))}
                     </select>
