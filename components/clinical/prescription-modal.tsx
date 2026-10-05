@@ -554,44 +554,44 @@ export function PrescriptionModal({
           </div>
 
           {/* Veículo & Parâmetros */}
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/10 space-y-3">
-            <span className="text-xs font-bold text-slate-900 dark:text-white block">
+          <div className="mt-4 p-4 rounded-xl border border-slate-200 bg-slate-50/50 w-full">
+            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
               Veículo e Parâmetros de Envase
-            </span>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+            </h4>
+            
+            <div className="flex flex-col sm:flex-row items-end gap-3 w-full">
+              {/* Veículo Base - ocupa o espaço restante com maior peso */}
+              <div className="flex-[3] min-w-0 w-full">
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
                   Veículo Base *
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex: Gel creme, Cápsula, Serum"
                   value={veiculo}
                   onChange={(e) => setVeiculo(e.target.value)}
-                  required
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  placeholder="Ex: Cápsula vegetal, Gel creme..."
+                  className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
-                  {via === "oral" ? "Dose por Tomada *" : "Concentração Q.S.P. *"}
+              {/* Dose (Renomeado de 'Dose por Tomada *') */}
+              <div className="flex-[1.5] min-w-0 w-full">
+                <label className="block text-xs font-semibold text-slate-600 mb-1 whitespace-nowrap">
+                  Dose *
                 </label>
-                <div className="flex gap-1.5">
+                <div className="flex items-center w-full gap-1">
                   <input
                     type="text"
-                    placeholder={via === "oral" ? "Ex: 1" : "Ex: 30"}
                     value={dosagemValor}
                     onChange={(e) => setDosagemValor(e.target.value)}
-                    required
-                    className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-center"
+                    placeholder="Ex: 1"
+                    className="w-full px-3 py-2 text-sm text-center bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 dark:text-slate-100"
                   />
                   {via === "tópico" && (
                     <select
                       value={dosagemUnidade}
                       onChange={(e) => setDosagemUnidade(e.target.value)}
-                      className="w-16 px-1.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                      className="px-1.5 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none shrink-0"
                     >
                       <option value="g">g</option>
                       <option value="ml">ml</option>
@@ -600,34 +600,22 @@ export function PrescriptionModal({
                 </div>
               </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+              {/* Quantidade Total com Sufixo Integrado */}
+              <div className="flex-[2] min-w-0 w-full">
+                <label className="block text-xs font-semibold text-slate-600 mb-1 whitespace-nowrap">
                   Quantidade Total *
                 </label>
-                <div className="flex gap-1.5">
+                <div className="flex items-center w-full">
                   <input
-                    type="number"
-                    placeholder="Ex: 30"
+                    type="text"
                     value={totalVeiculo}
                     onChange={(e) => setTotalVeiculo(e.target.value)}
-                    required
-                    className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-center"
+                    placeholder="Ex: 30"
+                    className="w-full min-w-0 px-3 py-2 text-sm text-center bg-white border border-r-0 border-slate-200 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 dark:text-slate-100"
                   />
-                  {via === "oral" ? (
-                    <select
-                      value={tipoVeiculo}
-                      onChange={(e) => setTipoVeiculo(e.target.value)}
-                      className="w-24 px-1 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-                    >
-                      <option value="dose(s)">dose(s)</option>
-                      <option value="sachê(s)">sachê(s)</option>
-                      <option value="comprimido(s)">comprimido(s)</option>
-                    </select>
-                  ) : (
-                    <div className="w-12 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-center font-bold text-slate-500">
-                      {dosagemUnidade}
-                    </div>
-                  )}
+                  <span className="px-2.5 py-2 text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-r-lg whitespace-nowrap select-none shrink-0">
+                    {via === 'oral' ? (tipoVeiculo || 'dose(s)') : 'g'}
+                  </span>
                 </div>
               </div>
             </div>

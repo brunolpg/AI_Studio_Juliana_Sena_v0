@@ -167,10 +167,10 @@ export function PrintPrescriptionModal({
 
       <link
         rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/index.css"
+        href="https://cdn.jsdelivr.net/npm/typeface-metropolis@1.1.13/index.css"
       />
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/index.css');
+        @import url('https://cdn.jsdelivr.net/npm/typeface-metropolis@1.1.13/index.css');
 
         .font-metropolis, 
         #receituario-print-area, 
