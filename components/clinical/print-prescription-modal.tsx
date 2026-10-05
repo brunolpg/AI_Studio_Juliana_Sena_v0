@@ -273,37 +273,40 @@ export function PrintPrescriptionModal({
             }}
           >
             <div>
-              {/* Cabeçalho */}
-              <div className="border-b border-slate-900 mt-3 pb-3 flex items-center justify-between gap-4">
-                {/* Lado Esquerdo */}
+              {/* Cabeçalho do Relatório */}
+              <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-6 w-full">
+                {/* Lado Esquerdo: Logo + Coluna com Título, Nome e Especialidade */}
                 <div className="flex items-center gap-4">
+                  {/* Logo da Clínica */}
                   <img
                     src="/logo-clinica.png"
                     alt="Logo Clínica"
-                    className="h-14 w-auto object-contain shrink-0"
+                    className="h-16 w-auto object-contain flex-shrink-0"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="flex flex-col">
-                    <span className="font-bold text-slate-900 whitespace-nowrap text-base leading-tight">
+
+                  {/* Coluna de Textos Alinhados à Esquerda */}
+                  <div className="flex flex-col justify-center">
+                    {/* Título do Documento (Acima do nome) */}
+                    <span className="text-xs sm:text-sm font-bold tracking-wider text-slate-800 uppercase whitespace-nowrap leading-tight mb-0.5">
+                      RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL
+                    </span>
+                    
+                    {/* Nome da Profissional (Alinhado logo abaixo do título) */}
+                    <span className="text-base font-bold text-slate-900 whitespace-nowrap leading-tight">
                       Juliana Sena de Souza Vieira
                     </span>
-                    <span className="text-xs text-slate-500 font-medium">
+                    
+                    {/* Especialidade */}
+                    <span className="text-xs text-slate-500 font-medium leading-tight">
                       Enfermeira Esteta
                     </span>
                   </div>
-                  
-                  {/* Barra divisória vertical */}
-                  <div className="h-8 w-[1px] bg-slate-300 mx-2 hidden sm:block"></div>
-
-                  {/* Título do documento */}
-                  <h1 className="font-bold text-slate-800 tracking-wide text-sm whitespace-nowrap">
-                    RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL
-                  </h1>
                 </div>
 
-                {/* Lado Direito */}
-                <div className="shrink-0">
-                  <span className="font-semibold text-slate-700 text-sm whitespace-nowrap">
+                {/* Lado Direito: Apenas o Registro Profissional */}
+                <div className="text-right flex-shrink-0">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800 whitespace-nowrap">
                     COREN-BA 366.344
                   </span>
                 </div>
