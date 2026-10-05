@@ -25,11 +25,13 @@ import {
   Sparkles,
   Image as ImageIcon,
   Printer,
+  X,
 } from "lucide-react";
 import {
   getPatientClinicalRecordAction,
   togglePrescriptionStatusAction,
 } from "@/actions/clinical-actions";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { EvolutionFormModal } from "./evolution-form-modal";
 import { MedicalHistoryModal } from "./medical-history-modal";
 import { PrescriptionModal } from "./prescription-modal";
@@ -64,6 +66,12 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [selectedRxForPrint, setSelectedRxForPrint] = useState<PrescriptionItem | null>(null);
 
+  // Modal de suspensão de receita
+  const [isSuspensionModalOpen, setIsSuspensionModalOpen] = useState(false);
+  const [justificativaTexto, setJustificativaTexto] = useState("");
+  const [selectedRxForSuspension, setSelectedRxForSuspension] = useState<string | null>(null);
+  const [isSubmittingSuspension, setIsSubmittingSuspension] = useState(false);
+
   // Carrega prontuário do paciente
   const loadClinicalData = useCallback(() => {
     const isValidUUID = (id?: string | null) => 
@@ -80,7 +88,80 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
         setIsLoading(true);
         const res = await getPatientClinicalRecordAction(client.id);
         if (res.success && res.data) {
-          setClinicalRecord(res.data);
+          const record = { ...res.data };
+          try {
+            const supabase = getSupabaseClient();
+            if (supabase) {
+              const { data: dbPrescs, error: dbErr } = await supabase
+                .from("prescricoes")
+                .select(`
+                  id,
+                  paciente_id,
+                  data_prescricao,
+                  status,
+                  justificativa_suspensao,
+                  data_suspensao,
+                  prescricao_itens (
+                    id,
+                    nome_formula,
+                    via,
+                    veiculo,
+                    dosagem,
+                    tipo_veiculo,
+                    posologia,
+                    duracao,
+                    orient_paciente,
+                    orient_farmacia,
+                    componentes_snapshot
+                  )
+                `)
+                .eq("paciente_id", client.id);
+
+              if (dbPrescs && !dbErr) {
+                const mappedPrescriptions: PrescriptionItem[] = dbPrescs.map((p: any) => {
+                  const item = p.prescricao_itens && p.prescricao_itens[0];
+                  const componentsList = item?.componentes_snapshot || [];
+                  
+                  // Reconstrução da dosagem formatada
+                  const listAtivos = Array.isArray(componentsList)
+                    ? componentsList.map((c: any) => `${c.nome}: ${c.quantidade}${c.unidade || ""}`).join(" + ")
+                    : "";
+                  
+                  const formattedDosagem = item?.via?.toLowerCase() === "oral"
+                    ? `${listAtivos} em ${item?.veiculo} (Dose: ${item?.dosagem} | Total: ${item?.duracao} ${item?.tipo_veiculo})`
+                    : `${listAtivos} em ${item?.veiculo} q.s.p. ${item?.dosagem}g (Total: ${item?.duracao}${item?.tipo_veiculo || "un"})`;
+
+                  const combinedInstrucoes = [
+                    item?.orient_paciente ? `[Orientações ao Paciente]\n${item.orient_paciente}` : "",
+                    item?.orient_farmacia ? `[Observações à Farmácia Magistral]\n${item.orient_farmacia}` : "",
+                  ]
+                    .filter(Boolean)
+                    .join("\n\n");
+
+                  return {
+                    id: p.id,
+                    client_id: p.paciente_id,
+                    data: p.data_prescricao,
+                    medicamento: item?.nome_formula || "Fórmula Magistral",
+                    dosagem: formattedDosagem || item?.dosagem || "",
+                    via: item?.via === "oral" ? "Oral" : "Tópico",
+                    posologia: item?.posologia || "",
+                    duracao: item?.via === "oral" ? `${item?.duracao} ${item?.tipo_veiculo}` : "Uso recomendado",
+                    ativo: p.status === "Ativo",
+                    instrucoes: combinedInstrucoes || undefined,
+                    status: p.status,
+                    justificativa_suspensao: p.justificativa_suspensao,
+                    data_suspensao: p.data_suspensao,
+                  };
+                });
+
+                record.prescriptions = mappedPrescriptions;
+              }
+            }
+          } catch (err) {
+            console.warn("Erro ao buscar prescrições do Supabase:", err);
+          }
+          setClinicalRecord(record);
         } else {
           toast({
             type: "error",
@@ -100,7 +181,82 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
     loadClinicalData();
   }, [loadClinicalData]);
 
-  // Alterna status de prescrição
+  // Função para suspender receita com persistência real
+  const handleConfirmSuspension = async () => {
+    if (!selectedRxForSuspension || !justificativaTexto.trim()) return;
+
+    try {
+      setIsSubmittingSuspension(true);
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        toast({
+          type: "error",
+          title: "Erro de conexão",
+          description: "Não foi possível conectar ao Supabase.",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from("prescricoes")
+        .update({
+          status: "Suspenso",
+          justificativa_suspensao: justificativaTexto.trim(),
+          data_suspensao: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", selectedRxForSuspension);
+
+      if (error) {
+        toast({
+          type: "error",
+          title: "Erro ao suspender receita",
+          description: error.message,
+        });
+      } else {
+        toast({
+          type: "success",
+          title: "Receita suspensa",
+          description: "A receita foi suspensa com sucesso.",
+        });
+        setIsSuspensionModalOpen(false);
+        setJustificativaTexto("");
+        setSelectedRxForSuspension(null);
+        
+        // Atualização otimista no estado local
+        if (clinicalRecord) {
+          const updatedPrescriptions = clinicalRecord.prescriptions.map((rx) => {
+            if (rx.id === selectedRxForSuspension) {
+              return {
+                ...rx,
+                ativo: false,
+                status: "Suspenso" as const,
+                justificativa_suspensao: justificativaTexto.trim(),
+                data_suspensao: new Date().toISOString(),
+              };
+            }
+            return rx;
+          });
+          setClinicalRecord({
+            ...clinicalRecord,
+            prescriptions: updatedPrescriptions,
+          });
+        }
+
+        loadClinicalData();
+      }
+    } catch (err: any) {
+      toast({
+        type: "error",
+        title: "Erro inesperado",
+        description: err.message || "Ocorreu um erro ao suspender a receita.",
+      });
+    } finally {
+      setIsSubmittingSuspension(false);
+    }
+  };
+
+  // Alterna status de prescrição (legado/fallback)
   const handleTogglePrescription = async (prescriptionId: string) => {
     try {
       const res = await togglePrescriptionStatusAction(client.id, prescriptionId);
@@ -751,7 +907,7 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
                         <div
                           key={rx.id}
                           className={`p-4 rounded-2xl border transition-all ${
-                            rx.ativo
+                            rx.ativo || rx.status === "Ativo"
                               ? "bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 shadow-2xs"
                               : "bg-slate-50/70 dark:bg-slate-900/60 border-slate-200/60 opacity-60"
                           }`}
@@ -781,18 +937,27 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
                                 <span>Gerar Relatório</span>
                               </button>
 
-                              <button
-                                type="button"
-                                onClick={() => handleTogglePrescription(rx.id)}
-                                className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer ${
-                                  rx.ativo
-                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200"
-                                    : "bg-slate-200 text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
-                                }`}
-                                title={rx.ativo ? "Suspender medicamento" : "Reativar prescrição"}
-                              >
-                                {rx.ativo ? "Em Uso (Ativo)" : "Suspenso"}
-                              </button>
+                              {rx.ativo || rx.status === "Ativo" ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedRxForSuspension(rx.id);
+                                    setJustificativaTexto("");
+                                    setIsSuspensionModalOpen(true);
+                                  }}
+                                  className="px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200"
+                                  title="Suspender receita"
+                                >
+                                  Em Uso (Ativo)
+                                </button>
+                              ) : (
+                                <span
+                                  className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-300 cursor-default"
+                                  title="Receita suspensa"
+                                >
+                                  Suspenso
+                                </span>
+                              )}
                             </div>
                           </div>
 
@@ -806,6 +971,11 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
                             {rx.instrucoes && (
                               <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
                                 <em>Obs: {rx.instrucoes}</em>
+                              </div>
+                            )}
+                            {(!rx.ativo || rx.status === "Suspenso") && rx.justificativa_suspensao && (
+                              <div className="mt-2 text-xs text-rose-600 dark:text-rose-400 font-medium">
+                                Motivo da suspensão: {rx.justificativa_suspensao}
                               </div>
                             )}
                           </div>
@@ -962,6 +1132,81 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
           prescription={selectedRxForPrint}
           client={client}
         />
+      )}
+
+      {/* Modal de Confirmação de Suspensão de Receita */}
+      {isSuspensionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-rose-500" />
+                <h3 className="font-bold text-slate-950 dark:text-white text-base">Suspender Receita</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSuspensionModalOpen(false);
+                  setJustificativaTexto("");
+                  setSelectedRxForSuspension(null);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Deseja suspender o uso desta receita? Informe a justificativa clínica abaixo:
+              </p>
+              
+              <div className="space-y-1">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                  Justificativa Clínica *
+                </label>
+                <textarea
+                  value={justificativaTexto}
+                  onChange={(e) => setJustificativaTexto(e.target.value)}
+                  placeholder="Ex: Reação adversa observada, troca de abordagem clínica, alcance do objetivo terapêutico..."
+                  rows={4}
+                  className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 resize-none"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="p-5 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSuspensionModalOpen(false);
+                  setJustificativaTexto("");
+                  setSelectedRxForSuspension(null);
+                }}
+                className="px-3.5 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+                disabled={isSubmittingSuspension}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSuspension}
+                disabled={!justificativaTexto.trim() || isSubmittingSuspension}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl cursor-pointer flex items-center gap-1.5 transition-all shadow-xs"
+              >
+                {isSubmittingSuspension ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Suspendendo...</span>
+                  </>
+                ) : (
+                  <span>Confirmar Suspensão</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Lightbox para fotos da área tratada */}

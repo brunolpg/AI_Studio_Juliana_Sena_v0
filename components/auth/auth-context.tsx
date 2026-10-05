@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         if (isMounted) {
-          console.error("Falha ao recuperar sessão do usuário:", error);
+          console.warn("Aviso: Falha ao recuperar sessão do usuário (esperado caso o banco de dados não esteja totalmente inicializado ou offline):", error);
           setUser(null);
         }
       } finally {

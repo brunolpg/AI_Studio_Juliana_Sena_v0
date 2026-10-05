@@ -631,7 +631,7 @@ export async function addStructuredPrescriptionAction(
 
     const formattedDosagem = input.via === "oral"
       ? `${listAtivos} em ${veiculoTitle} (Dose: ${input.dosagem_valor} | Total: ${input.total_veiculo} ${input.tipo_veiculo})`
-      : `${listAtivos} em ${veiculoTitle} q.s.p. ${input.dosagem_valor}${input.dosagem_unidade || "g"} (Total: ${input.total_veiculo}g)`;
+      : `${listAtivos} em ${veiculoTitle} q.s.p. ${input.dosagem_valor}${input.dosagem_unidade || "g"} (Total: ${input.total_veiculo}${input.tipo_veiculo || "un"})`;
 
     // Une as instruções ao paciente e farmácia em uma string de instruções elegível
     const combinedInstrucoes = [
