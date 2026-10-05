@@ -193,7 +193,7 @@ export function PrintPrescriptionModal({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-teal-600" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Receituário Médico</h3>
+                <span className="font-semibold text-slate-800">Receituário</span>
               </div>
               <button
                 onClick={onClose}
@@ -219,7 +219,7 @@ export function PrintPrescriptionModal({
             </div>
 
             <div className="bg-teal-50/50 dark:bg-teal-950/20 border border-teal-200/50 dark:border-teal-800 p-4 rounded-xl space-y-2">
-              <h4 className="text-xs font-bold text-teal-800 dark:text-teal-400">Padrão A4 Médico</h4>
+              <h4 className="text-xs font-bold text-teal-800 dark:text-teal-400">Padrão A4</h4>
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 Este relatório foi otimizado para papel A4. Você pode imprimi-lo ou salvá-lo como PDF utilizando as opções de impressão do seu navegador.
               </p>
