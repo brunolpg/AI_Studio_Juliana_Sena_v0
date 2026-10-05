@@ -125,24 +125,28 @@ export function PrintPrescriptionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-      {/* Estilo dinâmico injetado para impressão resiliente em A4 com a fonte Metropolis */}
+      {/* Injeção à prova de falhas da fonte Metropolis */}
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.cdnfonts.com/css/metropolis');
+        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/index.css');
+        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/500.css');
+        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/600.css');
+        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/700.css');
 
-        /* Aplica Metropolis em todo o conteúdo da folha A4 */
+        .metropolis-font,
+        .metropolis-font *,
         #receituario-print-area,
         #receituario-print-area * {
-          font-family: 'Metropolis', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+          font-family: 'Metropolis', 'Metropolis Fallback', sans-serif !important;
         }
 
         @media print {
           @page {
-            size: A4;
-            margin: 15mm;
+            size: A4 portrait;
+            margin: 12mm;
           }
           body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
           /* Oculta tudo que não faz parte da folha de receita */
@@ -268,7 +272,7 @@ export function PrintPrescriptionModal({
           <div
             id="receituario-print-area"
             ref={printAreaRef}
-            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between font-metropolis"
+            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between metropolis-font"
             style={{
               boxSizing: "border-box",
               aspectRatio: "1/1.414",

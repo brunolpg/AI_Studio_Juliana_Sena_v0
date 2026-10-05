@@ -26,8 +26,19 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
       <head>
         <link
           rel="stylesheet"
-          href="https://fonts.cdnfonts.com/css/metropolis"
-          crossOrigin="anonymous"
+          href="https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/index.css"
+        />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/500.css"
+        />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/600.css"
+        />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/700.css"
         />
       </head>
       <body suppressHydrationWarning>
