@@ -574,10 +574,10 @@ export function PrescriptionModal({
                 />
               </div>
 
-              {/* Dose (Renomeado de 'Dose por Tomada *') */}
+              {/* QSP (Renomeado de 'Dose *') */}
               <div className="flex-[1.5] min-w-0 w-full">
                 <label className="block text-xs font-semibold text-slate-600 mb-1 whitespace-nowrap">
-                  Dose *
+                  QSP *
                 </label>
                 <div className="flex items-center w-full gap-1">
                   <input
