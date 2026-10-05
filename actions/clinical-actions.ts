@@ -331,24 +331,9 @@ export async function togglePrescriptionStatusAction(
 // INTEGRAÇÃO DE FÓRMULAS, COMPONENTES E UNIDADES (SUPABASE COM RESILIÊNCIA)
 // =========================================================================
 
-const MOCK_UNIDADES = [
-  { id: "u1", sigla: "%" },
-  { id: "u2", sigla: "g" },
-  { id: "u3", sigla: "ml" },
-  { id: "u4", sigla: "mg" },
-  { id: "u5", sigla: "ui" },
-];
+const MOCK_UNIDADES: any[] = [];
 
-const MOCK_COMPONENTES = [
-  { id: "c1", nome: "Ácido Glicólico", unidade_id: "u1" },
-  { id: "c2", nome: "Ácido Hialurônico", unidade_id: "u1" },
-  { id: "c3", nome: "Niacinamida", unidade_id: "u1" },
-  { id: "c4", nome: "Vitamina C", unidade_id: "u1" },
-  { id: "c5", nome: "Coenzima Q10", unidade_id: "u4" },
-  { id: "c6", nome: "Vitamina E", unidade_id: "u4" },
-  { id: "c7", nome: "Ácido Kójico", unidade_id: "u1" },
-  { id: "c8", nome: "Trans-resveratrol", unidade_id: "u4" },
-];
+const MOCK_COMPONENTES: any[] = [];
 
 const MOCK_FORMULAS = [
   {
@@ -468,21 +453,31 @@ export async function getComponentesAction(): Promise<ActionResponse<any[]>> {
   try {
     const supabase = await createClient();
     if (!supabase) {
-      return { success: true, data: MOCK_COMPONENTES };
+      return { success: true, data: [] };
     }
 
     const { data, error } = await supabase
       .from("componentes")
-      .select("*")
+      .select(`
+        id,
+        nome,
+        unidade_id,
+        unidades (
+          id,
+          unidade
+        )
+      `)
       .order("nome", { ascending: true });
 
     if (error) {
-      return { success: true, data: MOCK_COMPONENTES };
+      console.error("Erro ao buscar componentes no Supabase:", error.message);
+      return { success: true, data: [] };
     }
 
     return { success: true, data: data || [] };
   } catch (err) {
-    return { success: true, data: MOCK_COMPONENTES };
+    console.error("Exceção em getComponentesAction:", err);
+    return { success: true, data: [] };
   }
 }
 
@@ -493,21 +488,23 @@ export async function getUnidadesAction(): Promise<ActionResponse<any[]>> {
   try {
     const supabase = await createClient();
     if (!supabase) {
-      return { success: true, data: MOCK_UNIDADES };
+      return { success: true, data: [] };
     }
 
     const { data, error } = await supabase
       .from("unidades")
-      .select("*")
-      .order("sigla", { ascending: true });
+      .select("id, unidade")
+      .order("unidade", { ascending: true });
 
-    if (error || !data) {
-      return { success: true, data: MOCK_UNIDADES };
+    if (error) {
+      console.error("Erro ao buscar unidades no Supabase:", error.message);
+      return { success: true, data: [] };
     }
 
-    return { success: true, data };
+    return { success: true, data: data || [] };
   } catch (err) {
-    return { success: true, data: MOCK_UNIDADES };
+    console.error("Exceção em getUnidadesAction:", err);
+    return { success: true, data: [] };
   }
 }
 

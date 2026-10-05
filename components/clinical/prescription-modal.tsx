@@ -75,33 +75,17 @@ export function PrescriptionModal({
   useEffect(() => {
     async function loadUnidades() {
       try {
-        const supabase = getSupabaseClient();
-        if (!supabase) {
-          setUnidadesList(['%', 'g', 'mcg', 'mg', 'ml', 'ui']);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('unidades')
-          .select('*');
-
-        if (data && !error && data.length > 0) {
-          const first = data[0];
-          const keyToMap = ('unidade' in first) ? 'unidade' : ('sigla' in first) ? 'sigla' : null;
-          
-          if (keyToMap) {
-            const mapped = data.map((u: any) => u[keyToMap]).filter(Boolean);
-            const uniqueUnits = Array.from(new Set([...mapped, 'mcg']));
-            uniqueUnits.sort();
-            setUnidadesList(uniqueUnits);
-          } else {
-            setUnidadesList(['%', 'g', 'mcg', 'mg', 'ml', 'ui']);
-          }
+        const res = await getUnidadesAction();
+        if (res.success && res.data && res.data.length > 0) {
+          const mapped = res.data.map((u: any) => u.unidade).filter(Boolean);
+          const uniqueUnits = Array.from(new Set([...mapped, 'mcg']));
+          uniqueUnits.sort();
+          setUnidadesList(uniqueUnits);
         } else {
           setUnidadesList(['%', 'g', 'mcg', 'mg', 'ml', 'ui']);
         }
       } catch (err) {
-        console.error("Erro ao carregar unidades do Supabase:", err);
+        console.error("Erro ao carregar unidades:", err);
         setUnidadesList(['%', 'g', 'mcg', 'mg', 'ml', 'ui']);
       }
     }
@@ -128,10 +112,14 @@ export function PrescriptionModal({
         if (uniRes.success && uniRes.data) {
           setDbUnidades(uniRes.data);
           // Pré-define unidade default de ativos
-          const defaultUni = uniRes.data.find((u) => u.sigla === "%");
+          const defaultUni = uniRes.data.find((u: any) => u.unidade === "%" || u.sigla === "%");
           if (defaultUni) {
             setComponentesRows((prev) =>
-              prev.map((row) => ({ ...row, unidade_id: defaultUni.id, unidade_sigla: defaultUni.sigla }))
+              prev.map((row) => ({
+                ...row,
+                unidade_id: defaultUni.id,
+                unidade_sigla: defaultUni.unidade || defaultUni.sigla || "%",
+              }))
             );
           }
         }
