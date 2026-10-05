@@ -125,9 +125,26 @@ export function PrintPrescriptionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-      {/* Estilo dinâmico injetado para impressão resiliente em A4 */}
+      {/* Estilo dinâmico injetado para impressão resiliente em A4 com a fonte Metropolis */}
       <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.cdnfonts.com/css/metropolis');
+
+        /* Aplica Metropolis em todo o conteúdo da folha A4 */
+        #receituario-print-area,
+        #receituario-print-area * {
+          font-family: 'Metropolis', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        }
+
         @media print {
+          @page {
+            size: A4;
+            margin: 15mm;
+          }
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
           /* Oculta tudo que não faz parte da folha de receita */
           body * {
             visibility: hidden !important;
@@ -146,6 +163,7 @@ export function PrintPrescriptionModal({
           #receituario-print-area,
           #receituario-print-area * {
             visibility: visible !important;
+            font-family: 'Metropolis', sans-serif !important;
           }
 
           /* Fixa a folha no topo da página A4 */
@@ -160,22 +178,7 @@ export function PrintPrescriptionModal({
             border: none !important;
             background: white !important;
             color: black !important;
-            font-family: 'Metropolis', -apple-system, BlinkMacSystemFont, sans-serif !important;
           }
-        }
-      `}} />
-
-      <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/typeface-metropolis@1.1.13/index.css"
-      />
-      <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://cdn.jsdelivr.net/npm/typeface-metropolis@1.1.13/index.css');
-
-        .font-metropolis, 
-        #receituario-print-area, 
-        #receituario-print-area * {
-          font-family: 'Metropolis', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
       `}} />
 

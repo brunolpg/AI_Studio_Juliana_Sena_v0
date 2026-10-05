@@ -23,6 +23,13 @@ export const metadata: Metadata = {
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.cdnfonts.com/css/metropolis"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body suppressHydrationWarning>
         <Providers>
           {children}
