@@ -505,11 +505,12 @@ export async function addStructuredPrescriptionAction(
     const titleCaseVeiculo = toTitleCase(input.veiculo);
 
     if (supabase) {
-      // Tenta encontrar fórmula existente com o mesmo nome (ignora case)
+      // Tenta encontrar fórmula existente com o mesmo nome e mesma via (ignora case com ilike)
       const { data: existingFormula } = await supabase
         .from("formulas")
         .select("id")
-        .eq("nome", titleCaseFormulaName)
+        .ilike("nome", titleCaseFormulaName)
+        .eq("via", input.via)
         .maybeSingle();
 
       if (existingFormula) {
@@ -547,23 +548,62 @@ export async function addStructuredPrescriptionAction(
       let compId = comp.componente_id;
       const titleCaseName = toTitleCase(comp.nome);
 
-      if (supabase && (!compId || compId.startsWith("new_"))) {
-        // Tenta encontrar componente existente pelo nome em Title Case
+      if (supabase) {
+        // Verifique se o ativo já existe pelo nome (ilike)
         const { data: existingComp } = await supabase
           .from("componentes")
           .select("id")
-          .eq("nome", titleCaseName)
+          .ilike("nome", titleCaseName)
           .maybeSingle();
 
         if (existingComp) {
           compId = existingComp.id;
         } else {
+          // Busca o ID da unidade correspondente à sigla informada ou associa uma unidade padrão
+          let resolvedUnidadeId = comp.unidade_id;
+
+          if (!resolvedUnidadeId || resolvedUnidadeId.startsWith("new_")) {
+            const siglaToFind = comp.unidade_sigla || "%";
+            
+            // Busca a unidade
+            const { data: dbUnit } = await supabase
+              .from("unidades")
+              .select("id")
+              .ilike("unidade", siglaToFind)
+              .maybeSingle();
+
+            if (dbUnit) {
+              resolvedUnidadeId = dbUnit.id;
+            } else {
+              // Se não encontrou, tenta buscar ou criar uma unidade padrão '%'
+              const { data: defaultUnit } = await supabase
+                .from("unidades")
+                .select("id")
+                .ilike("unidade", "%")
+                .maybeSingle();
+
+              if (defaultUnit) {
+                resolvedUnidadeId = defaultUnit.id;
+              } else {
+                const { data: createdUnit } = await supabase
+                  .from("unidades")
+                  .insert({ unidade: "%" })
+                  .select("id")
+                  .single();
+
+                if (createdUnit) {
+                  resolvedUnidadeId = createdUnit.id;
+                }
+              }
+            }
+          }
+
           // Insere novo componente
           const { data: newComp, error: insertErr } = await supabase
             .from("componentes")
             .insert({
               nome: titleCaseName,
-              unidade_id: comp.unidade_id && !comp.unidade_id.startsWith("new_") ? comp.unidade_id : null,
+              unidade_id: resolvedUnidadeId || null,
             })
             .select("id")
             .single();
@@ -586,19 +626,29 @@ export async function addStructuredPrescriptionAction(
 
     // 3. Vincular na Tabela Associativa (formula_componentes)
     if (supabase && formulaId) {
-      // Limpa vínculos anteriores se a fórmula já existia para não duplicar relações
-      await supabase.from("formula_componentes").delete().eq("formula_id", formulaId);
+      for (const c of processedComponentes) {
+        if (c.componente_id) {
+          // Verifica se já existe o vínculo para essa fórmula
+          const { data: existingRel } = await supabase
+            .from("formula_componentes")
+            .select("id")
+            .eq("formula_id", formulaId)
+            .eq("componente_id", c.componente_id)
+            .maybeSingle();
 
-      const relPayloads = processedComponentes.map((c) => ({
-        formula_id: formulaId,
-        componente_id: c.componente_id,
-        quantidade: c.quantidade,
-      })).filter(r => r.componente_id);
+          if (!existingRel) {
+            const { error: relErr } = await supabase
+              .from("formula_componentes")
+              .insert({
+                formula_id: formulaId,
+                componente_id: c.componente_id,
+                quantidade: c.quantidade,
+              });
 
-      if (relPayloads.length > 0) {
-        const { error: relErr } = await supabase.from("formula_componentes").insert(relPayloads);
-        if (relErr) {
-          console.error("Erro ao vincular componentes à fórmula:", relErr.message);
+            if (relErr) {
+              console.error("Erro ao vincular componentes à fórmula:", relErr.message);
+            }
+          }
         }
       }
     }
@@ -612,6 +662,7 @@ export async function addStructuredPrescriptionAction(
           paciente_id: clientId,
           data_prescricao: new Date().toISOString().split("T")[0],
           status: "Ativo",
+          observacoes: input.descricao || null,
         })
         .select()
         .single();
@@ -631,7 +682,7 @@ export async function addStructuredPrescriptionAction(
           .from("prescricao_itens")
           .insert({
             prescricao_id: prescricao.id,
-            formula_id: formulaId,
+            formula_id: formulaId, // vinculando obrigatoriamente a fórmula salva/recuperada no passo 1
             nome_formula: titleCaseFormulaName,
             via: input.via,
             veiculo: titleCaseVeiculo,
