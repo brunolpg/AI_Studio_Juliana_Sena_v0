@@ -125,18 +125,15 @@ export function PrintPrescriptionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-      {/* Injeção à prova de falhas da fonte Metropolis */}
+      {/* Injeção à prova de falhas da fonte Plus Jakarta Sans */}
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/index.css');
-        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/500.css');
-        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/600.css');
-        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/700.css');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
         .metropolis-font,
         .metropolis-font *,
         #receituario-print-area,
         #receituario-print-area * {
-          font-family: 'Metropolis', 'Metropolis Fallback', sans-serif !important;
+          font-family: 'Plus Jakarta Sans', sans-serif !important;
         }
 
         @media print {
@@ -167,7 +164,7 @@ export function PrintPrescriptionModal({
           #receituario-print-area,
           #receituario-print-area * {
             visibility: visible !important;
-            font-family: 'Metropolis', sans-serif !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
           }
 
           /* Fixa a folha no topo da página A4 */
@@ -276,7 +273,7 @@ export function PrintPrescriptionModal({
             style={{
               boxSizing: "border-box",
               aspectRatio: "1/1.414",
-              fontFamily: "'Metropolis', sans-serif",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
             <div>

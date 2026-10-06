@@ -1,7 +1,8 @@
-@import url('https://cdn.jsdelivr.net/npm/typeface-metropolis@1.1.13/index.css');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
 .font-metropolis, #receituario-print-area, #receituario-print-area * {
-  font-family: 'Metropolis', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
+
