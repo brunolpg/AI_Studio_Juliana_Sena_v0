@@ -335,40 +335,7 @@ const MOCK_UNIDADES: any[] = [];
 
 const MOCK_COMPONENTES: any[] = [];
 
-const MOCK_FORMULAS = [
-  {
-    id: "f1",
-    nome: "Fórmula Facial Anti-Idade e Clareadora",
-    descricao: "Fórmula rejuvenescedora facial diária com ativos clareadores e hidratantes.",
-    via: "tópico",
-    dosagem: "30",
-    veiculo: "Gel creme toque seco",
-    tipo_veiculo: "g",
-    orient_paciente: "Aplicar no rosto à noite após higienização. Evitar área dos olhos. Usar protetor solar FPS 50+ pela manhã.",
-    orient_farmacia: "Manipular em embalagem airless fosca para preservar os ativos antioxidantes. Ajustar pH para 4.5.",
-    componentes: [
-      { id: "c1", nome: "Ácido Glicólico", quantidade: 5, unidade_id: "u1" },
-      { id: "c3", nome: "Niacinamida", quantidade: 4, unidade_id: "u1" },
-      { id: "c2", nome: "Ácido Hialurônico", quantidade: 1.5, unidade_id: "u1" }
-    ]
-  },
-  {
-    id: "f2",
-    nome: "Fórmula Antioxidante Oral de Alta Performance",
-    descricao: "Pool de antioxidantes orais para fotoproteção e combate aos radicais livres.",
-    via: "oral",
-    dosagem: "1",
-    veiculo: "Cápsula vegetal",
-    tipo_veiculo: "dose(s)",
-    orient_paciente: "Tomar 1 dose por via oral pela manhã, logo após o café da manhã.",
-    orient_farmacia: "Acondicionar em frasco âmbar bem vedado com sílica gel. Cápsulas incolores livres de corantes.",
-    componentes: [
-      { id: "c4", nome: "Vitamina C", quantidade: 500, unidade_id: "u4" },
-      { id: "c5", nome: "Coenzima Q10", quantidade: 100, unidade_id: "u4" },
-      { id: "c8", nome: "Trans-resveratrol", quantidade: 150, unidade_id: "u4" }
-    ]
-  }
-];
+const MOCK_FORMULAS: any[] = [];
 
 function toTitleCase(str: string): string {
   if (!str) return "";
@@ -387,62 +354,50 @@ export async function getFormulasAction(): Promise<ActionResponse<any[]>> {
   try {
     const supabase = await createClient();
     if (!supabase) {
-      return { success: true, message: "Modo de contingência ativo.", data: MOCK_FORMULAS };
+      return { success: true, data: [] };
     }
 
-    // Busca fórmulas
-    const { data: dbFormulas, error: formulasErr } = await supabase
+    const { data, error } = await supabase
       .from("formulas")
-      .select("*")
-      .order("nome", { ascending: true });
-
-    if (formulasErr) {
-      return { success: true, message: "Modo de contingência ativo.", data: MOCK_FORMULAS };
-    }
-
-    if (!dbFormulas || dbFormulas.length === 0) {
-      return {
-        success: true,
-        data: [],
-      };
-    }
-
-    // Busca relações e componentes de forma a juntar tudo
-    const formulasCompletas = [];
-    for (const f of dbFormulas) {
-      const { data: relations } = await supabase
-        .from("formula_componentes")
-        .select(`
+      .select(`
+        *,
+        formula_componentes (
+          id,
           quantidade,
           componente_id,
           componentes (
+            id,
             nome,
             unidade_id
           )
-        `)
-        .eq("formula_id", f.id);
+        )
+      `)
+      .order("nome", { ascending: true });
 
-      const componentesFormatados = (relations || []).map((rel: any) => ({
+    if (error) {
+      console.error("Erro ao buscar fórmulas no Supabase:", error.message);
+      return { success: true, data: [] };
+    }
+
+    const mappedFormulas = (data || []).map((f: any) => {
+      const componentesFormatados = (f.formula_componentes || []).map((rel: any) => ({
         id: rel.componente_id,
         nome: rel.componentes?.nome || "Ativo",
         quantidade: rel.quantidade,
         unidade_id: rel.componentes?.unidade_id,
       }));
 
-      formulasCompletas.push({
+      return {
         ...f,
         via: f.via || f.tipo || "tópico",
         componentes: componentesFormatados,
-      });
-    }
+      };
+    });
 
-    return {
-      success: true,
-      data: formulasCompletas,
-    };
+    return { success: true, data: mappedFormulas };
   } catch (err) {
     console.error("Erro em getFormulasAction:", err);
-    return { success: true, message: "Erro de conexão, usando fallback.", data: MOCK_FORMULAS };
+    return { success: true, data: [] };
   }
 }
 

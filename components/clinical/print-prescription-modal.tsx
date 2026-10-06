@@ -313,7 +313,7 @@ export function PrintPrescriptionModal({
 
                 {/* Lado Direito: Apenas o Registro Profissional */}
                 <div className="text-right flex-shrink-0">
-                  <span className="text-[10px] sm:text-sm font-semibold text-slate-800 whitespace-nowrap">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-800 whitespace-nowrap">
                     COREN-BA 366.344
                   </span>
                 </div>

@@ -348,13 +348,13 @@ export function PrescriptionModal({
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold focus:outline-none disabled:opacity-60"
             >
               {formulas.length === 0 ? (
-                <option value="" disabled>Nenhum modelo cadastrado no banco</option>
+                <option value="" disabled>Nenhum modelo salvo encontrado no catálogo</option>
               ) : (
                 <>
                   <option value="" disabled>Escolha um modelo pronto para preenchimento rápido...</option>
                   {formulas.map((f) => (
                     <option key={f.id} value={f.id}>
-                      [{(f.via || f.tipo || "tópico").toUpperCase()}] {f.nome}
+                      [{f.via ? f.via.toUpperCase() : 'GERAL'}] {f.nome}
                     </option>
                   ))}
                 </>
