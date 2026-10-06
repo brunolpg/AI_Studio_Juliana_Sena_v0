@@ -244,12 +244,42 @@ export function PrescriptionModal({
       return;
     }
 
-    // Valida se algum componente está vazio
-    const invalidComp = componentesRows.some((c) => !c.nome.trim() || !c.quantidade.trim() || !c.unidade_id);
-    if (invalidComp) {
-      setErrorMsg("Preencha todos os campos (Ativo, Quantidade e Unidade) de todos os componentes adicionados.");
+    // Filtragem de linhas vazias residuais
+    const ativosValidos = componentesRows.filter(
+      (c) => c.nome && c.nome.trim() !== ''
+    );
+
+    if (ativosValidos.length === 0) {
+      setErrorMsg("Adicione pelo menos um componente à fórmula.");
       return;
     }
+
+    // Tratamento de números com vírgula (PT-BR)
+    const parseQuantidade = (val: any): number => {
+      if (typeof val === 'number') return val;
+      if (!val) return 0;
+      const parsed = parseFloat(String(val).replace(',', '.'));
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
+    // Validação flexível: garante que a quantidade seja positiva para todos os ativos preenchidos
+    const invalidComp = ativosValidos.some(
+      (c) => parseQuantidade(c.quantidade) <= 0
+    );
+
+    if (invalidComp) {
+      setErrorMsg("A quantidade de todos os componentes deve ser maior que zero.");
+      return;
+    }
+
+    // Mapeamento e associação flexível de unidade
+    const componentesPayload = ativosValidos.map((c) => ({
+      componente_id: c.componente_id || undefined,
+      nome: c.nome.trim(),
+      quantidade: parseQuantidade(c.quantidade),
+      unidade_sigla: c.unidade_sigla || (c as any).unidade || '%',
+      unidade_id: c.unidade_id || (dbUnidades.find(u => u.unidade === (c.unidade_sigla || '%'))?.id) || (dbUnidades[0]?.id) || ''
+    }));
 
     setIsSubmitting(true);
 
@@ -258,17 +288,11 @@ export function PrescriptionModal({
         nome_formula: nomeFormula.trim(),
         descricao: descricao.trim() || undefined,
         via,
-        componentes: componentesRows.map((r) => ({
-          componente_id: r.componente_id || undefined,
-          nome: r.nome.trim(),
-          quantidade: parseFloat(r.quantidade),
-          unidade_id: r.unidade_id,
-          unidade_sigla: r.unidade_sigla,
-        })),
+        componentes: componentesPayload,
         veiculo: veiculo.trim(),
         dosagem_valor: dosagemValor.trim(),
         dosagem_unidade: via === "tópico" ? dosagemUnidade : undefined,
-        total_veiculo: parseFloat(totalVeiculo),
+        total_veiculo: parseFloat(String(totalVeiculo).replace(',', '.')),
         tipo_veiculo: via === "oral" ? tipoVeiculo : "un",
         posologia: posologia.trim(),
         orient_paciente: orientPaciente.trim() || undefined,
