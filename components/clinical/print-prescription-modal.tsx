@@ -125,15 +125,18 @@ export function PrintPrescriptionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-      {/* Injeção à prova de falhas da fonte Plus Jakarta Sans */}
+      {/* Injeção à prova de falhas da fonte Metropolis */}
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/index.css');
+        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/500.css');
+        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/600.css');
+        @import url('https://cdn.jsdelivr.net/npm/@fontsource/metropolis@5.0.8/700.css');
 
         .metropolis-font,
         .metropolis-font *,
         #receituario-print-area,
         #receituario-print-area * {
-          font-family: 'Plus Jakarta Sans', sans-serif !important;
+          font-family: 'Metropolis', 'Metropolis Fallback', sans-serif !important;
         }
 
         @media print {
@@ -164,7 +167,7 @@ export function PrintPrescriptionModal({
           #receituario-print-area,
           #receituario-print-area * {
             visibility: visible !important;
-            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            font-family: 'Metropolis', sans-serif !important;
           }
 
           /* Fixa a folha no topo da página A4 */
@@ -273,7 +276,7 @@ export function PrintPrescriptionModal({
             style={{
               boxSizing: "border-box",
               aspectRatio: "1/1.414",
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontFamily: "'Metropolis', sans-serif",
             }}
           >
             <div>
@@ -445,7 +448,7 @@ export function PrintPrescriptionModal({
 
               {/* Rodapé Institucional sutil */}
               <div className="text-center text-[9px] text-slate-400 border-t border-slate-200 pt-3">
-                Juliana Sena de Souza Vieira • Estética Avançada e Regenerativa • Salvador - BA • Telefone: (71) 99999-9999 • COREN-BA 366.344
+                Juliana Sena de Souza Vieira • Estética Avançada e Regenerativa • Salvador - BA • Telefone: (71) 98661-2878 • COREN-BA 366.344
               </div>
             </div>
           </div>

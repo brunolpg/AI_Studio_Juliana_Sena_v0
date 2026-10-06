@@ -544,7 +544,49 @@ export async function addStructuredPrescriptionAction(
 
     const supabase = await createClient();
 
-    // 1. Sanitizar componentes e garantir inserção na tabela 'componentes' do Supabase
+    // 1. Inserir/Atualizar a Fórmula
+    let formulaId = null;
+    const titleCaseFormulaName = toTitleCase(input.nome_formula);
+    const titleCaseVeiculo = toTitleCase(input.veiculo);
+
+    if (supabase) {
+      // Tenta encontrar fórmula existente com o mesmo nome (ignora case)
+      const { data: existingFormula } = await supabase
+        .from("formulas")
+        .select("id")
+        .eq("nome", titleCaseFormulaName)
+        .maybeSingle();
+
+      if (existingFormula) {
+        formulaId = existingFormula.id;
+      } else {
+        // Insere nova fórmula
+        const { data: newFormula, error: formulaErr } = await supabase
+          .from("formulas")
+          .insert({
+            nome: titleCaseFormulaName,
+            descricao: input.descricao || null,
+            via: input.via,
+            dosagem: input.dosagem_valor,
+            veiculo: titleCaseVeiculo,
+            tipo_veiculo: input.tipo_veiculo || null,
+            total_veiculo: input.total_veiculo || null,
+            orient_paciente: input.orient_paciente || null,
+            orient_farmacia: input.orient_farmacia || null,
+          })
+          .select("id")
+          .single();
+
+        if (formulaErr) {
+          console.error("Erro ao inserir fórmula no Supabase:", formulaErr.message);
+        }
+        if (newFormula) {
+          formulaId = newFormula.id;
+        }
+      }
+    }
+
+    // 2. Garantir os Componentes (Ativos)
     const processedComponentes = [];
     for (const comp of input.componentes) {
       let compId = comp.componente_id;
@@ -571,7 +613,10 @@ export async function addStructuredPrescriptionAction(
             .select("id")
             .single();
 
-          if (!insertErr && newComp) {
+          if (insertErr) {
+            console.error("Erro ao inserir componente no Supabase:", insertErr.message);
+          }
+          if (newComp) {
             compId = newComp.id;
           }
         }
@@ -584,47 +629,73 @@ export async function addStructuredPrescriptionAction(
       });
     }
 
-    // 2. Salvar como modelo de Fórmula se selecionado
-    if (input.save_as_formula && supabase) {
-      try {
-        const titleCaseFormulaName = toTitleCase(input.nome_formula);
-        const titleCaseVeiculo = toTitleCase(input.veiculo);
+    // 3. Vincular na Tabela Associativa (formula_componentes)
+    if (supabase && formulaId) {
+      // Limpa vínculos anteriores se a fórmula já existia para não duplicar relações
+      await supabase.from("formula_componentes").delete().eq("formula_id", formulaId);
 
-        // Insere a fórmula
-        const { data: newFormula, error: formulaErr } = await supabase
-          .from("formulas")
-          .insert({
-            nome: titleCaseFormulaName,
-            descricao: input.descricao || null,
-            via: input.via,
-            dosagem: input.dosagem_valor,
-            veiculo: titleCaseVeiculo,
-            tipo_veiculo: input.tipo_veiculo || null,
-            total_veiculo: input.total_veiculo || null,
-            orient_paciente: input.orient_paciente || null,
-            orient_farmacia: input.orient_farmacia || null,
-          })
-          .select("id")
-          .single();
+      const relPayloads = processedComponentes.map((c) => ({
+        formula_id: formulaId,
+        componente_id: c.componente_id,
+        quantidade: c.quantidade,
+      })).filter(r => r.componente_id);
 
-        if (!formulaErr && newFormula) {
-          // Insere as relações em formula_componentes
-          const relPayloads = processedComponentes.map((c) => ({
-            formula_id: newFormula.id,
-            componente_id: c.componente_id,
-            quantidade: c.quantidade,
-          })).filter(r => r.componente_id);
-
-          if (relPayloads.length > 0) {
-            await supabase.from("formula_componentes").insert(relPayloads);
-          }
+      if (relPayloads.length > 0) {
+        const { error: relErr } = await supabase.from("formula_componentes").insert(relPayloads);
+        if (relErr) {
+          console.error("Erro ao vincular componentes à fórmula:", relErr.message);
         }
-      } catch (fErr) {
-        console.error("Erro ao salvar fórmula de modelo no Supabase:", fErr);
       }
     }
 
-    // 3. Gerar strings formatadas para os campos do prontuário tradicional (PrescriptionItem)
+    // 4. Salvar a Prescrição (Inserir registros finais em prescricoes e prescricao_itens)
+    let dbPrescricaoId = null;
+    if (supabase) {
+      const { data: prescricao, error: errPresc } = await supabase
+        .from("prescricoes")
+        .insert({
+          paciente_id: clientId,
+          data_prescricao: new Date().toISOString().split("T")[0],
+          status: "Ativo",
+        })
+        .select()
+        .single();
+
+      if (errPresc || !prescricao) {
+        console.error("Erro ao registrar cabeçalho de prescrição no Supabase:", errPresc?.message);
+      } else {
+        dbPrescricaoId = prescricao.id;
+
+        const componentsSnapshot = processedComponentes.map((r) => ({
+          nome: r.nome,
+          quantidade: r.quantidade,
+          unidade: r.unidade_sigla,
+        }));
+
+        const { error: errItem } = await supabase
+          .from("prescricao_itens")
+          .insert({
+            prescricao_id: prescricao.id,
+            formula_id: formulaId,
+            nome_formula: titleCaseFormulaName,
+            via: input.via,
+            veiculo: titleCaseVeiculo,
+            dosagem: input.dosagem_valor,
+            tipo_veiculo: input.tipo_veiculo || null,
+            posologia: input.posologia.trim(),
+            duracao: String(input.total_veiculo),
+            orient_paciente: input.orient_paciente || null,
+            orient_farmacia: input.orient_farmacia || null,
+            componentes_snapshot: componentsSnapshot,
+          });
+
+        if (errItem) {
+          console.error("Erro ao registrar itens estruturados de prescrição no Supabase:", errItem.message);
+        }
+      }
+    }
+
+    // 5. Gerar strings formatadas para os campos do prontuário tradicional (PrescriptionItem)
     const formulaName = toTitleCase(input.nome_formula);
     const veiculoTitle = toTitleCase(input.veiculo);
 
@@ -645,10 +716,10 @@ export async function addStructuredPrescriptionAction(
       .filter(Boolean)
       .join("\n\n");
 
-    // 4. Salva a prescrição no prontuário do paciente
+    // Salva a prescrição no prontuário do paciente (memória)
     const record = ensurePatientRecord(clientId);
     const newPrescription: PrescriptionItem = {
-      id: `rx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: dbPrescricaoId || `rx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       client_id: clientId,
       data: new Date().toISOString().split("T")[0],
       medicamento: formulaName,

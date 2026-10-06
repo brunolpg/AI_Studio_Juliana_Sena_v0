@@ -64,8 +64,6 @@ export function PrescriptionModal({
   const [orientPaciente, setOrientPaciente] = useState("");
   const [orientFarmacia, setOrientFarmacia] = useState("");
 
-  const [saveAsFormula, setSaveAsFormula] = useState(false);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedFormulaId, setSelectedFormulaId] = useState<string | null>(null);
@@ -275,61 +273,10 @@ export function PrescriptionModal({
         posologia: posologia.trim(),
         orient_paciente: orientPaciente.trim() || undefined,
         orient_farmacia: orientFarmacia.trim() || undefined,
-        save_as_formula: saveAsFormula,
+        save_as_formula: true,
       };
 
-      // 1. Gravação no Banco ao Prescrever (Persistência Real)
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const { data: prescricao, error: errPresc } = await supabase
-          .from("prescricoes")
-          .insert({
-            paciente_id: client.id,
-            data_prescricao: new Date().toISOString().split("T")[0],
-            status: "Ativo",
-          })
-          .select()
-          .single();
-
-        if (errPresc || !prescricao) {
-          throw new Error(errPresc?.message || "Falha ao registrar cabeçalho de prescrição no Supabase.");
-        }
-
-        // Tenta encontrar ID de fórmula do catálogo se houver
-        const matchedFormula = formulas.find((f) => f.nome.toLowerCase() === nomeFormula.toLowerCase().trim());
-        const formulaIdCandidate = selectedFormulaId || matchedFormula?.id;
-        const isValidUUID = (id?: string | null) => 
-          typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-
-        const componentsSnapshot = componentesRows.map((r) => ({
-          nome: r.nome.trim(),
-          quantidade: parseFloat(r.quantidade),
-          unidade: r.unidade_sigla,
-        }));
-
-        const { error: errItem } = await supabase
-          .from("prescricao_itens")
-          .insert({
-            prescricao_id: prescricao.id,
-            formula_id: isValidUUID(formulaIdCandidate) ? formulaIdCandidate : null,
-            nome_formula: nomeFormula.trim(),
-            via,
-            veiculo: veiculo.trim(),
-            dosagem: dosagemValor.trim(),
-            tipo_veiculo: via === "oral" ? tipoVeiculo : "un",
-            posologia: posologia.trim(),
-            duracao: totalVeiculo.trim(),
-            orient_paciente: orientPaciente.trim() || null,
-            orient_farmacia: orientFarmacia.trim() || null,
-            componentes_snapshot: componentsSnapshot,
-          });
-
-        if (errItem) {
-          throw new Error(errItem.message || "Falha ao registrar itens estruturados de prescrição no Supabase.");
-        }
-      }
-
-      // 2. Executa action para compatibilidade em memória e criação de novos modelos se selecionado
+      // Executa a action que realiza toda a persistência lógica no banco (fórmulas, componentes, vínculos e itens)
       const res = await addStructuredPrescriptionAction(client.id, payload);
 
       if (res.success) {
@@ -655,21 +602,6 @@ export function PrescriptionModal({
               onChange={(e) => setOrientFarmacia(e.target.value)}
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none focus:outline-none"
             />
-          </div>
-
-          {/* Opção para Salvar como modelo */}
-          <div className="flex items-center gap-2.5 p-3 rounded-xl border border-teal-200 dark:border-teal-900/40 bg-teal-50/5 dark:bg-teal-950/5">
-            <input
-              type="checkbox"
-              id="saveAsFormula"
-              checked={saveAsFormula}
-              onChange={(e) => setSaveAsFormula(e.target.checked)}
-              className="w-4 h-4 rounded text-teal-600 border-slate-300 focus:ring-teal-500 focus:ring-2 cursor-pointer"
-            />
-            <label htmlFor="saveAsFormula" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer flex items-center gap-1.5 select-none">
-              <Save className="w-4 h-4 text-teal-600" />
-              <span>Salvar esta receita no catálogo do consultório como modelo de Fórmula</span>
-            </label>
           </div>
 
           {/* Rodapé de Ações */}
