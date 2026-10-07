@@ -524,15 +524,15 @@ export function PrescriptionModal({
           </div>
 
           {/* Veículo & Parâmetros */}
-          <div className="mt-4 p-4 rounded-xl border border-slate-200 bg-slate-50/50 w-full">
-            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+          <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-4 space-y-4 w-full">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3">
               Veículo e Parâmetros de Envase
             </h4>
             
             <div className="flex flex-col sm:flex-row items-end gap-3 w-full">
               {/* Veículo Base - ocupa o espaço restante com maior peso */}
               <div className="flex-[3] min-w-0 w-full">
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Veículo Base *
                 </label>
                 <input
@@ -540,13 +540,13 @@ export function PrescriptionModal({
                   value={veiculo}
                   onChange={(e) => setVeiculo(e.target.value)}
                   placeholder="Ex: Cápsula vegetal, Gel creme..."
-                  className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
               {/* QSP (Renomeado de 'Dose *') */}
               <div className="flex-[1.5] min-w-0 w-full">
-                <label className="block text-xs font-semibold text-slate-600 mb-1 whitespace-nowrap">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 whitespace-nowrap">
                   QSP *
                 </label>
                 <div className="flex items-center w-full gap-1">
@@ -555,13 +555,13 @@ export function PrescriptionModal({
                     value={dosagemValor}
                     onChange={(e) => setDosagemValor(e.target.value)}
                     placeholder="Ex: 1"
-                    className="w-full px-3 py-2 text-sm text-center bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   {via === "tópico" && (
                     <select
                       value={dosagemUnidade}
                       onChange={(e) => setDosagemUnidade(e.target.value)}
-                      className="px-1.5 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none shrink-0"
+                      className="px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 shrink-0"
                     >
                       <option value="g">g</option>
                       <option value="ml">ml</option>
@@ -572,7 +572,7 @@ export function PrescriptionModal({
 
               {/* Quantidade Total com Sufixo Integrado */}
               <div className="flex-[2] min-w-0 w-full">
-                <label className="block text-xs font-semibold text-slate-600 mb-1 whitespace-nowrap">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 whitespace-nowrap">
                   Quantidade Total *
                 </label>
                 <div className="flex items-center w-full">
@@ -581,9 +581,9 @@ export function PrescriptionModal({
                     value={totalVeiculo}
                     onChange={(e) => setTotalVeiculo(e.target.value)}
                     placeholder="Ex: 30"
-                    className="w-full min-w-0 px-3 py-2 text-sm text-center bg-white border border-r-0 border-slate-200 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 text-sm rounded-l-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
-                  <span className="px-2.5 py-2 text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded-r-lg whitespace-nowrap select-none shrink-0">
+                  <span className="px-3 py-2 text-sm font-medium border border-l-0 border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-r-lg whitespace-nowrap select-none shrink-0">
                     {via?.toLowerCase() === 'tópico' ? 'un' : (tipoVeiculo || 'dose(s)')}
                   </span>
                 </div>
