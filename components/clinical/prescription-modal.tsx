@@ -135,6 +135,20 @@ export function PrescriptionModal({
 
   if (!isOpen) return null;
 
+  // Funções auxiliares de formatação PT-BR
+  const formatNumberToBr = (val: any): string => {
+    if (val === undefined || val === null || val === '') return '';
+    return String(val).replace('.', ',');
+  };
+
+  const parseBrNumberToFloat = (val: any): number => {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    const sanitized = String(val).replace(/\s/g, '').replace(',', '.');
+    const parsed = parseFloat(sanitized);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   // Autocompletar quando escolher uma fórmula existente
   const handleSelectFormula = (formulaId: string) => {
     const selected = formulas.find((f) => f.id === formulaId);
@@ -144,10 +158,10 @@ export function PrescriptionModal({
     setNomeFormula(selected.nome);
     setDescricao(selected.descricao || "");
     setVia((selected.via || selected.tipo) as "oral" | "tópico");
-    setDosagemValor(selected.dosagem || "");
+    setDosagemValor(formatNumberToBr(selected.dosagem));
     setVeiculo(selected.veiculo || "");
     setTipoVeiculo(selected.tipo_veiculo || "dose(s)");
-    setTotalVeiculo(selected.total_veiculo ? String(selected.total_veiculo) : "");
+    setTotalVeiculo(formatNumberToBr(selected.total_veiculo || ''));
     setOrientPaciente(selected.orient_paciente || "");
     setOrientFarmacia(selected.orient_farmacia || "");
     
@@ -160,7 +174,7 @@ export function PrescriptionModal({
           key: `f_${selected.id}_${index}_${Date.now()}`,
           componente_id: c.id || "",
           nome: c.nome,
-          quantidade: String(c.quantidade),
+          quantidade: formatNumberToBr(c.quantidade),
           unidade_id: c.unidade_id || "",
           unidade_sigla: unit ? unit.sigla : "%",
         };
@@ -263,12 +277,12 @@ export function PrescriptionModal({
     };
 
     // Validação flexível: garante que a quantidade seja positiva para todos os ativos preenchidos
-    const invalidComp = ativosValidos.some(
-      (c) => parseQuantidade(c.quantidade) <= 0
+    const invalidComp = componentesRows.some(
+      (c) => !c.nome.trim() || parseBrNumberToFloat(c.quantidade) <= 0 || !c.unidade_id
     );
 
     if (invalidComp) {
-      setErrorMsg("A quantidade de todos os componentes deve ser maior que zero.");
+      setErrorMsg("A quantidade de todos os componentes deve ser maior que zero e nome/unidade preenchidos.");
       return;
     }
 
@@ -276,7 +290,7 @@ export function PrescriptionModal({
     const componentesPayload = ativosValidos.map((c) => ({
       componente_id: c.componente_id || undefined,
       nome: c.nome.trim(),
-      quantidade: parseQuantidade(c.quantidade),
+      quantidade: parseBrNumberToFloat(c.quantidade),
       unidade_sigla: c.unidade_sigla || (c as any).unidade || '%',
       unidade_id: c.unidade_id || (dbUnidades.find(u => u.unidade === (c.unidade_sigla || '%'))?.id) || (dbUnidades[0]?.id) || ''
     }));
@@ -290,9 +304,9 @@ export function PrescriptionModal({
         via,
         componentes: componentesPayload,
         veiculo: veiculo.trim(),
-        dosagem_valor: dosagemValor.trim(),
+        dosagem_valor: String(parseBrNumberToFloat(dosagemValor)),
         dosagem_unidade: via === "tópico" ? dosagemUnidade : undefined,
-        total_veiculo: parseFloat(String(totalVeiculo).replace(',', '.')),
+        total_veiculo: parseBrNumberToFloat(totalVeiculo),
         tipo_veiculo: via === "oral" ? tipoVeiculo : "un",
         posologia: posologia.trim(),
         orient_paciente: orientPaciente.trim() || undefined,
@@ -485,11 +499,19 @@ export function PrescriptionModal({
                   {/* Quantidade */}
                   <div className="w-20">
                     <input
-                      type="number"
-                      step="0.001"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="Qtd."
                       value={row.quantidade}
-                      onChange={(e) => handleRowChange(row.key, "quantidade", e.target.value)}
+                      onChange={(e) => {
+                        let val = e.target.value.replace('.', ',');
+                        val = val.replace(/[^0-9,]/g, '');
+                        const parts = val.split(',');
+                        if (parts.length > 2) {
+                          val = parts[0] + ',' + parts.slice(1).join('');
+                        }
+                        handleRowChange(row.key, "quantidade", val);
+                      }}
                       className="w-full px-2.5 py-1.5 text-xs text-center border-0 border-b border-slate-200 dark:border-slate-700 focus:outline-none focus:border-teal-500 bg-transparent text-slate-900 dark:text-slate-100"
                     />
                   </div>
@@ -552,6 +574,7 @@ export function PrescriptionModal({
                 <div className="flex items-center w-full gap-1">
                   <input
                     type="text"
+                    inputMode="decimal"
                     value={dosagemValor}
                     onChange={(e) => setDosagemValor(e.target.value)}
                     placeholder="Ex: 1"
@@ -578,6 +601,7 @@ export function PrescriptionModal({
                 <div className="flex items-center w-full">
                   <input
                     type="text"
+                    inputMode="decimal"
                     value={totalVeiculo}
                     onChange={(e) => setTotalVeiculo(e.target.value)}
                     placeholder="Ex: 30"
