@@ -912,22 +912,24 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
                               : "bg-slate-50/70 dark:bg-slate-900/60 border-slate-200/60 opacity-60"
                           }`}
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-bold text-slate-900 dark:text-white text-sm">
-                                  {rx.medicamento}
-                                </h4>
-                                <span className="text-[11px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded border border-teal-200/60">
-                                  {rx.dosagem}
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                            <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-bold text-slate-900 dark:text-white text-sm">
+                                    {rx.medicamento}
+                                  </h4>
+                                  <span className="text-[11px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded border border-teal-200/60 shrink-0">
+                                    {rx.dosagem}
+                                  </span>
+                                </div>
+                                <span className="text-[11px] text-slate-400 block mt-0.5">
+                                  Via {rx.via} • Prescrito em {dateFormatted}
                                 </span>
                               </div>
-                              <span className="text-[11px] text-slate-400 block mt-0.5">
-                                Via {rx.via} • Prescrito em {dateFormatted}
-                              </span>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
                               <button
                                 type="button"
                                 onClick={() => setSelectedRxForPrint(rx)}
