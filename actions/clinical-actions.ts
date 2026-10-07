@@ -516,31 +516,41 @@ export async function addStructuredPrescriptionAction(
       if (existingFormula) {
         formulaId = existingFormula.id;
       } else {
-        // Insere nova fórmula
+        const allowedTiposVeiculo = ['dose(s)', 'sachê(s)', 'comprimido(s)'];
+        const sanitizedTipoVeiculo = allowedTiposVeiculo.includes(input.tipo_veiculo) ? input.tipo_veiculo : null;
+        const numDosagem = input.dosagem_valor ? parseFloat(String(input.dosagem_valor).replace(',', '.')) : null;
+
         const { data: newFormula, error: formulaErr } = await supabase
-          .from("formulas")
+          .from('formulas')
           .insert({
             nome: titleCaseFormulaName,
             descricao: input.descricao || null,
-            via: input.via,
-            dosagem: input.dosagem_valor,
-            veiculo: titleCaseVeiculo,
-            tipo_veiculo: input.tipo_veiculo || null,
-            total_veiculo: input.total_veiculo || null,
+            via: input.via.toLowerCase(), // 'oral' ou 'tópico'
+            veiculo: titleCaseVeiculo || null,
+            dosagem: isNaN(numDosagem as number) ? null : numDosagem,
+            tipo_veiculo: sanitizedTipoVeiculo,
+            posologia: input.posologia?.trim() || null,
             orient_paciente: input.orient_paciente || null,
             orient_farmacia: input.orient_farmacia || null,
           })
-          .select("id")
+          .select('id')
           .single();
 
         if (formulaErr) {
-          console.error("Erro ao inserir fórmula no Supabase:", formulaErr.message);
-        }
-        if (newFormula) {
+          console.error('Erro ao inserir formula:', formulaErr.message);
+        } else if (newFormula) {
           formulaId = newFormula.id;
         }
       }
     }
+
+    // Busca a lista de unidades cadastradas no banco para obter um id válido
+    const { data: dbUnidades } = await supabase ? await supabase.from('unidades').select('id, unidade') : { data: [] };
+    const getValidUnidadeId = (sigla?: string) => {
+      if (!dbUnidades || dbUnidades.length === 0) return null;
+      const match = dbUnidades.find((u: any) => u.unidade.toLowerCase() === (sigla || '%').toLowerCase());
+      return match ? match.id : dbUnidades[0].id;
+    };
 
     // 2. Garantir os Componentes (Ativos)
     const processedComponentes = [];
@@ -559,59 +569,19 @@ export async function addStructuredPrescriptionAction(
         if (existingComp) {
           compId = existingComp.id;
         } else {
-          // Busca o ID da unidade correspondente à sigla informada ou associa uma unidade padrão
-          let resolvedUnidadeId = comp.unidade_id;
-
-          if (!resolvedUnidadeId || resolvedUnidadeId.startsWith("new_")) {
-            const siglaToFind = comp.unidade_sigla || "%";
-            
-            // Busca a unidade
-            const { data: dbUnit } = await supabase
-              .from("unidades")
-              .select("id")
-              .ilike("unidade", siglaToFind)
-              .maybeSingle();
-
-            if (dbUnit) {
-              resolvedUnidadeId = dbUnit.id;
-            } else {
-              // Se não encontrou, tenta buscar ou criar uma unidade padrão '%'
-              const { data: defaultUnit } = await supabase
-                .from("unidades")
-                .select("id")
-                .ilike("unidade", "%")
-                .maybeSingle();
-
-              if (defaultUnit) {
-                resolvedUnidadeId = defaultUnit.id;
-              } else {
-                const { data: createdUnit } = await supabase
-                  .from("unidades")
-                  .insert({ unidade: "%" })
-                  .select("id")
-                  .single();
-
-                if (createdUnit) {
-                  resolvedUnidadeId = createdUnit.id;
-                }
-              }
-            }
-          }
-
-          // Insere novo componente
+          // Insere novo componente garantindo unidade_id válida
           const { data: newComp, error: insertErr } = await supabase
-            .from("componentes")
+            .from('componentes')
             .insert({
               nome: titleCaseName,
-              unidade_id: resolvedUnidadeId || null,
+              unidade_id: getValidUnidadeId(comp.unidade_sigla),
             })
-            .select("id")
+            .select('id')
             .single();
 
           if (insertErr) {
-            console.error("Erro ao inserir componente no Supabase:", insertErr.message);
-          }
-          if (newComp) {
+            console.error('Erro ao inserir componente:', insertErr.message);
+          } else if (newComp) {
             compId = newComp.id;
           }
         }
@@ -625,32 +595,16 @@ export async function addStructuredPrescriptionAction(
     }
 
     // 3. Vincular na Tabela Associativa (formula_componentes)
-    if (supabase && formulaId) {
-      for (const c of processedComponentes) {
-        if (c.componente_id) {
-          // Verifica se já existe o vínculo para essa fórmula
-          const { data: existingRel } = await supabase
-            .from("formula_componentes")
-            .select("id")
-            .eq("formula_id", formulaId)
-            .eq("componente_id", c.componente_id)
-            .maybeSingle();
+    const relPayloads = processedComponentes.map((c) => ({
+      formula_id: formulaId,
+      componente_id: c.componente_id,
+      quantidade: c.quantidade,
+    })).filter(r => r.formula_id && r.componente_id);
 
-          if (!existingRel) {
-            const { error: relErr } = await supabase
-              .from("formula_componentes")
-              .insert({
-                formula_id: formulaId,
-                componente_id: c.componente_id,
-                quantidade: c.quantidade,
-              });
-
-            if (relErr) {
-              console.error("Erro ao vincular componentes à fórmula:", relErr.message);
-            }
-          }
-        }
-      }
+    if (formulaId && relPayloads.length > 0 && supabase) {
+      await supabase.from('formula_componentes').delete().eq('formula_id', formulaId);
+      const { error: relErr } = await supabase.from('formula_componentes').insert(relPayloads);
+      if (relErr) console.error('Erro ao vincular componentes:', relErr.message);
     }
 
     // 4. Salvar a Prescrição (Inserir registros finais em prescricoes e prescricao_itens)

@@ -304,6 +304,12 @@ export function PrescriptionModal({
       const res = await addStructuredPrescriptionAction(client.id, payload);
 
       if (res.success) {
+        // Atualiza instantaneamente a lista de fórmulas/modelos salvos no seletor
+        const fRes = await getFormulasAction();
+        if (fRes.success && fRes.data) {
+          setFormulas(fRes.data);
+        }
+
         toast({
           type: "success",
           title: "Receita Magistral Emitida!",
