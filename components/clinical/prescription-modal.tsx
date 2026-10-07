@@ -326,8 +326,8 @@ export function PrescriptionModal({
 
         toast({
           type: "success",
-          title: "Receita Magistral Emitida!",
-          description: `Prescrição adicionada ao prontuário do paciente ${client.nome}.`,
+          title: "Prescrição Magistral Emitida!",
+          description: `Receita gerada e salva com sucesso para ${client.nome}.`,
         });
         onSuccess();
         onClose();
