@@ -235,12 +235,12 @@ export function EvolutionFormModal({
     return sortedGroups;
   }, [procedimentos]);
 
-  // Sinais vitais
+  // Sinais vitais - Estética Regenerativa
   const [pa, setPa] = useState("");
   const [fc, setFc] = useState<string>("");
-  const [temp, setTemp] = useState<string>("");
-  const [peso, setPeso] = useState<string>("");
-  const [altura, setAltura] = useState<string>("");
+  const [hidratacao, setHidratacao] = useState<string>("");
+  const [oleosidade, setOleosidade] = useState<string>("");
+  const [elasticidade, setElasticidade] = useState<string>("");
 
   // SOAP
   const [subjetivo, setSubjetivo] = useState("");
@@ -252,15 +252,6 @@ export function EvolutionFormModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
-
-  // Cálculo dinâmico do IMC
-  const pesoNum = parseFloat(peso);
-  const alturaNum = parseFloat(altura);
-  let calculatedImc: number | undefined;
-  if (pesoNum > 0 && alturaNum > 0) {
-    const alturaM = alturaNum > 3 ? alturaNum / 100 : alturaNum;
-    calculatedImc = Number((pesoNum / (alturaM * alturaM)).toFixed(1));
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -308,10 +299,9 @@ export function EvolutionFormModal({
         sinaisVitais: {
           pressaoArterial: pa.trim() || undefined,
           frequenciaCardiaca: fc ? parseInt(fc) : undefined,
-          temperatura: temp ? parseFloat(temp) : undefined,
-          peso: pesoNum || undefined,
-          altura: alturaNum || undefined,
-          imc: calculatedImc,
+          hidratacaoCutanea: hidratacao ? parseFloat(hidratacao) : undefined,
+          oleosidadeSebo: oleosidade ? parseFloat(oleosidade) : undefined,
+          indiceElasticidade: elasticidade ? parseFloat(elasticidade) : undefined,
         },
         avaliacao: avaliacao.trim(),
         plano: plano.trim(),
@@ -478,86 +468,35 @@ export function EvolutionFormModal({
             </div>
           </div>
 
-          {/* Sinais Vitais (Opcionais mas altamente recomendados) */}
-          <div className="p-4 rounded-xl border border-teal-200/80 dark:border-teal-900/60 bg-teal-50/40 dark:bg-teal-950/20 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-teal-950 dark:text-teal-200 flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-teal-600" />
-                <span>Sinais Vitais e Biometria</span>
-              </span>
-              {calculatedImc && (
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 border border-teal-200">
-                  IMC: {calculatedImc} kg/m²
-                </span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+          {/* Biometria & Parâmetros Regenerativos */}
+          <div className="p-3 sm:p-4 bg-teal-50/50 dark:bg-teal-950/20 border border-teal-100 dark:border-teal-900/50 rounded-xl mb-6">
+            <h3 className="text-sm font-semibold text-teal-800 dark:text-teal-400 flex items-center gap-2 mb-4">
+              <Activity className="w-4 h-4" />
+              Biometria & Parâmetros Regenerativos
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {/* PA e FC permanecem iguais */}
               <div>
-                <label className="text-[11px] text-slate-600 dark:text-slate-400 block mb-1">
-                  PA (mmHg)
-                </label>
-                <input
-                  type="text"
-                  placeholder="120/80"
-                  value={pa}
-                  onChange={(e) => setPa(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-                />
+                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">PA (mmHg)</label>
+                <input type="text" placeholder="120/80" value={pa} onChange={(e) => setPa(e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500" />
               </div>
-
               <div>
-                <label className="text-[11px] text-slate-600 dark:text-slate-400 block mb-1">
-                  FC (bpm)
-                </label>
-                <input
-                  type="number"
-                  placeholder="72"
-                  value={fc}
-                  onChange={(e) => setFc(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-                />
+                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">FC (bpm)</label>
+                <input type="number" placeholder="72" value={fc} onChange={(e) => setFc(e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500" />
               </div>
-
+              
+              {/* Novos inputs */}
               <div>
-                <label className="text-[11px] text-slate-600 dark:text-slate-400 block mb-1">
-                  Temp (°C)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  placeholder="36.5"
-                  value={temp}
-                  onChange={(e) => setTemp(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-                />
+                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">Hidratação (%)</label>
+                <input type="number" step="0.1" placeholder="60.5" value={hidratacao} onChange={(e) => setHidratacao(e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500" />
               </div>
-
               <div>
-                <label className="text-[11px] text-slate-600 dark:text-slate-400 block mb-1">
-                  Peso (kg)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  placeholder="70.5"
-                  value={peso}
-                  onChange={(e) => setPeso(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-                />
+                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">Oleosidade (%)</label>
+                <input type="number" step="0.1" placeholder="30" value={oleosidade} onChange={(e) => setOleosidade(e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500" />
               </div>
-
-              <div>
-                <label className="text-[11px] text-slate-600 dark:text-slate-400 block mb-1">
-                  Altura (cm)
-                </label>
-                <input
-                  type="number"
-                  placeholder="170"
-                  value={altura}
-                  onChange={(e) => setAltura(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
-                />
+              <div className="col-span-2 sm:col-span-1">
+                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">Elasticidade (%)</label>
+                <input type="number" step="0.1" placeholder="45" value={elasticidade} onChange={(e) => setElasticidade(e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500" />
               </div>
             </div>
           </div>
@@ -567,12 +506,12 @@ export function EvolutionFormModal({
             {/* Subjetivo */}
             <div>
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between mb-1">
-                <span>1. Subjetivo (S) - Queixa Principal & Anamnese Atual *</span>
+                <span>1. Subjetivo (S) - Queixa Principal, Hábitos & Anamnese Regenerativa *</span>
                 <span className="text-[10px] text-slate-400 font-normal">Relato do paciente</span>
               </label>
               <textarea
                 rows={3}
-                placeholder="Ex: Paciente relata dor abdominal em queimação iniciada há 3 dias. Refere piora pós-prandial..."
+                placeholder="Ex: Paciente relata perda de viço e elasticidade na região malar, com início há 6 meses..."
                 value={subjetivo}
                 onChange={(e) => setSubjetivo(e.target.value)}
                 required
@@ -583,12 +522,12 @@ export function EvolutionFormModal({
             {/* Objetivo */}
             <div>
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between mb-1">
-                <span>2. Objetivo (O) - Exame Físico & Achados Clínicos</span>
-                <span className="text-[10px] text-slate-400 font-normal">Inspeção, palpação, ausculta</span>
+                <span>2. Objetivo (O) - Análise Dérmica, Fotografia & Achados Clínicos</span>
+                <span className="text-[10px] text-slate-400 font-normal">Inspeção e achados dermoestéticos</span>
               </label>
               <textarea
                 rows={3}
-                placeholder="Ex: BEG, corado, anictérico. Abdome plano, flácido, com dor à palpação profunda em epigástrio..."
+                placeholder="Ex: Grau leve de flacidez tissular em terço médio, hidratação limítrofe e oleosidade controlada..."
                 value={objetivo}
                 onChange={(e) => setObjetivo(e.target.value)}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none"
@@ -598,12 +537,12 @@ export function EvolutionFormModal({
             {/* Avaliação */}
             <div>
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between mb-1">
-                <span>3. Avaliação (A) - Hipótese Diagnóstica & CID-10 *</span>
-                <span className="text-[10px] text-slate-400 font-normal">Conclusão médica</span>
+                <span>3. Avaliação (A) - Diagnóstico Estético & Necessidades Tissulares *</span>
+                <span className="text-[10px] text-slate-400 font-normal">Conclusão clínica dermoestética</span>
               </label>
               <input
                 type="text"
-                placeholder="Ex: Dispepsia Funcional / Gastrite Aguda (CID-10 K29.1)"
+                placeholder="Ex: Envelhecimento cutâneo cronológico grau II, desidratação epidérmica"
                 value={avaliacao}
                 onChange={(e) => setAvaliacao(e.target.value)}
                 required
@@ -614,12 +553,12 @@ export function EvolutionFormModal({
             {/* Plano */}
             <div>
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between mb-1">
-                <span>4. Plano (P) - Conduta Terapêutica, Prescrições & Orientações *</span>
-                <span className="text-[10px] text-slate-400 font-normal">Tratamento e retornos</span>
+                <span>4. Plano (P) - Protocolo Regenerativo, Prescrições & Home Care *</span>
+                <span className="text-[10px] text-slate-400 font-normal">Procedimentos e cuidados recomendados</span>
               </label>
               <textarea
                 rows={3}
-                placeholder="Ex: 1. Prescrito Omeprazol 20mg em jejum por 28 dias. 2. Orientações dietéticas. 3. Retorno em 30 dias com EDA se refratário."
+                placeholder="Ex: 1. Aplicação de bioestimulador de colágeno (Sculptra) em pontos demarcados. 2. Prescrição de sérum hidratante com ácido hialurônico para home care."
                 value={plano}
                 onChange={(e) => setPlano(e.target.value)}
                 required

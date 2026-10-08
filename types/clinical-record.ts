@@ -3,11 +3,10 @@ export type EvolutionType = string;
 export interface VitalSigns {
   pressaoArterial?: string; // ex: "120/80"
   frequenciaCardiaca?: number; // bpm
-  temperatura?: number; // °C
-  peso?: number; // kg
-  altura?: number; // cm
-  glicemia?: number; // mg/dL
-  imc?: number;
+  hidratacaoCutanea?: number; // %
+  oleosidadeSebo?: number; // %
+  indiceElasticidade?: number; // %
+  imc?: number; // Mantido para referência geral, se necessário
 }
 
 export interface ClinicalEvolution {
