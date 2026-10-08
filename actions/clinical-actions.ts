@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { INITIAL_CLINICAL_RECORDS, DEFAULT_MEDICAL_HISTORY } from "@/lib/clinical-mock-data";
 import type {
   PatientClinicalRecord,
   MedicalHistory,
@@ -10,26 +9,6 @@ import type {
   PrescriptionItem,
 } from "@/types/clinical-record";
 import type { ActionResponse } from "@/types/client";
-
-// Armazenamento em memória para demonstração / runtime
-let memoryClinicalRecords: Record<string, PatientClinicalRecord> = {
-  ...INITIAL_CLINICAL_RECORDS,
-};
-
-function ensurePatientRecord(clientId: string): PatientClinicalRecord {
-  if (!memoryClinicalRecords[clientId]) {
-    memoryClinicalRecords[clientId] = {
-      client_id: clientId,
-      medicalHistory: {
-        ...DEFAULT_MEDICAL_HISTORY,
-        updated_at: new Date().toISOString(),
-      },
-      evolutions: [],
-      prescriptions: [],
-    };
-  }
-  return memoryClinicalRecords[clientId];
-}
 
 /**
  * Consulta Prontuário e Histórico Clínico do Paciente
@@ -42,51 +21,175 @@ export async function getPatientClinicalRecordAction(
       return { success: false, message: "ID do paciente não informado." };
     }
 
-    const record = ensurePatientRecord(clientId);
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(clientId)) {
+      return { success: false, message: "ID de paciente inválido." };
+    }
 
-    // Tenta carregar dados da tabela historico_clinico do Supabase
-    try {
-      const supabase = await createClient();
-      if (supabase) {
-        const { data, error } = await supabase
-          .from("historico_clinico")
-          .select("*")
-          .eq("paciente_id", clientId)
-          .maybeSingle();
+    const supabase = await createClient();
+    if (!supabase) {
+      return { success: false, message: "Banco de dados não disponível." };
+    }
 
-        if (!error && data) {
-          record.medicalHistory = {
-            alergias: data.alergias || [],
-            comorbidades: data.comorbidades || [],
-            medicamentosUsoContinuo: data.medicamentos_uso_continuo || data.medicamentosUsoContinuo || [],
-            acompanhamentoMedico: data.acompanhamento_medico || [],
-            isotretinoina6Meses: Boolean(data.isotretinoina_6_meses),
-            lesoesDetalhes: data.lesoes_detalhes || "",
-            implantesDispositivos: data.implantes_dispositivos || [],
-            ingestaoAgua: data.ingestao_agua || "",
-            qualidadeSono: data.qualidade_sono || "",
-            funcionamentoIntestino: data.funcionamento_intestino || "",
-            fotosAreaTratada: data.fotos_area_tratada || [],
-            tipoSanguineo: data.tipo_sanguineo || data.tipoSanguineo || "Não informado",
-            historicoCirurgico: data.historico_cirurgico || data.historicoCirurgico || "",
-            historicoFamiliar: data.historico_familiar || data.historicoFamiliar || "",
-            habitosVida: data.habitos_vida || data.habitosVida || {
-              tabagismo: "Não fuma",
-              etilismo: "Não consome",
-              atividadeFisica: "Sedentário",
-            },
-            observacoesGerais: data.observacoes_gerais || data.observacoesGerais || "",
-            updated_at: data.updated_at,
-          };
+    // 1. Carrega histórico clínico
+    const defaultHistory: MedicalHistory = {
+      alergias: [],
+      comorbidades: [],
+      medicamentosUsoContinuo: [],
+      acompanhamentoMedico: [],
+      isotretinoina6Meses: false,
+      lesoesDetalhes: "",
+      implantesDispositivos: [],
+      ingestaoAgua: "",
+      qualidadeSono: "",
+      funcionamentoIntestino: "",
+      fotosAreaTratada: [],
+      tipoSanguineo: "Não informado",
+      historicoCirurgico: "",
+      historicoFamiliar: "",
+      habitosVida: {
+        tabagismo: "Não fuma",
+        etilismo: "Não consome",
+        atividadeFisica: "Sedentário",
+      },
+      observacoesGerais: "",
+    };
+
+    let medicalHistory = { ...defaultHistory };
+
+    const { data: dbHistory, error: dbErr } = await supabase
+      .from("historico_clinico")
+      .select("*")
+      .eq("paciente_id", clientId)
+      .maybeSingle();
+
+    if (!dbErr && dbHistory) {
+      medicalHistory = {
+        alergias: dbHistory.alergias || [],
+        comorbidades: dbHistory.comorbidades || [],
+        medicamentosUsoContinuo: dbHistory.medicamentos_uso_continuo || dbHistory.medicamentosUsoContinuo || [],
+        acompanhamentoMedico: dbHistory.acompanhamento_medico || [],
+        isotretinoina6Meses: Boolean(dbHistory.isotretinoina_6_meses),
+        lesoesDetalhes: dbHistory.lesoes_detalhes || "",
+        implantesDispositivos: dbHistory.implantes_dispositivos || [],
+        ingestaoAgua: dbHistory.ingestao_agua || "",
+        qualidadeSono: dbHistory.qualidade_sono || "",
+        funcionamentoIntestino: dbHistory.funcionamento_intestino || "",
+        fotosAreaTratada: dbHistory.fotos_area_tratada || [],
+        tipoSanguineo: dbHistory.tipo_sanguineo || dbHistory.tipoSanguineo || "Não informado",
+        historicoCirurgico: dbHistory.historico_cirurgico || dbHistory.historicoCirurgico || "",
+        historicoFamiliar: dbHistory.historico_familiar || dbHistory.historicoFamiliar || "",
+        habitosVida: dbHistory.habitos_vida || dbHistory.habitosVida || defaultHistory.habitosVida,
+        observacoesGerais: dbHistory.observacoes_gerais || dbHistory.observacoesGerais || "",
+        updated_at: dbHistory.updated_at,
+      };
+    }
+
+    // 2. Carrega prescrições reais do Supabase
+    const { data: prescricoesDb, error: rxErr } = await supabase
+      .from("prescricoes")
+      .select(`
+        id,
+        data_prescricao,
+        status,
+        observacoes,
+        prescricao_itens (
+          id,
+          nome_formula,
+          via,
+          veiculo,
+          dosagem,
+          tipo_veiculo,
+          posologia,
+          duracao,
+          orient_paciente,
+          orient_farmacia,
+          componentes_snapshot
+        )
+      `)
+      .eq("paciente_id", clientId)
+      .order("data_prescricao", { ascending: false });
+
+    const mappedPrescriptions: PrescriptionItem[] = [];
+
+    if (!rxErr && prescricoesDb && prescricoesDb.length > 0) {
+      for (const p of prescricoesDb) {
+        const items = p.prescricao_itens || [];
+        for (const item of items) {
+          const snap = (item.componentes_snapshot as any[]) || [];
+          const listAtivos = snap
+            .map((c: any) => `${c.nome}: ${c.quantidade}${c.unidade || "%"}`)
+            .join(" + ");
+
+          const sanitizedTipoVeiculo = item.tipo_veiculo;
+          const formattedDosagem = item.via === "oral"
+            ? `${listAtivos} em ${item.veiculo} (Dose: ${item.dosagem} | Total: ${item.duracao} ${sanitizedTipoVeiculo || "un"})`
+            : `${listAtivos} em ${item.veiculo} q.s.p. ${item.dosagem}g (Total: ${item.duracao} un)`;
+
+          const combinedInstrucoes = [
+            item.orient_paciente ? `[Orientações ao Paciente]\n${item.orient_paciente}` : "",
+            item.orient_farmacia ? `[Observações à Farmácia Magistral]\n${item.orient_farmacia}` : "",
+          ].filter(Boolean).join("\n\n");
+
+          mappedPrescriptions.push({
+            id: item.id || p.id,
+            client_id: clientId,
+            data: p.data_prescricao || new Date().toISOString().split("T")[0],
+            medicamento: item.nome_formula,
+            dosagem: formattedDosagem,
+            via: item.via === "oral" ? "Oral" : "Tópico",
+            posologia: item.posologia || "",
+            duracao: item.via === "oral" ? `${item.duracao} ${sanitizedTipoVeiculo || "un"}` : "Uso recomendado",
+            ativo: p.status === "Ativo",
+            instrucoes: combinedInstrucoes || undefined,
+          });
         }
       }
-    } catch (dbErr) {
-      console.warn("Aviso ao buscar historico_clinico no Supabase:", dbErr);
+    }
+
+    // 3. Evoluções
+    let mappedEvolutions: ClinicalEvolution[] = [];
+    try {
+      const { data: evDb, error: evErr } = await supabase
+        .from("evolucoes_clinicas")
+        .select("*")
+        .eq("paciente_id", clientId)
+        .order("created_at", { ascending: false });
+
+      if (!evErr && evDb) {
+        mappedEvolutions = evDb.map((e: any) => ({
+          id: e.id,
+          client_id: e.paciente_id,
+          data: e.data,
+          horario: e.horario,
+          tipo: e.tipo,
+          tipo_atendimento: e.tipo_atendimento,
+          procedimento_id: e.procedimento_id,
+          appointment_id: e.appointment_id,
+          exames_anexos: e.exames_anexos || [],
+          fotos_paciente: e.fotos_paciente || [],
+          profissional: e.profissional,
+          especialidade: e.especialidade,
+          subjetivo: e.subjetivo,
+          objetivo: e.objetivo,
+          sinaisVitais: e.sinais_vitais || undefined,
+          avaliacao: e.avaliacao,
+          plano: e.plano,
+          created_at: e.created_at,
+        }));
+      }
+    } catch {
+      // Falha silenciosa caso a tabela não exista, mantendo array vazio
     }
 
     return {
       success: true,
-      data: record,
+      data: {
+        client_id: clientId,
+        medicalHistory,
+        evolutions: mappedEvolutions,
+        prescriptions: mappedPrescriptions,
+      },
     };
   } catch (error) {
     console.error("Erro ao obter prontuário clínico:", error);
@@ -109,7 +212,10 @@ export async function addClinicalEvolutionAction(
       return { success: false, message: "ID do paciente não fornecido." };
     }
 
-    const record = ensurePatientRecord(clientId);
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(clientId)) {
+      return { success: false, message: "ID de paciente inválido." };
+    }
 
     // Calcula IMC se peso e altura foram fornecidos
     let calculatedImc = input.sinaisVitais?.imc;
@@ -151,25 +257,45 @@ export async function addClinicalEvolutionAction(
       created_at: new Date().toISOString(),
     };
 
-    record.evolutions.unshift(newEvolution);
-
-    // Se houver um agendamento vinculado, atualiza seu status para 'Realizado' no Supabase
-    if (input.appointment_id) {
+    const supabase = await createClient();
+    if (supabase) {
+      // Tenta gravar na tabela evolucoes_clinicas
       try {
-        const supabase = await createClient();
-        if (supabase) {
+        await supabase.from("evolucoes_clinicas").insert({
+          paciente_id: clientId,
+          data: newEvolution.data,
+          horario: newEvolution.horario,
+          tipo: newEvolution.tipo,
+          tipo_atendimento: newEvolution.tipo_atendimento,
+          procedimento_id: newEvolution.procedimento_id,
+          appointment_id: newEvolution.appointment_id,
+          exames_anexos: newEvolution.exames_anexos,
+          fotos_paciente: newEvolution.fotos_paciente,
+          profissional: newEvolution.profissional,
+          especialidade: newEvolution.especialidade,
+          subjetivo: newEvolution.subjetivo,
+          objetivo: newEvolution.objetivo,
+          sinais_vitais: newEvolution.sinaisVitais,
+          avaliacao: newEvolution.avaliacao,
+          plano: newEvolution.plano,
+        });
+      } catch (e) {
+        console.warn("Aviso ao salvar evolucoes_clinicas no Supabase:", e);
+      }
+
+      // Se houver um agendamento vinculado, atualiza seu status para 'Realizado' no Supabase
+      if (input.appointment_id) {
+        try {
           const { error } = await supabase
             .from("appointments")
             .update({ status: "Realizado", updated_at: new Date().toISOString() })
             .eq("id", input.appointment_id);
           if (error) {
             console.warn(`[addClinicalEvolutionAction] Erro ao atualizar status do agendamento ${input.appointment_id}:`, error.message);
-          } else {
-            console.log(`[addClinicalEvolutionAction] Agendamento ${input.appointment_id} atualizado para 'Realizado' com sucesso.`);
           }
+        } catch (err) {
+          console.error(`[addClinicalEvolutionAction] Exceção ao atualizar agendamento ${input.appointment_id}:`, err);
         }
-      } catch (err) {
-        console.error(`[addClinicalEvolutionAction] Exceção ao atualizar agendamento ${input.appointment_id}:`, err);
       }
     }
 
@@ -201,47 +327,44 @@ export async function updateMedicalHistoryAction(
       return { success: false, message: "ID do paciente não informado." };
     }
 
-    const record = ensurePatientRecord(clientId);
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(clientId)) {
+      return { success: false, message: "ID de paciente inválido." };
+    }
 
-    record.medicalHistory = {
-      ...history,
-      updated_at: new Date().toISOString(),
-    };
+    const supabase = await createClient();
+    if (!supabase) {
+      return { success: false, message: "Banco de dados não disponível." };
+    }
 
-    // Tenta gravar na tabela historico_clinico do Supabase (upsert)
-    try {
-      const supabase = await createClient();
-      if (supabase) {
-        const { error } = await supabase.from("historico_clinico").upsert(
-          {
-            paciente_id: clientId,
-            alergias: history.alergias,
-            comorbidades: history.comorbidades,
-            medicamentos_uso_continuo: history.medicamentosUsoContinuo,
-            acompanhamento_medico: history.acompanhamentoMedico || [],
-            isotretinoina_6_meses: Boolean(history.isotretinoina6Meses),
-            lesoes_detalhes: history.lesoesDetalhes || "",
-            implantes_dispositivos: history.implantesDispositivos || [],
-            ingestao_agua: history.ingestaoAgua || "",
-            qualidade_sono: history.qualidadeSono || "",
-            funcionamento_intestino: history.funcionamentoIntestino || "",
-            fotos_area_tratada: history.fotosAreaTratada || [],
-            tipo_sanguineo: history.tipoSanguineo,
-            historico_cirurgico: history.historicoCirurgico,
-            historico_familiar: history.historicoFamiliar,
-            habitos_vida: history.habitosVida,
-            observacoes_gerais: history.observacoesGerais || "",
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "paciente_id" }
-        );
+    // Gravar na tabela historico_clinico do Supabase (upsert)
+    const { error } = await supabase.from("historico_clinico").upsert(
+      {
+        paciente_id: clientId,
+        alergias: history.alergias,
+        comorbidades: history.comorbidades,
+        medicamentos_uso_continuo: history.medicamentosUsoContinuo,
+        acompanhamento_medico: history.acompanhamentoMedico || [],
+        isotretinoina_6_meses: Boolean(history.isotretinoina6Meses),
+        lesoes_detalhes: history.lesoesDetalhes || "",
+        implantes_dispositivos: history.implantesDispositivos || [],
+        ingestao_agua: history.ingestaoAgua || "",
+        qualidade_sono: history.qualidadeSono || "",
+        funcionamento_intestino: history.funcionamentoIntestino || "",
+        fotos_area_tratada: history.fotosAreaTratada || [],
+        tipo_sanguineo: history.tipoSanguineo,
+        historico_cirurgico: history.historicoCirurgico,
+        historico_familiar: history.historicoFamiliar,
+        habitos_vida: history.habitosVida,
+        observacoes_gerais: history.observacoesGerais || "",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "paciente_id" }
+    );
 
-        if (error) {
-          console.warn("Aviso ao salvar historico_clinico no Supabase:", error.message);
-        }
-      }
-    } catch (dbErr) {
-      console.warn("Exceção ao salvar historico_clinico no Supabase:", dbErr);
+    if (error) {
+      console.warn("Aviso ao salvar historico_clinico no Supabase:", error.message);
+      return { success: false, message: `Erro ao salvar histórico clínico: ${error.message}` };
     }
 
     revalidatePath("/");
@@ -249,7 +372,7 @@ export async function updateMedicalHistoryAction(
     return {
       success: true,
       message: "Histórico clínico atualizado com sucesso!",
-      data: record.medicalHistory,
+      data: history,
     };
   } catch (error) {
     console.error("Erro ao atualizar histórico clínico:", error);
@@ -261,7 +384,7 @@ export async function updateMedicalHistoryAction(
 }
 
 /**
- * Adiciona uma Nova Prescrição / Medicamento
+ * Adiciona uma Nova Prescrição / Medicamento simples
  */
 export async function addPrescriptionAction(
   clientId: string,
@@ -272,16 +395,55 @@ export async function addPrescriptionAction(
       return { success: false, message: "ID do paciente não informado." };
     }
 
-    const record = ensurePatientRecord(clientId);
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(clientId)) {
+      return { success: false, message: "ID de paciente inválido." };
+    }
+
+    const supabase = await createClient();
+    if (!supabase) {
+      return { success: false, message: "Banco de dados não disponível." };
+    }
+
+    // Registra como prescrição simples
+    const { data: prescricao, error: errPresc } = await supabase
+      .from("prescricoes")
+      .insert({
+        paciente_id: clientId,
+        data_prescricao: prescription.data || new Date().toISOString().split("T")[0],
+        status: prescription.ativo ? "Ativo" : "Suspenso",
+        observacoes: prescription.instrucoes || null,
+      })
+      .select("id")
+      .single();
+
+    if (errPresc || !prescricao) {
+      return { success: false, message: `Erro ao salvar cabeçalho de prescrição: ${errPresc?.message}` };
+    }
+
+    const { data: item, error: errItem } = await supabase
+      .from("prescricao_itens")
+      .insert({
+        prescricao_id: prescricao.id,
+        nome_formula: prescription.medicamento,
+        via: prescription.via?.toLowerCase() === "oral" ? "oral" : "tópico",
+        dosagem: parseFloat(prescription.dosagem) || null,
+        posologia: prescription.posologia,
+        duracao: prescription.duracao,
+        orient_paciente: prescription.instrucoes || null,
+      })
+      .select("id")
+      .single();
+
+    if (errItem) {
+      return { success: false, message: `Erro ao salvar itens de prescrição: ${errItem.message}` };
+    }
 
     const newPrescription: PrescriptionItem = {
       ...prescription,
-      id: `rx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: item.id || prescricao.id,
       client_id: clientId,
-      data: prescription.data || new Date().toISOString().split("T")[0],
     };
-
-    record.prescriptions.unshift(newPrescription);
 
     revalidatePath("/");
 
@@ -307,19 +469,49 @@ export async function togglePrescriptionStatusAction(
   prescriptionId: string
 ): Promise<ActionResponse<void>> {
   try {
-    const record = ensurePatientRecord(clientId);
-    const item = record.prescriptions.find((p) => p.id === prescriptionId);
+    if (!clientId) {
+      return { success: false, message: "ID do paciente não fornecido." };
+    }
 
-    if (!item) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(clientId)) {
+      return { success: false, message: "ID de paciente inválido." };
+    }
+
+    const supabase = await createClient();
+    if (!supabase) {
+      return { success: false, message: "Banco de dados não disponível." };
+    }
+
+    // Busca a prescrição para ver o status atual
+    const { data: prescricao, error: fetchErr } = await supabase
+      .from("prescricoes")
+      .select("status")
+      .eq("id", prescriptionId)
+      .eq("paciente_id", clientId)
+      .maybeSingle();
+
+    if (fetchErr || !prescricao) {
       return { success: false, message: "Prescrição não encontrada." };
     }
 
-    item.ativo = !item.ativo;
+    const newStatus = prescricao.status === "Ativo" ? "Suspenso" : "Ativo";
+
+    const { error: updateErr } = await supabase
+      .from("prescricoes")
+      .update({ status: newStatus })
+      .eq("id", prescriptionId)
+      .eq("paciente_id", clientId);
+
+    if (updateErr) {
+      return { success: false, message: `Erro ao alterar status: ${updateErr.message}` };
+    }
+
     revalidatePath("/");
 
     return {
       success: true,
-      message: item.ativo ? "Prescrição reativada." : "Medicamento suspenso com sucesso.",
+      message: newStatus === "Ativo" ? "Prescrição reativada." : "Medicamento suspenso com sucesso.",
     };
   } catch (error) {
     console.error("Erro ao alterar status da prescrição:", error);
@@ -330,12 +522,6 @@ export async function togglePrescriptionStatusAction(
 // =========================================================================
 // INTEGRAÇÃO DE FÓRMULAS, COMPONENTES E UNIDADES (SUPABASE COM RESILIÊNCIA)
 // =========================================================================
-
-const MOCK_UNIDADES: any[] = [];
-
-const MOCK_COMPONENTES: any[] = [];
-
-const MOCK_FORMULAS: any[] = [];
 
 function toTitleCase(str: string): string {
   if (!str) return "";
@@ -493,7 +679,10 @@ export async function addStructuredPrescriptionAction(
   input: StructuredPrescriptionPayload
 ): Promise<ActionResponse<PrescriptionItem>> {
   try {
-    if (!clientId) return { success: false, message: "ID do paciente não fornecido." };
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!clientId || !uuidRegex.test(clientId)) {
+      return { success: false, message: "ID do paciente inválido. Acesse através da lista de pacientes cadastrados." };
+    }
 
     const supabase = await createClient();
 
@@ -681,7 +870,6 @@ export async function addStructuredPrescriptionAction(
       input.orient_farmacia ? `[Observações à Farmácia Magistral]\n${input.orient_farmacia}` : "",
     ].filter(Boolean).join("\n\n");
 
-    const record = ensurePatientRecord(clientId);
     const newPrescription: PrescriptionItem = {
       id: `rx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       client_id: clientId,
@@ -695,7 +883,6 @@ export async function addStructuredPrescriptionAction(
       instrucoes: combinedInstrucoes || undefined,
     };
 
-    record.prescriptions.unshift(newPrescription);
     revalidatePath("/");
 
     return {

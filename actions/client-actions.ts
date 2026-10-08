@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { clientSchema, clientFilterSchema } from "@/lib/validations/client-schema";
 import { calculateAge } from "@/lib/brazil-data";
-import { INITIAL_CLIENTS } from "@/lib/mock-data";
 import { getSession } from "@/lib/auth/session";
 import type {
   Client,
@@ -13,9 +13,6 @@ import type {
   PaginatedResult,
   ActionResponse,
 } from "@/types/client";
-
-// Armazenamento em memória para demonstração / preview enquanto as chaves do Supabase não forem injetadas
-let memoryClients: Client[] = [...INITIAL_CLIENTS];
 
 /**
  * Normaliza erros do Zod em um mapa chave/valor amigável
@@ -53,109 +50,58 @@ export async function getClientsAction(
     }
 
     const { search, status, page, pageSize, sortBy, sortOrder } = filterParsed.data;
-    const supabase = getSupabaseAdminClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
 
-    // Se o Supabase estiver configurado, executa queries nativas no PostgreSQL
-    if (supabase) {
-      let query = supabase.from("pacientes").select("*", { count: "exact" });
-
-      // Filtro de Soft Delete e Status
-      if (status === "excluidos") {
-        query = query.not("deleted_at", "is", null);
-      } else {
-        query = query.is("deleted_at", null);
-        if (status === "Ativo" || status === "Inativo") {
-          query = query.eq("status", status);
-        }
-      }
-
-      // Busca textual em tempo real (Nome, CPF ou E-mail)
-      if (search && search.trim().length > 0) {
-        const term = search.trim();
-        query = query.or(`nome.ilike.%${term}%,cpf.ilike.%${term}%,email.ilike.%${term}%`);
-      }
-
-      // Ordenação
-      query = query.order(sortBy, { ascending: sortOrder === "asc" });
-
-      // Paginação
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-      query = query.range(from, to);
-
-      const { data, error, count } = await query;
-
-      if (error) {
-        console.error("Erro Supabase getClients:", error);
-        return {
-          success: false,
-          message: `Erro ao consultar banco de dados: ${error.message}`,
-        };
-      }
-
-      const total = count ?? 0;
-      const totalPages = Math.ceil(total / pageSize);
-
+    if (!supabase) {
       return {
-        success: true,
-        data: {
-          data: (data as Client[]) || [],
-          total,
-          page,
-          pageSize,
-          totalPages,
-          hasMore: page < totalPages,
-        },
+        success: false,
+        message: "Banco de dados não disponível.",
       };
     }
 
-    // Fallback em memória (para uso imediato no AI Studio Preview sem configuração prévia de chaves)
-    let filtered = [...memoryClients];
+    let query = supabase.from("pacientes").select("*", { count: "exact" });
 
+    // Filtro de Soft Delete e Status
     if (status === "excluidos") {
-      filtered = filtered.filter((c) => c.deleted_at !== null);
+      query = query.not("deleted_at", "is", null);
     } else {
-      filtered = filtered.filter((c) => c.deleted_at === null);
+      query = query.is("deleted_at", null);
       if (status === "Ativo" || status === "Inativo") {
-        filtered = filtered.filter((c) => c.status === status);
+        query = query.eq("status", status);
       }
     }
 
+    // Busca textual em tempo real (Nome, CPF ou E-mail)
     if (search && search.trim().length > 0) {
-      const term = search.toLowerCase().trim();
-      filtered = filtered.filter(
-        (c) =>
-          c.nome.toLowerCase().includes(term) ||
-          c.cpf.includes(term) ||
-          c.email.toLowerCase().includes(term) ||
-          c.cidade.toLowerCase().includes(term)
-      );
+      const term = search.trim();
+      query = query.or(`nome.ilike.%${term}%,cpf.ilike.%${term}%,email.ilike.%${term}%`);
     }
 
     // Ordenação
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      if (sortBy === "nome") {
-        comparison = a.nome.localeCompare(b.nome);
-      } else if (sortBy === "idade") {
-        comparison = a.idade - b.idade;
-      } else if (sortBy === "cidade") {
-        comparison = a.cidade.localeCompare(b.cidade);
-      } else {
-        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      }
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
+    query = query.order(sortBy, { ascending: sortOrder === "asc" });
 
-    const total = filtered.length;
-    const totalPages = Math.ceil(total / pageSize) || 1;
-    const startIndex = (page - 1) * pageSize;
-    const paginatedItems = filtered.slice(startIndex, startIndex + pageSize);
+    // Paginação
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Erro Supabase getClients:", error);
+      return {
+        success: false,
+        message: `Erro ao consultar banco de dados: ${error.message}`,
+      };
+    }
+
+    const total = count ?? 0;
+    const totalPages = Math.ceil(total / pageSize);
 
     return {
       success: true,
       data: {
-        data: paginatedItems,
+        data: (data as Client[]) || [],
         total,
         page,
         pageSize,
@@ -177,31 +123,29 @@ export async function getClientsAction(
  */
 export async function getClientByIdAction(id: string): Promise<ActionResponse<Client>> {
   try {
-    const supabase = getSupabaseAdminClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
 
-    if (supabase) {
-      const { data, error } = await supabase
-        .from("pacientes")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (error || !data) {
-        return {
-          success: false,
-          message: "Cliente/Paciente não encontrado no banco de dados.",
-        };
-      }
-
-      return { success: true, data: data as Client };
+    if (!supabase) {
+      return {
+        success: false,
+        message: "Banco de dados não disponível.",
+      };
     }
 
-    const found = memoryClients.find((c) => c.id === id);
-    if (!found) {
-      return { success: false, message: "Paciente não encontrado." };
+    const { data, error } = await supabase
+      .from("pacientes")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error || !data) {
+      return {
+        success: false,
+        message: "Cliente/Paciente não encontrado no banco de dados.",
+      };
     }
 
-    return { success: true, data: found };
+    return { success: true, data: data as Client };
   } catch (error) {
     return {
       success: false,
@@ -249,81 +193,55 @@ export async function createClientAction(
     }
     validData.idade = calculatedAge;
 
-    const supabase = getSupabaseAdminClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
 
-    // Inserção no Supabase PostgreSQL
-    if (supabase) {
-      // Verifica duplicidade de CPF ativo
-      const { data: existingCpf } = await supabase
-        .from("pacientes")
-        .select("id")
-        .eq("cpf", validData.cpf)
-        .is("deleted_at", null)
-        .maybeSingle();
-
-      if (existingCpf) {
-        return {
-          success: false,
-          message: "Já existe um paciente ativo cadastrado com este CPF.",
-          errors: { cpf: ["Este CPF já está registrado para outro paciente ativo."] },
-        };
-      }
-
-      const { data, error } = await supabase
-        .from("pacientes")
-        .insert([
-          {
-            ...validData,
-            deleted_at: null,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Erro Supabase createClient:", error);
-        return {
-          success: false,
-          message: `Erro ao salvar paciente no Supabase: ${error.message}`,
-        };
-      }
-
-      revalidatePath("/");
-      return {
-        success: true,
-        message: "Paciente cadastrado com sucesso!",
-        data: data as Client,
-      };
-    }
-
-    // Fallback de memória
-    const cpfConflict = memoryClients.some(
-      (c) => c.cpf === validData.cpf && c.deleted_at === null
-    );
-    if (cpfConflict) {
+    if (!supabase) {
       return {
         success: false,
-        message: "Já existe um paciente ativo com este CPF.",
-        errors: { cpf: ["Este CPF já está em uso."] },
+        message: "Banco de dados não disponível.",
       };
     }
 
-    const now = new Date().toISOString();
-    const newClient: Client = {
-      ...validData,
-      id: crypto.randomUUID(),
-      created_at: now,
-      updated_at: now,
-      deleted_at: null,
-    };
+    // Verifica duplicidade de CPF ativo
+    const { data: existingCpf } = await supabase
+      .from("pacientes")
+      .select("id")
+      .eq("cpf", validData.cpf)
+      .is("deleted_at", null)
+      .maybeSingle();
 
-    memoryClients.unshift(newClient);
+    if (existingCpf) {
+      return {
+        success: false,
+        message: "Já existe um paciente ativo cadastrado com este CPF.",
+        errors: { cpf: ["Este CPF já está registrado para outro paciente ativo."] },
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("pacientes")
+      .insert([
+        {
+          ...validData,
+          deleted_at: null,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Erro Supabase createClient:", error);
+      return {
+        success: false,
+        message: `Erro ao salvar paciente no Supabase: ${error.message}`,
+      };
+    }
+
     revalidatePath("/");
-
     return {
       success: true,
       message: "Paciente cadastrado com sucesso!",
-      data: newClient,
+      data: data as Client,
     };
   } catch (error) {
     console.error("Erro em createClientAction:", error);
@@ -378,81 +296,54 @@ export async function updateClientAction(
     }
     validData.idade = calculatedAge;
 
-    const supabase = getSupabaseAdminClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
 
-    if (supabase) {
-      // Verifica duplicidade de CPF com outro paciente ativo
-      const { data: existingCpf } = await supabase
-        .from("pacientes")
-        .select("id")
-        .eq("cpf", validData.cpf)
-        .neq("id", id)
-        .is("deleted_at", null)
-        .maybeSingle();
-
-      if (existingCpf) {
-        return {
-          success: false,
-          message: "Este CPF já está cadastrado para outro paciente.",
-          errors: { cpf: ["CPF já em uso por outro cadastro."] },
-        };
-      }
-
-      const { data, error } = await supabase
-        .from("pacientes")
-        .update({
-          ...validData,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) {
-        return {
-          success: false,
-          message: `Erro ao atualizar paciente: ${error.message}`,
-        };
-      }
-
-      revalidatePath("/");
-      return {
-        success: true,
-        message: "Dados do paciente atualizados com sucesso!",
-        data: data as Client,
-      };
-    }
-
-    // Fallback de memória
-    const index = memoryClients.findIndex((c) => c.id === id);
-    if (index === -1) {
-      return { success: false, message: "Paciente não encontrado para edição." };
-    }
-
-    const cpfConflict = memoryClients.some(
-      (c) => c.cpf === validData.cpf && c.id !== id && c.deleted_at === null
-    );
-    if (cpfConflict) {
+    if (!supabase) {
       return {
         success: false,
-        message: "CPF já em uso por outro paciente.",
-        errors: { cpf: ["CPF duplicado."] },
+        message: "Banco de dados não disponível.",
       };
     }
 
-    const updatedClient: Client = {
-      ...memoryClients[index],
-      ...validData,
-      updated_at: new Date().toISOString(),
-    };
+    // Verifica duplicidade de CPF com outro paciente ativo
+    const { data: existingCpf } = await supabase
+      .from("pacientes")
+      .select("id")
+      .eq("cpf", validData.cpf)
+      .neq("id", id)
+      .is("deleted_at", null)
+      .maybeSingle();
 
-    memoryClients[index] = updatedClient;
+    if (existingCpf) {
+      return {
+        success: false,
+        message: "Este CPF já está cadastrado para outro paciente.",
+        errors: { cpf: ["CPF já em uso por outro cadastro."] },
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("pacientes")
+      .update({
+        ...validData,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      return {
+        success: false,
+        message: `Erro ao atualizar paciente: ${error.message}`,
+      };
+    }
+
     revalidatePath("/");
-
     return {
       success: true,
       message: "Dados do paciente atualizados com sucesso!",
-      data: updatedClient,
+      data: data as Client,
     };
   } catch (error) {
     return {
@@ -482,47 +373,36 @@ export async function softDeleteClientAction(id: string): Promise<ActionResponse
       };
     }
 
-    const supabase = getSupabaseAdminClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
 
-    if (supabase) {
-      const now = new Date().toISOString();
-      const { error } = await supabase
-        .from("pacientes")
-        .update({
-          deleted_at: now,
-          status: "Inativo",
-          updated_at: now,
-        })
-        .eq("id", id);
-
-      if (error) {
-        return {
-          success: false,
-          message: `Erro ao inativar paciente: ${error.message}`,
-        };
-      }
-
-      revalidatePath("/");
+    if (!supabase) {
       return {
-        success: true,
-        message: "Paciente movido para a lixeira com sucesso!",
+        success: false,
+        message: "Banco de dados não disponível.",
       };
     }
 
-    // Fallback de memória
-    const client = memoryClients.find((c) => c.id === id);
-    if (!client) {
-      return { success: false, message: "Paciente não localizado." };
-    }
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("pacientes")
+      .update({
+        deleted_at: now,
+        status: "Inativo",
+        updated_at: now,
+      })
+      .eq("id", id);
 
-    client.deleted_at = new Date().toISOString();
-    client.status = "Inativo";
-    client.updated_at = new Date().toISOString();
+    if (error) {
+      return {
+        success: false,
+        message: `Erro ao inativar paciente: ${error.message}`,
+      };
+    }
 
     revalidatePath("/");
     return {
       success: true,
-      message: "Paciente movido para a lixeira (exclusão lógica) com sucesso!",
+      message: "Paciente movido para a lixeira com sucesso!",
     };
   } catch (error) {
     return {
@@ -546,46 +426,36 @@ export async function restoreClientAction(id: string): Promise<ActionResponse<vo
       };
     }
 
-    const supabase = getSupabaseAdminClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
 
-    if (supabase) {
-      const now = new Date().toISOString();
-      const { error } = await supabase
-        .from("pacientes")
-        .update({
-          deleted_at: null,
-          status: "Ativo",
-          updated_at: now,
-        })
-        .eq("id", id);
-
-      if (error) {
-        return {
-          success: false,
-          message: `Erro ao restaurar: ${error.message}`,
-        };
-      }
-
-      revalidatePath("/");
+    if (!supabase) {
       return {
-        success: true,
-        message: "Paciente restaurado com sucesso!",
+        success: false,
+        message: "Banco de dados não disponível.",
       };
     }
 
-    const client = memoryClients.find((c) => c.id === id);
-    if (!client) {
-      return { success: false, message: "Paciente não localizado." };
-    }
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("pacientes")
+      .update({
+        deleted_at: null,
+        status: "Ativo",
+        updated_at: now,
+      })
+      .eq("id", id);
 
-    client.deleted_at = null;
-    client.status = "Ativo";
-    client.updated_at = new Date().toISOString();
+    if (error) {
+      return {
+        success: false,
+        message: `Erro ao restaurar: ${error.message}`,
+      };
+    }
 
     revalidatePath("/");
     return {
       success: true,
-      message: "Paciente restaurado com sucesso para a lista ativa!",
+      message: "Paciente restaurado com sucesso!",
     };
   } catch (error) {
     return {
@@ -609,29 +479,27 @@ export async function permanentDeleteClientAction(id: string): Promise<ActionRes
       };
     }
 
-    const supabase = getSupabaseAdminClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
 
-    if (supabase) {
-      const { error } = await supabase.from("pacientes").delete().eq("id", id);
-      if (error) {
-        return {
-          success: false,
-          message: `Erro ao excluir definitivamente: ${error.message}`,
-        };
-      }
-
-      revalidatePath("/");
+    if (!supabase) {
       return {
-        success: true,
-        message: "Registro excluído permanentemente do banco de dados.",
+        success: false,
+        message: "Banco de dados não disponível.",
       };
     }
 
-    memoryClients = memoryClients.filter((c) => c.id !== id);
+    const { error } = await supabase.from("pacientes").delete().eq("id", id);
+    if (error) {
+      return {
+        success: false,
+        message: `Erro ao excluir definitivamente: ${error.message}`,
+      };
+    }
+
     revalidatePath("/");
     return {
       success: true,
-      message: "Registro excluído permanentemente.",
+      message: "Registro excluído permanentemente do banco de dados.",
     };
   } catch (error) {
     return {
