@@ -677,201 +677,236 @@ export interface StructuredPrescriptionPayload {
 export async function addStructuredPrescriptionAction(
   clientId: string,
   input: StructuredPrescriptionPayload
-): Promise<ActionResponse<PrescriptionItem>> {
+): Promise<ActionResponse<any>> {
   try {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!clientId || !uuidRegex.test(clientId)) {
-      return { success: false, message: "ID do paciente inválido. Acesse através da lista de pacientes cadastrados." };
+      return { success: false, message: "ID do paciente inválido. Acesso ao banco recusado." };
     }
 
     const supabase = await createClient();
+    if (!supabase) return { success: false, message: "Erro de conexão com o Supabase." };
 
-    const parseBrFloat = (val: any): number | null => {
-      if (val === undefined || val === null || val === '') return null;
-      const num = typeof val === 'number' ? val : parseFloat(String(val).replace(',', '.').replace(/[^0-9.]/g, ''));
-      return isNaN(num) ? null : num;
+    const parseNum = (val: any): number | null => {
+      if (val === undefined || val === null || val === "") return null;
+      const n = typeof val === "number" ? val : parseFloat(String(val).replace(",", ".").replace(/[^0-9.]/g, ""));
+      return isNaN(n) ? null : n;
     };
 
     const titleCaseFormulaName = toTitleCase(input.nome_formula);
     const titleCaseVeiculo = toTitleCase(input.veiculo);
-    const normalizedVia = (input.via?.toLowerCase() === 'oral' ? 'oral' : 'tópico') as 'oral' | 'tópico';
-    
-    // A constraint da tabela 'formulas' aceita estritamente estes 3 valores (ou nulo)
-    const validTipos = ['dose(s)', 'sachê(s)', 'comprimido(s)'];
-    const sanitizedTipoVeiculo = validTipos.includes(input.tipo_veiculo) ? input.tipo_veiculo : null;
-    const numDosagem = parseBrFloat(input.dosagem_valor);
+    const normalizedVia = (input.via?.toLowerCase() === "oral" ? "oral" : "tópico") as "oral" | "tópico";
+
+    const validTiposVeiculo = ["dose(s)", "sachê(s)", "comprimido(s)"];
+    const sanitizedTipoVeiculo = validTiposVeiculo.includes(input.tipo_veiculo) ? input.tipo_veiculo : null;
+    const numDosagem = parseNum(input.dosagem_valor);
 
     let formulaId = null;
 
-    if (supabase) {
-      // 1. Inserir/Atualizar Fórmula (schemas validados)
-      const { data: existingFormula } = await supabase
+    // 1. Inserir ou buscar a fórmula
+    const { data: existingFormula, error: findFormulaErr } = await supabase
+      .from("formulas")
+      .select("id")
+      .ilike("nome", titleCaseFormulaName)
+      .eq("via", normalizedVia)
+      .maybeSingle();
+
+    if (findFormulaErr) {
+      return { success: false, message: `Erro ao localizar fórmula: ${findFormulaErr.message}` };
+    }
+
+    if (existingFormula) {
+      formulaId = existingFormula.id;
+    } else {
+      const { data: newFormula, error: formulaErr } = await supabase
         .from("formulas")
-        .select("id")
-        .ilike("nome", titleCaseFormulaName)
-        .eq("via", normalizedVia)
-        .maybeSingle();
-
-      if (existingFormula) {
-        formulaId = existingFormula.id;
-      } else {
-        const { data: newFormula, error: formulaErr } = await supabase
-          .from('formulas')
-          .insert({
-            nome: titleCaseFormulaName,
-            descricao: input.descricao || null,
-            via: normalizedVia,
-            veiculo: titleCaseVeiculo || null,
-            dosagem: numDosagem,
-            tipo_veiculo: sanitizedTipoVeiculo,
-            posologia: input.posologia?.trim() || null,
-            orient_paciente: input.orient_paciente || null,
-            orient_farmacia: input.orient_farmacia || null,
-          })
-          .select('id')
-          .single();
-
-        if (formulaErr) {
-          console.error('Erro ao inserir formula:', formulaErr.message);
-        } else if (newFormula) {
-          formulaId = newFormula.id;
-        }
-      }
-
-      // 2. Unidades e Componentes (Garante que a constraint NOT NULL de unidade_id nunca falhe)
-      const { data: dbUnidades } = await supabase.from('unidades').select('id, unidade');
-      let defaultUnidadeId = dbUnidades && dbUnidades.length > 0 ? dbUnidades[0].id : null;
-
-      const processedComponentes = [];
-      for (const comp of input.componentes) {
-        if (!comp.nome || !comp.nome.trim()) continue;
-        
-        const titleCaseName = toTitleCase(comp.nome);
-        const sigla = comp.unidade_sigla || '%';
-        let matchedUnidadeId = comp.unidade_id;
-
-        if (!matchedUnidadeId || matchedUnidadeId.startsWith("new_")) {
-           const foundUnit = dbUnidades?.find((u: any) => u.unidade.toLowerCase() === sigla.toLowerCase());
-           matchedUnidadeId = foundUnit ? foundUnit.id : defaultUnidadeId;
-        }
-
-        // Se a tabela estiver completamente vazia, insere uma unidade dinamicamente
-        if (!matchedUnidadeId) {
-           const { data: newUnit } = await supabase.from('unidades').insert({ unidade: sigla }).select('id').single();
-           if (newUnit) {
-             matchedUnidadeId = newUnit.id;
-             defaultUnidadeId = newUnit.id;
-           }
-        }
-
-        let compId = null;
-        const { data: existingComp } = await supabase
-          .from("componentes")
-          .select("id")
-          .ilike("nome", titleCaseName)
-          .maybeSingle();
-
-        if (existingComp) {
-          compId = existingComp.id;
-        } else if (matchedUnidadeId) {
-          const { data: newComp, error: insertErr } = await supabase
-            .from('componentes')
-            .insert({
-              nome: titleCaseName,
-              unidade_id: matchedUnidadeId,
-            })
-            .select('id')
-            .single();
-          
-          if (insertErr) console.error('Erro ao inserir componente:', insertErr.message);
-          else if (newComp) compId = newComp.id;
-        }
-
-        if (compId) {
-          processedComponentes.push({
-            componente_id: compId,
-            nome: titleCaseName,
-            quantidade: parseBrFloat(comp.quantidade) || 0,
-            unidade_sigla: sigla,
-          });
-        }
-      }
-
-      // 3. Vincular formula_componentes
-      if (formulaId && processedComponentes.length > 0) {
-        await supabase.from('formula_componentes').delete().eq('formula_id', formulaId);
-        
-        const relPayloads = processedComponentes.map((c) => ({
-          formula_id: formulaId,
-          componente_id: c.componente_id,
-          quantidade: c.quantidade,
-        }));
-        
-        const { error: relErr } = await supabase.from('formula_componentes').insert(relPayloads);
-        if (relErr) console.error('Erro ao vincular componentes:', relErr.message);
-      }
-
-      // 4. Salvar Prescrição em cascata
-      const { data: prescricao, error: errPresc } = await supabase
-        .from("prescricoes")
         .insert({
-          paciente_id: clientId,
-          data_prescricao: new Date().toISOString().split("T")[0],
-          status: "Ativo",
-          observacoes: input.descricao || null,
+          nome: titleCaseFormulaName,
+          descricao: input.descricao || null,
+          via: normalizedVia,
+          veiculo: titleCaseVeiculo || null,
+          dosagem: numDosagem,
+          tipo_veiculo: sanitizedTipoVeiculo,
+          posologia: input.posologia?.trim() || null,
+          orient_paciente: input.orient_paciente || null,
+          orient_farmacia: input.orient_farmacia || null,
         })
         .select("id")
         .single();
 
-      if (errPresc || !prescricao) {
-        console.error("Erro ao registrar prescrição no Supabase:", errPresc?.message);
+      if (formulaErr) {
+        return { success: false, message: `Falha crítica ao cadastrar fórmula: ${formulaErr.message}` };
+      }
+      if (!newFormula) {
+        return { success: false, message: "A fórmula não pôde ser criada." };
+      }
+      formulaId = newFormula.id;
+    }
+
+    // 2. Resolver componentes e unidades
+    const { data: dbUnidades, error: unidadesErr } = await supabase.from("unidades").select("id, unidade");
+    if (unidadesErr) {
+      return { success: false, message: `Falha ao carregar unidades de medida: ${unidadesErr.message}` };
+    }
+    let defaultUnidadeId = dbUnidades && dbUnidades.length > 0 ? dbUnidades[0].id : null;
+
+    const processedComponentes = [];
+    for (const comp of input.componentes) {
+      if (!comp.nome || !comp.nome.trim()) continue;
+
+      const titleCaseName = toTitleCase(comp.nome);
+      const sigla = comp.unidade_sigla || "%";
+      let matchedUnidadeId = comp.unidade_id;
+
+      if (!matchedUnidadeId || matchedUnidadeId.startsWith("new_")) {
+        const foundUnit = dbUnidades?.find((u: any) => u.unidade.toLowerCase() === sigla.toLowerCase());
+        matchedUnidadeId = foundUnit ? foundUnit.id : defaultUnidadeId;
+      }
+
+      if (!matchedUnidadeId) {
+        const { data: newUnit, error: newUnitErr } = await supabase
+          .from("unidades")
+          .insert({ unidade: sigla })
+          .select("id")
+          .single();
+
+        if (newUnitErr) {
+          return { success: false, message: `Erro ao criar nova unidade de medida [${sigla}]: ${newUnitErr.message}` };
+        }
+        if (newUnit) {
+          matchedUnidadeId = newUnit.id;
+          defaultUnidadeId = newUnit.id;
+        }
+      }
+
+      let compId = null;
+      const { data: existingComp, error: findCompErr } = await supabase
+        .from("componentes")
+        .select("id")
+        .ilike("nome", titleCaseName)
+        .maybeSingle();
+
+      if (findCompErr) {
+        return { success: false, message: `Erro ao buscar componente [${titleCaseName}]: ${findCompErr.message}` };
+      }
+
+      if (existingComp) {
+        compId = existingComp.id;
       } else {
-        const componentsSnapshot = processedComponentes.map((r) => ({
-          nome: r.nome,
-          quantidade: r.quantidade,
-          unidade: r.unidade_sigla,
-        }));
-
-        const numTotalVeiculo = parseBrFloat(input.total_veiculo) || 0;
-
-        const { error: errItem } = await supabase
-          .from("prescricao_itens")
+        const { data: newComp, error: insertErr } = await supabase
+          .from("componentes")
           .insert({
-            prescricao_id: prescricao.id,
-            formula_id: formulaId,
-            nome_formula: titleCaseFormulaName,
-            via: normalizedVia,
-            veiculo: titleCaseVeiculo || null,
-            dosagem: numDosagem, // Protegido como numérico nativo
-            tipo_veiculo: sanitizedTipoVeiculo,
-            posologia: input.posologia.trim(),
-            duracao: String(numTotalVeiculo),
-            orient_paciente: input.orient_paciente || null,
-            orient_farmacia: input.orient_farmacia || null,
-            componentes_snapshot: componentsSnapshot,
-          });
+            nome: titleCaseName,
+            unidade_id: matchedUnidadeId,
+          })
+          .select("id")
+          .single();
 
-        if (errItem) console.error("Erro ao registrar itens da prescrição:", errItem.message);
+        if (insertErr) {
+          return { success: false, message: `Erro ao criar componente [${titleCaseName}]: ${insertErr.message}` };
+        }
+        if (newComp) {
+          compId = newComp.id;
+        }
+      }
+
+      if (compId) {
+        processedComponentes.push({
+          componente_id: compId,
+          nome: titleCaseName,
+          quantidade: parseNum(comp.quantidade) || 0,
+          unidade_sigla: sigla,
+        });
       }
     }
 
-    // 5. Configurar apresentação local e revalidar estado
+    // 3. Vincular componentes à fórmula
+    if (formulaId && processedComponentes.length > 0) {
+      const { error: deleteRelErr } = await supabase.from("formula_componentes").delete().eq("formula_id", formulaId);
+      if (deleteRelErr) {
+        return { success: false, message: `Erro ao limpar vínculos de ativos da fórmula: ${deleteRelErr.message}` };
+      }
+
+      const relPayloads = processedComponentes.map((c) => ({
+        formula_id: formulaId,
+        componente_id: c.componente_id,
+        quantidade: c.quantidade,
+      }));
+
+      const { error: relErr } = await supabase.from("formula_componentes").insert(relPayloads);
+      if (relErr) {
+        return { success: false, message: `Erro ao vincular componentes à fórmula: ${relErr.message}` };
+      }
+    }
+
+    // 4. Salvar Cabeçalho da Prescrição
+    const { data: prescricao, error: errPresc } = await supabase
+      .from("prescricoes")
+      .insert({
+        paciente_id: clientId,
+        data_prescricao: new Date().toISOString().split("T")[0],
+        status: "Ativo",
+        observacoes: input.descricao || null,
+      })
+      .select("id")
+      .single();
+
+    if (errPresc || !prescricao) {
+      return { success: false, message: `Erro ao salvar prescrição no prontuário: ${errPresc?.message || "Registro vazio"}` };
+    }
+
+    // 5. Salvar Item da Prescrição
+    const componentsSnapshot = processedComponentes.map((r) => ({
+      nome: r.nome,
+      quantidade: r.quantidade,
+      unidade: r.unidade_sigla,
+    }));
+
+    const numTotalVeiculo = parseNum(input.total_veiculo) || 0;
+
+    const { data: newItem, error: errItem } = await supabase
+      .from("prescricao_itens")
+      .insert({
+        prescricao_id: prescricao.id,
+        formula_id: formulaId,
+        nome_formula: titleCaseFormulaName,
+        via: normalizedVia,
+        veiculo: titleCaseVeiculo || null,
+        dosagem: numDosagem,
+        tipo_veiculo: sanitizedTipoVeiculo,
+        posologia: input.posologia.trim(),
+        duracao: String(numTotalVeiculo),
+        orient_paciente: input.orient_paciente || null,
+        orient_farmacia: input.orient_farmacia || null,
+        componentes_snapshot: componentsSnapshot,
+      })
+      .select("id")
+      .single();
+
+    if (errItem || !newItem) {
+      return { success: false, message: `Erro ao salvar item formulado na prescrição: ${errItem?.message || "Registro vazio"}` };
+    }
+
+    // 6. Preparar apresentação para a UI e revalidar
     const listAtivos = (input.componentes || [])
-      .filter(c => c.nome?.trim())
+      .filter((c) => c.nome?.trim())
       .map((c) => `${toTitleCase(c.nome)}: ${c.quantidade}${c.unidade_sigla || "%"}`)
       .join(" + ");
 
-    const formattedDosagem = normalizedVia === "oral"
-      ? `${listAtivos} em ${titleCaseVeiculo} (Dose: ${input.dosagem_valor} | Total: ${input.total_veiculo} ${sanitizedTipoVeiculo || "un"})`
-      : `${listAtivos} em ${titleCaseVeiculo} q.s.p. ${input.dosagem_valor}${input.dosagem_unidade || "g"} (Total: ${input.total_veiculo} un)`;
+    const formattedDosagem =
+      normalizedVia === "oral"
+        ? `${listAtivos} em ${titleCaseVeiculo} (Dose: ${input.dosagem_valor} | Total: ${input.total_veiculo} ${sanitizedTipoVeiculo || "un"})`
+        : `${listAtivos} em ${titleCaseVeiculo} q.s.p. ${input.dosagem_valor}${input.dosagem_unidade || "g"} (Total: ${input.total_veiculo} un)`;
 
     const combinedInstrucoes = [
       input.orient_paciente ? `[Orientações ao Paciente]\n${input.orient_paciente}` : "",
       input.orient_farmacia ? `[Observações à Farmácia Magistral]\n${input.orient_farmacia}` : "",
-    ].filter(Boolean).join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const newPrescription: PrescriptionItem = {
-      id: `rx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: newItem.id, // ID real inserido no banco
       client_id: clientId,
       data: new Date().toISOString().split("T")[0],
       medicamento: titleCaseFormulaName,
@@ -890,11 +925,11 @@ export async function addStructuredPrescriptionAction(
       message: "Prescrição magistral adicionada com sucesso!",
       data: newPrescription,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro inesperado em addStructuredPrescriptionAction:", error);
     return {
       success: false,
-      message: "Falha de conexão ao gravar a nova prescrição.",
+      message: `Erro interno no servidor: ${error.message || error}`,
     };
   }
 }
