@@ -919,7 +919,7 @@ export function PatientClinicalTabs({ client, onRefreshClient }: PatientClinical
                                   <h4 className="font-bold text-slate-900 dark:text-white text-sm">
                                     {rx.medicamento}
                                   </h4>
-                                  <span className="inline-block max-w-full text-xs font-plus-jakarta font-medium px-2.5 py-1.5 rounded-md bg-teal-950/60 text-teal-300 border border-teal-800/60 break-words whitespace-normal leading-relaxed">
+                                  <span className="inline-block max-w-full text-xs font-plus-jakarta font-medium px-3 py-2 rounded-lg bg-teal-50/80 border border-teal-200/80 text-teal-900 dark:bg-teal-950/60 dark:border-teal-800/60 dark:text-teal-300 break-words whitespace-normal leading-relaxed">
                                     {rx.dosagem}
                                   </span>
                                 </div>
