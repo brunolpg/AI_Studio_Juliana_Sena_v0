@@ -743,26 +743,42 @@ export async function addStructuredPrescriptionAction(
       formulaId = newFormula.id;
     }
 
-    // 2. Resolver componentes e unidades
-    const { data: dbUnidades, error: unidadesErr } = await supabase.from("unidades").select("id, unidade");
-    if (unidadesErr) {
-      return { success: false, message: `Falha ao carregar unidades de medida: ${unidadesErr.message}` };
-    }
-    let defaultUnidadeId = dbUnidades && dbUnidades.length > 0 ? dbUnidades[0].id : null;
+    // 2. UNIDADES e COMPONENTES
+    const { data: dbUnidades, error: unitErr } = await supabase.from("unidades").select("id, unidade");
+    if (unitErr) return { success: false, message: "Erro (Buscar Unidades): " + unitErr.message };
 
+    let fallbackUnidadeId = dbUnidades && dbUnidades.length > 0 ? dbUnidades[0].id : null;
     const processedComponentes = [];
+
+    // Regex para validar se a string é efetivamente um formato UUID
+    const isValidUUID = (id: string) => {
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    };
+
     for (const comp of input.componentes) {
       if (!comp.nome || !comp.nome.trim()) continue;
 
       const titleCaseName = toTitleCase(comp.nome);
-      const sigla = comp.unidade_sigla || "%";
-      let matchedUnidadeId = comp.unidade_id;
+      let matchedUnidadeId = null;
+      let sigla = comp.unidade_sigla || "%";
 
-      if (!matchedUnidadeId || matchedUnidadeId.startsWith("new_")) {
-        const foundUnit = dbUnidades?.find((u: any) => u.unidade.toLowerCase() === sigla.toLowerCase());
-        matchedUnidadeId = foundUnit ? foundUnit.id : defaultUnidadeId;
+      if (comp.unidade_id && isValidUUID(comp.unidade_id)) {
+        matchedUnidadeId = comp.unidade_id;
+      } else if (comp.unidade_id && comp.unidade_id.trim() && !comp.unidade_id.startsWith("new_")) {
+        sigla = comp.unidade_id;
       }
 
+      // Se não temos matchedUnidadeId válida, tentamos buscar pelo texto da sigla
+      if (!matchedUnidadeId) {
+        const foundUnit = dbUnidades?.find(
+          (u: any) => u.unidade.toLowerCase() === sigla.toLowerCase()
+        );
+        if (foundUnit) {
+          matchedUnidadeId = foundUnit.id;
+        }
+      }
+
+      // Se mesmo assim não encontramos, tentamos criar a unidade com a sigla informada
       if (!matchedUnidadeId) {
         const { data: newUnit, error: newUnitErr } = await supabase
           .from("unidades")
@@ -771,11 +787,16 @@ export async function addStructuredPrescriptionAction(
           .single();
 
         if (newUnitErr) {
-          return { success: false, message: `Erro ao criar nova unidade de medida [${sigla}]: ${newUnitErr.message}` };
+          return {
+            success: false,
+            message: `Erro ao criar nova unidade de medida [${sigla}]: ${newUnitErr.message}`,
+          };
         }
         if (newUnit) {
           matchedUnidadeId = newUnit.id;
-          defaultUnidadeId = newUnit.id;
+          fallbackUnidadeId = newUnit.id;
+        } else {
+          matchedUnidadeId = fallbackUnidadeId;
         }
       }
 
@@ -787,7 +808,10 @@ export async function addStructuredPrescriptionAction(
         .maybeSingle();
 
       if (findCompErr) {
-        return { success: false, message: `Erro ao buscar componente [${titleCaseName}]: ${findCompErr.message}` };
+        return {
+          success: false,
+          message: `Erro ao buscar componente [${titleCaseName}]: ${findCompErr.message}`,
+        };
       }
 
       if (existingComp) {
@@ -803,7 +827,10 @@ export async function addStructuredPrescriptionAction(
           .single();
 
         if (insertErr) {
-          return { success: false, message: `Erro ao criar componente [${titleCaseName}]: ${insertErr.message}` };
+          return {
+            success: false,
+            message: `Erro ao criar componente [${titleCaseName}]: ${insertErr.message}`,
+          };
         }
         if (newComp) {
           compId = newComp.id;
