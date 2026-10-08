@@ -449,7 +449,15 @@ function AppointmentFormModalContent({
 
     setIsSubmitting(true);
     try {
+      // 1. Função auxiliar de validação UUID antes do payload
+      const isValidUUID = (id: string | undefined) => {
+        return !!(id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+      };
+
       const matchedProc = procedimentosList.find((p) => p.procedimento === procedimento);
+      const safeProcedimentoId = isValidUUID(matchedProc?.id) ? matchedProc?.id : undefined;
+
+      // 2. Ajuste a construção do payload
       const payload: AppointmentInput = {
         client_id: selectedPatient.id,
         client_nome: selectedPatient.nome,
@@ -459,7 +467,7 @@ function AppointmentFormModalContent({
         horario_inicio: selectedSlot,
         horario_fim: selectedEndTime,
         procedimento: procedimento.trim(),
-        procedimento_id: matchedProc?.id || undefined,
+        procedimento_id: safeProcedimentoId,
         observacoes: observacoes.trim() || undefined,
         sync_google: true,
       };
