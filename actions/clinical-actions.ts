@@ -493,9 +493,7 @@ export async function addStructuredPrescriptionAction(
   input: StructuredPrescriptionPayload
 ): Promise<ActionResponse<PrescriptionItem>> {
   try {
-    if (!clientId) {
-      return { success: false, message: "ID do paciente não fornecido." };
-    }
+    if (!clientId) return { success: false, message: "ID do paciente não fornecido." };
 
     const supabase = await createClient();
 
@@ -505,17 +503,19 @@ export async function addStructuredPrescriptionAction(
       return isNaN(num) ? null : num;
     };
 
-    const normalizedVia = (input.via?.toLowerCase() === 'oral' ? 'oral' : 'tópico') as 'oral' | 'tópico';
-    const validTiposVeiculo = ['dose(s)', 'sachê(s)', 'comprimido(s)', 'g', 'ml', 'un'];
-    const sanitizedTipoVeiculo = validTiposVeiculo.includes(input.tipo_veiculo) ? input.tipo_veiculo : (normalizedVia === 'oral' ? 'dose(s)' : 'g');
     const titleCaseFormulaName = toTitleCase(input.nome_formula);
     const titleCaseVeiculo = toTitleCase(input.veiculo);
+    const normalizedVia = (input.via?.toLowerCase() === 'oral' ? 'oral' : 'tópico') as 'oral' | 'tópico';
+    
+    // A constraint da tabela 'formulas' aceita estritamente estes 3 valores (ou nulo)
+    const validTipos = ['dose(s)', 'sachê(s)', 'comprimido(s)'];
+    const sanitizedTipoVeiculo = validTipos.includes(input.tipo_veiculo) ? input.tipo_veiculo : null;
+    const numDosagem = parseBrFloat(input.dosagem_valor);
 
-    // 1. Inserir/Atualizar a Fórmula
     let formulaId = null;
 
     if (supabase) {
-      // Tenta encontrar fórmula existente com o mesmo nome e mesma via (ignora case com ilike)
+      // 1. Inserir/Atualizar Fórmula (schemas validados)
       const { data: existingFormula } = await supabase
         .from("formulas")
         .select("id")
@@ -526,8 +526,6 @@ export async function addStructuredPrescriptionAction(
       if (existingFormula) {
         formulaId = existingFormula.id;
       } else {
-        const numDosagem = parseBrFloat(input.dosagem_valor);
-
         const { data: newFormula, error: formulaErr } = await supabase
           .from('formulas')
           .insert({
@@ -550,25 +548,34 @@ export async function addStructuredPrescriptionAction(
           formulaId = newFormula.id;
         }
       }
-    }
 
-    // Busca a lista de unidades cadastradas no banco para obter um id válido
-    const { data: dbUnidades } = await supabase ? await supabase.from('unidades').select('id, unidade') : { data: [] };
-    const getValidUnidadeId = (sigla?: string) => {
-      if (!dbUnidades || dbUnidades.length === 0) return null;
-      const match = dbUnidades.find((u: any) => u.unidade.toLowerCase() === (sigla || '%').toLowerCase());
-      return match ? match.id : dbUnidades[0].id;
-    };
+      // 2. Unidades e Componentes (Garante que a constraint NOT NULL de unidade_id nunca falhe)
+      const { data: dbUnidades } = await supabase.from('unidades').select('id, unidade');
+      let defaultUnidadeId = dbUnidades && dbUnidades.length > 0 ? dbUnidades[0].id : null;
 
-    // 2. Garantir os Componentes (Ativos)
-    const processedComponentes = [];
-    for (const comp of input.componentes) {
-      let compId = comp.componente_id;
-      const titleCaseName = toTitleCase(comp.nome);
-      const validUniId = comp.unidade_id || getValidUnidadeId(comp.unidade_sigla);
+      const processedComponentes = [];
+      for (const comp of input.componentes) {
+        if (!comp.nome || !comp.nome.trim()) continue;
+        
+        const titleCaseName = toTitleCase(comp.nome);
+        const sigla = comp.unidade_sigla || '%';
+        let matchedUnidadeId = comp.unidade_id;
 
-      if (supabase && titleCaseName) {
-        // Verifique se o ativo já existe pelo nome (ilike)
+        if (!matchedUnidadeId || matchedUnidadeId.startsWith("new_")) {
+           const foundUnit = dbUnidades?.find((u: any) => u.unidade.toLowerCase() === sigla.toLowerCase());
+           matchedUnidadeId = foundUnit ? foundUnit.id : defaultUnidadeId;
+        }
+
+        // Se a tabela estiver completamente vazia, insere uma unidade dinamicamente
+        if (!matchedUnidadeId) {
+           const { data: newUnit } = await supabase.from('unidades').insert({ unidade: sigla }).select('id').single();
+           if (newUnit) {
+             matchedUnidadeId = newUnit.id;
+             defaultUnidadeId = newUnit.id;
+           }
+        }
+
+        let compId = null;
         const { data: existingComp } = await supabase
           .from("componentes")
           .select("id")
@@ -577,50 +584,45 @@ export async function addStructuredPrescriptionAction(
 
         if (existingComp) {
           compId = existingComp.id;
-        } else {
-          // Insere novo componente garantindo unidade_id válida
+        } else if (matchedUnidadeId) {
           const { data: newComp, error: insertErr } = await supabase
             .from('componentes')
             .insert({
               nome: titleCaseName,
-              unidade_id: validUniId || (dbUnidades?.[0]?.id),
+              unidade_id: matchedUnidadeId,
             })
             .select('id')
             .single();
+          
+          if (insertErr) console.error('Erro ao inserir componente:', insertErr.message);
+          else if (newComp) compId = newComp.id;
+        }
 
-          if (insertErr) {
-            console.error('Erro ao inserir componente:', insertErr.message);
-          } else if (newComp) {
-            compId = newComp.id;
-          }
+        if (compId) {
+          processedComponentes.push({
+            componente_id: compId,
+            nome: titleCaseName,
+            quantidade: parseBrFloat(comp.quantidade) || 0,
+            unidade_sigla: sigla,
+          });
         }
       }
 
-      processedComponentes.push({
-        ...comp,
-        componente_id: compId,
-        nome: titleCaseName,
-        quantidade: parseBrFloat(comp.quantidade) || 0,
-        unidade_id: validUniId,
-      });
-    }
+      // 3. Vincular formula_componentes
+      if (formulaId && processedComponentes.length > 0) {
+        await supabase.from('formula_componentes').delete().eq('formula_id', formulaId);
+        
+        const relPayloads = processedComponentes.map((c) => ({
+          formula_id: formulaId,
+          componente_id: c.componente_id,
+          quantidade: c.quantidade,
+        }));
+        
+        const { error: relErr } = await supabase.from('formula_componentes').insert(relPayloads);
+        if (relErr) console.error('Erro ao vincular componentes:', relErr.message);
+      }
 
-    // 3. Vincular na Tabela Associativa (formula_componentes)
-    const relPayloads = processedComponentes.map((c) => ({
-      formula_id: formulaId,
-      componente_id: c.componente_id,
-      quantidade: c.quantidade,
-    })).filter(r => r.formula_id && r.componente_id);
-
-    if (formulaId && relPayloads.length > 0 && supabase) {
-      await supabase.from('formula_componentes').delete().eq('formula_id', formulaId);
-      const { error: relErr } = await supabase.from('formula_componentes').insert(relPayloads);
-      if (relErr) console.error('Erro ao vincular componentes:', relErr.message);
-    }
-
-    // 4. Salvar a Prescrição (Inserir registros finais em prescricoes e prescricao_itens)
-    let dbPrescricaoId = null;
-    if (supabase) {
+      // 4. Salvar Prescrição em cascata
       const { data: prescricao, error: errPresc } = await supabase
         .from("prescricoes")
         .insert({
@@ -629,14 +631,12 @@ export async function addStructuredPrescriptionAction(
           status: "Ativo",
           observacoes: input.descricao || null,
         })
-        .select()
+        .select("id")
         .single();
 
       if (errPresc || !prescricao) {
-        console.error("Erro ao registrar cabeçalho de prescrição no Supabase:", errPresc?.message);
+        console.error("Erro ao registrar prescrição no Supabase:", errPresc?.message);
       } else {
-        dbPrescricaoId = prescricao.id;
-
         const componentsSnapshot = processedComponentes.map((r) => ({
           nome: r.nome,
           quantidade: r.quantidade,
@@ -652,8 +652,8 @@ export async function addStructuredPrescriptionAction(
             formula_id: formulaId,
             nome_formula: titleCaseFormulaName,
             via: normalizedVia,
-            veiculo: titleCaseVeiculo,
-            dosagem: String(parseBrFloat(input.dosagem_valor) || input.dosagem_valor),
+            veiculo: titleCaseVeiculo || null,
+            dosagem: numDosagem, // Protegido como numérico nativo
             tipo_veiculo: sanitizedTipoVeiculo,
             posologia: input.posologia.trim(),
             duracao: String(numTotalVeiculo),
@@ -662,38 +662,35 @@ export async function addStructuredPrescriptionAction(
             componentes_snapshot: componentsSnapshot,
           });
 
-        if (errItem) {
-          console.error("Erro ao registrar itens estruturados de prescrição no Supabase:", errItem.message);
-        }
+        if (errItem) console.error("Erro ao registrar itens da prescrição:", errItem.message);
       }
     }
 
-    // 5. Gerar strings formatadas para os campos do prontuário tradicional (PrescriptionItem)
-    const listAtivos = processedComponentes
-      .map((c) => `${c.nome}: ${c.quantidade}${c.unidade_sigla}`)
+    // 5. Configurar apresentação local e revalidar estado
+    const listAtivos = (input.componentes || [])
+      .filter(c => c.nome?.trim())
+      .map((c) => `${toTitleCase(c.nome)}: ${c.quantidade}${c.unidade_sigla || "%"}`)
       .join(" + ");
 
     const formattedDosagem = normalizedVia === "oral"
-      ? `${listAtivos} em ${titleCaseVeiculo} (Dose: ${input.dosagem_valor} | Total: ${input.total_veiculo} ${sanitizedTipoVeiculo})`
-      : `${listAtivos} em ${titleCaseVeiculo} q.s.p. ${input.dosagem_valor}${input.dosagem_unidade || "g"} (Total: ${input.total_veiculo}${sanitizedTipoVeiculo || "un"})`;
+      ? `${listAtivos} em ${titleCaseVeiculo} (Dose: ${input.dosagem_valor} | Total: ${input.total_veiculo} ${sanitizedTipoVeiculo || "un"})`
+      : `${listAtivos} em ${titleCaseVeiculo} q.s.p. ${input.dosagem_valor}${input.dosagem_unidade || "g"} (Total: ${input.total_veiculo} un)`;
 
     const combinedInstrucoes = [
       input.orient_paciente ? `[Orientações ao Paciente]\n${input.orient_paciente}` : "",
       input.orient_farmacia ? `[Observações à Farmácia Magistral]\n${input.orient_farmacia}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
+    ].filter(Boolean).join("\n\n");
 
     const record = ensurePatientRecord(clientId);
     const newPrescription: PrescriptionItem = {
-      id: dbPrescricaoId || `rx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: `rx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       client_id: clientId,
       data: new Date().toISOString().split("T")[0],
       medicamento: titleCaseFormulaName,
       dosagem: formattedDosagem,
       via: normalizedVia === "oral" ? "Oral" : "Tópico",
       posologia: input.posologia.trim(),
-      duracao: normalizedVia === "oral" ? `${input.total_veiculo} ${sanitizedTipoVeiculo}` : "Uso recomendado",
+      duracao: normalizedVia === "oral" ? `${input.total_veiculo} ${sanitizedTipoVeiculo || "un"}` : "Uso recomendado",
       ativo: true,
       instrucoes: combinedInstrucoes || undefined,
     };
