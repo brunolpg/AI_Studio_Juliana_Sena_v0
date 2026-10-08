@@ -478,9 +478,12 @@ export function PrescriptionModal({
 
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
               {componentesRows.map((row, index) => (
-                <div key={row.key} className="flex items-center gap-2 bg-white dark:bg-slate-800 p-2 rounded-xl border border-slate-150 dark:border-slate-700/80 shadow-2xs">
+                <div 
+                  key={row.key} 
+                  className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-2 p-2.5 sm:p-2 rounded-xl sm:rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 shadow-sm"
+                >
                   {/* Nome do componente com combobox */}
-                  <div className="flex-1">
+                  <div className="w-full sm:flex-1 min-w-0">
                     <input
                       type="text"
                       list={`comp-suggestions-${row.key}`}
@@ -496,50 +499,55 @@ export function PrescriptionModal({
                     </datalist>
                   </div>
 
-                  {/* Quantidade */}
-                  <div className="w-20">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Qtd."
-                      value={row.quantidade}
-                      onChange={(e) => {
-                        let val = e.target.value.replace('.', ',');
-                        val = val.replace(/[^0-9,]/g, '');
-                        const parts = val.split(',');
-                        if (parts.length > 2) {
-                          val = parts[0] + ',' + parts.slice(1).join('');
-                        }
-                        handleRowChange(row.key, "quantidade", val);
-                      }}
-                      className="w-full px-2.5 py-1.5 text-xs text-center border-0 border-b border-slate-200 dark:border-slate-700 focus:outline-none focus:border-teal-500 bg-transparent text-slate-900 dark:text-slate-100"
-                    />
-                  </div>
+                  {/* Segunda linha no mobile / alinhado no desktop */}
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {/* Quantidade */}
+                    <div className="w-20 sm:w-20">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="Qtd."
+                        value={row.quantidade}
+                        onChange={(e) => {
+                          let val = e.target.value.replace('.', ',');
+                          val = val.replace(/[^0-9,]/g, '');
+                          const parts = val.split(',');
+                          if (parts.length > 2) {
+                            val = parts[0] + ',' + parts.slice(1).join('');
+                          }
+                          handleRowChange(row.key, "quantidade", val);
+                        }}
+                        className="w-full px-2.5 py-1.5 text-xs text-center border-0 border-b border-slate-200 dark:border-slate-700 focus:outline-none focus:border-teal-500 bg-transparent text-slate-900 dark:text-slate-100"
+                      />
+                    </div>
 
-                  {/* Unidade */}
-                  <div className="w-24">
-                    <select
-                      value={row.unidade_sigla}
-                      onChange={(e) => handleRowChange(row.key, "unidade_id", e.target.value)}
-                      className="w-full py-1 text-xs border-0 border-b border-slate-200 dark:border-slate-700 focus:outline-none bg-transparent text-slate-900 dark:text-slate-100"
-                    >
-                      <option value="" disabled>Unidade</option>
-                      {unidadesList.map((u) => (
-                        <option key={u} value={u}>
-                          {u}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                    {/* Unidade */}
+                    <div className="w-24 sm:w-24">
+                      <select
+                        value={row.unidade_sigla}
+                        onChange={(e) => handleRowChange(row.key, "unidade_id", e.target.value)}
+                        className="w-full py-1 text-xs border-0 border-b border-slate-200 dark:border-slate-700 focus:outline-none bg-transparent text-slate-900 dark:text-slate-100"
+                      >
+                        <option value="" disabled>Unidade</option>
+                        {unidadesList.map((u) => (
+                          <option key={u} value={u}>
+                            {u}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  {/* Remover linha */}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveRow(row.key)}
-                    className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                    {/* Remover linha */}
+                    <div className="ml-auto sm:ml-0">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRow(row.key)}
+                        className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
