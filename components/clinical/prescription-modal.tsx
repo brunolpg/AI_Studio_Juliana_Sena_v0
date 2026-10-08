@@ -480,7 +480,7 @@ export function PrescriptionModal({
               {componentesRows.map((row, index) => (
                 <div 
                   key={row.key} 
-                  className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-2 p-2.5 sm:p-2 rounded-xl sm:rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 shadow-sm"
+                  className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-2 p-2.5 sm:p-2 rounded-xl sm:rounded-lg border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900/60 shadow-xs transition-colors"
                 >
                   {/* Nome do componente com combobox */}
                   <div className="w-full sm:flex-1 min-w-0">
@@ -490,7 +490,7 @@ export function PrescriptionModal({
                       placeholder="Nome do Ativo"
                       value={row.nome}
                       onChange={(e) => handleRowChange(row.key, "nome", e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs border-0 border-b border-slate-200 dark:border-slate-700 focus:outline-none focus:border-teal-500 bg-transparent text-slate-900 dark:text-slate-100"
+                      className="w-full px-2.5 py-1.5 text-xs border-0 border-b border-slate-200 dark:border-slate-700/80 focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                     <datalist id={`comp-suggestions-${row.key}`}>
                       {dbComponentes.map((c) => (
