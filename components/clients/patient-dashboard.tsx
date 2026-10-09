@@ -14,7 +14,7 @@ export function PatientDashboard() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("pacientes");
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col antialiased">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col antialiased">
       {/* Top Header com navegação por abas */}
       <AppHeader currentTab={activeTab} onTabChange={setActiveTab} />
 

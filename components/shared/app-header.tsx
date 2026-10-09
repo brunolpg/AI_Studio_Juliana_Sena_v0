@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Users, Calendar, Stethoscope, Sparkles } from "lucide-react";
-import { UserMenu } from "@/components/auth/user-menu";
+import { UserMenu } from "@/components/shared/user-menu";
 
 export type DashboardTab = "pacientes" | "prontuarios" | "agendamentos";
 
@@ -13,11 +13,11 @@ interface AppHeaderProps {
 
 export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
   return (
-    <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 relative z-50 w-full">
+    <header className="w-full bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-50 overflow-visible">
       <div className="w-full max-w-full px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between py-4 gap-4">
           {/* Logo & Info */}
-          <div className="flex items-center gap-3 overflow-hidden">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-teal-500/10">
               <Sparkles className="w-5 h-5" />
             </div>
@@ -34,7 +34,7 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
           </div>
 
           {/* Navigation Tabs & User Profile */}
-          <div className="flex items-center gap-3 self-stretch md:self-auto justify-between md:justify-end overflow-x-auto no-scrollbar max-w-full pb-1 md:pb-0">
+          <div className="flex items-center gap-3 self-stretch md:self-auto justify-between md:justify-end max-w-full pb-1 md:pb-0">
             <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar max-w-full shrink-0">
               <button
                 id="nav-tab-pacientes"
