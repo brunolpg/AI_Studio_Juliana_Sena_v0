@@ -390,9 +390,17 @@ export function ClientTableView() {
                       {/* Nome e Avatar */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                            {client.nome.charAt(0)}
-                          </div>
+                          {client.foto_perfil ? (
+                            <img
+                              src={client.foto_perfil}
+                              alt={client.nome}
+                              className="w-9 h-9 rounded-xl object-cover border border-teal-500/20 shadow-2xs shrink-0"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-xs shrink-0 border border-teal-500/20">
+                              {client.nome ? client.nome.charAt(0).toUpperCase() : "P"}
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <span className="font-semibold text-slate-900 dark:text-slate-100 block truncate max-w-[200px]">
                               {client.nome}

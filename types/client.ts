@@ -25,6 +25,7 @@ export type ClientFormRawValues = Omit<ClientInput, "idade"> & {
  */
 export interface Client extends ClientInput {
   id: string; // UUID v4 gerado pelo PostgreSQL
+  foto_perfil?: string | null; // Foto de perfil em Base64
   created_at: string; // Timestamp ISO 8601 de criação
   updated_at: string; // Timestamp ISO 8601 atualizado via trigger
   deleted_at: string | null; // Timestamp de soft delete (NULL se ativo no sistema)

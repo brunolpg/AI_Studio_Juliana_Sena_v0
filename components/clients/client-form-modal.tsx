@@ -44,6 +44,14 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
   const [status, setStatus] = useState<"Ativo" | "Inativo">(clientToEdit?.status ?? "Ativo");
   const [observacoes, setObservacoes] = useState(clientToEdit?.observacoes ?? "");
 
+  // Foto de Perfil & Corte (Crop 1:1)
+  const [fotoPerfil, setFotoPerfil] = useState<string | null>(clientToEdit?.foto_perfil ?? null);
+  const [tempImgSrc, setTempImgSrc] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
   // Estado para erros de validação por campo
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -157,6 +165,122 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
     }
   };
 
+  // Upload e Crop 1:1 handlers
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validação de tamanho (5 MB = 5 * 1024 * 1024 bytes)
+    const limit = 5 * 1024 * 1024;
+    if (file.size > limit) {
+      toast({
+        type: "error",
+        title: "Arquivo muito grande",
+        description: "O tamanho máximo permitido para a foto é de 5 MB.",
+      });
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setTempImgSrc(reader.result);
+        setZoom(1);
+        setPosition({ x: 0, y: 0 });
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  // Dragging mouse
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Dragging touch (Mobile support!)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setIsDragging(true);
+    setDragStart({ x: touch.clientX - position.x, y: touch.clientY - position.y });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setPosition({
+      x: touch.clientX - dragStart.x,
+      y: touch.clientY - dragStart.y,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleConfirmCrop = () => {
+    if (!tempImgSrc) return;
+
+    const img = new Image();
+    img.src = tempImgSrc;
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 300;
+      canvas.height = 300;
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) return;
+
+      // Fill white background
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, 300, 300);
+
+      // Calcular dimensões iniciais enquadradas no box de 300x300
+      let initW = img.naturalWidth;
+      let initH = img.naturalHeight;
+      const ratio = initW / initH;
+      if (initW > initH) {
+        initH = 300;
+        initW = 300 * ratio;
+      } else {
+        initW = 300;
+        initH = 300 / ratio;
+      }
+
+      const initX = (300 - initW) / 2;
+      const initY = (300 - initH) / 2;
+
+      ctx.save();
+      // Transforma e translada baseado na origem center-center
+      ctx.translate(150, 150);
+      ctx.translate(position.x, position.y);
+      ctx.scale(zoom, zoom);
+      ctx.translate(-150, -150);
+
+      ctx.drawImage(img, initX, initY, initW, initH);
+      ctx.restore();
+
+      const croppedBase64 = canvas.toDataURL("image/jpeg", 0.85);
+      setFotoPerfil(croppedBase64);
+      setTempImgSrc(null);
+    };
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -178,6 +302,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
       profissao: profissao.trim() || null,
       status,
       observacoes: observacoes.trim() || null,
+      foto_perfil: fotoPerfil || null,
     };
 
     // Validação preliminar com Zod no cliente para feedback instantâneo
@@ -273,6 +398,49 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-3 flex items-center gap-1.5">
             <UserCheck className="w-3.5 h-3.5" /> Identificação e Dados Pessoais
           </h4>
+
+          {/* Área do Avatar */}
+          <div className="mb-5 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col sm:flex-row items-center gap-4">
+            <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-teal-500/10 border border-teal-500/20 shadow-xs flex items-center justify-center shrink-0">
+              {fotoPerfil ? (
+                <img src={fotoPerfil} alt="Prévia" className="w-full h-full object-cover rounded-2xl" />
+              ) : (
+                <div className="text-teal-600 dark:text-teal-400 font-bold text-2xl uppercase">
+                  {nome ? nome.charAt(0).toUpperCase() : "P"}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1 w-full sm:w-auto">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 text-center sm:text-left">
+                Foto de Perfil do Paciente
+              </span>
+              <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                <label className="px-3 py-1.5 text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white rounded-lg cursor-pointer shadow-xs transition-colors">
+                  <span>+ Foto</span>
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/jpg"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                </label>
+                {fotoPerfil && (
+                  <button
+                    type="button"
+                    onClick={() => setFotoPerfil(null)}
+                    className="px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg cursor-pointer transition-colors"
+                  >
+                    Remover foto
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-400 text-center sm:text-left mt-0.5">
+                PNG ou JPG de até 5 MB (crop 1:1 automático).
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             {/* Nome */}
             <div className="md:col-span-8">
@@ -755,6 +923,91 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
           </button>
         </div>
       </form>
+
+      {/* Submodal de Corte 1:1 */}
+      {tempImgSrc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+          <div className="relative max-w-sm w-full bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <h5 className="font-bold text-sm text-slate-900 dark:text-white">
+                Ajustar e Enquadrar Foto
+              </h5>
+              <button
+                type="button"
+                onClick={() => setTempImgSrc(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Arraste a imagem para reposicionar e ajuste o controle deslizante abaixo para o enquadramento ideal.
+            </p>
+
+            {/* Área de Visualização e Movimento (300x300) */}
+            <div
+              className="relative w-[300px] h-[300px] mx-auto overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 cursor-move select-none"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <img
+                id="cropper-image"
+                src={tempImgSrc}
+                alt="Ajustar"
+                draggable={false}
+                className="absolute max-w-none pointer-events-none origin-center"
+                style={{
+                  left: "50%",
+                  top: "50%",
+                  transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+                }}
+              />
+              <div className="absolute inset-0 border-2 border-dashed border-teal-500/40 rounded-2xl pointer-events-none" />
+            </div>
+
+            {/* Slider de Zoom */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-[11px] font-semibold text-slate-500">
+                <span>Zoom</span>
+                <span>{Math.round(zoom * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.01"
+                value={zoom}
+                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                className="w-full accent-teal-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none"
+              />
+            </div>
+
+            {/* Botões do Submodal */}
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setTempImgSrc(null)}
+                className="px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCrop}
+                className="px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl"
+              >
+                Confirmar Foto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

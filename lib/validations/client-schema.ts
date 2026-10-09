@@ -142,6 +142,8 @@ const clientBaseSchema = z
       .optional()
       .nullable()
       .transform((val: string | null | undefined) => (val && val.length > 0 ? val : null)),
+
+    foto_perfil: z.string().nullable().optional(),
   });
 
 export const clientSchema = clientBaseSchema.refine(
