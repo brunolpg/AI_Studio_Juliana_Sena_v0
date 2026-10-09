@@ -48,6 +48,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(clientToEdit?.foto_perfil ?? null);
   const [tempImgSrc, setTempImgSrc] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [baseScale, setBaseScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -185,9 +186,18 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        setTempImgSrc(reader.result);
-        setZoom(1);
-        setPosition({ x: 0, y: 0 });
+        const img = new Image();
+        img.src = reader.result;
+        img.onload = () => {
+          const containerSize = 300;
+          const scaleX = containerSize / img.naturalWidth;
+          const scaleY = containerSize / img.naturalHeight;
+          const computedBase = Math.max(scaleX, scaleY);
+          setBaseScale(computedBase);
+          setZoom(1);
+          setPosition({ x: 0, y: 0 });
+          setTempImgSrc(reader.result as string);
+        };
       }
     };
     reader.readAsDataURL(file);
@@ -250,29 +260,14 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, 300, 300);
 
-      // Calcular dimensões iniciais enquadradas no box de 300x300
-      let initW = img.naturalWidth;
-      let initH = img.naturalHeight;
-      const ratio = initW / initH;
-      if (initW > initH) {
-        initH = 300;
-        initW = 300 * ratio;
-      } else {
-        initW = 300;
-        initH = 300 / ratio;
-      }
-
-      const initX = (300 - initW) / 2;
-      const initY = (300 - initH) / 2;
-
       ctx.save();
       // Transforma e translada baseado na origem center-center
       ctx.translate(150, 150);
       ctx.translate(position.x, position.y);
-      ctx.scale(zoom, zoom);
-      ctx.translate(-150, -150);
-
-      ctx.drawImage(img, initX, initY, initW, initH);
+      ctx.scale(zoom * baseScale, zoom * baseScale);
+      
+      // Desenha a imagem centralizada ao redor do ponto de origem transladado (150, 150)
+      ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
       ctx.restore();
 
       const croppedBase64 = canvas.toDataURL("image/jpeg", 0.85);
@@ -961,11 +956,12 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 src={tempImgSrc}
                 alt="Ajustar"
                 draggable={false}
-                className="absolute max-w-none pointer-events-none origin-center"
+                className="absolute max-w-none pointer-events-none"
                 style={{
                   left: "50%",
                   top: "50%",
-                  transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${zoom})`,
+                  transform: `translate(-50%, -50%) translate(${position.x}px, ${position.y}px) scale(${zoom * baseScale})`,
+                  transformOrigin: "center center"
                 }}
               />
               <div className="absolute inset-0 border-2 border-dashed border-teal-500/40 rounded-2xl pointer-events-none" />
@@ -973,15 +969,15 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
 
             {/* Slider de Zoom */}
             <div className="space-y-1">
-              <div className="flex justify-between text-[11px] font-semibold text-slate-500">
+              <div className="flex justify-between text-xs text-slate-500 mb-1">
                 <span>Zoom</span>
                 <span>{Math.round(zoom * 100)}%</span>
               </div>
               <input
                 type="range"
-                min="1"
+                min="0.5"
                 max="3"
-                step="0.01"
+                step="0.05"
                 value={zoom}
                 onChange={(e) => setZoom(parseFloat(e.target.value))}
                 className="w-full accent-teal-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none"
