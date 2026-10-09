@@ -1105,4 +1105,4 @@ export async function saveAestheticEvaluationAction(
   } catch (error: any) {
     return { success: false, message: error?.message || 'Falha ao salvar avaliação estética.' };
   }
-
+}
