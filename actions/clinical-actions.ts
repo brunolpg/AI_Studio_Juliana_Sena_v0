@@ -961,150 +961,148 @@ export async function addStructuredPrescriptionAction(
   }
 }
 
-/**
- * Busca Avaliação Estética Facial e Corporal do Paciente
- */
-export async function getAestheticEvaluationAction(
-  pacienteId: string
-): Promise<ActionResponse<{ facial: any; corporal: any }>> {
+export async function getAestheticEvaluationAction(patientId: string): Promise<ActionResponse<{ facial: any; corporal: any }>> {
   try {
-    if (!pacienteId) {
-      return { success: false, message: "ID do paciente não fornecido." };
-    }
-
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(pacienteId)) {
-      return { success: false, message: "ID de paciente inválido." };
+    if (!patientId || !uuidRegex.test(patientId)) {
+      return { success: false, message: 'ID do paciente inválido.' };
     }
 
     const supabase = await createClient();
-    if (!supabase) {
-      return { success: false, message: "Banco de dados não disponível." };
-    }
+    if (!supabase) return { success: false, message: 'Falha de conexão com o banco de dados.' };
 
-    const { data: facial, error: facialErr } = await supabase
-      .from("avaliacoes_faciais")
-      .select("*")
-      .eq("paciente_id", pacienteId)
+    const { data: facialData, error: facialErr } = await supabase
+      .from('avaliacoes_faciais')
+      .select('*')
+      .eq('paciente_id', patientId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (facialErr) {
-      console.warn("Aviso ao buscar avaliação facial:", facialErr.message);
+      console.error('Erro ao buscar avaliação facial:', facialErr.message);
     }
 
-    const { data: corporal, error: corporalErr } = await supabase
-      .from("avaliacoes_corporais")
-      .select("*")
-      .eq("paciente_id", pacienteId)
+    const { data: corporalData, error: corporalErr } = await supabase
+      .from('avaliacoes_corporais')
+      .select('*')
+      .eq('paciente_id', patientId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (corporalErr) {
-      console.warn("Aviso ao buscar avaliação corporal:", corporalErr.message);
+      console.error('Erro ao buscar avaliação corporal:', corporalErr.message);
     }
 
     return {
       success: true,
       data: {
-        facial: facial || null,
-        corporal: corporal || null,
+        facial: facialData || null,
+        corporal: corporalData || null,
       },
     };
   } catch (error: any) {
-    console.error("Erro em getAestheticEvaluationAction:", error);
-    return {
-      success: false,
-      message: `Erro ao buscar avaliação estética: ${error.message || error}`,
-    };
+    return { success: false, message: error?.message || 'Erro inesperado ao consultar avaliação estética.' };
   }
 }
 
-/**
- * Salva ou Atualiza Avaliação Estética (Facial e Corporal) do Paciente
- */
 export async function saveAestheticEvaluationAction(
-  pacienteId: string,
-  facialData: any,
-  corporalData: any
-): Promise<ActionResponse<any>> {
+  patientId: string,
+  payload: { facial: any; corporal: any }
+): Promise<ActionResponse<boolean>> {
   try {
-    if (!pacienteId) {
-      return { success: false, message: "ID do paciente não fornecido." };
-    }
-
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(pacienteId)) {
-      return { success: false, message: "ID de paciente inválido. Acesso ao banco recusado." };
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!patientId || !uuidRegex.test(patientId)) {
+      return { success: false, message: 'ID do paciente inválido.' };
     }
 
     const supabase = await createClient();
-    if (!supabase) {
-      return { success: false, message: "Conexão com o Supabase indisponível." };
+    if (!supabase) return { success: false, message: 'Falha de conexão com o banco de dados.' };
+
+    // 1. Salvar ou Atualizar Avaliação Facial
+    if (payload.facial) {
+      const { data: existingFacial } = await supabase
+        .from('avaliacoes_faciais')
+        .select('id')
+        .eq('paciente_id', patientId)
+        .maybeSingle();
+
+      const facialRecord = {
+        paciente_id: patientId,
+        tipo_pele: payload.facial.tipo_pele || null,
+        textura: payload.facial.textura || null,
+        fototipo: payload.facial.fototipo || null,
+        hidratacao: payload.facial.hidratacao !== undefined && payload.facial.hidratacao !== '' ? parseFloat(String(payload.facial.hidratacao)) : null,
+        oleosidade: payload.facial.oleosidade !== undefined && payload.facial.oleosidade !== '' ? parseFloat(String(payload.facial.oleosidade)) : null,
+        escala_glogau: payload.facial.escala_glogau || null,
+        acne_grau: payload.facial.acne_grau || null,
+        discromias: Array.isArray(payload.facial.discromias) ? payload.facial.discromias : [],
+        textura_relevo: Array.isArray(payload.facial.textura_relevo) ? payload.facial.textura_relevo : [],
+        vascularizacao: Array.isArray(payload.facial.vascularizacao) ? payload.facial.vascularizacao : [],
+        outras_alteracoes: Array.isArray(payload.facial.outras_alteracoes) ? payload.facial.outras_alteracoes : [],
+        avaliacao_lupa: payload.facial.avaliacao_lupa?.trim() || null,
+        exames_laboratoriais: payload.facial.exames_laboratoriais?.trim() || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (existingFacial?.id) {
+        const { error: updErr } = await supabase
+          .from('avaliacoes_faciais')
+          .update(facialRecord)
+          .eq('id', existingFacial.id);
+        if (updErr) return { success: false, message: 'Erro ao atualizar avaliação facial: ' + updErr.message };
+      } else {
+        const { error: insErr } = await supabase
+          .from('avaliacoes_faciais')
+          .insert(facialRecord);
+        if (insErr) return { success: false, message: 'Erro ao registrar avaliação facial: ' + insErr.message };
+      }
     }
 
-    // 1. Salvar Facial
-    const facialPayload = {
-      paciente_id: pacienteId,
-      tipo_pele: facialData.tipo_pele || null,
-      textura: facialData.textura || null,
-      fototipo: facialData.fototipo || null,
-      hidratacao_cutanea: facialData.hidratacao_cutanea !== undefined ? facialData.hidratacao_cutanea : null,
-      oleosidade_sebo: facialData.oleosidade_sebo !== undefined ? facialData.oleosidade_sebo : null,
-      glogau: facialData.glogau || null,
-      acne_grau: facialData.acne_grau || null,
-      discromias: facialData.discromias || [],
-      textura_relevo: facialData.textura_relevo || [],
-      vascularizacao: facialData.vascularizacao || [],
-      outros: facialData.outros || [],
-      avaliacao_lupa: facialData.avaliacao_lupa || null,
-      exames_laboratoriais: facialData.exames_laboratoriais || null,
-      updated_at: new Date().toISOString(),
-    };
+    // 2. Salvar ou Atualizar Avaliação Corporal
+    if (payload.corporal) {
+      const { data: existingCorporal } = await supabase
+        .from('avaliacoes_corporais')
+        .select('id')
+        .eq('paciente_id', patientId)
+        .maybeSingle();
 
-    const { error: facialErr } = await supabase
-      .from("avaliacoes_faciais")
-      .upsert(facialPayload, { onConflict: "paciente_id" });
+      const corporalRecord = {
+        paciente_id: patientId,
+        fototipo: payload.corporal.fototipo || null,
+        hidratacao_pele: payload.corporal.hidratacao_pele || null,
+        estrias_localizacao: Array.isArray(payload.corporal.estrias_localizacao) ? payload.corporal.estrias_localizacao : [],
+        estrias_localizacao_outros: payload.corporal.estrias_localizacao_outros?.trim() || null,
+        estrias_tipo_coloracao: Array.isArray(payload.corporal.estrias_tipo_coloracao) ? payload.corporal.estrias_tipo_coloracao : [],
+        estrias_espessura: Array.isArray(payload.corporal.estrias_espessura) ? payload.corporal.estrias_espessura : [],
+        tempo_estimado_surgimento: payload.corporal.tempo_estimado_surgimento?.trim() || null,
+        fatores_desencadeantes: Array.isArray(payload.corporal.fatores_desencadeantes) ? payload.corporal.fatores_desencadeantes : [],
+        alteracoes_associadas: Array.isArray(payload.corporal.alteracoes_associadas) ? payload.corporal.alteracoes_associadas : [],
+        updated_at: new Date().toISOString(),
+      };
 
-    if (facialErr) {
-      console.error("Erro ao salvar avaliação facial:", facialErr);
-      return { success: false, message: `Erro ao salvar avaliação facial: ${facialErr.message}` };
+      if (existingCorporal?.id) {
+        const { error: updCorpErr } = await supabase
+          .from('avaliacoes_corporais')
+          .update(corporalRecord)
+          .eq('id', existingCorporal.id);
+        if (updCorpErr) return { success: false, message: 'Erro ao atualizar avaliação corporal: ' + updCorpErr.message };
+      } else {
+        const { error: insCorpErr } = await supabase
+          .from('avaliacoes_corporais')
+          .insert(corporalRecord);
+        if (insCorpErr) return { success: false, message: 'Erro ao registrar avaliação corporal: ' + insCorpErr.message };
+      }
     }
 
-    // 2. Salvar Corporal
-    const corporalPayload = {
-      paciente_id: pacienteId,
-      fototipo: corporalData.fototipo || null,
-      hidratacao_local: corporalData.hidratacao_local || null,
-      estrias_localizacao: corporalData.estrias_localizacao || [],
-      estrias_localizacao_outro: corporalData.estrias_localizacao_outro || null,
-      estrias_tipo_coloracao: corporalData.estrias_tipo_coloracao || [],
-      estrias_espessura_profundidade: corporalData.estrias_espessura_profundidade || [],
-      estrias_tempo_surgimento: corporalData.estrias_tempo_surgimento || null,
-      estrias_fator_desencadeante: corporalData.estrias_fator_desencadeante || [],
-      alteracoes_associadas: corporalData.alteracoes_associadas || [],
-      updated_at: new Date().toISOString(),
-    };
-
-    const { error: corporalErr } = await supabase
-      .from("avaliacoes_corporais")
-      .upsert(corporalPayload, { onConflict: "paciente_id" });
-
-    if (corporalErr) {
-      console.error("Erro ao salvar avaliação corporal:", corporalErr);
-      return { success: false, message: `Erro ao salvar avaliação corporal: ${corporalErr.message}` };
-    }
-
-    revalidatePath("/");
-
+    revalidatePath('/');
     return {
       success: true,
-      message: "Avaliação estética salva com sucesso!",
+      message: 'Avaliação estética registrada com sucesso!',
+      data: true,
     };
   } catch (error: any) {
-    console.error("Erro inesperado em saveAestheticEvaluationAction:", error);
-    return {
-      success: false,
-      message: `Erro interno no servidor: ${error.message || error}`,
-    };
+    return { success: false, message: error?.message || 'Falha ao salvar avaliação estética.' };
   }
-}
 

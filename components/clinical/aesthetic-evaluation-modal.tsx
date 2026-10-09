@@ -59,14 +59,22 @@ export function AestheticEvaluationModal({
       setTipoPele(initialFacial.tipo_pele || "");
       setTextura(initialFacial.textura || "");
       setFototipoFacial(initialFacial.fototipo || "");
-      setHidratacaoCutanea(initialFacial.hidratacao_cutanea !== null ? String(initialFacial.hidratacao_cutanea) : "");
-      setOleosidadeSebo(initialFacial.oleosidade_sebo !== null ? String(initialFacial.oleosidade_sebo) : "");
-      setGlogau(initialFacial.glogau || "");
+      setHidratacaoCutanea(
+        initialFacial.hidratacao !== null && initialFacial.hidratacao !== undefined
+          ? String(initialFacial.hidratacao)
+          : ""
+      );
+      setOleosidadeSebo(
+        initialFacial.oleosidade !== null && initialFacial.oleosidade !== undefined
+          ? String(initialFacial.oleosidade)
+          : ""
+      );
+      setGlogau(initialFacial.escala_glogau || "");
       setAcneGrau(initialFacial.acne_grau || "");
       setDiscromias(Array.isArray(initialFacial.discromias) ? initialFacial.discromias : []);
       setTexturaRelevo(Array.isArray(initialFacial.textura_relevo) ? initialFacial.textura_relevo : []);
       setVascularizacao(Array.isArray(initialFacial.vascularizacao) ? initialFacial.vascularizacao : []);
-      setOutros(Array.isArray(initialFacial.outros) ? initialFacial.outros : []);
+      setOutros(Array.isArray(initialFacial.outras_alteracoes) ? initialFacial.outras_alteracoes : []);
       setAvaliacaoLupa(initialFacial.avaliacao_lupa || "");
       setExamesLaboratoriais(initialFacial.exames_laboratoriais || "");
     } else {
@@ -87,13 +95,13 @@ export function AestheticEvaluationModal({
 
     if (initialCorporal) {
       setFototipoCorporal(initialCorporal.fototipo || "");
-      setHidratacaoLocal(initialCorporal.hidratacao_local || "");
+      setHidratacaoLocal(initialCorporal.hidratacao_pele || "");
       setEstriasLocalizacao(Array.isArray(initialCorporal.estrias_localizacao) ? initialCorporal.estrias_localizacao : []);
-      setEstriasLocalizacaoOutro(initialCorporal.estrias_localizacao_outro || "");
+      setEstriasLocalizacaoOutro(initialCorporal.estrias_localizacao_outros || "");
       setEstriasTipoColoracao(Array.isArray(initialCorporal.estrias_tipo_coloracao) ? initialCorporal.estrias_tipo_coloracao : []);
-      setEstriasEspessuraProfundidade(Array.isArray(initialCorporal.estrias_espessura_profundidade) ? initialCorporal.estrias_espessura_profundidade : []);
-      setEstriasTempoSurgimento(initialCorporal.estrias_tempo_surgimento || "");
-      setEstriasFatorDesencadeante(Array.isArray(initialCorporal.estrias_fator_desencadeante) ? initialCorporal.estrias_fator_desencadeante : []);
+      setEstriasEspessuraProfundidade(Array.isArray(initialCorporal.estrias_espessura) ? initialCorporal.estrias_espessura : []);
+      setEstriasTempoSurgimento(initialCorporal.tempo_estimado_surgimento || "");
+      setEstriasFatorDesencadeante(Array.isArray(initialCorporal.fatores_desencadeantes) ? initialCorporal.fatores_desencadeantes : []);
       setAlteracoesAssociadas(Array.isArray(initialCorporal.alteracoes_associadas) ? initialCorporal.alteracoes_associadas : []);
     } else {
       setFototipoCorporal("");
@@ -130,36 +138,37 @@ export function AestheticEvaluationModal({
       return isNaN(num) ? null : num;
     };
 
-    const facialPayload = {
-      tipo_pele: tipoPele || null,
-      textura: textura || null,
-      fototipo: fototipoFacial || null,
-      hidratacao_cutanea: parseNum(hidratacaoCutanea),
-      oleosidade_sebo: parseNum(oleosidadeSebo),
-      glogau: glogau || null,
-      acne_grau: acneGrau || null,
-      discromias,
-      textura_relevo: texturaRelevo,
-      vascularizacao,
-      outros,
-      avaliacao_lupa: avaliacaoLupa.trim() || null,
-      exames_laboratoriais: examesLaboratoriais.trim() || null,
-    };
-
-    const corporalPayload = {
-      fototipo: fototipoCorporal || null,
-      hidratacao_local: hidratacaoLocal || null,
-      estrias_localizacao: estriasLocalizacao,
-      estrias_localizacao_outro: estriasLocalizacaoOutro.trim() || null,
-      estrias_tipo_coloracao: estriasTipoColoracao,
-      estrias_espessura_profundidade: estriasEspessuraProfundidade,
-      estrias_tempo_surgimento: estriasTempoSurgimento.trim() || null,
-      estrias_fator_desencadeante: estriasFatorDesencadeante,
-      alteracoes_associadas: alteracoesAssociadas,
+    const payload = {
+      facial: {
+        tipo_pele: tipoPele || null,
+        textura: textura || null,
+        fototipo: fototipoFacial || null,
+        hidratacao: parseNum(hidratacaoCutanea),
+        oleosidade: parseNum(oleosidadeSebo),
+        escala_glogau: glogau || null,
+        acne_grau: acneGrau || null,
+        discromias,
+        textura_relevo: texturaRelevo,
+        vascularizacao,
+        outras_alteracoes: outros,
+        avaliacao_lupa: avaliacaoLupa.trim() || null,
+        exames_laboratoriais: examesLaboratoriais.trim() || null,
+      },
+      corporal: {
+        fototipo: fototipoCorporal || null,
+        hidratacao_pele: hidratacaoLocal || null,
+        estrias_localizacao: estriasLocalizacao,
+        estrias_localizacao_outros: estriasLocalizacaoOutro.trim() || null,
+        estrias_tipo_coloracao: estriasTipoColoracao,
+        estrias_espessura: estriasEspessuraProfundidade,
+        tempo_estimado_surgimento: estriasTempoSurgimento.trim() || null,
+        fatores_desencadeantes: estriasFatorDesencadeante,
+        alteracoes_associadas: alteracoesAssociadas,
+      }
     };
 
     try {
-      const res = await saveAestheticEvaluationAction(patientId, facialPayload, corporalPayload);
+      const res = await saveAestheticEvaluationAction(patientId, payload);
       if (res.success) {
         toast({
           type: "success",
