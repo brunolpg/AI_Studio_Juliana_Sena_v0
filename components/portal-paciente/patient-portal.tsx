@@ -9,12 +9,10 @@ import {
   Sparkles,
   AlertCircle,
   Clock,
-  FileText,
-  ShieldAlert,
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { PatientClinicalTabs } from "@/components/clinical/patient-clinical-tabs";
-import { SchedulingView } from "@/components/scheduling/scheduling-view";
+import { AppointmentSchedulerView } from "@/components/appointments/appointment-scheduler-view";
 
 interface PatientPortalProps {
   user: any;
@@ -57,7 +55,6 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
         } else if (data) {
           setPatientData(data);
         } else {
-          // Dados não encontrados - caso onde o paciente ainda não tem ficha preenchida
           setPatientData(null);
         }
       } catch (err: any) {
@@ -169,7 +166,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
               Cadastro em fase de vinculação
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-              Sua conta ({user?.email}) está active, mas ainda não localizamos uma ficha clínica vinculada.
+              Sua conta ({user?.email}) está ativa, mas ainda não localizamos uma ficha clínica vinculada.
               Entre em contato com a clínica para sincronizar seu histórico.
             </p>
           </div>
@@ -243,7 +240,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
             {/* ABA: AGENDAMENTOS */}
             {activeTab === "agendamentos" && (
               <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-2xs">
-                <SchedulingView
+                <AppointmentSchedulerView
                   forcedClientId={patientData.id}
                   readOnlyOthers={true}
                 />
