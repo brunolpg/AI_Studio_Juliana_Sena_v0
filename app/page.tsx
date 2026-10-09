@@ -170,7 +170,7 @@ export default function HomePage() {
   // 1. Tela de Carregamento
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="relative">
             <div className="w-16 h-16 rounded-[20px] bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 flex items-center justify-center animate-pulse">
@@ -198,7 +198,7 @@ export default function HomePage() {
 
   // 3. Se não logado, exibe a Tela de Login (Idêntica à imagem "Tela_Login.png")
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 flex flex-col justify-center items-center p-4 sm:p-6 select-none">
+    <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col justify-center items-center p-4 sm:p-6 select-none">
       <div className="w-full max-w-[440px] space-y-6">
         
         {/* Logotipo e Nomes no Topo */}
