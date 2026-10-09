@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { PatientClinicalTabs } from "@/components/clinical/patient-clinical-tabs";
-import { AppointmentSchedulerView } from "@/components/appointments/appointment-scheduler-view";
+import { AppointmentList } from "@/components/appointments/appointment-list";
 
 interface PatientPortalProps {
   user: any;
@@ -39,7 +39,6 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
         const userEmail = (user?.email || "").toLowerCase().trim();
         const userId = user?.id;
 
-        // Consulta registro na tabela 'pacientes' por user_id ou e-mail
         let query = supabase.from("pacientes").select("*");
         if (userId) {
           query = query.or(`user_id.eq.${userId},email.ilike.${userEmail}`);
@@ -240,9 +239,9 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
             {/* ABA: AGENDAMENTOS */}
             {activeTab === "agendamentos" && (
               <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-2xs">
-                <AppointmentSchedulerView
-                  forcedClientId={patientData.id}
-                  readOnlyOthers={true}
+                <AppointmentList
+                  patientId={patientData.id}
+                  isPatientView={true}
                 />
               </div>
             )}
