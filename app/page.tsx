@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-context";
 import { PatientDashboard } from "@/components/clients/patient-dashboard";
+import { PatientPortal } from "@/components/portal-paciente/patient-portal";
 import { loginSchema, registerSchema } from "@/lib/validations/auth-schema";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
@@ -23,7 +24,7 @@ import {
 } from "lucide-react";
 
 export default function HomePage() {
-  const { user, isLoading, login, register } = useAuth();
+  const { user, isLoading, login, register, logout } = useAuth();
   const { toast } = useToast();
 
   // "entrar" ou "criar"
@@ -191,8 +192,22 @@ export default function HomePage() {
     );
   }
 
-  // 2. Se logado, exibe o Painel de Pacientes
+  // 2. Se logado, bifurca o ambiente pelo papel do usuário
   if (user) {
+    const rawRole = (
+      user.role ||
+      (user as any).profile?.role ||
+      (user as any).user_metadata?.role ||
+      ""
+    )
+      .toString()
+      .toLowerCase()
+      .trim();
+
+    if (rawRole === "paciente") {
+      return <PatientPortal user={user} onLogout={logout} />;
+    }
+
     return <PatientDashboard />;
   }
 
