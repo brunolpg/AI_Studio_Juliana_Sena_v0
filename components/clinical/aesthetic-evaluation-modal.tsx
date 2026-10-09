@@ -222,7 +222,7 @@ export function AestheticEvaluationModal({
               {/* Seção 1: Tipo de Pele e Textura */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block uppercase tracking-wider">
+                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block">
                     Tipo de Pele (Cutânea)
                   </span>
                   <div className="grid grid-cols-2 gap-2">
@@ -243,7 +243,7 @@ export function AestheticEvaluationModal({
                 </div>
 
                 <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block uppercase tracking-wider">
+                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block">
                     Textura Cutânea
                   </span>
                   <div className="grid grid-cols-2 gap-2">
@@ -267,7 +267,7 @@ export function AestheticEvaluationModal({
               {/* Seção 2: Fototipo Fitzpatrick e Biometria Cutânea */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block uppercase tracking-wider">
+                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block">
                     Fototipo de Fitzpatrick (Escala I a VI)
                   </span>
                   <div className="flex flex-wrap gap-3">
@@ -288,12 +288,12 @@ export function AestheticEvaluationModal({
                 </div>
 
                 <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block uppercase tracking-wider">
+                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block">
                     Biometria Cutânea
                   </span>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Hidratação (%)</label>
+                      <label className="text-[10px] font-bold text-slate-500 block mb-1">Hidratação (%)</label>
                       <div className="relative">
                         <input
                           type="number"
@@ -308,7 +308,7 @@ export function AestheticEvaluationModal({
                       </div>
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Oleosidade (%)</label>
+                      <label className="text-[10px] font-bold text-slate-500 block mb-1">Oleosidade (%)</label>
                       <div className="relative">
                         <input
                           type="number"
@@ -329,7 +329,7 @@ export function AestheticEvaluationModal({
               {/* Seção 3: Glogau e Acne */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block uppercase tracking-wider">
+                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block">
                     Escala de Fotoenvelhecimento de Glogau
                   </span>
                   <div className="space-y-2">
@@ -355,8 +355,8 @@ export function AestheticEvaluationModal({
                 </div>
 
                 <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block uppercase tracking-wider">
-                    Grau de Acne Clínico (Se houver)
+                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block">
+                    Acne (Grau)
                   </span>
                   <div className="space-y-2">
                     {[
@@ -383,14 +383,14 @@ export function AestheticEvaluationModal({
 
               {/* Seção 4: Alterações Observadas na Pele */}
               <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
-                <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block uppercase tracking-wider">
-                  Alterações Observadas na Pele (Múltipla Escolha)
+                <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block">
+                  Alterações Observadas na Pele
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   {/* Discromias */}
                   <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Discromias</span>
+                    <span className="text-[10px] font-bold text-slate-400 block">Discromias</span>
                     {["Melasma", "Efélides (Sardas)", "HPI (Hiperpigmentação)", "Melanose Solar"].map((dis) => (
                       <label key={dis} className="flex items-center gap-2 text-xs cursor-pointer">
                         <input
@@ -406,7 +406,7 @@ export function AestheticEvaluationModal({
 
                   {/* Textura e Relevo */}
                   <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Textura & Relevo</span>
+                    <span className="text-[10px] font-bold text-slate-400 block">Textura e Relevo</span>
                     {["Óstios Dilatados (Poros)", "Cicatrizes Atróficas", "Hiperqueratose"].map((tr) => (
                       <label key={tr} className="flex items-center gap-2 text-xs cursor-pointer">
                         <input
@@ -422,7 +422,7 @@ export function AestheticEvaluationModal({
 
                   {/* Vascularização */}
                   <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Vascularização</span>
+                    <span className="text-[10px] font-bold text-slate-400 block">Vascularização</span>
                     {["Telangiectasias", "Eritema Ativo", "Rosácea"].map((v) => (
                       <label key={v} className="flex items-center gap-2 text-xs cursor-pointer">
                         <input
@@ -438,7 +438,7 @@ export function AestheticEvaluationModal({
 
                   {/* Outros */}
                   <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Outras Ocorrências</span>
+                    <span className="text-[10px] font-bold text-slate-400 block">Outras Alterações</span>
                     {["Míliuns", "Ceratose seborreica", "Sinais/nevos suspeitos", "Lesões ativas"].map((o) => (
                       <label key={o} className="flex items-center gap-2 text-xs cursor-pointer">
                         <input
@@ -458,7 +458,7 @@ export function AestheticEvaluationModal({
               <div className="space-y-3">
                 <div>
                   <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1">
-                    Avaliação minuciosa com lupa (Luz polarizada / Wood)
+                    Avaliação com Lupa
                   </label>
                   <textarea
                     placeholder="Descreva as alterações de relevo, brilho, descamação e lesões sob magnificação..."
@@ -471,7 +471,7 @@ export function AestheticEvaluationModal({
 
                 <div>
                   <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1">
-                    Exames laboratoriais relevantes trazidos pelo paciente
+                    Exames Laboratoriais Relevantes
                   </label>
                   <textarea
                     placeholder="Ex: Hemograma, Perfil hormonal, Vitaminas (D, B12), Ferritina..."
@@ -492,8 +492,8 @@ export function AestheticEvaluationModal({
               {/* Seção 1: Fototipo e Hidratação Local */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block uppercase tracking-wider">
-                    Fototipo de Fitzpatrick (Corporal)
+                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block">
+                    Fototipo de Fitzpatrick
                   </span>
                   <div className="flex flex-wrap gap-3">
                     {["I", "II", "III", "IV", "V", "VI"].map((foto) => (
@@ -513,8 +513,8 @@ export function AestheticEvaluationModal({
                 </div>
 
                 <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block uppercase tracking-wider">
-                    Hidratação local (Região Alvo)
+                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block">
+                    Hidratação da Pele (na Região)
                   </span>
                   <div className="grid grid-cols-2 gap-2">
                     {["Seca", "Normal", "Mista", "Oleosa"].map((hl) => (
@@ -536,14 +536,14 @@ export function AestheticEvaluationModal({
 
               {/* Seção 2: Características das Estrias (Foco Corporal Regenerativo) */}
               <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
-                <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block uppercase tracking-wider">
-                  Características de Estrias & Turgor Tissular
+                <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block">
+                  Características das Estrias
                 </span>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Localização */}
                   <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Localização das Estrias</span>
+                    <span className="text-[10px] font-bold text-slate-400 block">Localização</span>
                     <div className="grid grid-cols-2 gap-2">
                       {["Abdômen", "Flancos", "Glúteos", "Coxas", "Panturrilhas", "Costas", "Mamas"].map((loc) => (
                         <label key={loc} className="flex items-center gap-2 text-xs cursor-pointer">
@@ -570,7 +570,7 @@ export function AestheticEvaluationModal({
 
                   {/* Tipo e Coloração */}
                   <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Tipo & Coloração</span>
+                    <span className="text-[10px] font-bold text-slate-400 block">Tipo e Coloração</span>
                     {["Rubras (Fase Inflamatória)", "Albas (Fase Cicatricial)", "Hiperpigmentadas (Escuras)"].map((tipo) => (
                       <label key={tipo} className="flex items-center gap-2 text-xs cursor-pointer">
                         <input
@@ -588,7 +588,7 @@ export function AestheticEvaluationModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-200/40 dark:border-slate-800/60 pt-4">
                   {/* Espessura e Profundidade */}
                   <div className="space-y-2">
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Espessura & Profundidade</span>
+                    <span className="text-[10px] font-bold text-slate-400 block">Espessura e Profundidade</span>
                     <div className="grid grid-cols-2 gap-2">
                       {["Finas", "Médias", "Largas", "Superficiais", "Atróficas (Profundas)"].map((esp) => (
                         <label key={esp} className="flex items-center gap-2 text-xs cursor-pointer">
@@ -607,7 +607,7 @@ export function AestheticEvaluationModal({
                   {/* Tempo e Fatores */}
                   <div className="space-y-3">
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 block uppercase mb-1">Tempo estimado de surgimento</span>
+                      <span className="text-[10px] font-bold text-slate-400 block mb-1">Tempo Estimado de Surgimento</span>
                       <input
                         type="text"
                         placeholder="Ex: Cerca de 2 anos, após gestação, puberdade..."
@@ -623,7 +623,7 @@ export function AestheticEvaluationModal({
               {/* Seção 3: Fator Desencadeante Provável */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block uppercase tracking-wider">
+                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block">
                     Fator Desencadeante Provável
                   </span>
                   <div className="grid grid-cols-1 gap-2">
@@ -650,7 +650,7 @@ export function AestheticEvaluationModal({
                 </div>
 
                 <div className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
-                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block uppercase tracking-wider">
+                  <span className="text-xs font-bold text-teal-700 dark:text-teal-400 block">
                     Alterações Corporais Associadas
                   </span>
                   <div className="grid grid-cols-1 gap-2">
