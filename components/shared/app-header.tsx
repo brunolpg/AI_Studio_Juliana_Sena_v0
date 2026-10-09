@@ -13,7 +13,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
   return (
-    <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-40 w-full overflow-x-hidden">
+    <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 relative z-50 w-full">
       <div className="w-full max-w-full px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between py-4 gap-4">
           {/* Logo & Info */}
