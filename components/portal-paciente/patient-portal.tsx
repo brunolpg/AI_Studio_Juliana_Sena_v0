@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { PatientClinicalTabs } from "@/components/clinical/patient-clinical-tabs";
-import { AppointmentList } from "@/components/appointments/appointment-list";
+import { AppointmentTableView } from "@/components/appointments/appointment-table-view";
 
 interface PatientPortalProps {
   user: any;
@@ -239,10 +239,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
             {/* ABA: AGENDAMENTOS */}
             {activeTab === "agendamentos" && (
               <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-2xs">
-                <AppointmentList
-                  patientId={patientData.id}
-                  isPatientView={true}
-                />
+                <AppointmentTableView />
               </div>
             )}
           </>
