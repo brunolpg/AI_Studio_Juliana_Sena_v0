@@ -178,22 +178,22 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
             <button
               type="button"
               onClick={toggleTheme}
-              className="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors cursor-pointer"
+              className="w-full px-2.5 py-1.5 text-[11px] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg flex items-center justify-between transition-colors cursor-pointer"
             >
               <span>Tema do Sistema:</span>
-              <div className="flex items-center gap-1 font-semibold text-teal-700 dark:text-teal-400">
+              <span className="font-semibold text-teal-700 dark:text-teal-400 flex items-center gap-1.5">
                 {isDark ? (
                   <>
-                    <Sun className="w-3 h-3 text-amber-500" />
-                    <span>Claro</span>
+                    <Moon className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                    <span>Escuro</span>
                   </>
                 ) : (
                   <>
-                    <Moon className="w-3 h-3 text-indigo-400" />
-                    <span>Escuro</span>
+                    <Sun className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Claro</span>
                   </>
                 )}
-              </div>
+              </span>
             </button>
           </div>
 

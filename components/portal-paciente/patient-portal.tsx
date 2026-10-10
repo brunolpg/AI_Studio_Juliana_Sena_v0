@@ -102,7 +102,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
               }`}
             >
               <ClipboardList className="w-3.5 h-3.5" />
-              <span>Prontuário & Evoluções</span>
+              <span>Documentos</span>
             </button>
             <button
               type="button"
