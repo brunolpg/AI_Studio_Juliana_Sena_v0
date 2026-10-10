@@ -132,59 +132,27 @@ function AppointmentFormModalContent({
     setTimeout(() => setCopiedPix(false), 2500);
   };
 
-  // Auto-seleciona o paciente garantindo que o ID seja o da tabela 'pacientes' (e não o auth.users.id)
+  // Auto-select patient if user is a patient
   useEffect(() => {
-    let isCancelled = false;
-
-    async function resolvePatientRecord() {
-      if (!isPatient) return;
-
-      // 1. Se já recebeu initialPatient válido da tabela pacientes
-      if (initialPatient && initialPatient.id) {
-        setSelectedPatient(initialPatient);
-        return;
-      }
-
+    if (isPatient && !selectedPatient) {
       const userEmail = (user?.email || "").toLowerCase().trim();
       const userId = user?.id;
-
-      // 2. Tenta encontrar na lista de pacientes já carregada
-      const inList = patients.find(
-        (p) =>
-          (userId && (p as any).user_id === userId) ||
-          (userEmail && p.email?.toLowerCase().trim() === userEmail)
+      const matched = patients.find(
+        (p) => (userId && (p as any).user_id === userId) || (userEmail && p.email?.toLowerCase().trim() === userEmail)
       );
-      if (inList) {
-        setSelectedPatient(inList);
-        return;
-      }
-
-      // 3. Busca direta e garantida na tabela 'pacientes' do Supabase
-      try {
-        const supabase = getSupabaseClient();
-        if (supabase && (userEmail || userId)) {
-          let query = supabase.from("pacientes").select("id, nome, cpf, email, telefone, user_id");
-          if (userId) {
-            query = query.or(`user_id.eq.${userId},email.ilike.${userEmail}`);
-          } else {
-            query = query.ilike("email", userEmail);
-          }
-
-          const { data: dbPatient } = await query.maybeSingle();
-          if (dbPatient && !isCancelled) {
-            setSelectedPatient(dbPatient as SelectablePatient);
-          }
-        }
-      } catch (err) {
-        console.error("Erro ao resolver registro do paciente:", err);
+      if (matched) {
+        setSelectedPatient(matched);
+      } else if (user && (user.email || user.name || user.nome)) {
+        setSelectedPatient({
+          id: user.id || "",
+          nome: user.name || user.nome || "Paciente",
+          email: user.email,
+          telefone: (user as any).telefone || "",
+          cpf: (user as any).cpf || "",
+        });
       }
     }
-
-    resolvePatientRecord();
-    return () => {
-      isCancelled = true;
-    };
-  }, [isPatient, initialPatient, patients, user]);
+  }, [isPatient, patients, user, selectedPatient]);
 
   useEffect(() => {
     async function loadProcedimentos() {
@@ -476,7 +444,7 @@ function AppointmentFormModalContent({
     setErrorMsg(null);
 
     if (!selectedPatient || !selectedPatient.id) {
-      setErrorMsg("Não foi possível identificar sua ficha de paciente cadastrada no sistema. Contate a recepção.");
+      setErrorMsg("Selecione um paciente cadastrado para o agendamento.");
       scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -528,6 +496,34 @@ function AppointmentFormModalContent({
       const matchedProc = procedimentosList.find((p) => p.procedimento === procedimento);
       const safeProcedimentoId = isValidUUID(matchedProc?.id) ? matchedProc?.id : undefined;
 
+      let uploadedReceiptUrl: string | null = null;
+
+      if (receiptFile) {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const fileExt = receiptFile.name.split('.').pop() || 'png';
+          const cleanFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `comprovantes/${cleanFileName}`;
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('comprovantes-pagamento')
+            .upload(filePath, receiptFile, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          if (uploadError) {
+            console.error('Erro no upload do comprovante:', uploadError.message);
+          } else {
+            const { data: publicData } = supabase.storage
+              .from('comprovantes-pagamento')
+              .getPublicUrl(filePath);
+            
+            uploadedReceiptUrl = publicData.publicUrl;
+          }
+        }
+      }
+
       // 2. Ajuste a construção do payload
       const payload: AppointmentInput = {
         client_id: selectedPatient.id,
@@ -541,28 +537,10 @@ function AppointmentFormModalContent({
         procedimento_id: safeProcedimentoId,
         observacoes: observacoes.trim() || undefined,
         sync_google: true,
-      };
-
-      let uploadedReceiptUrl = null;
-      if (receiptFile) {
-        const supabase = getSupabaseClient();
-        if (supabase) {
-          const fileExt = receiptFile.name.split('.').pop();
-          const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-          const filePath = `comprovantes/${fileName}`;
-
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('comprovantes-pagamento')
-            .upload(filePath, receiptFile);
-
-          if (!uploadError) {
-            const { data: publicUrlData } = supabase.storage
-              .from('comprovantes-pagamento')
-              .getPublicUrl(filePath);
-            uploadedReceiptUrl = publicUrlData.publicUrl;
-          }
-        }
-      }
+        status_pagamento: uploadedReceiptUrl ? 'Em Análise' : 'Pendente',
+        metodo_pagamento: 'pix_manual',
+        comprovante_url: uploadedReceiptUrl,
+      } as any;
 
       const res = await createAppointmentAction(payload);
 
@@ -574,13 +552,13 @@ function AppointmentFormModalContent({
             await supabase
               .from("appointments")
               .update({
-                status_pagamento: 'Em Análise',
+                status_pagamento: uploadedReceiptUrl ? 'Em Análise' : 'Pendente',
                 metodo_pagamento: 'pix_manual',
                 comprovante_url: uploadedReceiptUrl,
               })
               .eq("id", appointmentId);
             
-            (res.data as any).status_pagamento = 'Em Análise';
+            (res.data as any).status_pagamento = uploadedReceiptUrl ? 'Em Análise' : 'Pendente';
             (res.data as any).metodo_pagamento = 'pix_manual';
             (res.data as any).comprovante_url = uploadedReceiptUrl;
           }
