@@ -175,24 +175,55 @@ export async function getAppointmentsAction(
       query = query.eq("data", dateFilter);
     }
 
-    // 3. Busca textual inteligente (procedimento, data ou nome/contato do paciente)
+    // 3. Busca textual inteligente (procedimento, data ou paciente)
     if (search.trim()) {
       const term = search.trim();
+      const userRole = await getAuthUserRole();
+      const isPatientRole = userRole === "paciente";
 
-      // Busca IDs de pacientes correspondentes para busca ampla
-      const { data: matchedPatients } = await supabase
-        .from("pacientes")
-        .select("id")
-        .or(`nome.ilike.%${term}%,email.ilike.%${term}%,telefone.ilike.%${term}%,cpf.ilike.%${term}%`);
-
-      const patientIds = matchedPatients?.map((p) => p.id) || [];
-
-      if (patientIds.length > 0) {
-        query = query.or(
-          `procedimento.ilike.%${term}%,data.ilike.%${term}%,client_id.in.(${patientIds.join(",")})`
-        );
+      // Converte data DD/MM/AAAA ou DD/MM para formato AAAA-MM-DD
+      let formattedDateTerm: string | null = null;
+      const ddmmyyyyMatch = term.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (ddmmyyyyMatch) {
+        const day = ddmmyyyyMatch[1].padStart(2, "0");
+        const month = ddmmyyyyMatch[2].padStart(2, "0");
+        const year = ddmmyyyyMatch[3];
+        formattedDateTerm = `${year}-${month}-${day}`;
       } else {
-        query = query.or(`procedimento.ilike.%${term}%,data.ilike.%${term}%`);
+        const ddmmMatch = term.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+        if (ddmmMatch) {
+          const day = ddmmMatch[1].padStart(2, "0");
+          const month = ddmmMatch[2].padStart(2, "0");
+          formattedDateTerm = `-${month}-${day}`;
+        }
+      }
+
+      if (isPatientRole) {
+        // Para pacientes: busca exclusivamente em procedimento ou na data (AAAA-MM-DD ou DD/MM/AAAA)
+        if (formattedDateTerm) {
+          query = query.or(
+            `procedimento.ilike.%${term}%,data.ilike.%${term}%,data.ilike.%${formattedDateTerm}%`
+          );
+        } else {
+          query = query.or(`procedimento.ilike.%${term}%,data.ilike.%${term}%`);
+        }
+      } else {
+        // Para administradores e profissionais: busca ampla incluindo pacientes
+        const { data: matchedPatients } = await supabase
+          .from("pacientes")
+          .select("id")
+          .or(`nome.ilike.%${term}%,email.ilike.%${term}%,telefone.ilike.%${term}%,cpf.ilike.%${term}%`);
+
+        const patientIds = matchedPatients?.map((p) => p.id) || [];
+
+        let orConditions = `procedimento.ilike.%${term}%,data.ilike.%${term}%`;
+        if (formattedDateTerm) {
+          orConditions += `,data.ilike.%${formattedDateTerm}%`;
+        }
+        if (patientIds.length > 0) {
+          orConditions += `,client_id.in.(${patientIds.join(",")})`;
+        }
+        query = query.or(orConditions);
       }
     }
 

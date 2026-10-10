@@ -339,7 +339,11 @@ export function AppointmentTableView() {
           <input
             id="appointment-search-input"
             type="text"
-            placeholder="Buscar por paciente, profissional ou data..."
+            placeholder={
+              isPatient
+                ? "Buscar por procedimento ou data..."
+                : "Buscar por paciente, profissional ou data..."
+            }
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
