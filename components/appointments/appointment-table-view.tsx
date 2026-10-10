@@ -674,7 +674,7 @@ export function AppointmentTableView() {
                             <Eye className="w-4 h-4" />
                           </button>
 
-                          {/* Editar Horário (Apenas para Admin e Profissional) */}
+                          {/* Editar Agendamento (Apenas para Admin e Profissional) */}
                           {!isPatient && appointment.status !== "Cancelado" && (
                             <button
                               type="button"
