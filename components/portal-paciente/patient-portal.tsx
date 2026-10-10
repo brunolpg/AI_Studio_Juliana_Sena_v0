@@ -19,6 +19,13 @@ interface PatientPortalProps {
   onLogout?: () => void;
 }
 
+const formatBirthDate = (dateString?: string | null) => {
+  if (!dateString) return 'Não informado';
+  const clean = dateString.split('T')[0];
+  const parts = clean.split('-');
+  return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dateString;
+};
+
 export function PatientPortal({ user, onLogout }: PatientPortalProps) {
   const [activeTab, setActiveTab] = useState<"ficha" | "prontuario" | "agendamentos">("prontuario");
   const [patientData, setPatientData] = useState<any>(null);
@@ -106,18 +113,6 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("ficha")}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "ficha"
-                  ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-400 shadow-2xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <UserIcon className="w-3.5 h-3.5" />
-              <span>Minha Ficha</span>
-            </button>
-            <button
-              type="button"
               onClick={() => setActiveTab("agendamentos")}
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === "agendamentos"
@@ -127,6 +122,18 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
             >
               <Calendar className="w-3.5 h-3.5" />
               <span>Agendamentos</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("ficha")}
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === "ficha"
+                  ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-400 shadow-2xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              }`}
+            >
+              <UserIcon className="w-3.5 h-3.5" />
+              <span>Minha Ficha</span>
             </button>
           </div>
 
@@ -211,7 +218,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                   <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
                     <span className="text-[10px] text-slate-400 block font-medium">Data de Nascimento / Idade</span>
                     <span className="font-semibold text-slate-800 dark:text-slate-200">
-                      {patientData.data_nascimento} ({patientData.idade} anos)
+                      {formatBirthDate(patientData.data_nascimento)} ({patientData.idade} anos)
                     </span>
                   </div>
                   <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
