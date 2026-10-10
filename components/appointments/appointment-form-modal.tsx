@@ -72,6 +72,72 @@ interface FormContentProps {
   initialPatient: SelectablePatient | null;
 }
 
+// Gera o código Pix Copia e Cola / Payload oficial do Banco Central
+function generatePixPayload({
+  pixKey,
+  merchantName,
+  merchantCity,
+  amount,
+  txId = '***',
+}: {
+  pixKey: string;
+  merchantName: string;
+  merchantCity: string;
+  amount: number;
+  txId?: string;
+}) {
+  const formatField = (id: string, value: string) => {
+    const len = value.length.toString().padStart(2, '0');
+    return `${id}${len}${value}`;
+  };
+
+  // Normalização da chave de telefone para formato internacional exigido pelo BACEN
+  const cleanKey = pixKey.replace(/\D/g, '');
+  const formattedKey = cleanKey.length === 11 ? `+55${cleanKey}` : cleanKey;
+
+  // 26: Merchant Account Information (GUI + Chave Pix)
+  const mai = formatField('00', 'BR.GOV.BCB.PIX') + formatField('01', formattedKey);
+
+  // 00: Payload Format Indicator ("01")
+  // 26: Merchant Account Info
+  // 52: Merchant Category Code ("0000")
+  // 53: Transaction Currency ("986" - BRL)
+  // 54: Transaction Amount (Formatado com 2 casas decimais)
+  // 58: Country Code ("BR")
+  // 59: Merchant Name (Máx 25 chars, sem acentos)
+  // 60: Merchant City (Máx 15 chars, sem acentos)
+  // 62: Additional Data Field Template (05: Reference Label / txId)
+  let payload =
+    formatField('00', '01') +
+    formatField('26', mai) +
+    formatField('52', '0000') +
+    formatField('53', '986') +
+    (amount > 0 ? formatField('54', amount.toFixed(2)) : '') +
+    formatField('58', 'BR') +
+    formatField('59', merchantName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').slice(0, 25)) +
+    formatField('60', merchantCity.normalize('NFD').replace(/[\u0300-\u036f]/g, '').slice(0, 15)) +
+    formatField('62', formatField('05', txId));
+
+  // 63: CRC16 (Calculado via CCITT-FALSE / Polinômio 0x1021)
+  payload += '6304';
+
+  let crc = 0xffff;
+  for (let i = 0; i < payload.length; i++) {
+    crc ^= payload.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      if ((crc & 0x8000) !== 0) {
+        crc = (crc << 1) ^ 0x1021;
+      } else {
+        crc <<= 1;
+      }
+      crc &= 0xffff;
+    }
+  }
+
+  const crcHex = crc.toString(16).toUpperCase().padStart(4, '0');
+  return payload.slice(0, -4) + formatField('63', crcHex);
+}
+
 function AppointmentFormModalContent({
   onClose,
   onSuccess,
@@ -134,12 +200,6 @@ function AppointmentFormModalContent({
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [copiedPix, setCopiedPix] = useState(false);
-
-  const handleCopyPix = () => {
-    navigator.clipboard.writeText(PIX_KEY);
-    setCopiedPix(true);
-    setTimeout(() => setCopiedPix(false), 2500);
-  };
 
   // Auto-seleciona o paciente buscando garantidamente o ID real da tabela 'pacientes'
   useEffect(() => {
@@ -228,6 +288,34 @@ function AppointmentFormModalContent({
     const matched = procedimentosList.find((p) => p.procedimento === procedimento);
     return matched ? Number(matched.duracao) : 1;
   }, [procedimento, procedimentosList]);
+
+  const selectedProcedureObj = useMemo(() => {
+    return procedimentosList.find((p) => p.procedimento === procedimento);
+  }, [procedimento, procedimentosList]);
+
+  const procedurePrice = useMemo(() => {
+    if (!selectedProcedureObj) return 0;
+    return Number(selectedProcedureObj.valor || (selectedProcedureObj as any).preco || 0);
+  }, [selectedProcedureObj]);
+
+  const pixPayload = useMemo(() => {
+    return generatePixPayload({
+      pixKey: PIX_KEY,
+      merchantName: "JULIANA VIEIRA",
+      merchantCity: "SALVADOR",
+      amount: procedurePrice,
+    });
+  }, [PIX_KEY, procedurePrice]);
+
+  const pixQrCodeUrl = useMemo(() => {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(pixPayload)}`;
+  }, [pixPayload]);
+
+  const handleCopyPix = () => {
+    navigator.clipboard.writeText(pixPayload);
+    setCopiedPix(true);
+    setTimeout(() => setCopiedPix(false), 2500);
+  };
 
   const selectedEndTime = useMemo(() => {
     if (!selectedSlot) return "";
@@ -1131,21 +1219,36 @@ function AppointmentFormModalContent({
                   Garantia via PIX (Sinal de Reserva)
                 </span>
                 <span className="text-[10px] font-semibold bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 px-2 py-0.5 rounded-full border border-teal-200/60 dark:border-teal-800">
-                  Chave CNPJ / Telefone
+                  {procedurePrice > 0
+                    ? `R$ ${procedurePrice.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : "Chave CNPJ / Telefone"}
                 </span>
               </div>
 
-              {/* EXIBIÇÃO DA CHAVE E DADOS PIX */}
+              {/* EXIBIÇÃO DO QR CODE E DADOS PIX */}
               <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-teal-100 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <div className="w-12 h-12 bg-teal-100 dark:bg-teal-950/80 rounded-xl border border-teal-200 dark:border-teal-800 flex flex-col items-center justify-center shrink-0">
-                    <QrCode className="w-7 h-7 text-teal-600 dark:text-teal-400" />
-                    <span className="text-[7px] font-bold text-teal-700 dark:text-teal-300">PIX CODE</span>
+                <div className="flex items-center gap-3 w-full sm:w-auto min-w-0">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white p-1 rounded-xl border border-teal-200 dark:border-teal-800 flex flex-col items-center justify-center shrink-0 shadow-xs overflow-hidden">
+                    <img
+                      src={pixQrCodeUrl}
+                      alt="QR Code Pix"
+                      className="w-full h-full object-contain"
+                    />
                   </div>
-                  <div className="space-y-0.5 min-w-0">
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Chave PIX da Clínica:</p>
-                    <p className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 truncate">{PIX_KEY}</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Beneficiário: {PIX_BENEFICIARIO}</p>
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Pix Copia e Cola ({procedimento}):</p>
+                    <p
+                      className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 truncate max-w-[180px] sm:max-w-[200px]"
+                      title={pixPayload}
+                    >
+                      {pixPayload}
+                    </p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                      Beneficiário: {PIX_BENEFICIARIO}
+                    </p>
+                    <p className="text-[10px] font-medium text-teal-700 dark:text-teal-300">
+                      Chave: {PIX_KEY}
+                    </p>
                   </div>
                 </div>
 
@@ -1162,7 +1265,7 @@ function AppointmentFormModalContent({
                   ) : (
                     <>
                       <Copy className="w-3.5 h-3.5" />
-                      <span>Copiar PIX</span>
+                      <span>Copiar Código PIX</span>
                     </>
                   )}
                 </button>
