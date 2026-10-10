@@ -20,6 +20,8 @@ import {
   ShieldCheck,
   QrCode,
   CreditCard,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import { AppointmentCalendarPicker } from "./appointment-calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
@@ -130,6 +132,7 @@ function AppointmentFormModalContent({
   const PIX_BENEFICIARIO = "Juliana Sena de Souza Vieira";
 
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [copiedPix, setCopiedPix] = useState(false);
 
   const handleCopyPix = () => {
@@ -480,7 +483,38 @@ function AppointmentFormModalContent({
   // 4. SUBMISSÃO DO AGENDAMENTO (Execução após aceitação da política)
   const executeSubmit = async () => {
     setIsSubmitting(true);
+    setErrorMsg(null);
     try {
+      let uploadedReceiptUrl: string | null = null;
+
+      // Upload do comprovante de pagamento no Supabase Storage caso anexado
+      if (receiptFile) {
+        setIsUploadingReceipt(true);
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const fileExt = receiptFile.name.split(".").pop() || "png";
+          const cleanFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `comprovantes/${cleanFileName}`;
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("comprovantes-pagamento")
+            .upload(filePath, receiptFile, {
+              cacheControl: "3600",
+              upsert: false,
+            });
+
+          if (uploadError) {
+            console.error("Erro no upload do comprovante:", uploadError.message);
+          } else if (uploadData) {
+            const { data: publicUrlData } = supabase.storage
+              .from("comprovantes-pagamento")
+              .getPublicUrl(filePath);
+            uploadedReceiptUrl = publicUrlData?.publicUrl || null;
+          }
+        }
+        setIsUploadingReceipt(false);
+      }
+
       const isValidUUID = (id: string | undefined) => {
         return !!(id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
       };
@@ -500,8 +534,9 @@ function AppointmentFormModalContent({
         procedimento_id: safeProcedimentoId,
         observacoes: observacoes.trim() || undefined,
         sync_google: true,
-        status_pagamento: "Pendente",
+        status_pagamento: receiptFile ? "Em Análise" : "Pendente",
         metodo_pagamento: "pix_manual",
+        comprovante_url: uploadedReceiptUrl,
       } as any;
 
       const res = await createAppointmentAction(payload);
@@ -521,6 +556,7 @@ function AppointmentFormModalContent({
       setErrorMsg("Ocorreu um erro interno de conexão ao salvar o agendamento.");
     } finally {
       setIsSubmitting(false);
+      setIsUploadingReceipt(false);
     }
   };
 
@@ -1087,7 +1123,7 @@ function AppointmentFormModalContent({
               </p>
             </div>
 
-            {/* FORMAS DE PAGAMENTO PARA GARANTIA DO HORÁRIO */}
+            {/* FORMAS DE PAGAMENTO PARA GARANTIA DO HORÁRIO (QR CODE + CHAVE + COMPROVANTE) */}
             <div className="space-y-3 p-3.5 rounded-2xl bg-teal-50/50 dark:bg-slate-800/60 border border-teal-200/80 dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-teal-900 dark:text-teal-200 flex items-center gap-1.5">
@@ -1099,20 +1135,28 @@ function AppointmentFormModalContent({
                 </span>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-teal-100 dark:border-slate-700 flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Chave PIX da Clínica:</p>
-                  <p className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">{PIX_KEY}</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Beneficiário: {PIX_BENEFICIARIO}</p>
+              {/* EXIBIÇÃO DA CHAVE E DADOS PIX */}
+              <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-teal-100 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="w-12 h-12 bg-teal-100 dark:bg-teal-950/80 rounded-xl border border-teal-200 dark:border-teal-800 flex flex-col items-center justify-center shrink-0">
+                    <QrCode className="w-7 h-7 text-teal-600 dark:text-teal-400" />
+                    <span className="text-[7px] font-bold text-teal-700 dark:text-teal-300">PIX CODE</span>
+                  </div>
+                  <div className="space-y-0.5 min-w-0">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Chave PIX da Clínica:</p>
+                    <p className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 truncate">{PIX_KEY}</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Beneficiário: {PIX_BENEFICIARIO}</p>
+                  </div>
                 </div>
+
                 <button
                   type="button"
                   onClick={handleCopyPix}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 transition-colors cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 transition-colors cursor-pointer shrink-0"
                 >
                   {copiedPix ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       <span>Copiado!</span>
                     </>
                   ) : (
@@ -1124,6 +1168,60 @@ function AppointmentFormModalContent({
                 </button>
               </div>
 
+              {/* ANEXO DE COMPROVANTE PIX (OPCIONAL) */}
+              <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-dashed border-teal-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    Anexar Comprovante PIX (Opcional)
+                  </label>
+                  {receiptFile && (
+                    <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Anexado
+                    </span>
+                  )}
+                </div>
+
+                {receiptFile ? (
+                  <div className="flex items-center justify-between bg-teal-50/60 dark:bg-slate-800/80 p-2 px-3 rounded-lg border border-teal-200/80 dark:border-slate-700 text-xs">
+                    <div className="flex items-center gap-2 truncate pr-2">
+                      <FileText className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate">
+                        {receiptFile.name}
+                      </span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 shrink-0">
+                        ({(receiptFile.size / 1024).toFixed(0)} KB)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReceiptFile(null)}
+                      className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                      title="Remover arquivo"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-teal-50/50 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium cursor-pointer transition-colors">
+                    <Upload className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <span>Clique para selecionar o comprovante (.png, .jpg, .pdf)</span>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setReceiptFile(e.target.files[0]);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* OPÇÃO CARTÃO DE CRÉDITO */}
               <div className="pt-1 border-t border-teal-100 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
                 <div className="flex items-center gap-1.5">
                   <CreditCard className="w-4 h-4 text-slate-400 dark:text-slate-500" />
@@ -1157,14 +1255,21 @@ function AppointmentFormModalContent({
               </button>
               <button
                 type="button"
-                disabled={!acceptedPolicy || isSubmitting}
+                disabled={!acceptedPolicy || isSubmitting || isUploadingReceipt}
                 onClick={async () => {
                   setShowPolicyModal(false);
                   await executeSubmit(); // Função que executa a chamada ao banco
                 }}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
+                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer inline-flex items-center gap-1.5"
               >
-                {isSubmitting ? 'Salvando...' : 'Concluir Agendamento'}
+                {isSubmitting || isUploadingReceipt ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>{isUploadingReceipt ? "Enviando comprovante..." : "Salvando..."}</span>
+                  </>
+                ) : (
+                  <span>Concluir Agendamento</span>
+                )}
               </button>
             </div>
           </div>

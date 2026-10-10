@@ -32,19 +32,26 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const userId = user?.id;
+  const userEmail = (user?.email || "").toLowerCase().trim();
+
   useEffect(() => {
+    let isMounted = true;
+
     async function loadPatientRecord() {
+      if (!userId && !userEmail) {
+        if (isMounted) setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setErrorMessage(null);
       try {
         const supabase = getSupabaseClient();
         if (!supabase) {
-          setErrorMessage("Não foi possível conectar ao banco de dados.");
+          if (isMounted) setErrorMessage("Não foi possível conectar ao banco de dados.");
           return;
         }
-
-        const userEmail = (user?.email || "").toLowerCase().trim();
-        const userId = user?.id;
 
         let query = supabase.from("pacientes").select("*");
         if (userId) {
@@ -54,6 +61,8 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
         }
 
         const { data, error } = await query.maybeSingle();
+
+        if (!isMounted) return;
 
         if (error) {
           console.error("Erro ao consultar tabela de pacientes:", error.message);
@@ -65,18 +74,28 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
         }
       } catch (err: any) {
         console.error("Falha inesperada:", err);
-        setErrorMessage("Falha na sincronização dos dados do paciente.");
+        if (isMounted) setErrorMessage("Falha na sincronização dos dados do paciente.");
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     }
 
-    if (user?.email || user?.id) {
-      loadPatientRecord();
-    } else {
-      setIsLoading(false);
-    }
-  }, [user]);
+    loadPatientRecord();
+
+    const supabase = getSupabaseClient();
+    const { data: { subscription } } = supabase?.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+      // Valida se o ID do usuário de fato mudou antes de re-inicializar
+      if (session?.user?.id && session.user.id !== userId) {
+        // ID mudou, o componente receberá novas props via auth-context
+      }
+    }) || { data: { subscription: null } };
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
+  }, [userId, userEmail]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col antialiased">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useTransition } from "react";
+import React, { useState, useEffect, useCallback, useTransition, useMemo, useRef } from "react";
 import {
   Search,
   Plus,
@@ -159,7 +159,12 @@ export function AppointmentTableView() {
     }
   };
 
-  // Carregar agendamentos
+  const toastRef = useRef(toast);
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
+
+  // Carregar agendamentos (dependências exclusivamente primitivas e estáveis)
   const loadAppointments = useCallback(() => {
     startTransition(async () => {
       try {
@@ -173,7 +178,7 @@ export function AppointmentTableView() {
         if (res.success && res.data) {
           setPaginatedData(res.data);
         } else {
-          toast({
+          toastRef.current({
             type: "error",
             title: "Erro ao buscar agendamentos",
             description: res.message,
@@ -181,18 +186,35 @@ export function AppointmentTableView() {
         }
       } catch (err) {
         console.error(err);
-        toast({
+        toastRef.current({
           type: "error",
           title: "Erro de conexão",
           description: "Falha ao sincronizar agenda de consultas.",
         });
       }
     });
-  }, [debouncedSearch, activeFilterTab, currentPage, pageSize, toast]);
+  }, [debouncedSearch, activeFilterTab, currentPage, pageSize]);
 
   useEffect(() => {
     loadAppointments();
   }, [loadAppointments]);
+
+  // Polling automático seguro para status 'Em Análise' (mínimo de 60s, com limpeza no unmount)
+  const hasPendingPayments = useMemo(() => {
+    return (paginatedData?.data || []).some(
+      (apt) => apt.status_pagamento === "Em Análise" || (apt as any).comprovante_url && apt.status_pagamento !== "Pago"
+    );
+  }, [paginatedData?.data]);
+
+  useEffect(() => {
+    if (!hasPendingPayments) return;
+
+    const timer = setInterval(() => {
+      loadAppointments();
+    }, 60000); // 60 segundos
+
+    return () => clearInterval(timer);
+  }, [hasPendingPayments, loadAppointments]);
 
   // Ação de Cancelamento
   const handleCancelAppointment = (appointment: Appointment) => {

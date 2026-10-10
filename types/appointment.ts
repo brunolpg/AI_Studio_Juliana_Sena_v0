@@ -16,6 +16,9 @@ export interface Appointment {
   google_event_id?: string | null;
   google_html_link?: string | null;
   synced_with_google: boolean;
+  status_pagamento?: string | null;
+  metodo_pagamento?: string | null;
+  comprovante_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +35,9 @@ export interface AppointmentInput {
   procedimento_id?: string;
   observacoes?: string;
   sync_google: boolean;
+  status_pagamento?: string;
+  metodo_pagamento?: string;
+  comprovante_url?: string | null;
 }
 
 export type AppointmentFilterTab = "todos" | "hoje" | "proximos" | "concluidos" | "cancelados";
