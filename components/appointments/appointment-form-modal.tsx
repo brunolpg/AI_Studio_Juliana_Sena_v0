@@ -17,6 +17,7 @@ import {
   UploadCloud,
   CheckCircle2,
   Copy,
+  ShieldCheck,
 } from "lucide-react";
 import { AppointmentCalendarPicker } from "./appointment-calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
@@ -119,6 +120,9 @@ function AppointmentFormModalContent({
   const [syncGoogle, setSyncGoogle] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [acceptedPolicy, setAcceptedPolicy] = useState(false);
 
   const PIX_KEY = "71986612878";
   const PIX_BENEFICIARIO = "Juliana Sena de Souza Vieira";
@@ -471,8 +475,55 @@ function AppointmentFormModalContent({
     });
   }, [patientSearch, patients]);
 
-  // 4. SUBMISSÃO DO AGENDAMENTO
-  const handleSubmit = async (e: React.FormEvent) => {
+  // 4. SUBMISSÃO DO AGENDAMENTO (Execução após aceitação da política)
+  const executeSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      const isValidUUID = (id: string | undefined) => {
+        return !!(id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+      };
+
+      const matchedProc = procedimentosList.find((p) => p.procedimento === procedimento);
+      const safeProcedimentoId = isValidUUID(matchedProc?.id) ? matchedProc?.id : undefined;
+
+      const payload: AppointmentInput = {
+        client_id: selectedPatient!.id,
+        client_nome: selectedPatient!.nome,
+        client_email: selectedPatient!.email || undefined,
+        client_telefone: selectedPatient!.telefone || undefined,
+        data: selectedDate,
+        horario_inicio: selectedSlot!,
+        horario_fim: selectedEndTime,
+        procedimento: procedimento.trim(),
+        procedimento_id: safeProcedimentoId,
+        observacoes: observacoes.trim() || undefined,
+        sync_google: true,
+        status_pagamento: "Pendente",
+        metodo_pagamento: "pix_manual",
+      } as any;
+
+      const res = await createAppointmentAction(payload);
+
+      if (res.success && res.data) {
+        setConfirmedAppointment(res.data);
+        toast({
+          type: "success",
+          title: "Consulta Agendada com Sucesso!",
+          description: `Horário ${res.data.horario_inicio} reservado para ${res.data.client_nome}.`,
+        });
+      } else {
+        setErrorMsg(res.message || "Não foi possível concluir o agendamento.");
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("Ocorreu um erro interno de conexão ao salvar o agendamento.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Validação dos campos antes de exibir o Modal de Política
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
@@ -519,99 +570,9 @@ function AppointmentFormModalContent({
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      // 1. Função auxiliar de validação UUID antes do payload
-      const isValidUUID = (id: string | undefined) => {
-        return !!(id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
-      };
-
-      const matchedProc = procedimentosList.find((p) => p.procedimento === procedimento);
-      const safeProcedimentoId = isValidUUID(matchedProc?.id) ? matchedProc?.id : undefined;
-
-      let uploadedReceiptUrl: string | null = null;
-
-      if (receiptFile) {
-        const supabase = getSupabaseClient();
-        if (supabase) {
-          const fileExt = receiptFile.name.split('.').pop() || 'png';
-          const cleanFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-          const filePath = `comprovantes/${cleanFileName}`;
-
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('comprovantes-pagamento')
-            .upload(filePath, receiptFile, {
-              cacheControl: '3600',
-              upsert: false
-            });
-
-          if (uploadError) {
-            console.error('Erro no upload do comprovante:', uploadError.message);
-          } else {
-            const { data: publicData } = supabase.storage
-              .from('comprovantes-pagamento')
-              .getPublicUrl(filePath);
-            
-            uploadedReceiptUrl = publicData.publicUrl;
-          }
-        }
-      }
-
-      // 2. Ajuste a construção do payload
-      const payload: AppointmentInput = {
-        client_id: selectedPatient.id,
-        client_nome: selectedPatient.nome,
-        client_email: selectedPatient.email || undefined,
-        client_telefone: selectedPatient.telefone || undefined,
-        data: selectedDate,
-        horario_inicio: selectedSlot,
-        horario_fim: selectedEndTime,
-        procedimento: procedimento.trim(),
-        procedimento_id: safeProcedimentoId,
-        observacoes: observacoes.trim() || undefined,
-        sync_google: true,
-        status_pagamento: uploadedReceiptUrl ? 'Em Análise' : 'Pendente',
-        metodo_pagamento: 'pix_manual',
-        comprovante_url: uploadedReceiptUrl,
-      } as any;
-
-      const res = await createAppointmentAction(payload);
-
-      if (res.success && res.data) {
-        const appointmentId = res.data.id;
-        if (uploadedReceiptUrl && appointmentId) {
-          const supabase = getSupabaseClient();
-          if (supabase) {
-            await supabase
-              .from("appointments")
-              .update({
-                status_pagamento: uploadedReceiptUrl ? 'Em Análise' : 'Pendente',
-                metodo_pagamento: 'pix_manual',
-                comprovante_url: uploadedReceiptUrl,
-              })
-              .eq("id", appointmentId);
-            
-            (res.data as any).status_pagamento = uploadedReceiptUrl ? 'Em Análise' : 'Pendente';
-            (res.data as any).metodo_pagamento = 'pix_manual';
-            (res.data as any).comprovante_url = uploadedReceiptUrl;
-          }
-        }
-
-        setConfirmedAppointment(res.data);
-        toast({
-          type: "success",
-          title: "Consulta Agendada com Sucesso!",
-          description: `Horário ${res.data.horario_inicio} reservado para ${res.data.client_nome}.`,
-        });
-      } else {
-        setErrorMsg(res.message || "Não foi possível concluir o agendamento.");
-      }
-    } catch (err) {
-      console.error(err);
-      setErrorMsg("Ocorreu um erro interno de conexão ao salvar o agendamento.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Validações bem-sucedidas: exibe o modal da política jurídica de cancelamento
+    setAcceptedPolicy(false);
+    setShowPolicyModal(true);
   };
 
   if (confirmedAppointment) {
@@ -1059,106 +1020,6 @@ function AppointmentFormModalContent({
               />
             </div>
           </div>
-
-          {/* BLOCO DE PAGAMENTO PIX & ANEXO DE COMPROVANTE */}
-          <div className="space-y-3 p-4 rounded-2xl bg-teal-50/50 dark:bg-slate-800/60 border border-teal-200/80 dark:border-slate-700">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-teal-900 dark:text-teal-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                <span>Pagamento via PIX (Garantia de Horário)</span>
-              </h4>
-              <span className="text-[10px] font-semibold text-teal-700 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-900/50 px-2 py-0.5 rounded-full">
-                Chave Celular
-              </span>
-            </div>
-
-            {/* Card com QR Code e Chave Pix */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-teal-100 dark:border-slate-800 shadow-2xs">
-              {/* QR Code Dinâmico */}
-              <div className="w-20 h-20 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 bg-white flex items-center justify-center p-1">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(PIX_KEY)}`}
-                  alt="QR Code Pix"
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-
-              {/* Detalhes da Chave Pix */}
-              <div className="flex-1 w-full text-center sm:text-left space-y-1">
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                  Favorecida: <strong className="text-slate-700 dark:text-slate-200">{PIX_BENEFICIARIO}</strong>
-                </p>
-                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 p-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700">
-                  <span className="text-[11px] font-mono font-medium text-slate-700 dark:text-slate-300 truncate flex-1 select-all px-1">
-                    (71) 98661-2878
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleCopyPix}
-                    className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-md transition-all shrink-0 cursor-pointer shadow-2xs"
-                  >
-                    {copiedPix ? (
-                      <>
-                        <CheckCircle2 className="w-3 h-3 text-white" />
-                        <span>Copiado!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3" />
-                        <span>Copiar</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Área de Anexo do Comprovante */}
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-teal-600" />
-                  <span>Anexar Comprovante do PIX</span>
-                </label>
-                <span className="text-[10px] text-slate-400">PDF, PNG ou JPG (até 5MB)</span>
-              </div>
-
-              {!receiptFile ? (
-                <label className="flex flex-col items-center justify-center p-3 border border-dashed border-teal-300 dark:border-teal-700/60 rounded-xl bg-white dark:bg-slate-900 hover:bg-teal-50/40 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-                  <UploadCloud className="w-5 h-5 text-teal-600 mb-1" />
-                  <span className="text-[11px] font-semibold text-teal-700 dark:text-teal-400">
-                    Clique para anexar comprovante
-                  </span>
-                  <input
-                    type="file"
-                    accept=".pdf,image/png,image/jpeg"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file && file.size <= 5 * 1024 * 1024) {
-                        setReceiptFile(file);
-                      }
-                    }}
-                  />
-                </label>
-              ) : (
-                <div className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 border border-teal-200 dark:border-teal-800/80 rounded-xl shadow-2xs">
-                  <div className="flex items-center gap-2 text-xs text-teal-800 dark:text-teal-300 font-medium truncate">
-                    <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
-                    <span className="truncate">{receiptFile.name}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setReceiptFile(null)}
-                    className="text-slate-400 hover:text-rose-500 p-1"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Rodapé Fixo com Ações */}
@@ -1190,6 +1051,75 @@ function AppointmentFormModalContent({
           </button>
         </div>
       </form>
+
+      {/* MODAL DE POLÍTICA JURÍDICA DE RESERVA E CANCELAMENTO */}
+      {showPolicyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Política de Confirmação e Cancelamento
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Dra. Juliana Sena • Termos de Reserva de Agenda
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 text-xs text-slate-700 dark:text-slate-300 space-y-3 leading-relaxed border border-slate-200/80 dark:border-slate-700 max-h-64 overflow-y-auto">
+              <p>
+                <strong>1. Garantia da Reserva:</strong> O agendamento é concluído em caráter preliminar. Para confirmação definitiva do horário, o pagamento deve ser realizado em até <strong>24 horas</strong>, com o devido envio do comprovante. Após esse prazo sem compensação, o horário retornará à grade pública.
+              </p>
+              <p>
+                <strong>2. Solicitação de Cancelamento:</strong> Cancelamentos ou reagendamentos devem ser solicitados diretamente com a clínica via telefone ou WhatsApp oficial.
+              </p>
+              <p>
+                <strong>3. Reembolso Integral (Antecedência &ge; 24h):</strong> Cancelamentos comunicados com antecedência igual ou superior a 24 horas do horário agendado terão reembolso de <strong>100% do valor pago</strong>.
+              </p>
+              <p>
+                <strong>4. Reembolso Parcial (Antecedência &lt; 24h):</strong> Em caso de cancelamento com menos de 24 horas de antecedência ou ausência injustificada, será aplicado reembolso de <strong>50% do valor pago</strong> para cobertura de reserva e custos operacionais exclusivos do horário.
+              </p>
+            </div>
+
+            <label className="flex items-start gap-2.5 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={acceptedPolicy}
+                onChange={(e) => setAcceptedPolicy(e.target.checked)}
+                className="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+              />
+              <span className="text-xs text-slate-600 dark:text-slate-300 select-none">
+                Li e concordo com a política de confirmação, prazos e cancelamento da clínica.
+              </span>
+            </label>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowPolicyModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                disabled={!acceptedPolicy || isSubmitting}
+                onClick={async () => {
+                  setShowPolicyModal(false);
+                  await executeSubmit(); // Função que executa a chamada ao banco
+                }}
+                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
+              >
+                {isSubmitting ? 'Salvando...' : 'Concluir Agendamento'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
