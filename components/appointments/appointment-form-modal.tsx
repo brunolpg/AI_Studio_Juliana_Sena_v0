@@ -132,27 +132,60 @@ function AppointmentFormModalContent({
     setTimeout(() => setCopiedPix(false), 2500);
   };
 
-  // Auto-select patient if user is a patient
+  // Auto-seleciona o paciente buscando garantidamente o ID real da tabela 'pacientes'
   useEffect(() => {
-    if (isPatient && !selectedPatient) {
+    let isCancelled = false;
+
+    async function fetchAndSetPatient() {
+      if (!isPatient) return;
+
+      // Se já foi passado via initialPatient da tabela pacientes
+      if (initialPatient && initialPatient.id) {
+        setSelectedPatient(initialPatient);
+        return;
+      }
+
       const userEmail = (user?.email || "").toLowerCase().trim();
       const userId = user?.id;
+
+      // 1. Tenta encontrar na lista em memória caso já esteja carregada
       const matched = patients.find(
-        (p) => (userId && (p as any).user_id === userId) || (userEmail && p.email?.toLowerCase().trim() === userEmail)
+        (p) =>
+          (userId && (p as any).user_id === userId) ||
+          (userEmail && p.email?.toLowerCase().trim() === userEmail)
       );
-      if (matched) {
+      if (matched && matched.id) {
         setSelectedPatient(matched);
-      } else if (user && (user.email || user.name || user.nome)) {
-        setSelectedPatient({
-          id: user.id || "",
-          nome: user.name || user.nome || "Paciente",
-          email: user.email,
-          telefone: (user as any).telefone || "",
-          cpf: (user as any).cpf || "",
-        });
+        return;
+      }
+
+      // 2. Busca direta no Supabase na tabela 'pacientes' para obter o ID da ficha clínica
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase && (userEmail || userId)) {
+          let query = supabase.from("pacientes").select("id, nome, cpf, email, telefone, user_id");
+          if (userId) {
+            query = query.or(`user_id.eq.${userId},email.ilike.${userEmail}`);
+          } else {
+            query = query.ilike("email", userEmail);
+          }
+
+          const { data: dbPatient, error } = await query.maybeSingle();
+          if (!error && dbPatient && !isCancelled) {
+            setSelectedPatient(dbPatient as SelectablePatient);
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao buscar dados do paciente:", err);
       }
     }
-  }, [isPatient, patients, user, selectedPatient]);
+
+    fetchAndSetPatient();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isPatient, initialPatient, patients, user]);
 
   useEffect(() => {
     async function loadProcedimentos() {
