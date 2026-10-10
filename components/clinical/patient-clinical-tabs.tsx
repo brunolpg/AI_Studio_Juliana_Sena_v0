@@ -1141,24 +1141,12 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                 </button>
                               )}
 
-                              {isPatientView ? (
-                                rx.ativo || rx.status === "Ativo" ? (
-                                  <span
-                                    className="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default"
-                                    title="Receita ativa"
-                                  >
-                                    Em Uso
+                              {rx.ativo || rx.status === "Ativo" ? (
+                                isPatientView ? (
+                                  <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default select-none">
+                                    Em Uso (Ativo)
                                   </span>
                                 ) : (
-                                  <span
-                                    className="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-300 cursor-default"
-                                    title="Receita suspensa"
-                                  >
-                                    Suspenso
-                                  </span>
-                                )
-                              ) : (
-                                rx.ativo || rx.status === "Ativo" ? (
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -1171,14 +1159,14 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                   >
                                     Em Uso (Ativo)
                                   </button>
-                                ) : (
-                                  <span
-                                    className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-300 cursor-default"
-                                    title="Receita suspensa"
-                                  >
-                                    Suspenso
-                                  </span>
                                 )
+                              ) : (
+                                <span
+                                  className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-300 cursor-default"
+                                  title="Receita suspensa"
+                                >
+                                  Suspenso
+                                </span>
                               )}
                             </div>
                           </div>
