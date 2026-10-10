@@ -12,6 +12,11 @@ import {
   UserX,
   UserCheck,
   Users,
+  Sparkles,
+  FileText,
+  UploadCloud,
+  CheckCircle2,
+  Copy,
 } from "lucide-react";
 import { AppointmentCalendarPicker } from "./appointment-calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
@@ -114,6 +119,18 @@ function AppointmentFormModalContent({
   const [syncGoogle, setSyncGoogle] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const PIX_KEY = "71986612878";
+  const PIX_BENEFICIARIO = "Juliana Sena de Souza Vieira";
+
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [copiedPix, setCopiedPix] = useState(false);
+
+  const handleCopyPix = () => {
+    navigator.clipboard.writeText(PIX_KEY);
+    setCopiedPix(true);
+    setTimeout(() => setCopiedPix(false), 2500);
+  };
 
   // Auto-select patient if user is a patient
   useEffect(() => {
@@ -494,9 +511,49 @@ function AppointmentFormModalContent({
         sync_google: true,
       };
 
+      let uploadedReceiptUrl = null;
+      if (receiptFile) {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const fileExt = receiptFile.name.split('.').pop();
+          const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `comprovantes/${fileName}`;
+
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('comprovantes-pagamento')
+            .upload(filePath, receiptFile);
+
+          if (!uploadError) {
+            const { data: publicUrlData } = supabase.storage
+              .from('comprovantes-pagamento')
+              .getPublicUrl(filePath);
+            uploadedReceiptUrl = publicUrlData.publicUrl;
+          }
+        }
+      }
+
       const res = await createAppointmentAction(payload);
 
       if (res.success && res.data) {
+        const appointmentId = res.data.id;
+        if (uploadedReceiptUrl && appointmentId) {
+          const supabase = getSupabaseClient();
+          if (supabase) {
+            await supabase
+              .from("appointments")
+              .update({
+                status_pagamento: 'Em Análise',
+                metodo_pagamento: 'pix_manual',
+                comprovante_url: uploadedReceiptUrl,
+              })
+              .eq("id", appointmentId);
+            
+            (res.data as any).status_pagamento = 'Em Análise';
+            (res.data as any).metodo_pagamento = 'pix_manual';
+            (res.data as any).comprovante_url = uploadedReceiptUrl;
+          }
+        }
+
         setConfirmedAppointment(res.data);
         toast({
           type: "success",
@@ -957,6 +1014,106 @@ function AppointmentFormModalContent({
                 onChange={(e) => setObservacoes(e.target.value)}
                 className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 resize-none"
               />
+            </div>
+          </div>
+
+          {/* BLOCO DE PAGAMENTO PIX & ANEXO DE COMPROVANTE */}
+          <div className="space-y-3 p-4 rounded-2xl bg-teal-50/50 dark:bg-slate-800/60 border border-teal-200/80 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-teal-900 dark:text-teal-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                <span>Pagamento via PIX (Garantia de Horário)</span>
+              </h4>
+              <span className="text-[10px] font-semibold text-teal-700 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-900/50 px-2 py-0.5 rounded-full">
+                Chave Celular
+              </span>
+            </div>
+
+            {/* Card com QR Code e Chave Pix */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-teal-100 dark:border-slate-800 shadow-2xs">
+              {/* QR Code Dinâmico */}
+              <div className="w-20 h-20 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 bg-white flex items-center justify-center p-1">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(PIX_KEY)}`}
+                  alt="QR Code Pix"
+                  className="w-full h-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+
+              {/* Detalhes da Chave Pix */}
+              <div className="flex-1 w-full text-center sm:text-left space-y-1">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Favorecida: <strong className="text-slate-700 dark:text-slate-200">{PIX_BENEFICIARIO}</strong>
+                </p>
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 p-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700">
+                  <span className="text-[11px] font-mono font-medium text-slate-700 dark:text-slate-300 truncate flex-1 select-all px-1">
+                    (71) 98661-2878
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyPix}
+                    className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-md transition-all shrink-0 cursor-pointer shadow-2xs"
+                  >
+                    {copiedPix ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3 text-white" />
+                        <span>Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>Copiar</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Área de Anexo do Comprovante */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-teal-600" />
+                  <span>Anexar Comprovante do PIX</span>
+                </label>
+                <span className="text-[10px] text-slate-400">PDF, PNG ou JPG (até 5MB)</span>
+              </div>
+
+              {!receiptFile ? (
+                <label className="flex flex-col items-center justify-center p-3 border border-dashed border-teal-300 dark:border-teal-700/60 rounded-xl bg-white dark:bg-slate-900 hover:bg-teal-50/40 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+                  <UploadCloud className="w-5 h-5 text-teal-600 mb-1" />
+                  <span className="text-[11px] font-semibold text-teal-700 dark:text-teal-400">
+                    Clique para anexar comprovante
+                  </span>
+                  <input
+                    type="file"
+                    accept=".pdf,image/png,image/jpeg"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && file.size <= 5 * 1024 * 1024) {
+                        setReceiptFile(file);
+                      }
+                    }}
+                  />
+                </label>
+              ) : (
+                <div className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 border border-teal-200 dark:border-teal-800/80 rounded-xl shadow-2xs">
+                  <div className="flex items-center gap-2 text-xs text-teal-800 dark:text-teal-300 font-medium truncate">
+                    <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
+                    <span className="truncate">{receiptFile.name}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setReceiptFile(null)}
+                    className="text-slate-400 hover:text-rose-500 p-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
