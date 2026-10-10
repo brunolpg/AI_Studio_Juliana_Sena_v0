@@ -132,27 +132,59 @@ function AppointmentFormModalContent({
     setTimeout(() => setCopiedPix(false), 2500);
   };
 
-  // Auto-select patient if user is a patient
+  // Auto-seleciona o paciente garantindo que o ID seja o da tabela 'pacientes' (e não o auth.users.id)
   useEffect(() => {
-    if (isPatient && !selectedPatient) {
+    let isCancelled = false;
+
+    async function resolvePatientRecord() {
+      if (!isPatient) return;
+
+      // 1. Se já recebeu initialPatient válido da tabela pacientes
+      if (initialPatient && initialPatient.id) {
+        setSelectedPatient(initialPatient);
+        return;
+      }
+
       const userEmail = (user?.email || "").toLowerCase().trim();
       const userId = user?.id;
-      const matched = patients.find(
-        (p) => (userId && (p as any).user_id === userId) || (userEmail && p.email?.toLowerCase().trim() === userEmail)
+
+      // 2. Tenta encontrar na lista de pacientes já carregada
+      const inList = patients.find(
+        (p) =>
+          (userId && (p as any).user_id === userId) ||
+          (userEmail && p.email?.toLowerCase().trim() === userEmail)
       );
-      if (matched) {
-        setSelectedPatient(matched);
-      } else if (user && (user.email || user.name || user.nome)) {
-        setSelectedPatient({
-          id: user.id || "",
-          nome: user.name || user.nome || "Paciente",
-          email: user.email,
-          telefone: (user as any).telefone || "",
-          cpf: (user as any).cpf || "",
-        });
+      if (inList) {
+        setSelectedPatient(inList);
+        return;
+      }
+
+      // 3. Busca direta e garantida na tabela 'pacientes' do Supabase
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase && (userEmail || userId)) {
+          let query = supabase.from("pacientes").select("id, nome, cpf, email, telefone, user_id");
+          if (userId) {
+            query = query.or(`user_id.eq.${userId},email.ilike.${userEmail}`);
+          } else {
+            query = query.ilike("email", userEmail);
+          }
+
+          const { data: dbPatient } = await query.maybeSingle();
+          if (dbPatient && !isCancelled) {
+            setSelectedPatient(dbPatient as SelectablePatient);
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao resolver registro do paciente:", err);
       }
     }
-  }, [isPatient, patients, user, selectedPatient]);
+
+    resolvePatientRecord();
+    return () => {
+      isCancelled = true;
+    };
+  }, [isPatient, initialPatient, patients, user]);
 
   useEffect(() => {
     async function loadProcedimentos() {
@@ -444,7 +476,7 @@ function AppointmentFormModalContent({
     setErrorMsg(null);
 
     if (!selectedPatient || !selectedPatient.id) {
-      setErrorMsg("Selecione um paciente cadastrado para o agendamento.");
+      setErrorMsg("Não foi possível identificar sua ficha de paciente cadastrada no sistema. Contate a recepção.");
       scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
