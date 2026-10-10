@@ -20,6 +20,7 @@ import {
   CalendarDays,
   AlertCircle,
   Sparkles,
+  FileText,
 } from "lucide-react";
 import {
   getAppointmentsAction,
@@ -242,83 +243,85 @@ export function AppointmentTableView() {
   return (
     <div className="space-y-4">
       {/* Banner Resiliente / Status do Google Calendar */}
-      <div className="p-3.5 px-4 rounded-2xl border transition-all text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div
-            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-              calendarHealth.healthy
-                ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
-            }`}
-          >
-            <CalendarCheck2 className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-900 dark:text-white">
-                Google Agenda (Calendar v3)
-              </span>
-              <span
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                  calendarHealth.healthy
-                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200"
-                    : calendarHealth.status === "error" || calendarHealth.status === "no_access" || calendarHealth.status === "not_configured"
-                    ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200"
-                    : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200"
-                }`}
-                title={calendarHealth.message}
-              >
-                {calendarHealth.healthy ? (
-                  <>
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    <span>Agenda: {calendarHealth.calendarSummary || "Dra. Juliana"}</span>
-                  </>
-                ) : calendarHealth.status === "error" || calendarHealth.status === "no_access" || calendarHealth.status === "not_configured" ? (
-                  <>
-                    <AlertCircle className="w-3 h-3 text-amber-600" />
-                    <span>Configuração necessária</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-3 h-3 text-slate-400" />
-                    <span>Não conectado</span>
-                  </>
-                )}
-              </span>
+      {!isPatient && (
+        <div className="p-3.5 px-4 rounded-2xl border transition-all text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                calendarHealth.healthy
+                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
+              }`}
+            >
+              <CalendarCheck2 className="w-4 h-4" />
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              {calendarHealth.healthy
-                ? `Sincronização bidirecional ativa com o Google Agenda da Dra. Juliana.`
-                : calendarHealth.message || `A agenda da Dra. Juliana ainda não está configurada.`}
-              {!calendarHealth.canManageCalendar && (
-                <span className="block text-[10px] text-amber-600 mt-0.5">
-                  Nota: Apenas administradores e profissionais podem conectar ou sincronizar o Google Agenda.
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-900 dark:text-white">
+                  Google Agenda (Calendar v3)
                 </span>
-              )}
-            </p>
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    calendarHealth.healthy
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200"
+                      : calendarHealth.status === "error" || calendarHealth.status === "no_access" || calendarHealth.status === "not_configured"
+                      ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200"
+                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200"
+                  }`}
+                  title={calendarHealth.message}
+                >
+                  {calendarHealth.healthy ? (
+                    <>
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      <span>Agenda: {calendarHealth.calendarSummary || "Dra. Juliana"}</span>
+                    </>
+                  ) : calendarHealth.status === "error" || calendarHealth.status === "no_access" || calendarHealth.status === "not_configured" ? (
+                    <>
+                      <AlertCircle className="w-3 h-3 text-amber-600" />
+                      <span>Configuração necessária</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3 text-slate-400" />
+                      <span>Não conectado</span>
+                    </>
+                  )}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {calendarHealth.healthy
+                  ? `Sincronização bidirecional ativa com o Google Agenda da Dra. Juliana.`
+                  : calendarHealth.message || `A agenda da Dra. Juliana ainda não está configurada.`}
+                {!calendarHealth.canManageCalendar && (
+                  <span className="block text-[10px] text-amber-600 mt-0.5">
+                    Nota: Apenas administradores e profissionais podem conectar ou sincronizar o Google Agenda.
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+            {calendarHealth.canManageCalendar ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleTriggerSync}
+                  disabled={isSyncing || !calendarHealth.healthy}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-[#3B9E8C] hover:bg-[#2d8272] disabled:opacity-50 transition-all shadow-xs cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+                  <span>{isSyncing ? "Sincronizando..." : "Sincronizar Agenda"}</span>
+                </button>
+              </>
+            ) : (
+              <span className="text-[11px] text-slate-400 italic">
+                {calendarHealth.healthy ? "Sincronizado" : "Não conectado"}
+              </span>
+            )}
           </div>
         </div>
-
-        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-          {calendarHealth.canManageCalendar ? (
-            <>
-              <button
-                type="button"
-                onClick={handleTriggerSync}
-                disabled={isSyncing || !calendarHealth.healthy}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-[#3B9E8C] hover:bg-[#2d8272] disabled:opacity-50 transition-all shadow-xs cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-                <span>{isSyncing ? "Sincronizando..." : "Sincronizar Agenda"}</span>
-              </button>
-            </>
-          ) : (
-            <span className="text-[11px] text-slate-400 italic">
-              {calendarHealth.healthy ? "Sincronizado" : "Não conectado"}
-            </span>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Orientação informativa para Pacientes */}
       {isPatient && (
@@ -466,13 +469,16 @@ export function AppointmentTableView() {
                 <th className="py-3.5 px-4">Contato</th>
                 <th className="py-3.5 px-4">Google Agenda</th>
                 <th className="py-3.5 px-4">Status</th>
+                <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
+                  PAGAMENTO
+                </th>
                 <th className="py-3.5 px-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm">
               {isPending && paginatedData.data.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                  <td colSpan={8} className="py-12 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
                       <span className="text-xs">Sincronizando agendamentos...</span>
@@ -481,7 +487,7 @@ export function AppointmentTableView() {
                 </tr>
               ) : paginatedData.data.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center">
+                  <td colSpan={8} className="py-12 text-center">
                     <div className="max-w-sm mx-auto flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                       <div className="p-3 bg-teal-50 dark:bg-slate-800 rounded-full mb-3 text-teal-600 dark:text-teal-400">
                         <CalendarDays className="w-6 h-6" />
@@ -506,7 +512,11 @@ export function AppointmentTableView() {
                   </td>
                 </tr>
               ) : (
-                paginatedData.data.map((appointment) => {
+                paginatedData.data.map((rawAppointment) => {
+                  const appointment = rawAppointment as Appointment & {
+                    status_pagamento?: string | null;
+                    comprovante_url?: string | null;
+                  };
                   const [year, month, day] = appointment.data.split("-");
                   const dateFormatted = `${day}/${month}/${year}`;
 
@@ -604,7 +614,41 @@ export function AppointmentTableView() {
                         )}
                       </td>
 
-                      {/* AÇÕES: Abrir no Google Agenda com link direto, Editar horário e Cancelar agendamento */}
+                      {/* PAGAMENTO */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          {appointment.status_pagamento === "Pago" ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200">
+                              Pago
+                            </span>
+                          ) : appointment.status_pagamento === "Em Análise" || appointment.comprovante_url ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200">
+                              <Clock className="w-3 h-3 text-amber-600" />
+                              <span>Em Análise</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200">
+                              Pendente
+                            </span>
+                          )}
+
+                          {/* Botão para visualizar o comprovativo PIX anexado */}
+                          {appointment.comprovante_url && (
+                            <a
+                              href={appointment.comprovante_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 hover:bg-teal-100 transition-colors"
+                              title="Abrir comprovante de pagamento"
+                            >
+                              <FileText className="w-3 h-3 text-teal-600" />
+                              <span>Ver PIX</span>
+                            </a>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* AÇÕES: Abrir no Google Agenda com link direto, Detalhes, Editar horário e Cancelar agendamento */}
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
                           {/* Abrir no Google Agenda */}
@@ -630,8 +674,8 @@ export function AppointmentTableView() {
                             <Eye className="w-4 h-4" />
                           </button>
 
-                          {/* Editar Horário */}
-                          {appointment.status !== "Cancelado" && (
+                          {/* Editar Horário (Apenas para Admin e Profissional) */}
+                          {!isPatient && appointment.status !== "Cancelado" && (
                             <button
                               type="button"
                               onClick={() => handleOpenEdit(appointment)}
