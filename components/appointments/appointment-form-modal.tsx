@@ -22,6 +22,9 @@ import {
   CreditCard,
   Upload,
   Loader2,
+  Paperclip,
+  Image as ImageIcon,
+  Trash2,
 } from "lucide-react";
 import { AppointmentCalendarPicker } from "./appointment-calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
@@ -200,6 +203,22 @@ function AppointmentFormModalContent({
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [copiedPix, setCopiedPix] = useState(false);
+
+  const [clinicalFiles, setClinicalFiles] = useState<File[]>([]);
+
+  const handleAddFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    const valid = files.filter(f => f.size <= MAX_SIZE);
+    if (valid.length < files.length) {
+      alert("Alguns arquivos excederam o limite máximo de 10MB.");
+    }
+    setClinicalFiles(prev => [...prev, ...valid]);
+  };
+
+  const handleRemoveFile = (idx: number) => {
+    setClinicalFiles(prev => prev.filter((_, i) => i !== idx));
+  };
 
   // Auto-seleciona o paciente buscando garantidamente o ID real da tabela 'pacientes'
   useEffect(() => {
@@ -1144,6 +1163,67 @@ function AppointmentFormModalContent({
                 onChange={(e) => setObservacoes(e.target.value)}
                 className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 resize-none"
               />
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Paperclip className="w-3.5 h-3.5 text-teal-600" />
+                  <span>Anexar Exames e/ou Fotos da Região (Opcional)</span>
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  PDF, PNG ou JPG (até 10MB por arquivo)
+                </span>
+              </div>
+
+              <label className="flex flex-col items-center justify-center p-4 border border-dashed border-teal-300/80 dark:border-teal-700/60 rounded-2xl bg-teal-50/30 dark:bg-slate-800/40 hover:bg-teal-50/60 dark:hover:bg-slate-800 transition-all cursor-pointer">
+                <UploadCloud className="w-6 h-6 text-teal-600 mb-1.5" />
+                <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">
+                  Clique para adicionar fotos ou exames
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5">
+                  Selecione um ou vários arquivos
+                </span>
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,image/png,image/jpeg,image/jpg"
+                  className="hidden"
+                  onChange={handleAddFiles}
+                />
+              </label>
+
+              {clinicalFiles.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  {clinicalFiles.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        {file.type.startsWith("image/") ? (
+                          <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
+                        ) : (
+                          <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                        )}
+                        <span className="truncate font-medium text-slate-700 dark:text-slate-200">
+                          {file.name}
+                        </span>
+                        <span className="text-[10px] text-slate-400 shrink-0">
+                          ({(file.size / (1024 * 1024)).toFixed(1)} MB)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(idx)}
+                        className="text-slate-400 hover:text-rose-500 p-1 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
