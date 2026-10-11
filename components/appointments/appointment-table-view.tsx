@@ -930,15 +930,17 @@ export function AppointmentTableView() {
                       {/* AÇÕES: Abrir no Google Agenda com link direto, Detalhes, Editar horário e Cancelar agendamento */}
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
-                          {/* Botão para Anexar Exames/Fotos */}
-                          <button
-                            type="button"
-                            onClick={() => setAttachmentModalAppointment(appointment)}
-                            className="p-1.5 rounded-lg text-teal-600 hover:text-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 transition-colors cursor-pointer"
-                            title="Anexar ou visualizar exames e fotos"
-                          >
-                            <Paperclip className="w-4 h-4" />
-                          </button>
+                          {/* Botão de anexos apenas para o Paciente */}
+                          {isPatient && (
+                            <button
+                              type="button"
+                              onClick={() => setAttachmentModalAppointment(appointment)}
+                              className="p-1.5 rounded-lg text-teal-600 hover:text-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 transition-colors cursor-pointer"
+                              title="Anexar ou visualizar exames e fotos"
+                            >
+                              <Paperclip className="w-4 h-4" />
+                            </button>
+                          )}
 
                           {/* Botão de Pagamento / Recibo para o Paciente */}
                           {isPatient && appointment.status !== "Cancelado" && (

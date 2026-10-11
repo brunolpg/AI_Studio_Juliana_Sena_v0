@@ -17,7 +17,9 @@ import {
   Share2,
   Paperclip,
   ImageIcon,
+  UploadCloud,
 } from "lucide-react";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Appointment } from "@/types/appointment";
 
 interface AppointmentDetailsModalProps {
@@ -34,6 +36,13 @@ export function AppointmentDetailsModal({
   onEdit,
 }: AppointmentDetailsModalProps) {
   if (!isOpen || !appointment) return null;
+
+  const [attachments, setAttachments] = React.useState<string[]>(appointment.anexos_clinicos || []);
+  const [isUploading, setIsUploading] = React.useState(false);
+
+  React.useEffect(() => {
+    setAttachments(appointment.anexos_clinicos || []);
+  }, [appointment]);
 
   const dateFormatted = new Date(appointment.data + "T12:00:00").toLocaleDateString(
     "pt-BR",
@@ -143,42 +152,109 @@ export function AppointmentDetailsModal({
             )}
           </div>
 
-          {/* Exames e Fotos Anexadas */}
-          <div className="space-y-2">
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <Paperclip className="w-3.5 h-3.5 text-teal-600" />
-              <span>Exames e Fotos Anexadas ({appointment.anexos_clinicos?.length || 0}/3)</span>
-            </span>
+          {/* SEÇÃO: ARQUIVOS NO PRONTUÁRIO (EXAMES E FOTOS) */}
+          <div className="space-y-3 pt-2">
+            {/* Barra de Contagem */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-teal-50/50 dark:bg-slate-800/60 border border-teal-200/70 dark:border-slate-700">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Total de arquivos anexados
+              </span>
+              <span className="text-xs font-bold text-teal-700 dark:text-teal-400">
+                {attachments.length} de 3 arquivos
+              </span>
+            </div>
 
-            {(!appointment.anexos_clinicos || appointment.anexos_clinicos.length === 0) ? (
-              <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs text-slate-400 italic">
-                Nenhum exame ou foto anexada para este atendimento.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {appointment.anexos_clinicos.map((url, idx) => {
-                  const isImage = url.match(/\.(jpeg|jpg|png|webp)($|\?)/i);
-                  return (
-                    <a
-                      key={idx}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:bg-teal-50 dark:hover:bg-slate-800 text-xs text-slate-700 dark:text-slate-200 transition-colors group cursor-pointer"
-                    >
-                      {isImage ? (
-                        <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
-                      ) : (
-                        <FileText className="w-4 h-4 text-rose-600 shrink-0" />
-                      )}
-                      <span className="truncate flex-1 font-medium group-hover:text-teal-700 dark:group-hover:text-teal-300">
-                        Anexo {idx + 1} ({isImage ? "Foto" : "Documento/PDF"})
-                      </span>
-                      <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-teal-600 shrink-0" />
-                    </a>
-                  );
-                })}
-              </div>
+            {/* Lista de Arquivos */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider block">
+                ARQUIVOS NO PRONTUÁRIO
+              </span>
+
+              {attachments.length === 0 ? (
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 text-center text-xs text-slate-400 italic">
+                  Nenhum exame ou foto clínica anexado a esta consulta ainda.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {attachments.map((url, idx) => {
+                    const isImage = url.match(/\.(jpeg|jpg|png|webp)($|\?)/i);
+                    return (
+                      <a
+                        key={idx}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 hover:bg-teal-50 dark:hover:bg-slate-700/60 text-xs text-slate-700 dark:text-slate-200 transition-colors group cursor-pointer"
+                      >
+                        {isImage ? (
+                          <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
+                        ) : (
+                          <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                        )}
+                        <span className="truncate flex-1 font-medium group-hover:text-teal-700 dark:group-hover:text-teal-300">
+                          Anexo {idx + 1} ({isImage ? "Foto" : "Documento"})
+                        </span>
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 shrink-0" />
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Caixa Tracejada de Upload */}
+            {attachments.length < 3 && (
+              <label className="flex flex-col items-center justify-center p-4 border border-dashed border-teal-300/80 dark:border-teal-700/60 rounded-2xl bg-teal-50/20 dark:bg-slate-800/30 hover:bg-teal-50/50 dark:hover:bg-slate-800 transition-all cursor-pointer">
+                <UploadCloud className="w-6 h-6 text-teal-600 mb-1" />
+                <span className="text-xs font-bold text-teal-900 dark:text-teal-200">
+                  {isUploading ? "Enviando arquivo..." : "Clique para adicionar fotos ou exames"}
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5">
+                  Selecione até {3 - attachments.length} arquivo(s) (PDF, PNG, JPG até 10MB)
+                </span>
+                <input
+                  type="file"
+                  disabled={isUploading}
+                  accept=".pdf,image/png,image/jpeg,image/jpg,image/webp"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 10 * 1024 * 1024) {
+                      alert("O arquivo não pode ultrapassar 10MB.");
+                      return;
+                    }
+                    setIsUploading(true);
+                    try {
+                      const supabase = getSupabaseClient();
+                      if (!supabase) return;
+                      const fileExt = file.name.split(".").pop() || "png";
+                      const filePath = `consultas/${appointment.id}_${Date.now()}.${fileExt}`;
+                      const { error: uploadErr } = await supabase.storage
+                        .from("anexos-consultas")
+                        .upload(filePath, file, { upsert: true });
+                      if (uploadErr) throw uploadErr;
+
+                      const { data: publicData } = supabase.storage
+                        .from("anexos-consultas")
+                        .getPublicUrl(filePath);
+
+                      const updated = [...attachments, publicData.publicUrl];
+                      setAttachments(updated);
+
+                      // Sincroniza diretamente no banco de dados Supabase
+                      await supabase
+                        .from("appointments")
+                        .update({ anexos_clinicos: updated, updated_at: new Date().toISOString() })
+                        .eq("id", appointment.id);
+                    } catch (err: any) {
+                      alert("Falha ao salvar anexo: " + err.message);
+                    } finally {
+                      setIsUploading(false);
+                    }
+                  }}
+                />
+              </label>
             )}
           </div>
 
