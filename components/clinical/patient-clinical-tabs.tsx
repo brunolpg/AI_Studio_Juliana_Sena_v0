@@ -86,6 +86,26 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const [isAestheticModalOpen, setIsAestheticModalOpen] = useState(false);
   const [aestheticData, setAestheticData] = useState<{ facial: any; corporal: any } | null>(null);
 
+  const handleDownloadAndOpenVidaas = (rxId: string, rxName: string) => {
+    // 1. Mantém o download direto do arquivo
+    const downloadUrl = `/api/prescricoes/${rxId}/pdf`;
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = `Receita_${rxName.replace(/\s+/g, "_")}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // 2. Aciona a abertura do aplicativo VIDaaS no dispositivo móvel
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile) {
+      setTimeout(() => {
+        // Intent oficial do app VIDaaS no Android (br.com.valid.vidaas)
+        window.location.href = "intent://#Intent;package=br.com.valid.vidaas;scheme=vidaas;end;";
+      }, 700);
+    }
+  };
+
   // Carrega prontuário do paciente
   const loadClinicalData = useCallback(() => {
     const isValidUUID = (id?: string | null) => 
@@ -1488,14 +1508,14 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               <p className="text-[10px] text-slate-500 leading-relaxed">
                 Abra o relatório para salvar como PDF no seu dispositivo e assinar no VIDaaS Connect ou app VIDaaS.
               </p>
-              <a
-                href={`/api/prescricoes/${signingRx.id}/pdf`}
-                download={`Receita_${signingRx.medicamento}.html`}
+              <button
+                type="button"
+                onClick={() => handleDownloadAndOpenVidaas(signingRx.id, signingRx.medicamento || 'receita')}
                 className="w-full py-2.5 px-3 text-xs font-semibold rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
               >
                 <Printer className="w-4 h-4 text-teal-600" />
-                <span>Baixar Arquivo da Prescrição</span>
-              </a>
+                <span>Baixar Prescrição e Abrir VIDaaS</span>
+              </button>
               <p className="text-[10px] text-teal-800 dark:text-teal-300 font-medium mt-1 leading-tight">
                 Dica: Após baixar, abra o app VIDaaS no celular (ou use o VIDaaS Connect no computador) para aplicar a assinatura ICP-Brasil.
               </p>
