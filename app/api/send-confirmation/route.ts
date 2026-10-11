@@ -22,14 +22,15 @@ export async function POST(req: NextRequest) {
     const formattedDate = day && month && year ? `${day}/${month}/${year}` : date;
 
     const calendarTitle = encodeURIComponent(`Consulta: ${procedimento} - Dra. Juliana Sena`);
-    const startIso = `${date}T${startTime}:00-03:00`.replace(/[-:]/g, "").replace(".000", "");
-    const endIso = `${date}T${endTime}:00-03:00`.replace(/[-:]/g, "").replace(".000", "");
-    const startCompact = startIso.substring(0, 15) + "Z";
-    const endCompact = endIso.substring(0, 15) + "Z";
+    const startDateTime = new Date(`${date}T${startTime}:00-03:00`);
+    const endDateTime = new Date(`${date}T${endTime}:00-03:00`);
+    const formatToUtcCompact = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const startCompact = formatToUtcCompact(startDateTime);
+    const endCompact = formatToUtcCompact(endDateTime);
     const calendarDetails = encodeURIComponent(
       `Paciente: ${patientName}\nProcedimento: ${procedimento}\nHorário: ${startTime} às ${endTime}\n\nFavor comparecer com antecedência.`
     );
-    const addToCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${calendarTitle}&dates=${startCompact}/${endCompact}&details=${calendarDetails}`;
+    const addToCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${calendarTitle}&dates=${startCompact}/${endCompact}&details=${calendarDetails}&ctz=America/Sao_Paulo`;
 
     const htmlContent = `
       <!DOCTYPE html>

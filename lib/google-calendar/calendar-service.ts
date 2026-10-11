@@ -73,12 +73,19 @@ function formatToBrasiliaTime(dateTimeStr?: string, dateStr?: string, defaultTim
 }
 
 export function generateGoogleCalendarTemplateUrl(input: GoogleCalendarEventInput): string {
-  const startIso = toIsoDateTime(input.date, input.startTime).replace(/[-:]/g, "").replace(".000", "");
-  const endIso = toIsoDateTime(input.date, input.endTime).replace(/[-:]/g, "").replace(".000", "");
-  const startCompact = startIso.substring(0, 15) + "Z";
-  const endCompact = endIso.substring(0, 15) + "Z";
+  // Converte a data e hora local de Brasília/Bahia (GMT-3) para o objeto Date UTC real
+  const startDateTime = new Date(`${input.date}T${input.startTime}:00-03:00`);
+  const endDateTime = new Date(`${input.date}T${input.endTime}:00-03:00`);
 
-  const summary = `Consulta: ${input.procedimento} - ${input.patientName}`;
+  // Formata para o padrão UTC (YYYYMMDDTHHMMSSZ) somando o offset correto para UTC
+  const formatToUtcCompact = (d: Date) => {
+    return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  };
+
+  const startCompact = formatToUtcCompact(startDateTime);
+  const endCompact = formatToUtcCompact(endDateTime);
+
+  const summary = `Consulta: ${input.procedimento} - Dra. Juliana Sena`;
   const details = [
     `Paciente: ${input.patientName}`,
     `Telefone: ${input.patientPhone || "Não informado"}`,
@@ -89,12 +96,12 @@ export function generateGoogleCalendarTemplateUrl(input: GoogleCalendarEventInpu
     .filter(Boolean)
     .join("\n");
 
-  const location = "Consultório de Atendimento - São Paulo/SP";
+  const location = "Clínica Dra. Juliana Sena - Salvador/BA";
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
     summary
   )}&dates=${startCompact}/${endCompact}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(
     location
-  )}`;
+  )}&ctz=America/Sao_Paulo`;
 }
 
 async function refreshGoogleOAuthToken(refreshToken: string): Promise<string | null> {
