@@ -21,7 +21,7 @@ export const PROCEDIMENTOS_CADASTRAIS: Procedimento[] = [
   // Estética Facial
   {
     id: "p2",
-    procedimento: "Botox (Face inteira)",
+    procedimento: "Toxina Botulínica (Face Inteira)",
     categoria: "Estética Facial",
     duracao: 2,
     valor: 1800,
