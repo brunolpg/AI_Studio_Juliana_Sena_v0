@@ -415,33 +415,33 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                       <span className="text-[10px] text-slate-400 block font-medium">Nome Completo</span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">{patientData.nome}</span>
                     </div>
-                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                       <span className="text-[10px] text-slate-400 block font-medium">CPF</span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">{patientData.cpf}</span>
                     </div>
-                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                       <span className="text-[10px] text-slate-400 block font-medium">Data de Nascimento / Idade</span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">
                         {formatBirthDate(patientData.data_nascimento)} ({patientData.idade} anos)
                       </span>
                     </div>
-                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                       <span className="text-[10px] text-slate-400 block font-medium">Sexo</span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">{patientData.sexo}</span>
                     </div>
-                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                       <span className="text-[10px] text-slate-400 block font-medium">Telefone</span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">{patientData.telefone}</span>
                     </div>
-                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                       <span className="text-[10px] text-slate-400 block font-medium">E-mail Cadastrado</span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">{patientData.email}</span>
                     </div>
-                    <div className="sm:col-span-2 md:col-span-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                    <div className="sm:col-span-2 md:col-span-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                       <span className="text-[10px] text-slate-400 block font-medium">Endereço</span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">
                         {patientData.logradouro}, {patientData.numero} {patientData.complemento ? `- ${patientData.complemento}` : ""} • {patientData.cidade}/{patientData.estado} {patientData.cep ? `(CEP: ${patientData.cep})` : ""}
@@ -514,7 +514,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                   {/* SEÇÃO 1: ALERGIAS, COMORBIDADES E MEDICAMENTOS */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                     {/* Alergias e Advertências */}
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850/50 border border-slate-100 dark:border-slate-800/80 space-y-2">
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
                       <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold">
                         <ShieldAlert className="w-4 h-4" />
                         <span>Alergias e Advertências</span>
@@ -535,7 +535,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                     </div>
 
                     {/* Comorbidades e Condições Crônicas */}
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850/50 border border-slate-100 dark:border-slate-800/80 space-y-2">
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
                       <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold">
                         <Activity className="w-4 h-4" />
                         <span>Comorbidades e Condições Crônicas</span>
@@ -556,7 +556,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                     </div>
 
                     {/* Medicamentos de Uso Contínuo */}
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850/50 border border-slate-100 dark:border-slate-800/80 space-y-2">
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
                       <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400 font-bold">
                         <Pill className="w-4 h-4" />
                         <span>Medicamentos de Uso Contínuo</span>
@@ -577,7 +577,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                     </div>
 
                     {/* Acompanhamento Médico */}
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850/50 border border-slate-100 dark:border-slate-800/80 space-y-2">
+                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-2">
                       <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400 font-bold">
                         <Stethoscope className="w-4 h-4" />
                         <span>Acompanhamento Médico</span>
@@ -608,42 +608,42 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                       Grade de Hábitos e Sinais Vitais
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-3 text-xs">
-                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                         <span className="text-[10px] text-slate-400 block font-medium">Tipo Sanguíneo</span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {clinicalHistory?.tipo_sanguineo || 'Não informado'}
                         </span>
                       </div>
 
-                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                         <span className="text-[10px] text-slate-400 block font-medium">Tabagismo</span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {clinicalHistory?.tabagismo || clinicalHistory?.habitos_vida?.tabagismo || 'Não fuma'}
                         </span>
                       </div>
 
-                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                         <span className="text-[10px] text-slate-400 block font-medium">Etilismo</span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {clinicalHistory?.etilismo || clinicalHistory?.habitos_vida?.etilismo || 'Não consome'}
                         </span>
                       </div>
 
-                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                         <span className="text-[10px] text-slate-400 block font-medium">Atividade Física</span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {clinicalHistory?.atividade_fisica || clinicalHistory?.habitos_vida?.atividadeFisica || 'Sedentário'}
                         </span>
                       </div>
 
-                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                         <span className="text-[10px] text-slate-400 block font-medium">Isotretinoína (Últimos 6 meses)</span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {clinicalHistory?.isotretinoina_6_meses ? 'Sim' : 'Não'}
                         </span>
                       </div>
 
-                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                         <span className="text-[10px] text-slate-400 block font-medium">Implantes / Marcapasso</span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {Array.isArray(clinicalHistory?.implantes_dispositivos)
@@ -652,21 +652,21 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                         </span>
                       </div>
 
-                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                         <span className="text-[10px] text-slate-400 block font-medium">Ingestão de Água</span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {clinicalHistory?.ingestao_agua || 'Não informado'}
                         </span>
                       </div>
 
-                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                         <span className="text-[10px] text-slate-400 block font-medium">Qualidade do Sono</span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {clinicalHistory?.qualidade_sono || 'Não informado'}
                         </span>
                       </div>
 
-                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
+                      <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
                         <span className="text-[10px] text-slate-400 block font-medium">Funcionamento Intestinal</span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {clinicalHistory?.funcionamento_intestino || 'Não informado'}
@@ -677,7 +677,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
 
                   {/* SEÇÃO 3: ANTECEDENTES & LESÕES */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
-                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-850/50 space-y-1">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1">
                       <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider">
                         Histórico Familiar & Antecedentes
                       </span>
@@ -686,7 +686,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                       </p>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-850/50 space-y-1">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 space-y-1">
                       <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider">
                         Lesões ou Detalhes Dermatológicos
                       </span>
