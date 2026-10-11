@@ -615,7 +615,7 @@ export function AppointmentTableView() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                <th className="py-3.5 px-4">Paciente</th>
+                {!isPatient && <th className="py-3.5 px-4">Paciente</th>}
                 <th className="py-3.5 px-4">Data / Horário</th>
                 <th className="py-3.5 px-4">Procedimento / Especialidade</th>
                 <th className="py-3.5 px-4">Contato</th>
@@ -630,7 +630,7 @@ export function AppointmentTableView() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm">
               {isPending && paginatedData.data.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <td colSpan={isPatient ? 7 : 8} className="py-12 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
                       <span className="text-xs">Sincronizando agendamentos...</span>
@@ -639,7 +639,7 @@ export function AppointmentTableView() {
                 </tr>
               ) : paginatedData.data.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center">
+                  <td colSpan={isPatient ? 7 : 8} className="py-12 text-center">
                     <div className="max-w-sm mx-auto flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                       <div className="p-3 bg-teal-50 dark:bg-slate-800 rounded-full mb-3 text-teal-600 dark:text-teal-400">
                         <CalendarDays className="w-6 h-6" />
@@ -679,21 +679,23 @@ export function AppointmentTableView() {
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                     >
                       {/* PACIENTE: Avatar em quadrado verde claro arredondado + Nome em negrito */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-xs flex-shrink-0 border border-teal-500/20">
-                            {appointment.client_nome.charAt(0)}
+                      {!isPatient && (
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-xs flex-shrink-0 border border-teal-500/20">
+                              {appointment.client_nome.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-bold text-slate-900 dark:text-slate-100 block truncate max-w-[200px]">
+                                {appointment.client_nome}
+                              </span>
+                              <span className="text-[11px] text-slate-400 block truncate max-w-[200px]">
+                                Dra. Juliana Sena
+                              </span>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <span className="font-bold text-slate-900 dark:text-slate-100 block truncate max-w-[200px]">
-                              {appointment.client_nome}
-                            </span>
-                            <span className="text-[11px] text-slate-400 block truncate max-w-[200px]">
-                              Dra. Juliana Sena
-                            </span>
-                          </div>
-                        </div>
-                      </td>
+                        </td>
+                      )}
 
                       {/* DATA / HORÁRIO: Data + pílula destacando horário */}
                       <td className="py-3 px-4 whitespace-nowrap">

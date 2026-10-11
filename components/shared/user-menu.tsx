@@ -168,12 +168,14 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
           </div>
 
           <div className="py-1">
-            <div className="px-2.5 py-1.5 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
-              <span>Nível de Acesso:</span>
-              <span className="font-semibold text-teal-700 dark:text-teal-400 capitalize">
-                {userRole}
-              </span>
-            </div>
+            {userRole !== 'paciente' && (
+              <div className="px-2.5 py-1.5 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Nível de Acesso:</span>
+                <span className="font-semibold text-teal-700 dark:text-teal-400 capitalize">
+                  {userRole}
+                </span>
+              </div>
+            )}
             
             <button
               type="button"

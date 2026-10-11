@@ -13,6 +13,7 @@ import {
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { PatientClinicalTabs } from "@/components/clinical/patient-clinical-tabs";
 import { AppointmentTableView } from "@/components/appointments/appointment-table-view";
+import { UserMenu } from "@/components/shared/user-menu";
 
 interface PatientPortalProps {
   user: any;
@@ -156,17 +157,10 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
             </button>
           </div>
 
-          {/* Botão Sair */}
-          {onLogout && (
-            <button
-              type="button"
-              onClick={onLogout}
-              className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sair</span>
-            </button>
-          )}
+          {/* Menu do Usuário */}
+          <div className="flex items-center gap-2">
+            <UserMenu user={user} onLogout={async () => onLogout?.()} />
+          </div>
         </div>
       </header>
 
