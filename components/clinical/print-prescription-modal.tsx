@@ -145,7 +145,7 @@ export function PrintPrescriptionModal({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 12mm;
+            margin: 8mm;
           }
           body {
             -webkit-print-color-adjust: exact !important;
@@ -173,14 +173,19 @@ export function PrintPrescriptionModal({
             font-family: 'Plus Jakarta Sans', sans-serif !important;
           }
 
-          /* Fixa a folha no topo da página A4 */
+          /* Fixa a folha no topo da página A4 e restringe altura para 1 única página */
           #receituario-print-area {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
+            height: 275mm !important;
+            max-height: 275mm !important;
+            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
             margin: 0 !important;
-            padding: 1.5cm !important;
+            padding: 10mm !important;
             box-shadow: none !important;
             border: none !important;
             background: white !important;

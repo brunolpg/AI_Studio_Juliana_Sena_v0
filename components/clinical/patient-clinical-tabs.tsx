@@ -1488,21 +1488,14 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               <p className="text-[10px] text-slate-500 leading-relaxed">
                 Abra o relatório para salvar como PDF no seu dispositivo e assinar no VIDaaS Connect ou app VIDaaS.
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  const rxToPrint = signingRx;
-                  setSigningRx(null);
-                  setSelectedRxForPrint(rxToPrint);
-                  setTimeout(() => {
-                    window.print();
-                  }, 400);
-                }}
-                className="w-full py-2 px-3 text-xs font-semibold rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+              <a
+                href={`/api/prescricoes/${signingRx.id}/pdf`}
+                download={`Receita_${signingRx.medicamento}.html`}
+                className="w-full py-2.5 px-3 text-xs font-semibold rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
               >
-                <Printer className="w-3.5 h-3.5 text-teal-600" />
-                <span>Baixar PDF do Receituário</span>
-              </button>
+                <Printer className="w-4 h-4 text-teal-600" />
+                <span>Baixar Arquivo da Prescrição</span>
+              </a>
               <p className="text-[10px] text-teal-800 dark:text-teal-300 font-medium mt-1 leading-tight">
                 Dica: Após baixar, abra o app VIDaaS no celular (ou use o VIDaaS Connect no computador) para aplicar a assinatura ICP-Brasil.
               </p>
