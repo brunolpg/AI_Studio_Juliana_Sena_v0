@@ -35,6 +35,8 @@ interface AppointmentEditModalProps {
 }
 
 const STATUS_OPTIONS: AppointmentStatus[] = ["Confirmado", "Pendente", "Concluído", "Cancelado"];
+const PAYMENT_STATUS_OPTIONS = ["Pendente", "Em Análise", "Pago", "Cancelado"] as const;
+type PaymentStatusOption = typeof PAYMENT_STATUS_OPTIONS[number];
 
 interface EditContentProps {
   appointment: Appointment;
@@ -58,6 +60,9 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
   const [procedimento, setProcedimento] = useState(appointment.procedimento);
   const [observacoes, setObservacoes] = useState(appointment.observacoes || "");
   const [status, setStatus] = useState<AppointmentStatus>(appointment.status);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatusOption>(
+    (appointment.status_pagamento as PaymentStatusOption) || "Pendente"
+  );
   const [clinicalAttachments, setClinicalAttachments] = useState<string[]>(
     appointment.anexos_clinicos || []
   );
@@ -201,6 +206,7 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
         procedimento,
         observacoes,
         status,
+        status_pagamento: paymentStatus,
         anexos_clinicos: clinicalAttachments,
       });
 
@@ -279,6 +285,35 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
                       ? "bg-amber-500 text-white border-amber-500"
                       : opt === "Concluído"
                       ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-rose-600 text-white border-rose-600"
+                    : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Status do Pagamento */}
+        <div>
+          <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1.5">
+            Status do Pagamento
+          </label>
+          <div className="grid grid-cols-4 gap-2">
+            {PAYMENT_STATUS_OPTIONS.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setPaymentStatus(opt)}
+                className={`py-1.5 text-xs font-semibold rounded-xl border transition-all ${
+                  paymentStatus === opt
+                    ? opt === "Pago"
+                      ? "bg-emerald-600 text-white border-emerald-600"
+                      : opt === "Pendente"
+                      ? "bg-amber-500 text-white border-amber-500"
+                      : opt === "Em Análise"
+                      ? "bg-sky-600 text-white border-sky-600"
                       : "bg-rose-600 text-white border-rose-600"
                     : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
                 }`}
