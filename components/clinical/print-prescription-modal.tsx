@@ -442,11 +442,17 @@ export function PrintPrescriptionModal({
                 <span>{formatDateToPortuguese(prescription.data)}</span>
               </div>
 
-              {/* Bloco de Assinatura */}
-              <div className="flex flex-col items-center">
-                <div className="w-72 border-b border-slate-400"></div>
-                <span className="text-xs font-bold text-slate-950 mt-1.5">Juliana Sena de Souza Vieira</span>
-                <span className="text-[10px] text-slate-500">Enfermeira Esteta • COREN-BA 366.344</span>
+              {/* Bloco de Assinatura Digital VIDaaS */}
+              <div className="flex flex-col items-center justify-center p-3 border-2 border-dashed border-teal-600/40 rounded-xl bg-teal-50/20 max-w-sm mx-auto text-center">
+                <span className="text-[11px] font-bold text-slate-900">
+                  Juliana Sena de Souza Vieira
+                </span>
+                <span className="text-[10px] text-teal-800 font-medium">
+                  Enfermeira Esteta • COREN-BA 366.344
+                </span>
+                <span className="text-[9px] text-slate-500 mt-1 leading-tight">
+                  Espaço reservado para aposição de Assinatura Digital Qualificada ICP-Brasil (VIDaaS / Validador ITI)
+                </span>
               </div>
 
               {/* Rodapé Institucional sutil */}

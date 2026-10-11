@@ -26,6 +26,8 @@ import {
   Image as ImageIcon,
   Printer,
   X,
+  FileCheck,
+  ExternalLink,
 } from "lucide-react";
 import {
   getPatientClinicalRecordAction,
@@ -1139,6 +1141,29 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                   <Printer className="w-3.5 h-3.5" />
                                   <span>Gerar Relatório</span>
                                 </button>
+                                {rx.pdf_assinado_url ? (
+                                  <a
+                                    href={rx.pdf_assinado_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 rounded-lg transition-colors"
+                                    title="Ver receita assinada digitalmente"
+                                  >
+                                    <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>PDF Assinado</span>
+                                    <ExternalLink className="w-3 h-3 text-emerald-500" />
+                                  </a>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedRxForPrint(rx)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100/70 rounded-lg transition-colors cursor-pointer"
+                                    title="Assinar com certificado digital VIDaaS"
+                                  >
+                                    <FileCheck className="w-3.5 h-3.5 text-blue-600" />
+                                    <span>Assinar (VIDaaS)</span>
+                                  </button>
+                                )}
                               )}
 
                               {rx.ativo || rx.status === "Ativo" ? (
