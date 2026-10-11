@@ -27,6 +27,7 @@ import {
   Upload,
   X,
   Paperclip,
+  Loader2,
 } from "lucide-react";
 import {
   getAppointmentsAction,
@@ -112,6 +113,39 @@ export function AppointmentTableView() {
   const [paymentModalAppointment, setPaymentModalAppointment] = useState<Appointment | null>(null);
   const [isUploadingPaymentReceipt, setIsUploadingPaymentReceipt] = useState(false);
   const [copiedPixPaymentModal, setCopiedPixPaymentModal] = useState(false);
+  const [isGeneratingCheckout, setIsGeneratingCheckout] = useState(false);
+
+  const handlePayWithInfinitePay = async (appointmentId?: string) => {
+    if (!appointmentId) {
+      toast({
+        type: "error",
+        title: "Agendamento não identificado",
+        description: "Selecione um agendamento válido."
+      });
+      return;
+    }
+    setIsGeneratingCheckout(true);
+    try {
+      const res = await fetch("/api/infinitepay/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appointmentId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.checkoutUrl) {
+        throw new Error(data.error || "Não foi possível gerar o link de pagamento.");
+      }
+      window.location.href = data.checkoutUrl;
+    } catch (err: any) {
+      toast({
+        type: "error",
+        title: "Erro no Checkout",
+        description: err.message || "Falha ao conectar com a InfinitePay."
+      });
+    } finally {
+      setIsGeneratingCheckout(false);
+    }
+  };
 
   // Modal de Anexos Clínicos (Exames e Fotos)
   const [attachmentModalAppointment, setAttachmentModalAppointment] = useState<Appointment | null>(null);
@@ -1315,15 +1349,35 @@ export function AppointmentTableView() {
                 )}
               </div>
 
-              {/* OPÇÃO CARTÃO DE CRÉDITO */}
-              <div className="pt-1 border-t border-teal-100 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
-                <div className="flex items-center gap-1.5">
-                  <CreditCard className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                  <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">Cartão de Crédito</span>
-                </div>
-                <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
-                  Em breve / InfinitePay
-                </span>
+              {/* OPÇÃO CARTÃO DE CRÉDITO - INFINITEPAY */}
+              <div className="pt-1.5 border-t border-teal-100 dark:border-slate-700/60">
+                <button
+                  type="button"
+                  disabled={isGeneratingCheckout}
+                  onClick={() => handlePayWithInfinitePay(paymentModalAppointment.id)}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50/60 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer group text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        Pagar com Cartão de Crédito
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        Parcelamento seguro via InfinitePay
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {isGeneratingCheckout ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-600" />
+                    ) : (
+                      <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 bg-teal-100/70 dark:bg-teal-950 px-2 py-0.5 rounded-full">
+                        Pagar Agora →
+                      </span>
+                    )}
+                  </div>
+                </button>
               </div>
             </div>
 
