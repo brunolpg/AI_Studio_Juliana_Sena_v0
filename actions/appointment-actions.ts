@@ -72,11 +72,13 @@ interface RawAppointmentRow {
     nome?: string;
     email?: string;
     telefone?: string;
+    foto_perfil?: string;
   } | Array<{
     id?: string;
     nome?: string;
     email?: string;
     telefone?: string;
+    foto_perfil?: string;
   }> | null;
 }
 
@@ -91,6 +93,7 @@ function mapRowToAppointment(row: RawAppointmentRow): Appointment {
     client_nome: patientData?.nome || "Paciente Cadastrado",
     client_email: patientData?.email || "",
     client_telefone: patientData?.telefone || "",
+    patientPhoto: patientData?.foto_perfil || null,
     data: row.data,
     horario_inicio: row.horario_inicio,
     horario_fim: row.horario_fim,
@@ -106,7 +109,7 @@ function mapRowToAppointment(row: RawAppointmentRow): Appointment {
     synced_with_google: Boolean(row.synced_with_google),
     created_at: row.created_at,
     updated_at: row.updated_at,
-  };
+  } as any;
 }
 
 /**
@@ -154,7 +157,8 @@ export async function getAppointmentsAction(
           id,
           nome,
           email,
-          telefone
+          telefone,
+          foto_perfil
         )
       `,
       { count: "exact" }

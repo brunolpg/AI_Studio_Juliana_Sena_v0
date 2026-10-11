@@ -39,8 +39,21 @@ import { AppointmentEditModal } from "./appointment-edit-modal";
 import { AppointmentDetailsModal } from "./appointment-details-modal";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/auth/auth-context";
-import type { Appointment, AppointmentFilterTab } from "@/types/appointment";
-import type { PaginatedResult } from "@/types/client";
+function formatShortName(fullName?: string): string {
+  if (!fullName) return "Paciente";
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 2) return fullName;
+
+  const firstName = parts[0];
+  const lastName = parts[parts.length - 1];
+  const middleInitials = parts
+    .slice(1, -1)
+    .filter((p) => p.length > 2) // ignora preposições como 'de', 'da', 'do'
+    .map((p) => `${p[0].toUpperCase()}.`)
+    .join(" ");
+
+  return middleInitials ? `${firstName} ${middleInitials} ${lastName}` : `${firstName} ${lastName}`;
+}
 
 export function AppointmentTableView() {
   const { toast } = useToast();
@@ -615,16 +628,32 @@ export function AppointmentTableView() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                {!isPatient && <th className="py-3.5 px-4">Paciente</th>}
-                <th className="py-3.5 px-4">Data / Horário</th>
-                <th className="py-3.5 px-4">Procedimento / Especialidade</th>
-                <th className="py-3.5 px-4">Contato</th>
-                <th className="py-3.5 px-4">Google Agenda</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
+                {!isPatient && (
+                  <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300 w-52 max-w-[210px]">
+                    PACIENTE
+                  </th>
+                )}
+                <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300">
+                  Data / Horário
+                </th>
+                <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300">
+                  PROCEDIMENTO
+                </th>
+                <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300">
+                  Contato
+                </th>
+                <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300">
+                  Google Agenda
+                </th>
+                <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300">
+                  Status
+                </th>
+                <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300">
                   PAGAMENTO
                 </th>
-                <th className="py-3.5 px-4 text-right">Ações</th>
+                <th className="py-2.5 px-3 text-right font-bold text-slate-700 dark:text-slate-300">
+                  Ações
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm">
@@ -668,6 +697,7 @@ export function AppointmentTableView() {
                   const appointment = rawAppointment as Appointment & {
                     status_pagamento?: string | null;
                     comprovante_url?: string | null;
+                    patientPhoto?: string | null;
                   };
                   const [year, month, day] = appointment.data.split("-");
                   const dateFormatted = `${day}/${month}/${year}`;
@@ -678,27 +708,39 @@ export function AppointmentTableView() {
                       id={`appointment-row-${appointment.id}`}
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                     >
-                      {/* PACIENTE: Avatar em quadrado verde claro arredondado + Nome em negrito */}
+                      {/* PACIENTE (Foto, Largura Reduzida e Nome Abreviado) */}
                       {!isPatient && (
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-xs flex-shrink-0 border border-teal-500/20">
-                              {appointment.client_nome.charAt(0)}
-                            </div>
-                            <div className="min-w-0">
-                              <span className="font-bold text-slate-900 dark:text-slate-100 block truncate max-w-[200px]">
-                                {appointment.client_nome}
-                              </span>
-                              <span className="text-[11px] text-slate-400 block truncate max-w-[200px]">
-                                Dra. Juliana Sena
-                              </span>
+                        <td className="py-2.5 px-3 max-w-[210px]">
+                          <div className="flex items-center gap-2.5">
+                            {/* Foto de Perfil ou Inicial */}
+                            {appointment.patientPhoto ? (
+                              <img
+                                src={appointment.patientPhoto}
+                                alt={appointment.client_nome || "Paciente"}
+                                className="w-8 h-8 rounded-full object-cover shrink-0 border border-teal-200 dark:border-slate-700 shadow-2xs"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 text-xs font-bold flex items-center justify-center shrink-0">
+                                {(appointment.client_nome || "P")[0].toUpperCase()}
+                              </div>
+                            )}
+
+                            {/* Nome com iniciais nos sobrenomes do meio */}
+                            <div className="min-w-0 truncate">
+                              <p
+                                className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate"
+                                title={appointment.client_nome}
+                              >
+                                {formatShortName(appointment.client_nome)}
+                              </p>
+                              <p className="text-[10px] text-slate-400 truncate">Dra. Juliana Sena</p>
                             </div>
                           </div>
                         </td>
                       )}
 
                       {/* DATA / HORÁRIO: Data + pílula destacando horário */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         <span className="text-xs font-medium text-slate-800 dark:text-slate-200 block">
                           {dateFormatted}
                         </span>
@@ -711,7 +753,7 @@ export function AppointmentTableView() {
                       </td>
 
                       {/* PROCEDIMENTO / ESPECIALIDADE */}
-                      <td className="py-3 px-4">
+                      <td className="py-2.5 px-3">
                         <span className="text-xs font-medium text-slate-800 dark:text-slate-200 block">
                           {appointment.procedimento}
                         </span>
@@ -723,7 +765,7 @@ export function AppointmentTableView() {
                       </td>
 
                       {/* CONTATO: Telefone e e-mail */}
-                      <td className="py-3 px-4">
+                      <td className="py-2.5 px-3">
                         <span className="text-xs text-slate-700 dark:text-slate-300 block">
                           {appointment.client_telefone}
                         </span>
@@ -733,7 +775,7 @@ export function AppointmentTableView() {
                       </td>
 
                       {/* GOOGLE AGENDA: Badge com ícone indicando status de sincronização */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         {appointment.synced_with_google ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -748,7 +790,7 @@ export function AppointmentTableView() {
                       </td>
 
                       {/* STATUS: Pílulas coloridas */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         {appointment.status === "Confirmado" ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                             Confirmado
@@ -769,7 +811,7 @@ export function AppointmentTableView() {
                       </td>
 
                       {/* PAGAMENTO */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           {appointment.status_pagamento === "Pago" ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200">
