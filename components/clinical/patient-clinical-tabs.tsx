@@ -28,6 +28,7 @@ import {
   X,
   FileCheck,
   ExternalLink,
+  UploadCloud,
 } from "lucide-react";
 import {
   getPatientClinicalRecordAction,
@@ -72,6 +73,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [selectedRxForPrint, setSelectedRxForPrint] = useState<PrescriptionItem | null>(null);
+  const [signingRx, setSigningRx] = useState<PrescriptionItem | null>(null);
+  const [isUploadingSignedPdf, setIsUploadingSignedPdf] = useState(false);
 
   // Modal de suspensão de receita
   const [isSuspensionModalOpen, setIsSuspensionModalOpen] = useState(false);
@@ -1157,8 +1160,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                   ) : (
                                     <button
                                       type="button"
-                                      onClick={() => setSelectedRxForPrint(rx)}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100/70 rounded-lg transition-colors cursor-pointer"
+                                      onClick={() => setSigningRx(rx)}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 hover:bg-blue-100/70 rounded-xl transition-colors cursor-pointer"
                                       title="Assinar com certificado digital VIDaaS"
                                     >
                                       <FileCheck className="w-3.5 h-3.5 text-blue-600" />
@@ -1440,6 +1443,137 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                 ) : (
                   <span>Confirmar Suspensão</span>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE ASSINATURA DIGITAL ICP-BRASIL (VIDAAS) */}
+      {signingRx && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600">
+                  <FileCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                    Assinatura Digital ICP-Brasil
+                  </h3>
+                  <p className="text-[10px] text-slate-400">
+                    Fluxo com Certificado Digital VIDaaS
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSigningRx(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-600 dark:text-slate-300">
+              Prescrição: <strong className="text-slate-800 dark:text-slate-100">{signingRx.medicamento}</strong>
+            </div>
+
+            {/* Passo 1: Obter o PDF */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-2">
+              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 block">
+                1º Passo: Obter o Receituário Formatado
+              </span>
+              <p className="text-[10px] text-slate-500 leading-relaxed">
+                Abra o relatório para salvar como PDF no seu dispositivo e assinar no VIDaaS Connect ou app VIDaaS.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRxForPrint(signingRx);
+                }}
+                className="w-full py-2 px-3 text-xs font-semibold rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+              >
+                <Printer className="w-3.5 h-3.5 text-teal-600" />
+                <span>Abrir Relatório para Salvar em PDF</span>
+              </button>
+            </div>
+
+            {/* Passo 2: Upload do documento assinado */}
+            <div className="p-3.5 rounded-2xl bg-teal-50/40 dark:bg-slate-800/60 border border-teal-200/60 dark:border-slate-700 space-y-2">
+              <span className="text-[11px] font-bold text-teal-900 dark:text-teal-200 block">
+                2º Passo: Anexar o PDF Assinado pelo VIDaaS
+              </span>
+              <p className="text-[10px] text-slate-500 leading-relaxed">
+                Após assinar com o VIDaaS (carimbo ICP-Brasil), selecione o arquivo assinado para vincular ao prontuário.
+              </p>
+              <label className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer">
+                <UploadCloud className="w-4 h-4" />
+                <span>{isUploadingSignedPdf ? "Salvando receita..." : "Selecionar PDF Assinado"}</span>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  disabled={isUploadingSignedPdf}
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.type !== "application/pdf") {
+                      alert("Por favor, selecione um arquivo em formato PDF.");
+                      return;
+                    }
+                    setIsUploadingSignedPdf(true);
+                    try {
+                      const supabase = getSupabaseClient();
+                      if (!supabase) throw new Error("Conexão com o Supabase indisponível.");
+
+                      const filePath = `receitas/${signingRx.id}_assinado_${Date.now()}.pdf`;
+                      const { error: uploadErr } = await supabase.storage
+                        .from("receitas")
+                        .upload(filePath, file, { upsert: true });
+
+                      if (uploadErr) throw uploadErr;
+
+                      const { data: publicData } = supabase.storage
+                        .from("receitas")
+                        .getPublicUrl(filePath);
+
+                      const { error: dbErr } = await supabase
+                        .from("prescricoes")
+                        .update({
+                          pdf_assinado_url: publicData.publicUrl,
+                          data_assinatura: new Date().toISOString(),
+                          updated_at: new Date().toISOString(),
+                        })
+                        .eq("id", signingRx.id);
+
+                      if (dbErr) throw dbErr;
+
+                      toast({
+                        type: "success",
+                        title: "Receita Assinada Registrada!",
+                        description: "O documento assinado com ICP-Brasil foi vinculado com sucesso.",
+                      });
+                      setSigningRx(null);
+                      loadClinicalData();
+                    } catch (err: any) {
+                      alert("Erro ao anexar receita assinada: " + (err.message || err));
+                    } finally {
+                      setIsUploadingSignedPdf(false);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+
+            <div className="pt-1 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSigningRx(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
+              >
+                Fechar
               </button>
             </div>
           </div>
