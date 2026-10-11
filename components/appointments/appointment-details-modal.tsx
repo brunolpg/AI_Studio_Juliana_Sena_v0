@@ -15,6 +15,8 @@ import {
   AlertCircle,
   XCircle,
   Share2,
+  Paperclip,
+  ImageIcon,
 } from "lucide-react";
 import type { Appointment } from "@/types/appointment";
 
@@ -137,6 +139,45 @@ export function AppointmentDetailsModal({
                 <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                   {appointment.observacoes}
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Exames e Fotos Anexadas */}
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Paperclip className="w-3.5 h-3.5 text-teal-600" />
+              <span>Exames e Fotos Anexadas ({appointment.anexos_clinicos?.length || 0}/3)</span>
+            </span>
+
+            {(!appointment.anexos_clinicos || appointment.anexos_clinicos.length === 0) ? (
+              <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs text-slate-400 italic">
+                Nenhum exame ou foto anexada para este atendimento.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {appointment.anexos_clinicos.map((url, idx) => {
+                  const isImage = url.match(/\.(jpeg|jpg|png|webp)($|\?)/i);
+                  return (
+                    <a
+                      key={idx}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:bg-teal-50 dark:hover:bg-slate-800 text-xs text-slate-700 dark:text-slate-200 transition-colors group cursor-pointer"
+                    >
+                      {isImage ? (
+                        <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                      )}
+                      <span className="truncate flex-1 font-medium group-hover:text-teal-700 dark:group-hover:text-teal-300">
+                        Anexo {idx + 1} ({isImage ? "Foto" : "Documento/PDF"})
+                      </span>
+                      <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-teal-600 shrink-0" />
+                    </a>
+                  );
+                })}
               </div>
             )}
           </div>

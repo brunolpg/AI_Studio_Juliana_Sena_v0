@@ -752,7 +752,7 @@ export async function cancelAppointmentAction(
  */
 export async function updateAppointmentAction(
   appointmentId: string,
-  updates: Partial<Pick<Appointment, "data" | "horario_inicio" | "procedimento" | "observacoes" | "status">>
+  updates: Partial<Pick<Appointment, "data" | "horario_inicio" | "procedimento" | "observacoes" | "status" | "anexos_clinicos">>
 ): Promise<ActionResponse<Appointment>> {
   try {
     const userRole = await getAuthUserRole();
@@ -882,6 +882,10 @@ export async function updateAppointmentAction(
       horario_fim: targetEnd,
       updated_at: new Date().toISOString(),
     };
+
+    if (updates.anexos_clinicos !== undefined) {
+      payloadToUpdate.anexos_clinicos = updates.anexos_clinicos;
+    }
 
     // 3. Atualiza no Supabase
     const { data: updated, error: updateError } = await supabase

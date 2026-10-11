@@ -1,10 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Calendar as CalendarIcon, Clock, Check, AlertCircle } from "lucide-react";
+import {
+  X,
+  Calendar as CalendarIcon,
+  Clock,
+  Check,
+  AlertCircle,
+  Paperclip,
+  ImageIcon,
+  FileText,
+  Trash2,
+  UploadCloud,
+} from "lucide-react";
 import { AppointmentCalendarPicker } from "./appointment-calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
 import { getTimeSlotsForDateAction, updateAppointmentAction } from "@/actions/appointment-actions";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/auth/auth-context";
 import type { Appointment, AppointmentStatus, TimeSlot } from "@/types/appointment";
@@ -46,6 +58,8 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
   const [procedimento, setProcedimento] = useState(appointment.procedimento);
   const [observacoes, setObservacoes] = useState(appointment.observacoes || "");
   const [status, setStatus] = useState<AppointmentStatus>(appointment.status);
+  const [clinicalAttachments, setClinicalAttachments] = useState<string[]>(appointment.anexos_clinicos || []);
+  const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -125,6 +139,7 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
         procedimento,
         observacoes,
         status,
+        anexos_clinicos: clinicalAttachments,
       });
 
       if (res.success) {
@@ -266,6 +281,105 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
             onChange={(e) => setObservacoes(e.target.value)}
             className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none"
           />
+        </div>
+
+        {/* Gestão de Exames e Fotos (Máximo 3) */}
+        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+              <Paperclip className="w-3.5 h-3.5 text-teal-600" />
+              <span>Exames e Fotos da Região</span>
+            </label>
+            <span className="text-[10px] text-slate-400 font-medium">
+              {clinicalAttachments.length}/3 arquivos anexados
+            </span>
+          </div>
+
+          {/* Lista de anexos com opção de exclusão */}
+          {clinicalAttachments.length > 0 && (
+            <div className="space-y-1.5">
+              {clinicalAttachments.map((url, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                >
+                  <div className="flex items-center gap-2 truncate pr-2">
+                    {url.match(/\.(jpeg|jpg|png|webp)($|\?)/i) ? (
+                      <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
+                    ) : (
+                      <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                    )}
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="truncate text-teal-700 dark:text-teal-300 hover:underline font-medium"
+                    >
+                      Anexo {idx + 1}
+                    </a>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setClinicalAttachments(prev => prev.filter((_, i) => i !== idx))}
+                    className="text-slate-400 hover:text-rose-500 p-1 rounded-lg transition-colors cursor-pointer shrink-0"
+                    title="Excluir anexo"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Botão de Upload se houver menos de 3 arquivos */}
+          {clinicalAttachments.length < 3 && (
+            <label className="flex items-center justify-center gap-2 p-3 border border-dashed border-teal-300 dark:border-teal-700 rounded-xl bg-teal-50/30 dark:bg-slate-800/40 hover:bg-teal-50/60 dark:hover:bg-slate-800 transition-all cursor-pointer">
+              <UploadCloud className="w-4 h-4 text-teal-600 shrink-0" />
+              <span className="text-xs font-semibold text-teal-800 dark:text-teal-300 text-center">
+                {isUploading ? "Enviando arquivo..." : `Adicionar arquivo (PDF, PNG ou JPG) - Restam ${3 - clinicalAttachments.length}`}
+              </span>
+              <input
+                type="file"
+                disabled={isUploading}
+                accept=".pdf,image/png,image/jpeg,image/jpg,image/webp"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 10 * 1024 * 1024) {
+                    alert("O arquivo não pode exceder 10MB.");
+                    return;
+                  }
+                  setIsUploading(true);
+                  try {
+                    const supabase = getSupabaseClient();
+                    if (!supabase) {
+                      alert("Supabase não conectado.");
+                      return;
+                    }
+                    const fileExt = file.name.split('.').pop() || 'png';
+                    const filePath = `anexos/${appointment.id}_${Date.now()}.${fileExt}`;
+                    const { error: uploadErr } = await supabase.storage
+                      .from('anexos-consultas')
+                      .upload(filePath, file, { upsert: true });
+                    
+                    if (!uploadErr) {
+                      const { data: publicUrlData } = supabase.storage
+                        .from('anexos-consultas')
+                        .getPublicUrl(filePath);
+                      if (publicUrlData?.publicUrl) {
+                        setClinicalAttachments(prev => [...prev, publicUrlData.publicUrl]);
+                      }
+                    } else {
+                      alert("Erro ao enviar anexo: " + uploadErr.message);
+                    }
+                  } finally {
+                    setIsUploading(false);
+                  }
+                }}
+              />
+            </label>
+          )}
         </div>
 
         </div>
