@@ -26,12 +26,14 @@ import {
   Copy,
   Upload,
   X,
+  Paperclip,
 } from "lucide-react";
 import {
   getAppointmentsAction,
   cancelAppointmentAction,
   getCalendarIntegrationStatusAction,
   updateAppointmentReceiptAction,
+  addAppointmentAttachmentsAction,
 } from "@/actions/appointment-actions";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { AppointmentFormModal } from "./appointment-form-modal";
@@ -110,6 +112,87 @@ export function AppointmentTableView() {
   const [paymentModalAppointment, setPaymentModalAppointment] = useState<Appointment | null>(null);
   const [isUploadingPaymentReceipt, setIsUploadingPaymentReceipt] = useState(false);
   const [copiedPixPaymentModal, setCopiedPixPaymentModal] = useState(false);
+
+  // Modal de Anexos Clínicos (Exames e Fotos)
+  const [attachmentModalAppointment, setAttachmentModalAppointment] = useState<Appointment | null>(null);
+  const [isUploadingClinical, setIsUploadingClinical] = useState(false);
+
+  const handleUploadClinicalAttachments = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !attachmentModalAppointment) return;
+
+    const currentCount = attachmentModalAppointment.anexos_clinicos?.length || 0;
+    const remainingSlots = 3 - currentCount;
+    if (files.length > remainingSlots) {
+      toast({
+        type: "error",
+        title: "Limite excedido",
+        description: `Você só pode adicionar mais ${remainingSlots} arquivo(s).`,
+      });
+      return;
+    }
+
+    setIsUploadingClinical(true);
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        toast({ type: "error", title: "Erro", description: "Supabase não conectado." });
+        return;
+      }
+
+      const uploadedUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 10 * 1024 * 1024) {
+          toast({ type: "error", title: "Arquivo muito grande", description: `O arquivo ${file.name} excede 10MB.` });
+          continue;
+        }
+        const ext = file.name.split('.').pop() || 'png';
+        const fileName = `anexos/${attachmentModalAppointment.id}_${Date.now()}_${i}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from('anexos-consultas')
+          .upload(fileName, file, { upsert: false });
+
+        if (uploadErr) {
+          toast({ type: "error", title: "Erro no upload", description: uploadErr.message });
+          continue;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('anexos-consultas')
+          .getPublicUrl(fileName);
+
+        if (publicUrlData?.publicUrl) {
+          uploadedUrls.push(publicUrlData.publicUrl);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        const res = await addAppointmentAttachmentsAction({
+          appointmentId: attachmentModalAppointment.id,
+          newAttachmentUrls: uploadedUrls,
+        });
+
+        if (res.success && res.data) {
+          const updatedAppt = { ...attachmentModalAppointment, anexos_clinicos: res.data };
+          setAttachmentModalAppointment(updatedAppt);
+          setPaginatedData((prev) => ({
+            ...prev,
+            data: prev.data.map((item) => item.id === updatedAppt.id ? updatedAppt : item),
+          }));
+          toast({ type: "success", title: "Sucesso", description: res.message });
+        } else {
+          toast({ type: "error", title: "Erro", description: res.message });
+        }
+      }
+    } catch (err: any) {
+      console.error("Erro no upload de anexos:", err);
+      toast({ type: "error", title: "Erro", description: "Falha ao enviar arquivos." });
+    } finally {
+      setIsUploadingClinical(false);
+    }
+  };
+
 
   const PIX_KEY = "71986612878";
   const PIX_BENEFICIARIO = "Juliana Sena de Souza Vieira";
@@ -847,6 +930,16 @@ export function AppointmentTableView() {
                       {/* AÇÕES: Abrir no Google Agenda com link direto, Detalhes, Editar horário e Cancelar agendamento */}
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
+                          {/* Botão para Anexar Exames/Fotos */}
+                          <button
+                            type="button"
+                            onClick={() => setAttachmentModalAppointment(appointment)}
+                            className="p-1.5 rounded-lg text-teal-600 hover:text-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 transition-colors cursor-pointer"
+                            title="Anexar ou visualizar exames e fotos"
+                          >
+                            <Paperclip className="w-4 h-4" />
+                          </button>
+
                           {/* Botão de Pagamento / Recibo para o Paciente */}
                           {isPatient && appointment.status !== "Cancelado" && (
                             <button
@@ -1237,6 +1330,138 @@ export function AppointmentTableView() {
               <button
                 type="button"
                 onClick={() => setPaymentModalAppointment(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE EXAMES E FOTOS CLÍNICAS */}
+      {attachmentModalAppointment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Exames e Fotos Clínicas
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {attachmentModalAppointment.procedimento} • {attachmentModalAppointment.data} ({attachmentModalAppointment.horario_inicio})
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setAttachmentModalAppointment(null)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contador de arquivos */}
+            <div className="flex items-center justify-between text-xs font-semibold px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
+              <span>Total de arquivos anexados</span>
+              <span className="text-teal-600 dark:text-teal-400">
+                {attachmentModalAppointment.anexos_clinicos?.length || 0} de 3 arquivos
+              </span>
+            </div>
+
+            {/* Lista de anexos existentes */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                Arquivos no Prontuário
+              </h4>
+              {Array.isArray(attachmentModalAppointment.anexos_clinicos) && attachmentModalAppointment.anexos_clinicos.length > 0 ? (
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {attachmentModalAppointment.anexos_clinicos.map((url: string, idx: number) => {
+                    const isPdf = url.toLowerCase().endsWith('.pdf');
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs"
+                      >
+                        <div className="flex items-center gap-2.5 truncate pr-2">
+                          {isPdf ? (
+                            <FileText className="w-4 h-4 text-rose-500 shrink-0" />
+                          ) : (
+                            <FileText className="w-4 h-4 text-teal-600 shrink-0" />
+                          )}
+                          <span className="font-medium text-slate-800 dark:text-slate-200 truncate">
+                            Arquivo Clínico {idx + 1}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 text-[11px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900 rounded-lg border border-teal-200 dark:border-teal-800 transition-colors"
+                          >
+                            Visualizar
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400 italic p-3 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                  Nenhum exame ou foto clínica anexado a esta consulta ainda.
+                </p>
+              )}
+            </div>
+
+            {/* Área de Upload ou Aviso de Limite */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+              {(attachmentModalAppointment.anexos_clinicos?.length || 0) < 3 ? (
+                <div className="space-y-2">
+                  <label className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 hover:bg-teal-50/50 dark:bg-slate-800/50 dark:hover:bg-slate-800/80 border-2 border-dashed border-teal-200 dark:border-slate-700 cursor-pointer transition-all text-center">
+                    {isUploadingClinical ? (
+                      <div className="flex items-center gap-2 text-xs font-semibold text-teal-600 dark:text-teal-400 py-2">
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Enviando arquivos...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-6 h-6 text-teal-600 dark:text-teal-400 mb-1" />
+                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                          Clique para adicionar fotos ou exames
+                        </span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          Selecione até {3 - (attachmentModalAppointment.anexos_clinicos?.length || 0)} arquivo(s) (PDF, PNG, JPG até 10MB)
+                        </span>
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*,application/pdf"
+                          disabled={isUploadingClinical}
+                          onChange={handleUploadClinicalAttachments}
+                          className="hidden"
+                        />
+                      </>
+                    )}
+                  </label>
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/40 rounded-2xl text-xs text-amber-800 dark:text-amber-300 text-center font-medium">
+                  Limite máximo de 3 arquivos atingido para esta consulta.
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setAttachmentModalAppointment(null)}
                 className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
               >
                 Fechar

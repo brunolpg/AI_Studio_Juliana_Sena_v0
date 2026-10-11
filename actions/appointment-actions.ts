@@ -1053,3 +1053,45 @@ export async function updateAppointmentReceiptAction({
   revalidatePath('/agendamentos');
   return { success: true, message: 'Recibo enviado com sucesso!' };
 }
+
+export async function addAppointmentAttachmentsAction({
+  appointmentId,
+  newAttachmentUrls,
+}: {
+  appointmentId: string;
+  newAttachmentUrls: string[];
+}) {
+  const supabase = await createClient();
+  if (!supabase) return { success: false, message: 'Supabase não conectado.' };
+
+  // 1. Busca os anexos atuais
+  const { data: current, error: fetchErr } = await supabase
+    .from('appointments')
+    .select('anexos_clinicos')
+    .eq('id', appointmentId)
+    .single();
+
+  if (fetchErr) return { success: false, message: fetchErr.message };
+
+  const currentList: string[] = current?.anexos_clinicos || [];
+  if (currentList.length + newAttachmentUrls.length > 3) {
+    return { success: false, message: 'O limite máximo é de 3 arquivos por agendamento.' };
+  }
+
+  const updatedList = [...currentList, ...newAttachmentUrls];
+
+  const { error: updateErr } = await supabase
+    .from('appointments')
+    .update({
+      anexos_clinicos: updatedList,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', appointmentId);
+
+  if (updateErr) return { success: false, message: updateErr.message };
+
+  revalidatePath('/paciente');
+  revalidatePath('/agendamentos');
+  return { success: true, data: updatedList, message: 'Arquivos anexados com sucesso!' };
+}
+
