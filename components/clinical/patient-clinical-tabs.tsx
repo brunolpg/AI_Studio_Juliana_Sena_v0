@@ -87,26 +87,26 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const [aestheticData, setAestheticData] = useState<{ facial: any; corporal: any } | null>(null);
 
   const handleDownloadPdfDirect = async (rx: any) => {
-    // 1. Carrega o script html2pdf se ainda não estiver presente
     if (!(window as any).html2pdf) {
       await new Promise<void>((resolve, reject) => {
         const script = document.createElement("script");
         script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
         script.onload = () => resolve();
-        script.onerror = () => reject(new Error("Falha ao carregar motor de PDF"));
+        script.onerror = () => reject(new Error("Falha ao carregar html2pdf"));
         document.head.appendChild(script);
       });
     }
 
-    // 2. Monta o container temporário estilizado com Plus Jakarta Sans
     const tempContainer = document.createElement("div");
-    tempContainer.style.position = "fixed";
-    tempContainer.style.left = "-9999px";
+    // Mantém no fluxo visual para que o html2canvas capture perfeitamente, mas invisível ao usuário
+    tempContainer.style.position = "absolute";
     tempContainer.style.top = "0";
-    tempContainer.style.width = "210mm";
-    tempContainer.style.padding = "14mm";
-    tempContainer.style.background = "#ffffff";
-    tempContainer.style.color = "#0f172a";
+    tempContainer.style.left = "0";
+    tempContainer.style.width = "750px";
+    tempContainer.style.zIndex = "-1000";
+    tempContainer.style.opacity = "1";
+    tempContainer.style.backgroundColor = "#ffffff";
+    tempContainer.style.padding = "30px";
     tempContainer.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
 
     const pacienteNome = client?.nome || "Paciente";
@@ -122,75 +122,65 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
     }).format(new Date());
 
     tempContainer.innerHTML = `
-      <link rel="preconnect" href="https://fonts.googleapis.com">
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-      <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
-        .rx-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; }
-        .rx-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #0f172a; }
-        .rx-doc { font-size: 15px; font-weight: 800; color: #0f172a; margin-top: 3px; }
-        .rx-spec { font-size: 11px; font-weight: 700; color: #0d9488; }
-        .rx-coren { font-size: 11px; font-weight: 700; color: #475569; }
-        .rx-patient-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; }
-        .rx-lbl { font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
-        .rx-val { font-size: 12px; font-weight: 700; color: #0f172a; margin-top: 2px; }
-        .rx-med-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-        .rx-med-title { font-size: 14px; font-weight: 800; color: #0f172a; }
-        .rx-med-via { font-size: 11px; font-weight: 600; color: #64748b; }
-        .rx-box-card { background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 11.5px; line-height: 1.55; color: #134e4a; }
-        .rx-date { text-align: center; font-size: 11px; font-weight: 600; color: #64748b; margin-top: 20px; margin-bottom: 20px; }
-        .rx-signature-box { border: 2px dashed #0d9488; border-radius: 14px; background: #f0fdfa; padding: 14px; text-align: center; width: 340px; margin: 0 auto; }
-        .rx-sig-name { font-size: 12px; font-weight: 800; color: #0f172a; }
-        .rx-sig-sub { font-size: 10.5px; font-weight: 700; color: #0d9488; margin-top: 2px; }
-        .rx-sig-note { font-size: 8.5px; color: #64748b; margin-top: 6px; line-height: 1.3; font-weight: 500; }
-      </style>
-      <div class="rx-header">
-        <div>
-          <div class="rx-title">RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL</div>
-          <div class="rx-doc">Juliana Sena de Souza Vieira</div>
-          <div class="rx-spec">Enfermeira Esteta</div>
+      <div style="font-family: 'Plus Jakarta Sans', sans-serif; color: #0f172a; line-height: 1.4;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
+          <div>
+            <div style="font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL</div>
+            <div style="font-size: 15px; font-weight: 800; margin-top: 3px;">Juliana Sena de Souza Vieira</div>
+            <div style="font-size: 11px; font-weight: 700; color: #0d9488;">Enfermeira Esteta</div>
+          </div>
+          <div style="font-size: 11px; font-weight: 700; color: #475569;">COREN-BA 366.344</div>
         </div>
-        <div class="rx-coren">COREN-BA 366.344</div>
-      </div>
-      <div class="rx-patient-card">
-        <div>
-          <div class="rx-lbl">Paciente</div>
-          <div class="rx-val">${pacienteNome}</div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between;">
+          <div>
+            <div style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">PACIENTE</div>
+            <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 2px;">${pacienteNome}</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">CPF</div>
+            <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 2px;">${formattedCpf}</div>
+          </div>
         </div>
-        <div style="text-align: right;">
-          <div class="rx-lbl">CPF</div>
-          <div class="rx-val">${formattedCpf}</div>
+
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+          <div style="font-size: 15px; font-weight: 800; color: #0f172a;">${rx.medicamento || "Fórmula Estética"}</div>
+          <div style="font-size: 11px; font-weight: 600; color: #64748b;">Uso ${rx.via || "Oral"}</div>
         </div>
-      </div>
-      <div class="rx-med-header">
-        <div class="rx-med-title">${rx.medicamento || "Fórmula Estética"}</div>
-        <div class="rx-med-via">Uso ${rx.via || "Oral"}</div>
-      </div>
-      <div class="rx-box-card">
-        <div style="font-weight: 800; margin-bottom: 4px; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.5px;">Composição & Concentração:</div>
-        <div>${rx.dosagem || ""}</div>
-      </div>
-      ${rx.posologia ? `
-      <div class="rx-box-card" style="background: #f8fafc; border-color: #e2e8f0; color: #334155;">
-        <div style="font-weight: 800; margin-bottom: 4px; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.5px; color: #0f172a;">Posologia e Instruções:</div>
-        <div>${rx.posologia}</div>
-      </div>` : ""}
-      <div class="rx-date">Salvador - BA, ${dataEmissao}</div>
-      <div class="rx-signature-box">
-        <div class="rx-sig-name">Juliana Sena de Souza Vieira</div>
-        <div class="rx-sig-sub">Enfermeira Esteta • COREN-BA 366.344</div>
-        <div class="rx-sig-note">Espaço reservado para aposição de Assinatura Digital Qualificada ICP-Brasil (VIDaaS / Validador ITI)</div>
+
+        <div style="background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 12px; line-height: 1.5; color: #134e4a;">
+          <div style="font-weight: 800; margin-bottom: 4px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px;">Composição & Concentração:</div>
+          <div>${rx.dosagem || ""}</div>
+        </div>
+
+        ${rx.posologia ? `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 12px; line-height: 1.5; color: #334155;">
+          <div style="font-weight: 800; margin-bottom: 4px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; color: #0f172a;">Posologia e Instruções:</div>
+          <div>${rx.posologia}</div>
+        </div>` : ""}
+
+        <div style="text-align: center; font-size: 11px; font-weight: 600; color: #64748b; margin-top: 24px; margin-bottom: 24px;">
+          Salvador - BA, ${dataEmissao}
+        </div>
+
+        <div style="border: 2px dashed #0d9488; border-radius: 14px; background: #f0fdfa; padding: 14px; text-align: center; width: 350px; margin: 0 auto;">
+          <div style="font-size: 12px; font-weight: 800; color: #0f172a;">Juliana Sena de Souza Vieira</div>
+          <div style="font-size: 10.5px; font-weight: 700; color: #0d9488; margin-top: 2px;">Enfermeira Esteta • COREN-BA 366.344</div>
+          <div style="font-size: 8.5px; color: #64748b; margin-top: 6px; line-height: 1.3;">
+            Espaço reservado para aposição de Assinatura Digital Qualificada ICP-Brasil (VIDaaS / Validador ITI)
+          </div>
+        </div>
       </div>
     `;
 
     document.body.appendChild(tempContainer);
 
     const opt = {
-      margin: 8,
+      margin: 10,
       filename: `Receita_${(rx.medicamento || "Prescricao").replace(/\s+/g, "_")}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
     };
 
@@ -198,9 +188,11 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
       await (window as any).html2pdf().set(opt).from(tempContainer).save();
       toast({
         type: "success",
-        title: "PDF Baixado com Sucesso!",
-        description: "Abra o aplicativo VIDaaS no aparelho para aplicar a assinatura ICP-Brasil."
+        title: "PDF gerado com sucesso!",
+        description: "O arquivo foi salvo na pasta Downloads com formatação completa."
       });
+    } catch (err: any) {
+      alert("Erro ao gerar PDF: " + err.message);
     } finally {
       document.body.removeChild(tempContainer);
     }
@@ -1608,17 +1600,24 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               <p className="text-[10px] text-slate-500 leading-relaxed">
                 Abra o relatório para salvar como PDF no seu dispositivo e assinar no VIDaaS Connect ou app VIDaaS.
               </p>
+            <div className="space-y-2">
               <button
                 type="button"
                 onClick={() => handleDownloadPdfDirect(signingRx)}
                 className="w-full py-2.5 px-3 text-xs font-semibold rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-200 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
               >
                 <Printer className="w-4 h-4 text-teal-600" />
-                <span>Baixar PDF da Prescrição</span>
+                <span>1. Baixar Receita em PDF</span>
               </button>
-              <p className="text-[10px] text-slate-500 text-center mt-1">
-                O arquivo .pdf será salvo na pasta Downloads. Em seguida, abra o app VIDaaS para assinar com biometria/PIN.
-              </p>
+
+              <a
+                href="intent://#Intent;package=br.com.valid.vidaas;scheme=vidaas;end;"
+                className="w-full py-2 px-3 text-xs font-semibold rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+                <span>2. Abrir Aplicativo VIDaaS</span>
+              </a>
+            </div>
             </div>
 
             {/* Passo 2: Upload do documento assinado */}
