@@ -1491,7 +1491,12 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedRxForPrint(signingRx);
+                  const rxToPrint = signingRx;
+                  setSigningRx(null);
+                  setSelectedRxForPrint(rxToPrint);
+                  setTimeout(() => {
+                    window.print();
+                  }, 400);
                 }}
                 className="w-full py-2 px-3 text-xs font-semibold rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 flex items-center justify-center gap-2 cursor-pointer shadow-xs"
               >
