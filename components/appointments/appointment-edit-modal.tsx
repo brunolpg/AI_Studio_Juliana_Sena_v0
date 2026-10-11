@@ -58,8 +58,10 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
   const [procedimento, setProcedimento] = useState(appointment.procedimento);
   const [observacoes, setObservacoes] = useState(appointment.observacoes || "");
   const [status, setStatus] = useState<AppointmentStatus>(appointment.status);
-  const [clinicalAttachments, setClinicalAttachments] = useState<string[]>(appointment.anexos_clinicos || []);
-  const [isUploading, setIsUploading] = useState(false);
+  const [clinicalAttachments, setClinicalAttachments] = useState<string[]>(
+    appointment.anexos_clinicos || []
+  );
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -92,6 +94,66 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
       isMounted = false;
     };
   }, [date, appointment.horario_inicio, appointment.data]);
+
+  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (clinicalAttachments.length >= 3) {
+      toast({ type: "error", title: "Limite atingido", description: "Máximo de 3 anexos por agendamento." });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ type: "error", title: "Arquivo muito grande", description: "O arquivo deve ter até 10MB." });
+      return;
+    }
+
+    setIsUploadingAttachment(true);
+    try {
+      const supabase = getSupabaseClient();
+      const fileExt = file.name.split(".").pop() || "png";
+      const filePath = `consultas/${appointment.id}_${Date.now()}.${fileExt}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from("anexos-consultas")
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadErr) throw uploadErr;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("anexos-consultas")
+        .getPublicUrl(filePath);
+
+      const updated = [...clinicalAttachments, publicUrlData.publicUrl];
+      setClinicalAttachments(updated);
+
+      // Persiste imediatamente no banco de dados para evitar perda ao fechar o modal
+      await supabase
+        .from("appointments")
+        .update({ anexos_clinicos: updated, updated_at: new Date().toISOString() })
+        .eq("id", appointment.id);
+
+      toast({ type: "success", title: "Anexo salvo!", description: "Arquivo anexado e sincronizado." });
+    } catch (err: any) {
+      toast({ type: "error", title: "Erro no envio", description: err.message || "Falha ao enviar arquivo." });
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (indexToRemove: number) => {
+    const updated = clinicalAttachments.filter((_, idx) => idx !== indexToRemove);
+    setClinicalAttachments(updated);
+    try {
+      const supabase = getSupabaseClient();
+      await supabase
+        .from("appointments")
+        .update({ anexos_clinicos: updated, updated_at: new Date().toISOString() })
+        .eq("id", appointment.id);
+      toast({ type: "success", title: "Anexo removido", description: "Arquivo removido do atendimento." });
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,7 +345,7 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
           />
         </div>
 
-        {/* Gestão de Exames e Fotos (Máximo 3) */}
+        {/* Exames e Fotos da Região */}
         <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
@@ -295,88 +357,60 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
             </span>
           </div>
 
-          {/* Lista de anexos com opção de exclusão */}
+          {/* Lista de anexos existentes */}
           {clinicalAttachments.length > 0 && (
             <div className="space-y-1.5">
-              {clinicalAttachments.map((url, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
-                >
-                  <div className="flex items-center gap-2 truncate pr-2">
-                    {url.match(/\.(jpeg|jpg|png|webp)($|\?)/i) ? (
-                      <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
-                    ) : (
-                      <FileText className="w-4 h-4 text-rose-600 shrink-0" />
-                    )}
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="truncate text-teal-700 dark:text-teal-300 hover:underline font-medium"
-                    >
-                      Anexo {idx + 1}
-                    </a>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setClinicalAttachments(prev => prev.filter((_, i) => i !== idx))}
-                    className="text-slate-400 hover:text-rose-500 p-1 rounded-lg transition-colors cursor-pointer shrink-0"
-                    title="Excluir anexo"
+              {clinicalAttachments.map((url, idx) => {
+                const isImage = url.match(/\.(jpeg|jpg|png|webp)($|\?)/i);
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-2 truncate">
+                      {isImage ? (
+                        <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                      )}
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="truncate text-teal-700 dark:text-teal-300 hover:underline font-medium"
+                      >
+                        Anexo {idx + 1} ({isImage ? "Foto" : "Documento"})
+                      </a>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteAttachment(idx)}
+                      className="text-slate-400 hover:text-rose-500 p-1 rounded-lg transition-colors cursor-pointer"
+                      title="Excluir anexo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 
-          {/* Botão de Upload se houver menos de 3 arquivos */}
+          {/* Botão de Upload se restarem vagas */}
           {clinicalAttachments.length < 3 && (
             <label className="flex items-center justify-center gap-2 p-3 border border-dashed border-teal-300 dark:border-teal-700 rounded-xl bg-teal-50/30 dark:bg-slate-800/40 hover:bg-teal-50/60 dark:hover:bg-slate-800 transition-all cursor-pointer">
               <UploadCloud className="w-4 h-4 text-teal-600 shrink-0" />
-              <span className="text-xs font-semibold text-teal-800 dark:text-teal-300 text-center">
-                {isUploading ? "Enviando arquivo..." : `Adicionar arquivo (PDF, PNG ou JPG) - Restam ${3 - clinicalAttachments.length}`}
+              <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">
+                {isUploadingAttachment
+                  ? "Enviando arquivo..."
+                  : `Adicionar arquivo (PDF, PNG ou JPG) - Restam ${3 - clinicalAttachments.length}`}
               </span>
               <input
                 type="file"
-                disabled={isUploading}
+                disabled={isUploadingAttachment}
                 accept=".pdf,image/png,image/jpeg,image/jpg,image/webp"
                 className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  if (file.size > 10 * 1024 * 1024) {
-                    alert("O arquivo não pode exceder 10MB.");
-                    return;
-                  }
-                  setIsUploading(true);
-                  try {
-                    const supabase = getSupabaseClient();
-                    if (!supabase) {
-                      alert("Supabase não conectado.");
-                      return;
-                    }
-                    const fileExt = file.name.split('.').pop() || 'png';
-                    const filePath = `anexos/${appointment.id}_${Date.now()}.${fileExt}`;
-                    const { error: uploadErr } = await supabase.storage
-                      .from('anexos-consultas')
-                      .upload(filePath, file, { upsert: true });
-                    
-                    if (!uploadErr) {
-                      const { data: publicUrlData } = supabase.storage
-                        .from('anexos-consultas')
-                        .getPublicUrl(filePath);
-                      if (publicUrlData?.publicUrl) {
-                        setClinicalAttachments(prev => [...prev, publicUrlData.publicUrl]);
-                      }
-                    } else {
-                      alert("Erro ao enviar anexo: " + uploadErr.message);
-                    }
-                  } finally {
-                    setIsUploading(false);
-                  }
-                }}
+                onChange={handleUploadFile}
               />
             </label>
           )}
