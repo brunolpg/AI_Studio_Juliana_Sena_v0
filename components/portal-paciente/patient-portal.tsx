@@ -332,6 +332,88 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                     </span>
                   </div>
 
+                  {/* FOTO DE PERFIL COM UPLOAD E REMOÇÃO */}
+                  <div className="flex items-center gap-4 py-4 my-2 border-y border-slate-100 dark:border-slate-800">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 flex items-center justify-center shadow-xs">
+                      {patientData?.foto_perfil ? (
+                        <img
+                          src={patientData.foto_perfil}
+                          alt={patientData?.nome || "Foto de Perfil"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 font-bold text-lg flex items-center justify-center">
+                          {(patientData?.nome || "P")[0].toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Foto de Perfil do Paciente
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer">
+                          <span>+ Foto</span>
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              if (file.size > 5 * 1024 * 1024) {
+                                alert("Envie uma foto de até 5MB.");
+                                return;
+                              }
+                              const supabase = getSupabaseClient();
+                              if (supabase && patientData?.id) {
+                                const fileExt = file.name.split('.').pop() || 'png';
+                                const filePath = `pacientes/${patientData.id}_${Date.now()}.${fileExt}`;
+                                const { error: uploadError } = await supabase.storage
+                                  .from('avatars')
+                                  .upload(filePath, file, { upsert: true });
+
+                                if (!uploadError) {
+                                  const { data: publicData } = supabase.storage
+                                    .from('avatars')
+                                    .getPublicUrl(filePath);
+                                  await supabase
+                                    .from('pacientes')
+                                    .update({ foto_perfil: publicData.publicUrl, updated_at: new Date().toISOString() })
+                                    .eq('id', patientData.id);
+                                  setPatientData((prev: any) => ({ ...prev, foto_perfil: publicData.publicUrl }));
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+
+                        {patientData?.foto_perfil && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const supabase = getSupabaseClient();
+                              if (supabase && patientData?.id) {
+                                await supabase
+                                  .from('pacientes')
+                                  .update({ foto_perfil: null, updated_at: new Date().toISOString() })
+                                  .eq('id', patientData.id);
+                                setPatientData((prev: any) => ({ ...prev, foto_perfil: null }));
+                              }
+                            }}
+                            className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 hover:border-rose-300 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+                          >
+                            Remover foto
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400">
+                        PNG ou JPG de até 5 MB (crop 1:1 automático).
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                     <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-850/50">
                       <span className="text-[10px] text-slate-400 block font-medium">Nome Completo</span>
