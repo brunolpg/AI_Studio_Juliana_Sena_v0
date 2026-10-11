@@ -83,7 +83,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
           return;
         }
 
-        let query = supabase.from("pacientes").select("*");
+        let query = supabase.from("pacientes").select("id, nome, cpf, data_nascimento, idade, email, sexo, telefone, logradouro, numero, complemento, estado, cidade, cep, foto_perfil, user_id, status");
         if (userId) {
           query = query.or(`user_id.eq.${userId},email.ilike.${userEmail}`);
         } else {
@@ -191,6 +191,13 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
     fotosAreaTratada: [],
   };
 
+  const userPhotoUrl = 
+    patientData?.foto_perfil || 
+    (user as any)?.foto_perfil || 
+    (user as any)?.user_metadata?.avatar_url || 
+    (user as any)?.user_metadata?.picture || 
+    null;
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col antialiased">
       {/* Header Dedicado do Portal do Paciente */}
@@ -252,7 +259,18 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
 
           {/* Menu do Usuário */}
           <div className="flex items-center gap-2">
-            <UserMenu user={user} onLogout={async () => onLogout?.()} />
+            <UserMenu
+              user={{
+                nome: patientData?.nome || user?.name || user?.nome || "Paciente",
+                email: patientData?.email || user?.email,
+                role: "paciente",
+                foto_perfil: userPhotoUrl,
+                avatar: userPhotoUrl,
+                avatar_url: userPhotoUrl,
+                roleLabel: "Paciente"
+              }}
+              onLogout={onLogout ? async () => onLogout() : undefined}
+            />
           </div>
         </div>
       </header>

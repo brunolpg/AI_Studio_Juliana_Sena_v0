@@ -12,6 +12,7 @@ export interface UserMenuProps {
     email?: string;
     foto_perfil?: string | null;
     avatar?: string | null;
+    avatar_url?: string | null;
     roleLabel?: string;
   } | null;
   onLogout?: () => Promise<void>;
@@ -94,7 +95,7 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
   const userDisplayName = user.nome || user.name || "Usuário";
   const userRole = user.role || "paciente";
   const userEmail = user.email || "";
-  const userAvatar = user.foto_perfil || user.avatar || null;
+  const avatarSrc = user.foto_perfil || user.avatar_url || user.avatar || (user as any)?.user_metadata?.avatar_url || (user as any)?.user_metadata?.picture || null;
   const userRoleLabel = user.roleLabel || (
     userRole === "administrador" ? "Administrador" : 
     userRole === "profissional" ? "Profissional" : "Paciente"
@@ -119,10 +120,10 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
         }}
         className="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-teal-400 dark:hover:border-teal-500 bg-white dark:bg-slate-800 transition-all text-left shadow-2xs group cursor-pointer font-sans"
       >
-        {userAvatar ? (
+        {avatarSrc ? (
           <img
-            src={userAvatar}
-            alt={userDisplayName}
+            src={avatarSrc}
+            alt={userDisplayName || 'Avatar'}
             className="w-7 h-7 rounded-lg object-cover shadow-2xs"
           />
         ) : (
