@@ -1353,7 +1353,11 @@ export function AppointmentTableView() {
                     Exames e Fotos Clínicas
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {attachmentModalAppointment.procedimento} • {attachmentModalAppointment.data} ({attachmentModalAppointment.horario_inicio})
+                    {attachmentModalAppointment.procedimento} • {
+                      attachmentModalAppointment.data
+                        ? attachmentModalAppointment.data.split("-").reverse().join("/")
+                        : ""
+                    } ({attachmentModalAppointment.horario_inicio})
                   </p>
                 </div>
               </div>
