@@ -58,6 +58,50 @@ function formatShortName(fullName?: string): string {
   return middleInitials ? `${firstName} ${middleInitials} ${lastName}` : `${firstName} ${lastName}`;
 }
 
+function generatePixPayload({
+  pixKey,
+  merchantName,
+  merchantCity,
+  amount,
+  txId = '***',
+}: {
+  pixKey: string;
+  merchantName: string;
+  merchantCity: string;
+  amount: number;
+  txId?: string;
+}) {
+  const formatField = (id: string, value: string) => {
+    const len = value.length.toString().padStart(2, '0');
+    return `${id}${len}${value}`;
+  };
+  const cleanKey = pixKey.replace(/\D/g, '');
+  const formattedKey = cleanKey.length === 11 ? `+55${cleanKey}` : cleanKey;
+  const mai = formatField('00', 'BR.GOV.BCB.PIX') + formatField('01', formattedKey);
+  let payload =
+    formatField('00', '01') +
+    formatField('26', mai) +
+    formatField('52', '0000') +
+    formatField('53', '986') +
+    (amount > 0 ? formatField('54', amount.toFixed(2)) : '') +
+    formatField('58', 'BR') +
+    formatField('59', merchantName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').slice(0, 25)) +
+    formatField('60', merchantCity.normalize('NFD').replace(/[\u0300-\u036f]/g, '').slice(0, 15)) +
+    formatField('62', formatField('05', txId));
+  payload += '6304';
+  let crc = 0xffff;
+  for (let i = 0; i < payload.length; i++) {
+    crc ^= payload.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      if ((crc & 0x8000) !== 0) crc = (crc << 1) ^ 0x1021;
+      else crc <<= 1;
+      crc &= 0xffff;
+    }
+  }
+  const crcHex = crc.toString(16).toUpperCase().padStart(4, '0');
+  return payload.slice(0, -4) + formatField('63', crcHex);
+}
+
 export function AppointmentTableView() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -231,8 +275,24 @@ export function AppointmentTableView() {
   const PIX_KEY = "71986612878";
   const PIX_BENEFICIARIO = "Juliana Sena de Souza Vieira";
 
+  const modalPixAmount = Number(paymentModalAppointment?.valor_cobrado || 200);
+  const modalPixPayload = useMemo(() => {
+    if (!paymentModalAppointment) return "";
+    return generatePixPayload({
+      pixKey: "71986612878",
+      merchantName: "JULIANA VIEIRA",
+      merchantCity: "SALVADOR",
+      amount: modalPixAmount,
+    });
+  }, [paymentModalAppointment, modalPixAmount]);
+
+  const modalPixQrCodeUrl = useMemo(() => {
+    if (!modalPixPayload) return "";
+    return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(modalPixPayload)}`;
+  }, [modalPixPayload]);
+
   const handleCopyPixPaymentModal = () => {
-    navigator.clipboard.writeText(PIX_KEY);
+    navigator.clipboard.writeText(modalPixPayload);
     setCopiedPixPaymentModal(true);
     setTimeout(() => setCopiedPixPaymentModal(false), 2500);
   };
@@ -1209,7 +1269,7 @@ export function AppointmentTableView() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                    Garantia via PIX (Sinal de Reserva)
+                    Garantia do Agendamento (Sinal de Reserva)
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     {paymentModalAppointment.procedimento} • {paymentModalAppointment.data.split("-").reverse().join("/")} às {paymentModalAppointment.horario_inicio}
@@ -1240,9 +1300,16 @@ export function AppointmentTableView() {
               {/* DADOS PIX E BOTÃO DE CÓPIA */}
               <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-teal-100 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <div className="w-12 h-12 bg-teal-100 dark:bg-teal-950/80 rounded-xl border border-teal-200 dark:border-teal-800 flex flex-col items-center justify-center shrink-0">
-                    <QrCode className="w-7 h-7 text-teal-600 dark:text-teal-400" />
-                    <span className="text-[7px] font-bold text-teal-700 dark:text-teal-300">PIX CODE</span>
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white p-1 rounded-xl border border-teal-200 dark:border-teal-800 flex flex-col items-center justify-center shrink-0 shadow-xs overflow-hidden">
+                    {modalPixQrCodeUrl ? (
+                      <img
+                        src={modalPixQrCodeUrl}
+                        alt="QR Code Pix"
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <QrCode className="w-8 h-8 text-teal-600" />
+                    )}
                   </div>
                   <div className="space-y-0.5 min-w-0">
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">Chave PIX da Clínica:</p>
