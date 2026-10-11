@@ -181,52 +181,36 @@ export async function getAppointmentsAction(
     // 3. Busca textual inteligente (procedimento, data ou paciente)
     if (search.trim()) {
       const term = search.trim();
-      const userRole = await getAuthUserRole();
-      const isPatientRole = userRole === "paciente";
+      const isPatientRole = (await getAuthUserRole()) === "paciente";
 
-      // Converte data DD/MM/AAAA ou DD/MM para formato AAAA-MM-DD
-      let formattedDateTerm: string | null = null;
-      const ddmmyyyyMatch = term.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-      if (ddmmyyyyMatch) {
-        const day = ddmmyyyyMatch[1].padStart(2, "0");
-        const month = ddmmyyyyMatch[2].padStart(2, "0");
-        const year = ddmmyyyyMatch[3];
-        formattedDateTerm = `${year}-${month}-${day}`;
-      } else {
-        const ddmmMatch = term.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
-        if (ddmmMatch) {
-          const day = ddmmMatch[1].padStart(2, "0");
-          const month = ddmmMatch[2].padStart(2, "0");
-          formattedDateTerm = `-${month}-${day}`;
-        }
+      // Converte se for formato DD/MM/AAAA para AAAA-MM-DD
+      let validDateIso: string | null = null;
+      const ddmmyyyy = term.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (ddmmyyyy) {
+        validDateIso = `${ddmmyyyy[3]}-${ddmmyyyy[2].padStart(2, "0")}-${ddmmyyyy[1].padStart(2, "0")}`;
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(term)) {
+        validDateIso = term;
       }
 
       if (isPatientRole) {
-        // Para pacientes: busca exclusivamente em procedimento ou na data (AAAA-MM-DD ou DD/MM/AAAA)
-        if (formattedDateTerm) {
-          query = query.or(
-            `procedimento.ilike.%${term}%,data.ilike.%${term}%,data.ilike.%${formattedDateTerm}%`
-          );
+        if (validDateIso) {
+          query = query.or(`procedimento.ilike.%${term}%,data.eq.${validDateIso}`);
         } else {
-          query = query.or(`procedimento.ilike.%${term}%,data.ilike.%${term}%`);
+          query = query.ilike("procedimento", `%${term}%`);
         }
       } else {
-        // Para administradores e profissionais: busca ampla incluindo pacientes
         const { data: matchedPatients } = await supabase
           .from("pacientes")
           .select("id")
           .or(`nome.ilike.%${term}%,email.ilike.%${term}%,telefone.ilike.%${term}%,cpf.ilike.%${term}%`);
 
         const patientIds = matchedPatients?.map((p) => p.id) || [];
+        const conditions: string[] = [`procedimento.ilike.%${term}%`];
 
-        let orConditions = `procedimento.ilike.%${term}%,data.ilike.%${term}%`;
-        if (formattedDateTerm) {
-          orConditions += `,data.ilike.%${formattedDateTerm}%`;
-        }
-        if (patientIds.length > 0) {
-          orConditions += `,client_id.in.(${patientIds.join(",")})`;
-        }
-        query = query.or(orConditions);
+        if (validDateIso) conditions.push(`data.eq.${validDateIso}`);
+        if (patientIds.length > 0) conditions.push(`client_id.in.(${patientIds.join(",")})`);
+
+        query = query.or(conditions.join(","));
       }
     }
 
