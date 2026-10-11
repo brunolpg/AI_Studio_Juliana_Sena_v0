@@ -17,9 +17,7 @@ import {
   Share2,
   Paperclip,
   ImageIcon,
-  UploadCloud,
 } from "lucide-react";
-import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Appointment } from "@/types/appointment";
 
 interface AppointmentDetailsModalProps {
@@ -38,7 +36,6 @@ export function AppointmentDetailsModal({
   if (!isOpen || !appointment) return null;
 
   const [attachments, setAttachments] = React.useState<string[]>(appointment.anexos_clinicos || []);
-  const [isUploading, setIsUploading] = React.useState(false);
 
   React.useEffect(() => {
     setAttachments(appointment.anexos_clinicos || []);
@@ -201,62 +198,6 @@ export function AppointmentDetailsModal({
                 </div>
               )}
             </div>
-
-            {/* Caixa Tracejada de Upload */}
-            {attachments.length < 3 && (
-              <label className="flex flex-col items-center justify-center p-4 border border-dashed border-teal-300/80 dark:border-teal-700/60 rounded-2xl bg-teal-50/20 dark:bg-slate-800/30 hover:bg-teal-50/50 dark:hover:bg-slate-800 transition-all cursor-pointer">
-                <UploadCloud className="w-6 h-6 text-teal-600 mb-1" />
-                <span className="text-xs font-bold text-teal-900 dark:text-teal-200">
-                  {isUploading ? "Enviando arquivo..." : "Clique para adicionar fotos ou exames"}
-                </span>
-                <span className="text-[10px] text-slate-400 mt-0.5">
-                  Selecione até {3 - attachments.length} arquivo(s) (PDF, PNG, JPG até 10MB)
-                </span>
-                <input
-                  type="file"
-                  disabled={isUploading}
-                  accept=".pdf,image/png,image/jpeg,image/jpg,image/webp"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    if (file.size > 10 * 1024 * 1024) {
-                      alert("O arquivo não pode ultrapassar 10MB.");
-                      return;
-                    }
-                    setIsUploading(true);
-                    try {
-                      const supabase = getSupabaseClient();
-                      if (!supabase) return;
-                      const fileExt = file.name.split(".").pop() || "png";
-                      const filePath = `consultas/${appointment.id}_${Date.now()}.${fileExt}`;
-                      const { error: uploadErr } = await supabase.storage
-                        .from("anexos-consultas")
-                        .upload(filePath, file, { upsert: true });
-                      if (uploadErr) throw uploadErr;
-
-                      const { data: publicData } = supabase.storage
-                        .from("anexos-consultas")
-                        .getPublicUrl(filePath);
-
-                      const updated = [...attachments, publicData.publicUrl];
-                      setAttachments(updated);
-
-                      // Sincroniza diretamente no banco de dados Supabase
-                      await supabase
-                        .from("appointments")
-                        .update({ anexos_clinicos: updated, updated_at: new Date().toISOString() })
-                        .eq("id", appointment.id);
-                    } catch (err: any) {
-                      alert("Falha ao salvar anexo: " + err.message);
-                    } finally {
-                      setIsUploading(false);
-                    }
-                  }}
-                />
-              </label>
-            )}
-          </div>
 
           {/* Integração Google Agenda */}
           <div className="p-4 rounded-xl border border-teal-200/80 dark:border-teal-900/60 bg-teal-50/50 dark:bg-teal-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
