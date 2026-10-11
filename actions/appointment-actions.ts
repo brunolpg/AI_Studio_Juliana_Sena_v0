@@ -1041,3 +1041,27 @@ export async function getProcedimentosAction(): Promise<ActionResponse<Procedime
     };
   }
 }
+
+export async function updateAppointmentReceiptAction({
+  appointmentId,
+  receiptUrl,
+}: {
+  appointmentId: string;
+  receiptUrl: string;
+}) {
+  const supabase = await createClient();
+  if (!supabase) return { success: false, message: 'Supabase não conectado.' };
+
+  const { error } = await supabase
+    .from('appointments')
+    .update({
+      comprovante_url: receiptUrl,
+      status_pagamento: 'Em Análise',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', appointmentId);
+
+  if (error) return { success: false, message: error.message };
+  revalidatePath('/agendamentos');
+  return { success: true, message: 'Recibo enviado com sucesso!' };
+}

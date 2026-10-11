@@ -21,12 +21,19 @@ import {
   AlertCircle,
   Sparkles,
   FileText,
+  CreditCard,
+  QrCode,
+  Copy,
+  Upload,
+  X,
 } from "lucide-react";
 import {
   getAppointmentsAction,
   cancelAppointmentAction,
   getCalendarIntegrationStatusAction,
+  updateAppointmentReceiptAction,
 } from "@/actions/appointment-actions";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { AppointmentFormModal } from "./appointment-form-modal";
 import { AppointmentEditModal } from "./appointment-edit-modal";
 import { AppointmentDetailsModal } from "./appointment-details-modal";
@@ -85,6 +92,125 @@ export function AppointmentTableView() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // Modal de Pagamento / Recibo do Paciente
+  const [paymentModalAppointment, setPaymentModalAppointment] = useState<Appointment | null>(null);
+  const [isUploadingPaymentReceipt, setIsUploadingPaymentReceipt] = useState(false);
+  const [copiedPixPaymentModal, setCopiedPixPaymentModal] = useState(false);
+
+  const PIX_KEY = "71986612878";
+  const PIX_BENEFICIARIO = "Juliana Sena de Souza Vieira";
+
+  const handleCopyPixPaymentModal = () => {
+    navigator.clipboard.writeText(PIX_KEY);
+    setCopiedPixPaymentModal(true);
+    setTimeout(() => setCopiedPixPaymentModal(false), 2500);
+  };
+
+  const handleUploadPaymentReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !paymentModalAppointment) return;
+
+    setIsUploadingPaymentReceipt(true);
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        toast({
+          type: "error",
+          title: "Erro de Conexão",
+          description: "Não foi possível conectar ao Supabase.",
+        });
+        return;
+      }
+
+      const fileExt = file.name.split(".").pop() || "png";
+      const cleanFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `comprovantes/${cleanFileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("comprovantes-pagamento")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        toast({
+          type: "error",
+          title: "Erro no Upload",
+          description: uploadError.message,
+        });
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("comprovantes-pagamento")
+        .getPublicUrl(filePath);
+
+      const receiptUrl = publicUrlData?.publicUrl;
+      if (!receiptUrl) {
+        toast({
+          type: "error",
+          title: "Erro de URL",
+          description: "Não foi possível obter a URL do comprovante.",
+        });
+        return;
+      }
+
+      const res = await updateAppointmentReceiptAction({
+        appointmentId: paymentModalAppointment.id,
+        receiptUrl,
+      });
+
+      if (res.success) {
+        toast({
+          type: "success",
+          title: "Recibo Enviado!",
+          description: "O comprovante foi registrado e está em análise.",
+        });
+
+        const targetId = paymentModalAppointment.id;
+
+        setPaymentModalAppointment((prev) =>
+          prev && prev.id === targetId
+            ? {
+                ...prev,
+                comprovante_url: receiptUrl,
+                status_pagamento: "Em Análise",
+              }
+            : null
+        );
+
+        setPaginatedData((prev) => ({
+          ...prev,
+          data: prev.data.map((apt) =>
+            apt.id === targetId
+              ? {
+                  ...apt,
+                  comprovante_url: receiptUrl,
+                  status_pagamento: "Em Análise",
+                }
+              : apt
+          ),
+        }));
+      } else {
+        toast({
+          type: "error",
+          title: "Erro ao Atualizar Agendamento",
+          description: res.message,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      toast({
+        type: "error",
+        title: "Erro Inesperado",
+        description: "Ocorreu uma falha ao enviar o comprovante.",
+      });
+    } finally {
+      setIsUploadingPaymentReceipt(false);
+    }
+  };
 
   // Debounce busca
   useEffect(() => {
@@ -677,8 +803,20 @@ export function AppointmentTableView() {
                       {/* AÇÕES: Abrir no Google Agenda com link direto, Detalhes, Editar horário e Cancelar agendamento */}
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
-                          {/* Abrir no Google Agenda */}
-                          {appointment.google_html_link && (
+                          {/* Botão de Pagamento / Recibo para o Paciente */}
+                          {isPatient && appointment.status !== "Cancelado" && (
+                            <button
+                              type="button"
+                              onClick={() => setPaymentModalAppointment(appointment)}
+                              className="p-1.5 rounded-lg text-teal-600 hover:text-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/50 transition-colors cursor-pointer"
+                              title="Efetuar pagamento ou anexar recibo PIX"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                            </button>
+                          )}
+
+                          {/* Abrir no Google Agenda (Para Profissional/Admin) */}
+                          {!isPatient && appointment.google_html_link && (
                             <a
                               href={appointment.google_html_link}
                               target="_blank"
@@ -880,6 +1018,184 @@ export function AppointmentTableView() {
                 ) : (
                   <span>Confirmar Cancelamento</span>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE PAGAMENTO VIA PIX E ANEXO DE RECIBO PARA O PACIENTE */}
+      {paymentModalAppointment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            {/* CABEÇALHO DO MODAL */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                  <QrCode className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Garantia via PIX (Sinal de Reserva)
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {paymentModalAppointment.procedimento} • {paymentModalAppointment.data.split("-").reverse().join("/")} às {paymentModalAppointment.horario_inicio}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPaymentModalAppointment(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* CARD PIX COM QR CODE E CHAVE COPIA E COLA */}
+            <div className="space-y-3 p-3.5 rounded-2xl bg-teal-50/50 dark:bg-slate-800/60 border border-teal-200/80 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-teal-900 dark:text-teal-200 flex items-center gap-1.5">
+                  <QrCode className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                  Garantia via PIX
+                </span>
+                <span className="text-[10px] font-semibold bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 px-2 py-0.5 rounded-full border border-teal-200/60 dark:border-teal-800">
+                  Chave CNPJ / Telefone
+                </span>
+              </div>
+
+              {/* DADOS PIX E BOTÃO DE CÓPIA */}
+              <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-teal-100 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="w-12 h-12 bg-teal-100 dark:bg-teal-950/80 rounded-xl border border-teal-200 dark:border-teal-800 flex flex-col items-center justify-center shrink-0">
+                    <QrCode className="w-7 h-7 text-teal-600 dark:text-teal-400" />
+                    <span className="text-[7px] font-bold text-teal-700 dark:text-teal-300">PIX CODE</span>
+                  </div>
+                  <div className="space-y-0.5 min-w-0">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Chave PIX da Clínica:</p>
+                    <p className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 truncate">{PIX_KEY}</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">Beneficiário: {PIX_BENEFICIARIO}</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCopyPixPaymentModal}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 transition-colors cursor-pointer shrink-0"
+                >
+                  {copiedPixPaymentModal ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copiar Código PIX</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* SEÇÃO ANEXAR COMPROVANTE PIX */}
+              <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-dashed border-teal-200 dark:border-slate-700 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <span>Anexar Comprovante PIX</span>
+                  </label>
+                  {paymentModalAppointment.comprovante_url && (
+                    <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Recibo já anexado (Em Análise)
+                    </span>
+                  )}
+                </div>
+
+                {paymentModalAppointment.comprovante_url ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between bg-teal-50/60 dark:bg-slate-800/80 p-2.5 px-3 rounded-lg border border-teal-200/80 dark:border-slate-700 text-xs">
+                      <div className="flex items-center gap-2 truncate pr-2">
+                        <FileText className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                        <span className="font-medium text-slate-800 dark:text-slate-200 truncate">
+                          Comprovante Anexado
+                        </span>
+                      </div>
+                      <a
+                        href={paymentModalAppointment.comprovante_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1 text-[11px] font-bold text-teal-700 dark:text-teal-300 bg-teal-100 hover:bg-teal-200 dark:bg-teal-900 dark:hover:bg-teal-800 rounded-lg transition-colors shrink-0"
+                      >
+                        Visualizar Recibo
+                      </a>
+                    </div>
+
+                    <label className="flex items-center justify-center gap-2 p-2 rounded-lg bg-slate-50 hover:bg-teal-50/50 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium cursor-pointer transition-colors">
+                      {isUploadingPaymentReceipt ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 text-teal-600 animate-spin" />
+                          <span>Enviando novo comprovante...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                          <span>Alterar / Enviar Novo Comprovante</span>
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            disabled={isUploadingPaymentReceipt}
+                            onChange={handleUploadPaymentReceipt}
+                            className="hidden"
+                          />
+                        </>
+                      )}
+                    </label>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50/50 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium cursor-pointer transition-colors">
+                    {isUploadingPaymentReceipt ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 text-teal-600 animate-spin" />
+                        <span>Enviando comprovante...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                        <span>Clique para selecionar o comprovante (.png, .jpg, .pdf)</span>
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          disabled={isUploadingPaymentReceipt}
+                          onChange={handleUploadPaymentReceipt}
+                          className="hidden"
+                        />
+                      </>
+                    )}
+                  </label>
+                )}
+              </div>
+
+              {/* OPÇÃO CARTÃO DE CRÉDITO */}
+              <div className="pt-1 border-t border-teal-100 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
+                <div className="flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                  <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">Cartão de Crédito</span>
+                </div>
+                <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                  Em breve / InfinitePay
+                </span>
+              </div>
+            </div>
+
+            {/* RODAPÉ DO MODAL */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setPaymentModalAppointment(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                Fechar
               </button>
             </div>
           </div>
