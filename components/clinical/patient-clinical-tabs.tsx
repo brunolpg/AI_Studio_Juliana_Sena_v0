@@ -87,121 +87,162 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const [aestheticData, setAestheticData] = useState<{ facial: any; corporal: any } | null>(null);
 
   const handleDownloadPdfDirect = async (rx: any) => {
-    if (!(window as any).html2pdf) {
-      await new Promise<void>((resolve, reject) => {
-        const script = document.createElement("script");
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error("Falha ao carregar html2pdf"));
-        document.head.appendChild(script);
-      });
-    }
-
-    // Garante o carregamento das fontes do sistema/Google Fonts
-    if (document.fonts) {
-      await document.fonts.ready;
-    }
-
-    const tempContainer = document.createElement("div");
-    tempContainer.style.position = "fixed";
-    tempContainer.style.top = "0";
-    tempContainer.style.left = "0";
-    tempContainer.style.width = "750px";
-    tempContainer.style.zIndex = "99999";
-    tempContainer.style.opacity = "0.01"; // Visível para o html2canvas renderizar sem piscar na tela
-    tempContainer.style.pointerEvents = "none";
-    tempContainer.style.backgroundColor = "#ffffff";
-    tempContainer.style.padding = "32px";
-    tempContainer.style.fontFamily = "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif";
-
-    const pacienteNome = client?.nome || "Paciente";
-    const cleanCpf = (client?.cpf || "").replace(/\D/g, "");
-    const formattedCpf = cleanCpf.length === 11 
-      ? `${cleanCpf.slice(0,3)}.${cleanCpf.slice(3,6)}.${cleanCpf.slice(6,9)}-${cleanCpf.slice(9,11)}`
-      : client?.cpf || "Não informado";
-
-    const dataEmissao = new Intl.DateTimeFormat("pt-BR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric"
-    }).format(new Date());
-
-    tempContainer.innerHTML = `
-      <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0f172a; line-height: 1.45; background: #fff;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 14px; margin-bottom: 18px;">
-          <div>
-            <div style="font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #0f172a;">RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL</div>
-            <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-top: 3px;">Juliana Sena de Souza Vieira</div>
-            <div style="font-size: 11.5px; font-weight: 700; color: #0d9488;">Enfermeira Esteta</div>
-          </div>
-          <div style="font-size: 11.5px; font-weight: 700; color: #475569;">COREN-BA 366.344</div>
-        </div>
-
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; display: flex; justify-content: space-between;">
-          <div>
-            <div style="font-size: 9.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">PACIENTE</div>
-            <div style="font-size: 13.5px; font-weight: 700; color: #0f172a; margin-top: 2px;">${pacienteNome}</div>
-          </div>
-          <div style="text-align: right;">
-            <div style="font-size: 9.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">CPF</div>
-            <div style="font-size: 13.5px; font-weight: 700; color: #0f172a; margin-top: 2px;">${formattedCpf}</div>
-          </div>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
-          <div style="font-size: 15px; font-weight: 800; color: #0f172a;">${rx.medicamento || "Fórmula Estética"}</div>
-          <div style="font-size: 11.5px; font-weight: 600; color: #64748b;">Uso ${rx.via || "Oral"}</div>
-        </div>
-
-        <div style="background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-size: 12px; line-height: 1.55; color: #134e4a;">
-          <div style="font-weight: 800; margin-bottom: 4px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px;">Composição & Concentração:</div>
-          <div>${rx.dosagem || ""}</div>
-        </div>
-
-        ${rx.posologia ? `
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-size: 12px; line-height: 1.55; color: #334155;">
-          <div style="font-weight: 800; margin-bottom: 4px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; color: #0f172a;">Posologia e Instruções:</div>
-          <div>${rx.posologia}</div>
-        </div>` : ""}
-
-        <div style="text-align: center; font-size: 11.5px; font-weight: 600; color: #64748b; margin-top: 26px; margin-bottom: 26px;">
-          Salvador - BA, ${dataEmissao}
-        </div>
-
-        <div style="border: 2px dashed #0d9488; border-radius: 14px; background: #f0fdfa; padding: 14px; text-align: center; width: 360px; margin: 0 auto;">
-          <div style="font-size: 12.5px; font-weight: 800; color: #0f172a;">Juliana Sena de Souza Vieira</div>
-          <div style="font-size: 11px; font-weight: 700; color: #0d9488; margin-top: 2px;">Enfermeira Esteta • COREN-BA 366.344</div>
-          <div style="font-size: 9px; color: #64748b; margin-top: 6px; line-height: 1.35;">
-            Espaço reservado para aposição de Assinatura Digital Qualificada ICP-Brasil (VIDaaS / Validador ITI)
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(tempContainer);
-
-    // Pequeno atraso para o browser processar a pintura do DOM
-    await new Promise((r) => setTimeout(r, 150));
-
-    const opt = {
-      margin: 10,
-      filename: `Receita_${(rx.medicamento || "Prescricao").replace(/\s+/g, "_")}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
-    };
-
     try {
-      await (window as any).html2pdf().set(opt).from(tempContainer).save();
+      if (!(window as any).jspdf) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Falha ao carregar motor de PDF"));
+          document.head.appendChild(script);
+        });
+      }
+
+      const { jsPDF } = (window as any).jspdf;
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      const pacienteNome = client?.nome || "Paciente";
+      const cleanCpf = (client?.cpf || "").replace(/\D/g, "");
+      const formattedCpf = cleanCpf.length === 11 
+        ? `${cleanCpf.slice(0,3)}.${cleanCpf.slice(3,6)}.${cleanCpf.slice(6,9)}-${cleanCpf.slice(9,11)}`
+        : client?.cpf || "Não informado";
+
+      const dataEmissao = new Intl.DateTimeFormat("pt-BR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      }).format(new Date());
+
+      // Header
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(15, 23, 42);
+      doc.text("RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL", 20, 20);
+
+      doc.setFontSize(14);
+      doc.text("Juliana Sena de Souza Vieira", 20, 27);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(13, 148, 136); // teal
+      doc.text("Enfermeira Esteta", 20, 33);
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(71, 85, 105);
+      doc.text("COREN-BA 366.344", 190, 27, { align: "right" });
+
+      doc.setDrawColor(15, 23, 42);
+      doc.setLineWidth(0.5);
+      doc.line(20, 38, 190, 38);
+
+      // Patient Card Box
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(20, 43, 170, 16, 3, 3, "FD");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text("PACIENTE", 24, 49);
+      doc.text("CPF", 140, 49);
+
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text(pacienteNome, 24, 55);
+      doc.text(formattedCpf, 140, 55);
+
+      // Medication info
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text(rx.medicamento || "Fórmula Estética", 20, 70);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Uso ${rx.via || "Oral"}`, 190, 70, { align: "right" });
+
+      // Composition box
+      doc.setFillColor(240, 253, 250);
+      doc.setDrawColor(204, 251, 241);
+      const dosagemText = rx.dosagem || "";
+      const splitDosagem = doc.splitTextToSize(dosagemText, 162);
+      const dosagemHeight = Math.max(12, splitDosagem.length * 5 + 8);
+      doc.roundedRect(20, 75, 170, dosagemHeight, 3, 3, "FD");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(19, 78, 74);
+      doc.text("COMPOSIÇÃO & CONCENTRAÇÃO:", 24, 82);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text(splitDosagem, 24, 89);
+
+      let currentY = 75 + dosagemHeight + 6;
+
+      if (rx.posologia) {
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        const splitPosologia = doc.splitTextToSize(rx.posologia, 162);
+        const posologiaHeight = Math.max(12, splitPosologia.length * 5 + 8);
+        doc.roundedRect(20, currentY, 170, posologiaHeight, 3, 3, "FD");
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(15, 23, 42);
+        doc.text("POSOLOGIA E INSTRUÇÕES:", 24, currentY + 7);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(51, 65, 85);
+        doc.text(splitPosologia, 24, currentY + 14);
+
+        currentY += posologiaHeight + 6;
+      }
+
+      // Date
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Salvador - BA, ${dataEmissao}`, 105, currentY + 15, { align: "center" });
+
+      // Signature box
+      currentY += 25;
+      doc.setFillColor(240, 253, 250);
+      doc.setDrawColor(13, 148, 136);
+      doc.setLineWidth(0.75);
+      doc.roundedRect(55, currentY, 100, 32, 4, 4, "FD");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text("Juliana Sena de Souza Vieira", 105, currentY + 8, { align: "center" });
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(13, 148, 136);
+      doc.text("Enfermeira Esteta • COREN-BA 366.344", 105, currentY + 14, { align: "center" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Espaço reservado para aposição de Assinatura", 105, currentY + 21, { align: "center" });
+      doc.text("Digital Qualificada ICP-Brasil (VIDaaS / Validador ITI)", 105, currentY + 26, { align: "center" });
+
+      doc.save(`Receita_${(rx.medicamento || "Prescricao").replace(/\s+/g, "_")}.pdf`);
+
       toast({
         type: "success",
-        title: "PDF Baixado com Sucesso!",
-        description: "O receituário foi salvo na sua pasta de Downloads."
+        title: "PDF Gerado com Sucesso!",
+        description: "O receituário em PDF foi baixado no seu dispositivo."
       });
     } catch (err: any) {
       alert("Erro ao gerar PDF: " + err.message);
-    } finally {
-      document.body.removeChild(tempContainer);
     }
   };
 
@@ -1602,29 +1643,19 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             {/* Passo 1: Obter o PDF */}
             <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 space-y-2">
               <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 block">
-                1º Passo: Obter o Receituário Formatado
+                1º Passo: Baixar o Receituário em PDF
               </span>
               <p className="text-[10px] text-slate-500 leading-relaxed">
-                Abra o relatório para salvar como PDF no seu dispositivo e assinar no VIDaaS Connect ou app VIDaaS.
+                Baixe o PDF do receituário e assine no aplicativo VIDaaS ou portal VIDaaS Connect.
               </p>
-            <div className="space-y-2">
               <button
                 type="button"
                 onClick={() => handleDownloadPdfDirect(signingRx)}
-                className="w-full py-2.5 px-3 text-xs font-semibold rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-200 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                className="w-full py-2.5 px-3 text-xs font-semibold rounded-xl bg-teal-600 hover:bg-teal-700 text-white transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
               >
-                <Printer className="w-4 h-4 text-teal-600" />
-                <span>1. Baixar Receita em PDF</span>
+                <Printer className="w-4 h-4 text-white" />
+                <span>Baixar Receita em PDF</span>
               </button>
-
-              <a
-                href="intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=br.com.valid.vidaas;end"
-                className="w-full py-2 px-3 text-xs font-semibold rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
-                <span>2. Abrir Aplicativo VIDaaS</span>
-              </a>
-            </div>
             </div>
 
             {/* Passo 2: Upload do documento assinado */}
