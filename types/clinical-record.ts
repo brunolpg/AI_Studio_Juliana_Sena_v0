@@ -65,6 +65,9 @@ export interface PrescriptionItem {
   duracao: string;
   ativo: boolean;
   instrucoes?: string;
+  /** URL do PDF assinado (ICP-Brasil), quando já anexado */
+  pdf_assinado_url?: string | null;
+  data_assinatura?: string | null;
 }
 
 export interface PatientClinicalRecord {

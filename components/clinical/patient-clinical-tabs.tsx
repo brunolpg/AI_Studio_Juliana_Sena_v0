@@ -29,6 +29,7 @@ import {
   FileCheck,
   ExternalLink,
   UploadCloud,
+  Download,
 } from "lucide-react";
 import {
   getPatientClinicalRecordAction,
@@ -86,120 +87,100 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const [isAestheticModalOpen, setIsAestheticModalOpen] = useState(false);
   const [aestheticData, setAestheticData] = useState<{ facial: any; corporal: any } | null>(null);
 
-  const handleDownloadAndLaunchVidaas = (rx: any) => {
-    const pacienteNome = client?.nome || "Paciente";
-    const cleanCpf = (client?.cpf || "").replace(/\D/g, "");
-    const formattedCpf = cleanCpf.length === 11 
-      ? `${cleanCpf.slice(0,3)}.${cleanCpf.slice(3,6)}.${cleanCpf.slice(6,9)}-${cleanCpf.slice(9,11)}`
-      : client?.cpf || "Não informado";
+  // --- Assinatura digital (VIDaaS) ---------------------------------------
+  const [signError, setSignError] = useState<string | null>(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [pdfDownloaded, setPdfDownloaded] = useState(false);
+  const [isDraggingSigned, setIsDraggingSigned] = useState(false);
 
-    const dataEmissao = new Intl.DateTimeFormat("pt-BR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric"
-    }).format(new Date());
+  const openSigningModal = (rx: PrescriptionItem) => {
+    setSignError(null);
+    setPdfDownloaded(false);
+    setIsDraggingSigned(false);
+    setSigningRx(rx);
+  };
 
-    // Conteúdo HTML com estilo embutido e fonte Plus Jakarta Sans
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Receita_${(rx.medicamento || "Prescricao").replace(/\s+/g, "_")}</title>
-          <link rel="preconnect" href="https://fonts.googleapis.com">
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-          <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-          <style>
-            @page { size: A4 portrait; margin: 10mm; }
-            * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
-            body { background: #ffffff; color: #0f172a; padding: 15mm; }
-            .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 18px; }
-            .title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-            .doc-name { font-size: 16px; font-weight: 800; margin-top: 3px; }
-            .doc-sub { font-size: 11px; font-weight: 700; color: #0d9488; }
-            .coren { font-size: 11px; font-weight: 700; color: #475569; }
-            .box-patient { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; display: flex; justify-content: space-between; }
-            .label { font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
-            .val { font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 2px; }
-            .med-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-            .med-title { font-size: 15px; font-weight: 800; color: #0f172a; }
-            .med-via { font-size: 11px; font-weight: 600; color: #64748b; }
-            .box-formula { background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 12px; line-height: 1.5; color: #134e4a; }
-            .box-posologia { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 12px; line-height: 1.5; color: #334155; }
-            .date-line { text-align: center; font-size: 11px; font-weight: 600; color: #64748b; margin-top: 30px; margin-bottom: 25px; }
-            .box-sig { border: 2px dashed #0d9488; border-radius: 12px; background: #f0fdfa; padding: 14px; text-align: center; width: 350px; margin: 0 auto; }
-            .sig-name { font-size: 12px; font-weight: 800; color: #0f172a; }
-            .sig-sub { font-size: 10.5px; font-weight: 700; color: #0d9488; margin-top: 2px; }
-            .sig-note { font-size: 8.5px; color: #64748b; margin-top: 5px; line-height: 1.3; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <div class="title">RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL</div>
-              <div class="doc-name">Juliana Sena de Souza Vieira</div>
-              <div class="doc-sub">Enfermeira Esteta</div>
-            </div>
-            <div class="coren">COREN-BA 366.344</div>
-          </div>
-          <div class="box-patient">
-            <div>
-              <div class="label">Paciente</div>
-              <div class="val">${pacienteNome}</div>
-            </div>
-            <div style="text-align: right;">
-              <div class="label">CPF</div>
-              <div class="val">${formattedCpf}</div>
-            </div>
-          </div>
-          <div class="med-header">
-            <div class="med-title">${rx.medicamento || "Fórmula Estética"}</div>
-            <div class="med-via">Uso ${rx.via || "Oral"}</div>
-          </div>
-          <div class="box-formula">
-            <div style="font-weight: 800; margin-bottom: 4px; text-transform: uppercase; font-size: 10px;">Composição & Concentração:</div>
-            <div>${rx.dosagem || ""}</div>
-          </div>
-          ${rx.posologia ? `
-          <div class="box-posologia">
-            <div style="font-weight: 800; margin-bottom: 4px; text-transform: uppercase; font-size: 10px;">Posologia e Instruções:</div>
-            <div>${rx.posologia}</div>
-          </div>` : ""}
-          <div class="date-line">Salvador - BA, ${dataEmissao}</div>
-          <div class="box-sig">
-            <div class="sig-name">Juliana Sena de Souza Vieira</div>
-            <div class="sig-sub">Enfermeira Esteta • COREN-BA 366.344</div>
-            <div class="sig-note">Espaço reservado para aposição de Assinatura Digital Qualificada ICP-Brasil (VIDaaS / Validador ITI)</div>
-          </div>
-          <script>
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-              }, 300);
-            };
-          </script>
-        </body>
-      </html>
-    `;
+  const closeSigningModal = () => {
+    if (isUploadingSignedPdf) return;
+    setSigningRx(null);
+    setSignError(null);
+    setPdfDownloaded(false);
+    setIsDraggingSigned(false);
+  };
 
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.open();
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-    }
-
-    // Abre a loja oficial (Play Store no Android / App Store no iOS)
-    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-    const isAndroid = /android/i.test(userAgent);
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
-
-    setTimeout(() => {
-      if (isAndroid) {
-        window.open("https://play.google.com/store/apps/details?id=br.com.valid.vidaas", "_blank");
-      } else if (isIOS) {
-        window.open("https://apps.apple.com/br/app/vidaas/id1458896089", "_blank");
+  // Baixa o PDF gerado no servidor (o mesmo arquivo que será assinado e conferido no envio)
+  const handleDownloadPrescriptionPdf = async (rx: PrescriptionItem) => {
+    setSignError(null);
+    setIsDownloadingPdf(true);
+    try {
+      const res = await fetch(`/api/prescricoes/${rx.id}/pdf`, { credentials: "same-origin" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || "Não foi possível gerar o PDF da receita.");
       }
-    }, 800);
+      const fileName =
+        /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || "")?.[1] || `Receita_${rx.id}.pdf`;
+      const url = URL.createObjectURL(await res.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 15000);
+      setPdfDownloaded(true);
+    } catch (err: any) {
+      setSignError(err?.message || "Não foi possível gerar o PDF da receita.");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
+  // Envia o PDF assinado: o servidor confere assinatura + receita e só então vincula ao prontuário
+  const handleSignedFile = async (file?: File | null) => {
+    if (!file || !signingRx) return;
+    setSignError(null);
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      setSignError("Selecione um arquivo em formato PDF.");
+      return;
+    }
+    setIsUploadingSignedPdf(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch(`/api/prescricoes/${signingRx.id}/assinado`, {
+        method: "POST",
+        body,
+        credentials: "same-origin",
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        setSignError(data?.message || "Não foi possível anexar a receita assinada.");
+        return;
+      }
+      const warnings: string[] = data.warnings || [];
+      toast({
+        type: warnings.length > 0 ? "warning" : "success",
+        title: "Receita assinada registrada!",
+        description: warnings.length > 0 ? warnings[0] : "O documento assinado com ICP-Brasil foi vinculado ao prontuário.",
+      });
+      setSigningRx(null);
+      setPdfDownloaded(false);
+      loadClinicalData();
+    } catch {
+      setSignError("Falha de conexão ao enviar o arquivo. Tente novamente.");
+    } finally {
+      setIsUploadingSignedPdf(false);
+    }
+  };
+
+  const openVidaasStore = () => {
+    const ua = navigator.userAgent || "";
+    if (/android/i.test(ua)) {
+      window.open("https://play.google.com/store/apps/details?id=br.com.valid.vidaas", "_blank");
+    } else if (/iPad|iPhone|iPod/.test(ua)) {
+      window.open("https://apps.apple.com/br/app/vidaas/id1458896089", "_blank");
+    }
   };
 
   // Carrega prontuário do paciente
@@ -231,6 +212,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                   status,
                   justificativa_suspensao,
                   data_suspensao,
+                  pdf_assinado_url,
+                  data_assinatura,
                   prescricao_itens (
                     id,
                     nome_formula,
@@ -282,6 +265,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     status: p.status,
                     justificativa_suspensao: p.justificativa_suspensao,
                     data_suspensao: p.data_suspensao,
+                    pdf_assinado_url: p.pdf_assinado_url ?? null,
+                    data_assinatura: p.data_assinatura ?? null,
                   };
                 });
 
@@ -1276,7 +1261,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                   ) : (
                                     <button
                                       type="button"
-                                      onClick={() => setSigningRx(rx)}
+                                      onClick={() => openSigningModal(rx)}
                                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 hover:bg-blue-100/70 rounded-xl transition-colors cursor-pointer"
                                       title="Assinar com certificado digital VIDaaS"
                                     >
@@ -1585,7 +1570,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               </div>
               <button
                 type="button"
-                onClick={() => setSigningRx(null)}
+                onClick={closeSigningModal}
                 className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -1596,99 +1581,83 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               Prescrição: <strong className="text-slate-800 dark:text-slate-100">{signingRx.medicamento}</strong>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-teal-50/50 dark:bg-slate-800 border border-teal-200/80 dark:border-slate-700 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-teal-950 dark:text-teal-200">
-                  1º Passo: Obter Receituário e Assinar
-                </p>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300">
-                  Padrão ICP-Brasil
-                </span>
-              </div>
+            {/* Passo 1: baixar o PDF */}
+            <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 space-y-2">
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                1º Passo: Baixar a receita em PDF
+              </p>
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                Gera o PDF com a tipografia oficial e abre a loja para iniciar o aplicativo VIDaaS.
+                Baixe o PDF, assine no aplicativo VIDaaS ou no portal VIDaaS Connect e volte aqui.
               </p>
               <button
                 type="button"
-                onClick={() => handleDownloadAndLaunchVidaas(signingRx)}
-                className="w-full py-2.5 px-3 text-xs font-bold rounded-xl bg-teal-600 hover:bg-teal-700 text-white transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                disabled={isDownloadingPdf}
+                onClick={() => handleDownloadPrescriptionPdf(signingRx)}
+                className="w-full py-2.5 px-3 text-xs font-bold rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Printer className="w-4 h-4" />
-                <span>Baixar PDF & Abrir VIDaaS</span>
+                <Download className="w-4 h-4" />
+                <span>{isDownloadingPdf ? "Gerando PDF..." : pdfDownloaded ? "Baixar novamente" : "Baixar Receita em PDF"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={openVidaasStore}
+                className="block mx-auto text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline-offset-2 hover:underline cursor-pointer"
+              >
+                Não tem o app? Instalar o VIDaaS
               </button>
             </div>
 
-            {/* Passo 2: Upload do documento assinado */}
-            <div className="p-3.5 rounded-2xl bg-teal-50/40 dark:bg-slate-800/60 border border-teal-200/60 dark:border-slate-700 space-y-2">
-              <span className="text-[11px] font-bold text-teal-900 dark:text-teal-200 block">
-                2º Passo: Anexar o PDF Assinado pelo VIDaaS
+            {/* Passo 2: anexar o PDF assinado (conferido pelo servidor) */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDraggingSigned(true);
+              }}
+              onDragLeave={() => setIsDraggingSigned(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDraggingSigned(false);
+                handleSignedFile(e.dataTransfer.files?.[0]);
+              }}
+              className={`p-3.5 rounded-2xl border space-y-2 transition-colors ${
+                isDraggingSigned || pdfDownloaded
+                  ? "bg-teal-50 dark:bg-teal-950/30 border-teal-400"
+                  : "bg-teal-50/40 dark:bg-slate-800/60 border-teal-200/60 dark:border-slate-700"
+              }`}
+            >
+              <span className="text-xs font-bold text-teal-900 dark:text-teal-200 block">
+                2º Passo: Anexar o PDF assinado
               </span>
-              <p className="text-[10px] text-slate-500 leading-relaxed">
-                Após assinar com o VIDaaS (carimbo ICP-Brasil), selecione o arquivo assinado para vincular ao prontuário.
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Selecione (ou arraste) o arquivo assinado. O sistema confere a assinatura e se é desta receita antes de salvar.
               </p>
               <label className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer">
                 <UploadCloud className="w-4 h-4" />
-                <span>{isUploadingSignedPdf ? "Salvando receita..." : "Selecionar PDF Assinado"}</span>
+                <span>{isUploadingSignedPdf ? "Conferindo e salvando..." : "Selecionar PDF Assinado"}</span>
                 <input
                   type="file"
-                  accept="application/pdf"
+                  accept="application/pdf,.pdf"
                   disabled={isUploadingSignedPdf}
                   className="hidden"
-                  onChange={async (e) => {
+                  onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (!file) return;
-                    if (file.type !== "application/pdf") {
-                      alert("Por favor, selecione um arquivo em formato PDF.");
-                      return;
-                    }
-                    setIsUploadingSignedPdf(true);
-                    try {
-                      const supabase = getSupabaseClient();
-                      if (!supabase) throw new Error("Conexão com o Supabase indisponível.");
-
-                      const filePath = `receitas/${signingRx.id}_assinado_${Date.now()}.pdf`;
-                      const { error: uploadErr } = await supabase.storage
-                        .from("receitas")
-                        .upload(filePath, file, { upsert: true });
-
-                      if (uploadErr) throw uploadErr;
-
-                      const { data: publicData } = supabase.storage
-                        .from("receitas")
-                        .getPublicUrl(filePath);
-
-                      const { error: dbErr } = await supabase
-                        .from("prescricoes")
-                        .update({
-                          pdf_assinado_url: publicData.publicUrl,
-                          data_assinatura: new Date().toISOString(),
-                          updated_at: new Date().toISOString(),
-                        })
-                        .eq("id", signingRx.id);
-
-                      if (dbErr) throw dbErr;
-
-                      toast({
-                        type: "success",
-                        title: "Receita Assinada Registrada!",
-                        description: "O documento assinado com ICP-Brasil foi vinculado com sucesso.",
-                      });
-                      setSigningRx(null);
-                      loadClinicalData();
-                    } catch (err: any) {
-                      alert("Erro ao anexar receita assinada: " + (err.message || err));
-                    } finally {
-                      setIsUploadingSignedPdf(false);
-                    }
+                    e.target.value = ""; // permite reenviar o mesmo arquivo após corrigir
+                    handleSignedFile(file);
                   }}
                 />
               </label>
+              {signError && (
+                <div role="alert" className="flex items-start gap-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-[11px] text-rose-800 dark:text-rose-200 leading-relaxed">
+                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  <span>{signError}</span>
+                </div>
+              )}
             </div>
 
             <div className="pt-1 flex justify-end">
               <button
                 type="button"
-                onClick={() => setSigningRx(null)}
+                onClick={closeSigningModal}
                 className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
               >
                 Fechar
