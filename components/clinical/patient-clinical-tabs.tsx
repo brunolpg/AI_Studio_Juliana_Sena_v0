@@ -97,17 +97,22 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
       });
     }
 
+    // Garante o carregamento das fontes do sistema/Google Fonts
+    if (document.fonts) {
+      await document.fonts.ready;
+    }
+
     const tempContainer = document.createElement("div");
-    // Mantém no fluxo visual para que o html2canvas capture perfeitamente, mas invisível ao usuário
-    tempContainer.style.position = "absolute";
+    tempContainer.style.position = "fixed";
     tempContainer.style.top = "0";
     tempContainer.style.left = "0";
     tempContainer.style.width = "750px";
-    tempContainer.style.zIndex = "-1000";
-    tempContainer.style.opacity = "1";
+    tempContainer.style.zIndex = "99999";
+    tempContainer.style.opacity = "0.01"; // Visível para o html2canvas renderizar sem piscar na tela
+    tempContainer.style.pointerEvents = "none";
     tempContainer.style.backgroundColor = "#ffffff";
-    tempContainer.style.padding = "30px";
-    tempContainer.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
+    tempContainer.style.padding = "32px";
+    tempContainer.style.fontFamily = "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif";
 
     const pacienteNome = client?.nome || "Paciente";
     const cleanCpf = (client?.cpf || "").replace(/\D/g, "");
@@ -122,52 +127,51 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
     }).format(new Date());
 
     tempContainer.innerHTML = `
-      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-      <div style="font-family: 'Plus Jakarta Sans', sans-serif; color: #0f172a; line-height: 1.4;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
+      <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0f172a; line-height: 1.45; background: #fff;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 14px; margin-bottom: 18px;">
           <div>
-            <div style="font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL</div>
-            <div style="font-size: 15px; font-weight: 800; margin-top: 3px;">Juliana Sena de Souza Vieira</div>
-            <div style="font-size: 11px; font-weight: 700; color: #0d9488;">Enfermeira Esteta</div>
+            <div style="font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #0f172a;">RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL</div>
+            <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-top: 3px;">Juliana Sena de Souza Vieira</div>
+            <div style="font-size: 11.5px; font-weight: 700; color: #0d9488;">Enfermeira Esteta</div>
           </div>
-          <div style="font-size: 11px; font-weight: 700; color: #475569;">COREN-BA 366.344</div>
+          <div style="font-size: 11.5px; font-weight: 700; color: #475569;">COREN-BA 366.344</div>
         </div>
 
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; display: flex; justify-content: space-between;">
           <div>
-            <div style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">PACIENTE</div>
-            <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 2px;">${pacienteNome}</div>
+            <div style="font-size: 9.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">PACIENTE</div>
+            <div style="font-size: 13.5px; font-weight: 700; color: #0f172a; margin-top: 2px;">${pacienteNome}</div>
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">CPF</div>
-            <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 2px;">${formattedCpf}</div>
+            <div style="font-size: 9.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">CPF</div>
+            <div style="font-size: 13.5px; font-weight: 700; color: #0f172a; margin-top: 2px;">${formattedCpf}</div>
           </div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
           <div style="font-size: 15px; font-weight: 800; color: #0f172a;">${rx.medicamento || "Fórmula Estética"}</div>
-          <div style="font-size: 11px; font-weight: 600; color: #64748b;">Uso ${rx.via || "Oral"}</div>
+          <div style="font-size: 11.5px; font-weight: 600; color: #64748b;">Uso ${rx.via || "Oral"}</div>
         </div>
 
-        <div style="background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 12px; line-height: 1.5; color: #134e4a;">
+        <div style="background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-size: 12px; line-height: 1.55; color: #134e4a;">
           <div style="font-weight: 800; margin-bottom: 4px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px;">Composição & Concentração:</div>
           <div>${rx.dosagem || ""}</div>
         </div>
 
         ${rx.posologia ? `
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 12px; line-height: 1.5; color: #334155;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-size: 12px; line-height: 1.55; color: #334155;">
           <div style="font-weight: 800; margin-bottom: 4px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; color: #0f172a;">Posologia e Instruções:</div>
           <div>${rx.posologia}</div>
         </div>` : ""}
 
-        <div style="text-align: center; font-size: 11px; font-weight: 600; color: #64748b; margin-top: 24px; margin-bottom: 24px;">
+        <div style="text-align: center; font-size: 11.5px; font-weight: 600; color: #64748b; margin-top: 26px; margin-bottom: 26px;">
           Salvador - BA, ${dataEmissao}
         </div>
 
-        <div style="border: 2px dashed #0d9488; border-radius: 14px; background: #f0fdfa; padding: 14px; text-align: center; width: 350px; margin: 0 auto;">
-          <div style="font-size: 12px; font-weight: 800; color: #0f172a;">Juliana Sena de Souza Vieira</div>
-          <div style="font-size: 10.5px; font-weight: 700; color: #0d9488; margin-top: 2px;">Enfermeira Esteta • COREN-BA 366.344</div>
-          <div style="font-size: 8.5px; color: #64748b; margin-top: 6px; line-height: 1.3;">
+        <div style="border: 2px dashed #0d9488; border-radius: 14px; background: #f0fdfa; padding: 14px; text-align: center; width: 360px; margin: 0 auto;">
+          <div style="font-size: 12.5px; font-weight: 800; color: #0f172a;">Juliana Sena de Souza Vieira</div>
+          <div style="font-size: 11px; font-weight: 700; color: #0d9488; margin-top: 2px;">Enfermeira Esteta • COREN-BA 366.344</div>
+          <div style="font-size: 9px; color: #64748b; margin-top: 6px; line-height: 1.35;">
             Espaço reservado para aposição de Assinatura Digital Qualificada ICP-Brasil (VIDaaS / Validador ITI)
           </div>
         </div>
@@ -175,6 +179,9 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
     `;
 
     document.body.appendChild(tempContainer);
+
+    // Pequeno atraso para o browser processar a pintura do DOM
+    await new Promise((r) => setTimeout(r, 150));
 
     const opt = {
       margin: 10,
@@ -188,8 +195,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
       await (window as any).html2pdf().set(opt).from(tempContainer).save();
       toast({
         type: "success",
-        title: "PDF gerado com sucesso!",
-        description: "O arquivo foi salvo na pasta Downloads com formatação completa."
+        title: "PDF Baixado com Sucesso!",
+        description: "O receituário foi salvo na sua pasta de Downloads."
       });
     } catch (err: any) {
       alert("Erro ao gerar PDF: " + err.message);
@@ -1611,7 +1618,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               </button>
 
               <a
-                href="intent://#Intent;package=br.com.valid.vidaas;scheme=vidaas;end;"
+                href="intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=br.com.valid.vidaas;end"
                 className="w-full py-2 px-3 text-xs font-semibold rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
