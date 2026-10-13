@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 // @ts-ignore
 import fontkit from '@pdf-lib/fontkit';
@@ -5,19 +7,23 @@ import fontkit from '@pdf-lib/fontkit';
 let regularFontBytesCache: Uint8Array | null = null;
 let boldFontBytesCache: Uint8Array | null = null;
 
-async function fetchPlusJakartaSansFonts(): Promise<{ regular: Uint8Array; bold: Uint8Array } | null> {
+function loadLocalPlusJakartaSansFonts(): { regular: Uint8Array; bold: Uint8Array } | null {
   try {
     if (!regularFontBytesCache || !boldFontBytesCache) {
-      const [regRes, boldRes] = await Promise.all([
-        fetch("https://cdn.jsdelivr.net/gh/tokotype/PlusJakartaSans@master/fonts/static/PlusJakartaSans-Regular.ttf"),
-        fetch("https://cdn.jsdelivr.net/gh/tokotype/PlusJakartaSans@master/fonts/static/PlusJakartaSans-Bold.ttf"),
-      ]);
-      if (!regRes.ok || !boldRes.ok) return null;
-      regularFontBytesCache = new Uint8Array(await regRes.arrayBuffer());
-      boldFontBytesCache = new Uint8Array(await boldRes.arrayBuffer());
+      const regularPath = path.join(process.cwd(), "public", "fonts", "PlusJakartaSans-Regular.ttf");
+      const boldPath = path.join(process.cwd(), "public", "fonts", "PlusJakartaSans-Bold.ttf");
+
+      if (!fs.existsSync(regularPath) || !fs.existsSync(boldPath)) {
+        console.warn("Fontes Plus Jakarta Sans não encontradas em public/fonts");
+        return null;
+      }
+
+      regularFontBytesCache = new Uint8Array(fs.readFileSync(regularPath));
+      boldFontBytesCache = new Uint8Array(fs.readFileSync(boldPath));
     }
     return { regular: regularFontBytesCache, bold: boldFontBytesCache };
-  } catch {
+  } catch (err) {
+    console.error("Erro ao carregar fontes locais:", err);
     return null;
   }
 }
@@ -191,7 +197,7 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
   let bold: PDFFont;
   let italic: PDFFont;
 
-  const fontBytes = await fetchPlusJakartaSansFonts();
+  const fontBytes = loadLocalPlusJakartaSansFonts();
   if (fontBytes) {
     try {
       regular = await pdf.embedFont(fontBytes.regular);

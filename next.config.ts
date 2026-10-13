@@ -2,13 +2,16 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  outputFileTracingIncludes: {
+    '/api/prescricoes/**/*': ['./public/fonts/**/*'],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
   eslint: {
-    ignoreDuringBuilds: true, // Pula a verificação do ESLint para poupar RAM
+    ignoreDuringBuilds: true,
   },
-  productionBrowserSourceMaps: false, // Desativa a geração pesada de Source Maps
+  productionBrowserSourceMaps: false,
   images: {
     remotePatterns: [
       {
