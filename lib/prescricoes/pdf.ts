@@ -1,4 +1,26 @@
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
+// @ts-ignore
+import fontkit from '@pdf-lib/fontkit';
+
+let regularFontBytesCache: Uint8Array | null = null;
+let boldFontBytesCache: Uint8Array | null = null;
+
+async function fetchPlusJakartaSansFonts(): Promise<{ regular: Uint8Array; bold: Uint8Array } | null> {
+  try {
+    if (!regularFontBytesCache || !boldFontBytesCache) {
+      const [regRes, boldRes] = await Promise.all([
+        fetch("https://cdn.jsdelivr.net/gh/tokotype/PlusJakartaSans@master/fonts/static/PlusJakartaSans-Regular.ttf"),
+        fetch("https://cdn.jsdelivr.net/gh/tokotype/PlusJakartaSans@master/fonts/static/PlusJakartaSans-Bold.ttf"),
+      ]);
+      if (!regRes.ok || !boldRes.ok) return null;
+      regularFontBytesCache = new Uint8Array(await regRes.arrayBuffer());
+      boldFontBytesCache = new Uint8Array(await boldRes.arrayBuffer());
+    }
+    return { regular: regularFontBytesCache, bold: boldFontBytesCache };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Geração server-side do PDF da receita (A4, texto pesquisável, fontes padrão).
@@ -163,9 +185,28 @@ export function prescriptionPdfFileName(patientName?: string | null, date?: stri
 // ---- gerador --------------------------------------------------------------
 export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  const regular = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const italic = await pdf.embedFont(StandardFonts.HelveticaOblique);
+  pdf.registerFontkit(fontkit);
+
+  let regular: PDFFont;
+  let bold: PDFFont;
+  let italic: PDFFont;
+
+  const fontBytes = await fetchPlusJakartaSansFonts();
+  if (fontBytes) {
+    try {
+      regular = await pdf.embedFont(fontBytes.regular);
+      bold = await pdf.embedFont(fontBytes.bold);
+      italic = regular;
+    } catch {
+      regular = await pdf.embedFont(StandardFonts.Helvetica);
+      bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+      italic = await pdf.embedFont(StandardFonts.HelveticaOblique);
+    }
+  } else {
+    regular = await pdf.embedFont(StandardFonts.Helvetica);
+    bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+    italic = await pdf.embedFont(StandardFonts.HelveticaOblique);
+  }
 
   const paciente = input.paciente.nome?.trim() || "Paciente";
   const item = input.item || {};
