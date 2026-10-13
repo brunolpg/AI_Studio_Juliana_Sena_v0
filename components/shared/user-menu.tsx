@@ -204,10 +204,20 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
             <button
               id="user-logout-btn"
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 setIsOpen(false);
-                if (onLogout) {
-                  onLogout();
+                try {
+                  if (onLogout) {
+                    await onLogout();
+                  } else if (authLogout) {
+                    await authLogout();
+                  }
+                } catch (err) {
+                  console.warn("Aviso ao tentar realizar logout:", err);
+                } finally {
+                  if (typeof window !== "undefined") {
+                    window.location.href = "/login";
+                  }
                 }
               }}
               className="w-full flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer"

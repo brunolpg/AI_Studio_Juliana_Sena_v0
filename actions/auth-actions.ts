@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema, registerSchema } from "@/lib/validations/auth-schema";
 import type { User, AuthResponse, UserRole } from "@/types/auth";
@@ -146,19 +147,43 @@ export async function logoutAction(): Promise<{ success: boolean; message: strin
   try {
     const supabase = await createClient();
     if (supabase) {
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.warn("Aviso ao executar signOut no Supabase (token pode estar expirado/inválido):", err);
+      }
     }
+
+    try {
+      const cookieStore = await cookies();
+      const allCookies = cookieStore.getAll();
+      for (const cookie of allCookies) {
+        if (
+          cookie.name.startsWith("sb-") ||
+          cookie.name.includes("auth") ||
+          cookie.name.includes("token") ||
+          cookie.name.includes("session")
+        ) {
+          try {
+            cookieStore.delete(cookie.name);
+          } catch {
+            // Ignora se não puder deletar o cookie
+          }
+        }
+      }
+    } catch (cookieErr) {
+      console.warn("Aviso ao limpar cookies de sessão:", cookieErr);
+    }
+
     revalidatePath("/");
-    return {
-      success: true,
-      message: "Sessão encerrada com sucesso.",
-    };
-  } catch {
-    return {
-      success: false,
-      message: "Falha ao encerrar sessão.",
-    };
+  } catch (err) {
+    console.warn("Exceção capturada em logoutAction (resiliente):", err);
   }
+
+  return {
+    success: true,
+    message: "Sessão encerrada com sucesso.",
+  };
 }
 
 export async function getCurrentUserAction(): Promise<User | null> {

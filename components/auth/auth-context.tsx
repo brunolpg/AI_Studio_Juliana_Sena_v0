@@ -177,19 +177,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await logoutAction();
-      setUser(null);
-      toast({
-        type: "success",
-        title: "Desconectado",
-        description: "Você saiu do sistema de gestão com segurança.",
-      });
+      try {
+        await logoutAction();
+      } catch (err) {
+        console.warn("Aviso: Falha no logout via Server Action, tentando rota /api/auth/logout:", err);
+        try {
+          await fetch("/api/auth/logout", { method: "POST" });
+        } catch (fetchErr) {
+          console.warn("Aviso: Falha na requisição fetch para /api/auth/logout:", fetchErr);
+        }
+      }
     } catch (error) {
-      toast({
-        type: "error",
-        title: "Erro ao Sair",
-        description: "Falha ao limpar sessão do servidor.",
-      });
+      console.warn("Aviso durante processo de logout no servidor:", error);
+    } finally {
+      // Garante encerramento no cliente via SDK Supabase
+      try {
+        const { getSupabaseClient } = require("@/lib/supabase/client");
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          await supabase.auth.signOut().catch(() => {});
+        }
+      } catch (clientSignOutErr) {
+        console.warn("Aviso ao executar signOut no cliente Supabase:", clientSignOutErr);
+      }
+
+      setUser(null);
+      setIsAuthModalOpen(false);
+
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
     }
   };
 
