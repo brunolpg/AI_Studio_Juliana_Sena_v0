@@ -1235,7 +1235,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+                            <div className="flex items-center gap-2 self-start md:self-auto shrink-0 flex-wrap">
+                              {/* 1. MODO PROFISSIONAL */}
                               {!isPatientView && (
                                 <>
                                   <button
@@ -1251,7 +1252,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                       href={rx.pdf_assinado_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 rounded-lg transition-colors"
+                                      className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 rounded-lg transition-colors"
                                       title="Ver receita assinada digitalmente"
                                     >
                                       <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
@@ -1262,7 +1263,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                     <button
                                       type="button"
                                       onClick={() => openSigningModal(rx)}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 hover:bg-blue-100/70 rounded-xl transition-colors cursor-pointer"
+                                      className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100/70 rounded-lg transition-colors cursor-pointer"
                                       title="Assinar com certificado digital VIDaaS"
                                     >
                                       <FileCheck className="w-3.5 h-3.5 text-blue-600" />
@@ -1272,9 +1273,43 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                 </>
                               )}
 
+                              {/* 2. MODO PACIENTE: Botão para Baixar Prescrição Assinada */}
+                              {isPatientView && (
+                                rx.pdf_assinado_url ? (
+                                  <a
+                                    href={rx.pdf_assinado_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition-all shadow-2xs"
+                                    title="Baixar receituário assinado digitalmente"
+                                  >
+                                    <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                    <span>Baixar Receita Assinada</span>
+                                  </a>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      toast({
+                                        type: "warning",
+                                        title: "Prescrição em Processamento",
+                                        description:
+                                          "Este documento ainda está aguardando a assinatura digital qualificada. Por favor, solicite a liberação à profissional.",
+                                      })
+                                    }
+                                    className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-lg cursor-pointer hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
+                                    title="Documento pendente de assinatura"
+                                  >
+                                    <Download className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                                    <span>Receita Assinada (Pendente)</span>
+                                  </button>
+                                )
+                              )}
+
+                              {/* 3. Badge de Status (Em Uso / Suspenso) */}
                               {rx.ativo || rx.status === "Ativo" ? (
                                 isPatientView ? (
-                                  <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default select-none">
+                                  <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 cursor-default select-none">
                                     Em Uso (Ativo)
                                   </span>
                                 ) : (
@@ -1285,7 +1320,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                       setJustificativaTexto("");
                                       setIsSuspensionModalOpen(true);
                                     }}
-                                    className="px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200"
+                                    className="px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 dark:hover:border-rose-800"
                                     title="Suspender receita"
                                   >
                                     Em Uso (Ativo)
@@ -1293,7 +1328,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                 )
                               ) : (
                                 <span
-                                  className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-300 cursor-default"
+                                  className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 cursor-default"
                                   title="Receita suspensa"
                                 >
                                   Suspenso
