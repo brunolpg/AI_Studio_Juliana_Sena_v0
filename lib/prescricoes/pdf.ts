@@ -121,7 +121,7 @@ function sanitize(font: PDFFont, text: string): string {
   return out;
 }
 
-/** Desenha retângulo com cantos arredondados vectoriais via SVG Path */
+/** Desenha retângulo com cantos arredondados de forma robusta e compatível */
 function drawRoundedRectangle(
   page: PDFPage,
   opts: {
@@ -135,27 +135,38 @@ function drawRoundedRectangle(
     borderWidth?: number;
   }
 ) {
-  const { x, y, width: w, height: h, borderRadius = 6, color, borderColor, borderWidth } = opts;
+  const { x, y, width: w, height: h, borderRadius = 4, color, borderColor, borderWidth = 0.8 } = opts;
   const r = Math.min(borderRadius, w / 2, h / 2);
 
-  const pathSvg = [
-    `M ${x + r} ${y}`,
-    `L ${x + w - r} ${y}`,
-    `Q ${x + w} ${y} ${x + w} ${y + r}`,
-    `L ${x + w} ${y + h - r}`,
-    `Q ${x + w} ${y + h} ${x + w - r} ${y + h}`,
-    `L ${x + r} ${y + h}`,
-    `Q ${x} ${y + h} ${x} ${y + h - r}`,
-    `L ${x} ${y + r}`,
-    `Q ${x} ${y} ${x + r} ${y}`,
-    "Z"
-  ].join(" ");
+  // Preenchimento com cantos curvos
+  if (color) {
+    page.drawRectangle({
+      x: x + r,
+      y: y,
+      width: w - 2 * r,
+      height: h,
+      color,
+    });
+    page.drawRectangle({
+      x: x,
+      y: y + r,
+      width: w,
+      height: h - 2 * r,
+      color,
+    });
+    page.drawCircle({ x: x + r, y: y + r, size: r, color });
+    page.drawCircle({ x: x + w - r, y: y + r, size: r, color });
+    page.drawCircle({ x: x + r, y: y + h - r, size: r, color });
+    page.drawCircle({ x: x + w - r, y: y + h - r, size: r, color });
+  }
 
-  page.drawSvgPath(pathSvg, {
-    color,
-    borderColor,
-    borderWidth,
-  });
+  // Linhas de borda conectadas
+  if (borderColor) {
+    page.drawLine({ start: { x: x + r, y }, end: { x: x + w - r, y }, thickness: borderWidth, color: borderColor });
+    page.drawLine({ start: { x: x + r, y: y + h }, end: { x: x + w - r, y: y + h }, thickness: borderWidth, color: borderColor });
+    page.drawLine({ start: { x, y: y + r }, end: { x, y: y + h - r }, thickness: borderWidth, color: borderColor });
+    page.drawLine({ start: { x: x + w, y: y + r }, end: { x: x + w, y: y + h - r }, thickness: borderWidth, color: borderColor });
+  }
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
@@ -305,7 +316,7 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
   const measure = (value: string, width: number, font: PDFFont, size: number, leading: number) =>
     wrapText(sanitize(font, value), font, size, width).length * leading;
 
-  // 1. Cabeçalho com Logótipo em Alta Resolução e Proporção Fiel
+  // 1. Cabeçalho com Logótipo
   const logoBytes = loadClinicLogo();
   let embeddedLogo = null;
   if (logoBytes) {
@@ -320,7 +331,7 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
   let textStartX = MARGIN;
 
   if (embeddedLogo) {
-    const targetHeight = 46;
+    const targetHeight = 44;
     const scale = targetHeight / embeddedLogo.height;
     const targetWidth = embeddedLogo.width * scale;
 
@@ -342,23 +353,23 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
   page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_W - MARGIN, y }, thickness: 0.8, color: C.line });
   y -= 16;
 
-  // 2. Card do Paciente com Cantos Arredondados
-  const patientBoxH = 44;
+  // 2. Card do Paciente com Fundo e Cantos Suaves
+  const patientBoxH = 42;
   drawRoundedRectangle(page, {
     x: MARGIN,
     y: y - patientBoxH,
     width: CONTENT_W,
     height: patientBoxH,
-    borderRadius: 6,
+    borderRadius: 5,
     color: C.panel,
     borderColor: C.line,
     borderWidth: 0.8,
   });
 
-  text("PACIENTE", MARGIN + 14, y - 15, { font: bold, size: 7, color: C.faint });
-  text(paciente, MARGIN + 14, y - 30, { font: bold, size: 10.5, color: C.ink });
-  text("CPF", MARGIN, y - 15, { font: bold, size: 7, color: C.faint, align: "right", width: CONTENT_W - 14 });
-  text(formatCpf(input.paciente.cpf), MARGIN, y - 30, { font: bold, size: 10.5, color: C.ink, align: "right", width: CONTENT_W - 14 });
+  text("PACIENTE", MARGIN + 12, y - 14, { font: bold, size: 7, color: C.faint });
+  text(paciente, MARGIN + 12, y - 29, { font: bold, size: 10.5, color: C.ink });
+  text("CPF", MARGIN, y - 14, { font: bold, size: 7, color: C.faint, align: "right", width: CONTENT_W - 12 });
+  text(formatCpf(input.paciente.cpf), MARGIN, y - 29, { font: bold, size: 10.5, color: C.ink, align: "right", width: CONTENT_W - 12 });
   y -= patientBoxH + 20;
 
   // 3. Fórmula e Título
@@ -367,7 +378,7 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
   text(`Uso ${isOral ? "Oral" : "Tópico"}`, MARGIN, y - 12, { font: bold, size: 9.5, color: C.muted, align: "right", width: CONTENT_W });
   y -= 26;
 
-  // 4. Subtítulo "FÓRMULA ATIVA" e Tabela de Componentes com Cantos Arredondados
+  // 4. Subtítulo "FÓRMULA ATIVA" e Tabela de Componentes
   text("FÓRMULA ATIVA", MARGIN, y - 8, { font: bold, size: 7.5, color: C.faint });
   y -= 14;
 
@@ -378,13 +389,13 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
     const tableTop = y;
     const tableH = rowH * (componentes.length + 1);
 
-    // Contorno exterior arredondado da tabela
+    // Contorno da tabela
     drawRoundedRectangle(page, {
       x: MARGIN,
       y: tableTop - tableH,
       width: CONTENT_W,
       height: tableH,
-      borderRadius: 6,
+      borderRadius: 4,
       borderColor: C.line,
       borderWidth: 0.8,
     });
@@ -398,21 +409,21 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
       color: rgb(0.95, 0.96, 0.98),
     });
 
-    text("Componente / Ativo", MARGIN + 12, tableTop - 13, { font: bold, size: 8, color: C.text });
-    text("Concentração", MARGIN, tableTop - 13, { font: bold, size: 8, color: C.text, align: "right", width: CONTENT_W - 12 });
+    text("Componente / Ativo", MARGIN + 10, tableTop - 13, { font: bold, size: 8, color: C.text });
+    text("Concentração", MARGIN, tableTop - 13, { font: bold, size: 8, color: C.text, align: "right", width: CONTENT_W - 10 });
 
     componentes.forEach((c, i) => {
       const top = tableTop - rowH * (i + 1);
       page.drawLine({ start: { x: MARGIN, y: top }, end: { x: PAGE_W - MARGIN, y: top }, thickness: 0.5, color: C.line });
-      text(String(c.nome), MARGIN + 12, top - 13, { font: bold, size: 9.5 });
+      text(String(c.nome), MARGIN + 10, top - 13, { font: bold, size: 9.5 });
       const qty = present(c.quantidade) ? `${c.quantidade}${c.unidade ? c.unidade : ""}` : "";
-      text(qty, MARGIN, top - 13, { font: bold, size: 9.5, align: "right", width: CONTENT_W - 12 });
+      text(qty, MARGIN, top - 13, { font: bold, size: 9.5, align: "right", width: CONTENT_W - 10 });
     });
 
     y = tableTop - tableH - 14;
   }
 
-  // 5. Veículo / Dose / Total com Cantos Arredondados
+  // 5. Veículo / Dose / Total
   const cells: Array<[string, string]> = [];
   if (present(item.veiculo)) cells.push(["VEÍCULO BASE", String(item.veiculo)]);
   if (present(item.dosagem)) {
@@ -424,13 +435,13 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
   }
   if (cells.length > 0) {
     ensure(46);
-    const h = 38;
+    const h = 36;
     drawRoundedRectangle(page, {
       x: MARGIN,
       y: y - h,
       width: CONTENT_W,
       height: h,
-      borderRadius: 6,
+      borderRadius: 4,
       color: C.panel,
       borderColor: C.line,
       borderWidth: 0.8,
@@ -438,18 +449,18 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
 
     const colW = CONTENT_W / cells.length;
     cells.forEach(([label, value], i) => {
-      const cx = MARGIN + colW * i + 14;
-      text(label, cx, y - 14, { font: bold, size: 7, color: C.faint });
-      text(value, cx, y - 27, { font: bold, size: 9.5 });
+      const cx = MARGIN + colW * i + 12;
+      text(label, cx, y - 13, { font: bold, size: 7, color: C.faint });
+      text(value, cx, y - 26, { font: bold, size: 9.5 });
     });
     y -= h + 14;
   }
 
-  // 6. Posologia com Cantos Arredondados e Destaque Lateral Suave
+  // 6. Posologia com Caixa e Linha Lateral de Destaque
   if (present(item.posologia)) {
     const w = CONTENT_W - 28;
     const bodyH = measure(String(item.posologia), w, regular, 9.5, 14);
-    const h = bodyH + 34;
+    const h = bodyH + 32;
     ensure(h + 6);
 
     drawRoundedRectangle(page, {
@@ -457,15 +468,15 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
       y: y - h,
       width: CONTENT_W,
       height: h,
-      borderRadius: 6,
+      borderRadius: 4,
       color: C.tealBg,
       borderColor: C.tealLine,
       borderWidth: 0.8,
     });
 
     page.drawLine({
-      start: { x: MARGIN + 1.5, y: y - 4 },
-      end: { x: MARGIN + 1.5, y: y - h + 4 },
+      start: { x: MARGIN + 1.5, y: y - 2 },
+      end: { x: MARGIN + 1.5, y: y - h + 2 },
       thickness: 3,
       color: C.teal,
     });
@@ -485,7 +496,7 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
     y -= h + 6;
   }
 
-  // 8. Observações à Farmácia com Cantos Arredondados
+  // 8. Observações à Farmácia
   if (present(item.orient_farmacia)) {
     const w = CONTENT_W - 24;
     const h = measure(String(item.orient_farmacia), w, italic, 8.5, 12.5) + 26;
@@ -496,7 +507,7 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
       y: y - h,
       width: CONTENT_W,
       height: h,
-      borderRadius: 6,
+      borderRadius: 4,
       color: C.panel,
       borderColor: C.line,
       borderWidth: 0.8,
