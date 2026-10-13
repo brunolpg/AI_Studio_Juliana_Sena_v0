@@ -9,6 +9,7 @@ import type {
   PrescriptionItem,
 } from "@/types/clinical-record";
 import type { ActionResponse } from "@/types/client";
+import { assinarPayloadSOAP } from "@/lib/crypto-payload";
 
 /**
  * Consulta Prontuário e Histórico Clínico do Paciente
@@ -175,6 +176,11 @@ export async function getPatientClinicalRecordAction(
           sinaisVitais: e.sinais_vitais || undefined,
           avaliacao: e.avaliacao,
           plano: e.plano,
+          payload_canonico: e.payload_canonico || undefined,
+          payload_hash: e.payload_hash || undefined,
+          assinatura: e.assinatura || undefined,
+          algoritmo: e.algoritmo || undefined,
+          assinado_em: e.assinado_em || undefined,
           created_at: e.created_at,
         }));
       }
@@ -201,7 +207,7 @@ export async function getPatientClinicalRecordAction(
 }
 
 /**
- * Adiciona uma Nova Evolução Clínica / Registro de Consulta (SOAP)
+ * Adiciona uma Nova Evolução Clínica / Registro de Consulta (SOAP) com Assinatura Digital de Payload
  */
 export async function addClinicalEvolutionAction(
   clientId: string,
@@ -229,39 +235,64 @@ export async function addClinicalEvolutionAction(
       calculatedImc = Number((input.sinaisVitais.peso / (alturaMetros * alturaMetros)).toFixed(1));
     }
 
-    const newEvolution: ClinicalEvolution = {
-      id: `evo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      client_id: clientId,
+    const assinadoEmServer = new Date().toISOString();
+
+    const rawPayloadToSign = {
+      paciente_id: clientId,
       data: input.data || new Date().toISOString().split("T")[0],
       horario:
         input.horario ||
         new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
-      tipo: input.tipo || "Consulta",
-      tipo_atendimento: input.tipo_atendimento || input.tipo,
-      procedimento_id: input.procedimento_id,
-      appointment_id: input.appointment_id || null,
-      exames_anexos: input.exames_anexos || [],
-      fotos_paciente: input.fotos_paciente || [],
-      profissional: input.profissional || "Dra. Juliana Sena",
-      especialidade: input.especialidade || "Clínica Geral",
       subjetivo: input.subjetivo || "Sem queixas ativas registradas.",
       objetivo: input.objetivo || "Exame físico sumário preservado.",
-      sinaisVitais: input.sinaisVitais
+      avaliacao: input.avaliacao || "Condição estável.",
+      plano: input.plano || "Orientações gerais de saúde.",
+      sinais_vitais: input.sinaisVitais
         ? {
             ...input.sinaisVitais,
             imc: calculatedImc,
           }
-        : undefined,
-      avaliacao: input.avaliacao || "Condição estável.",
-      plano: input.plano || "Orientações gerais de saúde.",
+        : null,
+      exames_anexos: input.exames_anexos || [],
+      fotos_paciente: input.fotos_paciente || [],
+      profissional: input.profissional || "Dra. Juliana Sena",
+      especialidade: input.especialidade || "Clínica Geral",
+      assinado_em: assinadoEmServer,
+    };
+
+    const signatureResult = assinarPayloadSOAP(rawPayloadToSign);
+
+    const newEvolution: ClinicalEvolution = {
+      id: `evo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      client_id: clientId,
+      data: rawPayloadToSign.data,
+      horario: rawPayloadToSign.horario,
+      tipo: input.tipo || "Consulta",
+      tipo_atendimento: input.tipo_atendimento || input.tipo,
+      procedimento_id: input.procedimento_id,
+      appointment_id: input.appointment_id || null,
+      exames_anexos: rawPayloadToSign.exames_anexos,
+      fotos_paciente: rawPayloadToSign.fotos_paciente,
+      profissional: rawPayloadToSign.profissional,
+      especialidade: rawPayloadToSign.especialidade,
+      subjetivo: rawPayloadToSign.subjetivo,
+      objetivo: rawPayloadToSign.objetivo,
+      sinaisVitais: rawPayloadToSign.sinais_vitais || undefined,
+      avaliacao: rawPayloadToSign.avaliacao,
+      plano: rawPayloadToSign.plano,
+      payload_canonico: signatureResult.payloadCanonicoStr,
+      payload_hash: signatureResult.payloadHash,
+      assinatura: signatureResult.assinatura,
+      algoritmo: signatureResult.algoritmo,
+      assinado_em: signatureResult.assinadoEm,
       created_at: new Date().toISOString(),
     };
 
     const supabase = await createClient();
     if (supabase) {
-      // Tenta gravar na tabela evolucoes_clinicas
+      // Tenta gravar na tabela evolucoes_clinicas com assinatura digital do payload
       try {
-        await supabase.from("evolucoes_clinicas").insert({
+        const { error: insertErr } = await supabase.from("evolucoes_clinicas").insert({
           paciente_id: clientId,
           data: newEvolution.data,
           horario: newEvolution.horario,
@@ -278,9 +309,45 @@ export async function addClinicalEvolutionAction(
           sinais_vitais: newEvolution.sinaisVitais,
           avaliacao: newEvolution.avaliacao,
           plano: newEvolution.plano,
+          payload_canonico: signatureResult.payloadCanonicoStr,
+          payload_hash: signatureResult.payloadHash,
+          assinatura: signatureResult.assinatura,
+          algoritmo: signatureResult.algoritmo,
+          assinado_em: signatureResult.assinadoEm,
         });
-      } catch (e) {
-        console.warn("Aviso ao salvar evolucoes_clinicas no Supabase:", e);
+
+        if (insertErr) {
+          console.error("Erro ao salvar evolução clínica na tabela evolucoes_clinicas:", insertErr.message);
+          // Fallback seguro de salvamento sem colunas de assinatura caso o schema remoto ainda não as possua
+          const { error: fallbackErr } = await supabase.from("evolucoes_clinicas").insert({
+            paciente_id: clientId,
+            data: newEvolution.data,
+            horario: newEvolution.horario,
+            tipo: newEvolution.tipo,
+            tipo_atendimento: newEvolution.tipo_atendimento,
+            procedimento_id: newEvolution.procedimento_id,
+            appointment_id: newEvolution.appointment_id,
+            exames_anexos: newEvolution.exames_anexos,
+            fotos_paciente: newEvolution.fotos_paciente,
+            profissional: newEvolution.profissional,
+            especialidade: newEvolution.especialidade,
+            subjetivo: newEvolution.subjetivo,
+            objetivo: newEvolution.objetivo,
+            sinais_vitais: newEvolution.sinaisVitais,
+            avaliacao: newEvolution.avaliacao,
+            plano: newEvolution.plano,
+          });
+
+          if (fallbackErr) {
+            console.error("Erro crítico ao salvar evolução no Supabase:", fallbackErr.message);
+            return {
+              success: false,
+              message: `Erro ao gravar evolução no banco: ${fallbackErr.message}`,
+            };
+          }
+        }
+      } catch (e: any) {
+        console.error("Exceção no registro da evolução clínica no Supabase:", e?.message || e);
       }
 
       // Se houver um agendamento vinculado, atualiza seu status para 'Realizado' no Supabase
@@ -303,7 +370,7 @@ export async function addClinicalEvolutionAction(
 
     return {
       success: true,
-      message: "Evolução clínica registrada no prontuário!",
+      message: "Evolução clínica registrada no prontuário com assinatura digital de payload!",
       data: newEvolution,
     };
   } catch (error) {

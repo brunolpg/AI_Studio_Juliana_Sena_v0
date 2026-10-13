@@ -27,6 +27,11 @@ export interface ClinicalEvolution {
   sinaisVitais?: VitalSigns;
   avaliacao: string; // Hipótese diagnóstica, diagnóstico fechado
   plano: string; // Conduta terapêutica, prescrições, orientações
+  payload_canonico?: string;
+  payload_hash?: string;
+  assinatura?: string;
+  algoritmo?: string;
+  assinado_em?: string;
   created_at: string;
 }
 
