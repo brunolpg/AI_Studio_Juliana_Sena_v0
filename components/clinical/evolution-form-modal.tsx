@@ -476,7 +476,7 @@ export function EvolutionFormModal({
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <div>
-                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   PA (mmHg)
                 </label>
                 <input
@@ -488,7 +488,7 @@ export function EvolutionFormModal({
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   FC (bpm)
                 </label>
                 <input
@@ -500,7 +500,7 @@ export function EvolutionFormModal({
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Hidratação (%)
                 </label>
                 <input
@@ -513,7 +513,7 @@ export function EvolutionFormModal({
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Oleosidade (%)
                 </label>
                 <input
@@ -526,7 +526,7 @@ export function EvolutionFormModal({
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Elasticidade (%)
                 </label>
                 <input
