@@ -216,7 +216,7 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
                   console.warn("Aviso ao tentar realizar logout:", err);
                 } finally {
                   if (typeof window !== "undefined") {
-                    window.location.href = "/login";
+                    window.location.href = "/";
                   }
                 }
               }}
