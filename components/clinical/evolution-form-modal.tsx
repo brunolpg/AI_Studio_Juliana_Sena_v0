@@ -475,28 +475,68 @@ export function EvolutionFormModal({
               Biometria & Parâmetros Regenerativos
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              {/* PA e FC permanecem iguais */}
               <div>
-                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">PA (mmHg)</label>
-                <input type="text" placeholder="120/80" value={pa} onChange={(e) => setPa(e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500" />
+                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                  PA (mmHg)
+                </label>
+                <input
+                  type="text"
+                  placeholder="120/80"
+                  value={pa}
+                  onChange={(e) => setPa(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500"
+                />
               </div>
               <div>
-                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">FC (bpm)</label>
-                <input type="number" placeholder="72" value={fc} onChange={(e) => setFc(e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500" />
+                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                  FC (bpm)
+                </label>
+                <input
+                  type="number"
+                  placeholder="72"
+                  value={fc}
+                  onChange={(e) => setFc(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500"
+                />
               </div>
-              
-              {/* Novos inputs */}
               <div>
-                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">Hidratação (%)</label>
-                <input type="number" step="0.1" placeholder="60.5" value={hidratacao} onChange={(e) => setHidratacao(e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500" />
+                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                  Hidratação (%)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="60.5"
+                  value={hidratacao}
+                  onChange={(e) => setHidratacao(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500"
+                />
               </div>
               <div>
-                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">Oleosidade (%)</label>
-                <input type="number" step="0.1" placeholder="30" value={oleosidade} onChange={(e) => setOleosidade(e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500" />
+                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                  Oleosidade (%)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="30"
+                  value={oleosidade}
+                  onChange={(e) => setOleosidade(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500"
+                />
               </div>
-              <div className="col-span-2 sm:col-span-1">
-                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">Elasticidade (%)</label>
-                <input type="number" step="0.1" placeholder="45" value={elasticidade} onChange={(e) => setElasticidade(e.target.value)} className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500" />
+              <div>
+                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                  Elasticidade (%)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="45"
+                  value={elasticidade}
+                  onChange={(e) => setElasticidade(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500"
+                />
               </div>
             </div>
           </div>

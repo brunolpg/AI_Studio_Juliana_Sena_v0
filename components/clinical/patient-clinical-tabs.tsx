@@ -1383,36 +1383,35 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
                       <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-200/50">
-                        <span className="text-[10px] text-slate-400 font-semibold block">
-                          Pressão Arterial
-                        </span>
-                        <span className="text-base font-bold text-slate-900 dark:text-white font-mono">
-                          {evolutions[0].sinaisVitais.pressaoArterial || "--/--"} mmHg
+                        <span className="text-[10px] text-slate-400 font-semibold block">PA (mmHg)</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">
+                          {evolutions[0].sinaisVitais.pressaoArterial || "--/--"}
                         </span>
                       </div>
-
                       <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-200/50">
-                        <span className="text-[10px] text-slate-400 font-semibold block">
-                          Frequência Cardíaca
-                        </span>
-                        <span className="text-base font-bold text-slate-900 dark:text-white font-mono">
-                          {evolutions[0].sinaisVitais.frequenciaCardiaca || "--"} bpm
+                        <span className="text-[10px] text-slate-400 font-semibold block">FC (bpm)</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">
+                          {evolutions[0].sinaisVitais.frequenciaCardiaca ? `${evolutions[0].sinaisVitais.frequenciaCardiaca}` : "--"}
                         </span>
                       </div>
-
                       <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-200/50">
-                        <span className="text-[10px] text-slate-400 font-semibold block">Peso</span>
-                        <span className="text-base font-bold text-slate-900 dark:text-white font-mono">
-                          {evolutions[0].sinaisVitais.peso || "--"} kg
+                        <span className="text-[10px] text-slate-400 font-semibold block">Hidratação (%)</span>
+                        <span className="text-sm font-bold text-teal-600 dark:text-teal-400 font-mono">
+                          {evolutions[0].sinaisVitais.hidratacaoCutanea != null ? `${evolutions[0].sinaisVitais.hidratacaoCutanea}%` : "--"}
                         </span>
                       </div>
-
                       <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-200/50">
-                        <span className="text-[10px] text-slate-400 font-semibold block">IMC</span>
-                        <span className="text-base font-bold text-teal-600 dark:text-teal-400 font-mono">
-                          {evolutions[0].sinaisVitais.imc || "--"} kg/m²
+                        <span className="text-[10px] text-slate-400 font-semibold block">Oleosidade (%)</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">
+                          {evolutions[0].sinaisVitais.oleosidadeSebo != null ? `${evolutions[0].sinaisVitais.oleosidadeSebo}%` : "--"}
+                        </span>
+                      </div>
+                      <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-200/50">
+                        <span className="text-[10px] text-slate-400 font-semibold block">Elasticidade (%)</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">
+                          {evolutions[0].sinaisVitais.indiceElasticidade != null ? `${evolutions[0].sinaisVitais.indiceElasticidade}%` : "--"}
                         </span>
                       </div>
                     </div>
@@ -1437,32 +1436,36 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                           <th className="py-2.5 px-3">Tipo</th>
                           <th className="py-2.5 px-3">PA (mmHg)</th>
                           <th className="py-2.5 px-3">FC (bpm)</th>
-                          <th className="py-2.5 px-3">Temp (°C)</th>
-                          <th className="py-2.5 px-3">Peso (kg)</th>
-                          <th className="py-2.5 px-3">IMC (kg/m²)</th>
+                          <th className="py-2.5 px-3">Hidratação (%)</th>
+                          <th className="py-2.5 px-3">Oleosidade (%)</th>
+                          <th className="py-2.5 px-3">Elasticidade (%)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
                         {evolutions
                           .filter((e) => e.sinaisVitais)
                           .map((e) => (
-                            <tr key={e.id} className="hover:bg-slate-50/50">
+                            <tr key={e.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
                               <td className="py-2 px-3 font-sans font-medium text-slate-800 dark:text-slate-200">
                                 {e.data}
                               </td>
-                              <td className="py-2 px-3 font-sans text-slate-600">{e.tipo}</td>
+                              <td className="py-2 px-3 font-sans text-slate-600 dark:text-slate-400">
+                                {e.tipo}
+                              </td>
                               <td className="py-2 px-3">
                                 {e.sinaisVitais?.pressaoArterial || "-"}
                               </td>
                               <td className="py-2 px-3">
-                                {e.sinaisVitais?.frequenciaCardiaca || "-"}
+                                {e.sinaisVitais?.frequenciaCardiaca ? `${e.sinaisVitais.frequenciaCardiaca}` : "-"}
+                              </td>
+                              <td className="py-2 px-3 text-teal-600 dark:text-teal-400 font-semibold">
+                                {e.sinaisVitais?.hidratacaoCutanea != null ? `${e.sinaisVitais.hidratacaoCutanea}%` : "-"}
                               </td>
                               <td className="py-2 px-3">
-                                {e.sinaisVitais?.temperatura ? `${e.sinaisVitais.temperatura}°C` : "-"}
+                                {e.sinaisVitais?.oleosidadeSebo != null ? `${e.sinaisVitais.oleosidadeSebo}%` : "-"}
                               </td>
-                              <td className="py-2 px-3">{e.sinaisVitais?.peso || "-"}</td>
-                              <td className="py-2 px-3 font-bold text-teal-600">
-                                {e.sinaisVitais?.imc || "-"}
+                              <td className="py-2 px-3">
+                                {e.sinaisVitais?.indiceElasticidade != null ? `${e.sinaisVitais.indiceElasticidade}%` : "-"}
                               </td>
                             </tr>
                           ))}
