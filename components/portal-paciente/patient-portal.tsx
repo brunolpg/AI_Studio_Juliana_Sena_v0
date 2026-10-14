@@ -27,6 +27,7 @@ import { PatientClinicalTabs } from "@/components/clinical/patient-clinical-tabs
 import { AppointmentTableView } from "@/components/appointments/appointment-table-view";
 import { UserMenu } from "@/components/shared/user-menu";
 import { MedicalHistoryModal } from "@/components/clinical/medical-history-modal";
+import { validateFileSize } from "@/lib/validations/file-upload";
 import type { MedicalHistory } from "@/types/clinical-record";
 
 interface PatientPortalProps {
@@ -362,8 +363,10 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                             onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (!file) return;
-                              if (file.size > 5 * 1024 * 1024) {
-                                alert("Envie uma foto de até 5MB.");
+                              const check = validateFileSize(file);
+                              if (!check.valid) {
+                                alert(check.error || "A foto de perfil deve possuir no máximo 5MB.");
+                                e.target.value = "";
                                 return;
                               }
                               const supabase = getSupabaseClient();

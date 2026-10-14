@@ -11,7 +11,7 @@ import { RX_MARKER_PREFIX } from "./pdf";
  * A validade jurídica continua sendo conferida no Validador do ITI.
  */
 
-export const MAX_SIGNED_PDF_BYTES = 10 * 1024 * 1024;
+export const MAX_SIGNED_PDF_BYTES = 5 * 1024 * 1024;
 
 export type RxIdMatch = "match" | "missing" | "mismatch";
 
@@ -37,7 +37,7 @@ export async function inspectSignedPdf(bytes: Uint8Array, expectedRxId: string):
   const fail = (msg: string): SignedPdfInspection => ({ ok: false, errors: [...errors, msg], warnings, info });
 
   if (bytes.length === 0) return fail("O arquivo está vazio.");
-  if (bytes.length > MAX_SIGNED_PDF_BYTES) return fail("O arquivo é maior que 10 MB.");
+  if (bytes.length > MAX_SIGNED_PDF_BYTES) return fail("O tamanho do arquivo excede o limite máximo permitido de 5MB.");
 
   // cabeçalho %PDF- nos primeiros bytes
   const head = Buffer.from(bytes.subarray(0, 1024)).toString("latin1");

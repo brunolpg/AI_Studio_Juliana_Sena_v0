@@ -38,6 +38,7 @@ import {
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/auth/auth-context";
+import { validateFileSize, validateMultipleFiles } from "@/lib/validations/file-upload";
 import type { Client } from "@/types/client";
 import type { TimeSlot, AppointmentInput, Appointment } from "@/types/appointment";
 import { generateGoogleCalendarTemplateUrl } from "@/lib/google-calendar/calendar-service";
@@ -241,12 +242,17 @@ function AppointmentFormModalContent({
 
   const handleAddFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-    const valid = files.filter(f => f.size <= MAX_SIZE);
-    if (valid.length < files.length) {
-      alert("Alguns arquivos excederam o limite máximo de 10MB.");
+    const validation = validateMultipleFiles(files);
+    if (!validation.valid) {
+      toast({
+        type: 'error',
+        title: 'Anexos acima de 5MB',
+        description: validation.error,
+      });
+      e.target.value = '';
+      return;
     }
-    setClinicalFiles(prev => [...prev, ...valid]);
+    setClinicalFiles(prev => [...prev, ...files]);
   };
 
   const handleRemoveFile = (idx: number) => {
@@ -1428,7 +1434,18 @@ function AppointmentFormModalContent({
                       accept="image/*,application/pdf"
                       onChange={(e) => {
                         if (e.target.files && e.target.files[0]) {
-                          setReceiptFile(e.target.files[0]);
+                          const file = e.target.files[0];
+                          const check = validateFileSize(file);
+                          if (!check.valid) {
+                            toast({
+                              type: "error",
+                              title: "Comprovante muito grande",
+                              description: check.error,
+                            });
+                            e.target.value = "";
+                            return;
+                          }
+                          setReceiptFile(file);
                         }
                       }}
                       className="hidden"

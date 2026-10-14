@@ -17,6 +17,7 @@ import {
 import { addClinicalEvolutionAction } from "@/actions/clinical-actions";
 import { useToast } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { validateMultipleFiles } from "@/lib/validations/file-upload";
 import type { Client } from "@/types/client";
 import type { EvolutionType } from "@/types/clinical-record";
 import { PROCEDIMENTOS_CADASTRAIS } from "@/lib/procedimentos-mock";
@@ -627,8 +628,18 @@ export function EvolutionFormModal({
                     accept=".pdf,.png,.jpg,.jpeg,.bmp,application/pdf,image/*"
                     onChange={(e) => {
                       if (e.target.files) {
-                        const files = Array.from(e.target.files);
-                        setExamesFiles((prev) => [...prev, ...files]);
+                        const selectedFiles = Array.from(e.target.files);
+                        const validation = validateMultipleFiles(selectedFiles);
+                        if (!validation.valid) {
+                          toast({
+                            type: 'error',
+                            title: 'Anexos acima de 5MB',
+                            description: validation.error,
+                          });
+                          e.target.value = '';
+                          return;
+                        }
+                        setExamesFiles((prev) => [...prev, ...selectedFiles]);
                       }
                     }}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
@@ -688,8 +699,18 @@ export function EvolutionFormModal({
                     accept=".png,.jpg,.jpeg,.bmp,image/png,image/jpeg,image/bmp"
                     onChange={(e) => {
                       if (e.target.files) {
-                        const files = Array.from(e.target.files);
-                        setFotosFiles((prev) => [...prev, ...files]);
+                        const selectedFiles = Array.from(e.target.files);
+                        const validation = validateMultipleFiles(selectedFiles);
+                        if (!validation.valid) {
+                          toast({
+                            type: 'error',
+                            title: 'Anexos acima de 5MB',
+                            description: validation.error,
+                          });
+                          e.target.value = '';
+                          return;
+                        }
+                        setFotosFiles((prev) => [...prev, ...selectedFiles]);
                       }
                     }}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"

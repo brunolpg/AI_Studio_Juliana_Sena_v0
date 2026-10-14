@@ -37,6 +37,7 @@ import {
   getAestheticEvaluationAction,
 } from "@/actions/clinical-actions";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { validateFileSize } from "@/lib/validations/file-upload";
 import { EvolutionFormModal } from "./evolution-form-modal";
 import { MedicalHistoryModal } from "./medical-history-modal";
 import { PrescriptionModal } from "./prescription-modal";
@@ -140,6 +141,17 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const handleSignedFile = async (file?: File | null) => {
     if (!file || !signingRx) return;
     setSignError(null);
+    const check = validateFileSize(file);
+    if (!check.valid) {
+      const errMsg = check.error || "O arquivo do PDF assinado não pode exceder 5MB.";
+      setSignError(errMsg);
+      toast({
+        type: 'error',
+        title: 'Arquivo excede 5MB',
+        description: errMsg,
+      });
+      return;
+    }
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
       setSignError("Selecione um arquivo em formato PDF.");
       return;

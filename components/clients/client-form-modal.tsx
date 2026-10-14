@@ -6,6 +6,7 @@ import { BRAZILIAN_STATES, CITIES_BY_STATE, formatCPF, formatPhone, formatCEP, i
 import { createClientAction, updateClientAction } from "@/actions/client-actions";
 import { clientSchema } from "@/lib/validations/client-schema";
 import { useToast } from "@/components/ui/toast";
+import { validateFileSize } from "@/lib/validations/file-upload";
 import type { Client } from "@/types/client";
 
 interface ClientFormModalProps {
@@ -171,13 +172,12 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validação de tamanho (5 MB = 5 * 1024 * 1024 bytes)
-    const limit = 5 * 1024 * 1024;
-    if (file.size > limit) {
+    const check = validateFileSize(file);
+    if (!check.valid) {
       toast({
         type: "error",
-        title: "Arquivo muito grande",
-        description: "O tamanho máximo permitido para a foto é de 5 MB.",
+        title: "Foto de perfil inválida",
+        description: "A foto de perfil deve possuir no máximo 5MB.",
       });
       e.target.value = "";
       return;

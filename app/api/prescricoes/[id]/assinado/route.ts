@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return jsonError(400, "Envio inválido. Selecione o arquivo PDF assinado.");
     }
     if (!file || typeof file === "string") return jsonError(400, "Selecione o arquivo PDF assinado.");
-    if (file.size > MAX_SIGNED_PDF_BYTES) return jsonError(413, "O arquivo é maior que 10 MB.");
+    if (file.size > MAX_SIGNED_PDF_BYTES) return jsonError(413, "O tamanho do arquivo excede o limite máximo permitido de 5MB.");
 
     const result = await attachSignedPrescription(supabase, id, new Uint8Array(await file.arrayBuffer()));
 

@@ -19,6 +19,7 @@ import { getTimeSlotsForDateAction, updateAppointmentAction } from "@/actions/ap
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/auth/auth-context";
+import { validateFileSize } from "@/lib/validations/file-upload";
 import type { Appointment, AppointmentStatus, TimeSlot } from "@/types/appointment";
 import {
   isAllowedAppointmentDay,
@@ -107,8 +108,9 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
       toast({ type: "error", title: "Limite atingido", description: "Máximo de 3 anexos por agendamento." });
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast({ type: "error", title: "Arquivo muito grande", description: "O arquivo deve ter até 10MB." });
+    const check = validateFileSize(file);
+    if (!check.valid) {
+      toast({ type: "error", title: "Arquivo muito grande", description: check.error });
       return;
     }
 

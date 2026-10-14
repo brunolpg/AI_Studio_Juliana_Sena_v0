@@ -16,6 +16,7 @@ import {
 import { updateMedicalHistoryAction } from "@/actions/clinical-actions";
 import { useToast } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { validateMultipleFiles } from "@/lib/validations/file-upload";
 import type { Client } from "@/types/client";
 import type { MedicalHistory } from "@/types/clinical-record";
 
@@ -755,6 +756,16 @@ export function MedicalHistoryModal({
                 onChange={(e) => {
                   if (e.target.files) {
                     const newFiles = Array.from(e.target.files);
+                    const check = validateMultipleFiles(newFiles);
+                    if (!check.valid) {
+                      toast({
+                        type: 'error',
+                        title: 'Foto excede o limite',
+                        description: check.error,
+                      });
+                      e.target.value = '';
+                      return;
+                    }
                     const totalAllowed = 3 - (fotosUrls.length + fotosFiles.length);
                     const filesToAdd = newFiles.slice(0, totalAllowed);
                     if (filesToAdd.length > 0) {
