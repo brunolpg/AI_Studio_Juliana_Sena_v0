@@ -202,7 +202,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                 d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.24 0 3.17 2.64 1.2 6.6l4.08 3.15c.95-2.84 3.6-4.95 6.72-4.95z"
               />
             </svg>
-            <span>Acessar com o Google</span>
+            <span>Continuar com Google</span>
           </button>
           <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
