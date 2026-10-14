@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-context";
 import { PatientDashboard } from "@/components/clients/patient-dashboard";
@@ -45,6 +45,139 @@ export default function HomePage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [confirmPasswordValue, setConfirmPasswordValue] = useState("");
   const [role, setRole] = useState<"paciente" | "profissional" | "administrador">("paciente");
+
+  // Estados para "Esqueci minha senha"
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
+
+  // Estados para definir nova senha (quando acessa pelo link de recuperação)
+  const [isUpdatePasswordModalOpen, setIsUpdatePasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  // Listener para detectar retorno do link de recuperação (PASSWORD_RECOVERY)
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setIsUpdatePasswordModalOpen(true);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Função para disparar o e-mail de redefinição
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      toast({
+        type: "error",
+        title: "E-mail obrigatório",
+        description: "Por favor, digite seu e-mail cadastrado.",
+      });
+      return;
+    }
+
+    setIsSendingReset(true);
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) throw new Error("Cliente Supabase não inicializado.");
+
+      const redirectTo = `${typeof window !== "undefined" ? window.location.origin : ""}/`;
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+        redirectTo,
+      });
+
+      if (error) {
+        toast({
+          type: "error",
+          title: "Erro ao solicitar recuperação",
+          description: error.message,
+        });
+      } else {
+        setResetEmailSent(true);
+        toast({
+          type: "success",
+          title: "E-mail enviado!",
+          description: "Enviamos as instruções de redefinição para o seu e-mail.",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        type: "error",
+        title: "Erro",
+        description: err?.message || "Não foi possível enviar o e-mail de recuperação.",
+      });
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
+  // Função para salvar a nova senha
+  const handleUpdatePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword.trim() || newPassword.length < 6) {
+      toast({
+        type: "error",
+        title: "Senha inválida",
+        description: "A nova senha deve ter no mínimo 6 caracteres.",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      toast({
+        type: "error",
+        title: "Senhas divergentes",
+        description: "A confirmação de senha não confere com a nova senha.",
+      });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) throw new Error("Cliente Supabase não inicializado.");
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        toast({
+          type: "error",
+          title: "Erro ao atualizar senha",
+          description: error.message,
+        });
+      } else {
+        toast({
+          type: "success",
+          title: "Senha atualizada com sucesso!",
+          description: "Sua senha foi redefinida. Você já pode acessar sua conta.",
+        });
+        setIsUpdatePasswordModalOpen(false);
+        setNewPassword("");
+        setConfirmNewPassword("");
+      }
+    } catch (err: any) {
+      toast({
+        type: "error",
+        title: "Erro",
+        description: err?.message || "Falha ao atualizar a senha.",
+      });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
 
   // Função para Google OAuth
   const handleGoogleOAuth = async () => {
@@ -351,9 +484,22 @@ export default function HomePage() {
 
               {/* Senha */}
               <div className="space-y-1">
-                <label htmlFor="password" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Senha
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Senha
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotEmail(email);
+                      setResetEmailSent(false);
+                      setIsForgotModalOpen(true);
+                    }}
+                    className="text-[11px] font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 hover:underline transition-colors cursor-pointer"
+                  >
+                    Esqueci minha senha
+                  </button>
+                </div>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
@@ -376,7 +522,7 @@ export default function HomePage() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isSubmitting}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-md p-1"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-md p-1 cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -640,6 +786,170 @@ export default function HomePage() {
           Dra. Juliana Sena • Sistema em conformidade com a LGPD e RLS do PostgreSQL.
         </p>
       </div>
+
+      {/* Modal: Solicitar Recuperação de Senha */}
+      {isForgotModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div
+            className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                  <Lock className="w-4 h-4"/>
+                </div>
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                  Recuperação de Senha
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsForgotModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {resetEmailSent ? (
+              <div className="py-6 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                  <Mail className="w-6 h-6"/>
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Verifique seu e-mail
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed px-4">
+                  Enviamos um link de redefinição de senha para <strong>{forgotEmail}</strong>. Verifique sua caixa de entrada e pasta de spam.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsForgotModalOpen(false)}
+                  className="w-full mt-4 py-2.5 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Entendido / Voltar ao Login
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPasswordSubmit} className="space-y-4 pt-4">
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Informe o e-mail cadastrado em sua conta para receber um link seguro de recuperação de senha.
+                </p>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    E-mail cadastrado
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"/>
+                    <input
+                      type="email"
+                      required
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="seu.email@provedor.com"
+                      className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotModalOpen(false)}
+                    className="flex-1 py-2 px-3 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSendingReset}
+                    className="flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+                  >
+                    {isSendingReset ? "Enviando link..." : "Enviar link"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Definir Nova Senha (Acionado ao retornar do link do e-mail) */}
+      {isUpdatePasswordModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div
+            className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                <Lock className="w-4 h-4"/>
+              </div>
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                Definir Nova Senha
+              </h3>
+            </div>
+
+            <form onSubmit={handleUpdatePasswordSubmit} className="space-y-4 pt-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Digite e confirme sua nova senha de acesso à conta.
+              </p>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Nova Senha (mínimo 6 caracteres)
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"/>
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-9 pr-10 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Confirmar Nova Senha
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"/>
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isUpdatingPassword}
+                className="w-full mt-2 py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                {isUpdatingPassword ? "Salvando nova senha..." : "Salvar Nova Senha"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
