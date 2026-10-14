@@ -217,7 +217,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                     Dra. Juliana Sena
                   </h1>
                   <p className="text-[10px] sm:text-[11px] text-teal-600 dark:text-teal-400 font-semibold tracking-wide truncate">
-                    Portal do Paciente • Acesso Restrito
+                    Portal do Paciente
                   </p>
                 </div>
               </div>
