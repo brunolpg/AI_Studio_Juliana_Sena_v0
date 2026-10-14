@@ -1218,17 +1218,17 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
                     {prescriptions.map((rx) => {
-                      const [year, month, day] = rx.data.split("-");
-                      const dateFormatted = `${day}/${month}/${year}`;
+                      const [year, month, day] = (rx.data || "").split("-");
+                      const dateFormatted = year && month && day ? `${day}/${month}/${year}` : rx.data;
 
                       return (
                         <div
                           key={rx.id}
                           className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between"
                         >
-                          {/* Cabeçalho do Card: Fluxo flexível sem absolute e sem sobreposição */}
                           <div>
-                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 sm:gap-3 mb-3.5 pb-3 border-b border-slate-100 dark:border-slate-800/70">
+                            {/* Cabeçalho do Card: Título + Ações (Responsivo e sem sobreposição) */}
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 sm:gap-3 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70">
                               
                               {/* Título da Fórmula e Metadados */}
                               <div className="min-w-0 flex-1">
@@ -1252,10 +1252,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                 </div>
                               </div>
 
-                              {/* Ações e Badges (Fluxo dinâmico sem sobrepor o texto) */}
+                              {/* Ações e Badges */}
                               <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap shrink-0">
-                                
-                                {/* 1. MODO PROFISSIONAL / ADMINISTRADOR (!isPatientView) */}
                                 {!isPatientView && (
                                   <>
                                     <button
@@ -1264,7 +1262,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                       className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 hover:bg-teal-50/70 dark:hover:bg-slate-800/80 rounded-xl cursor-pointer transition-colors shadow-2xs"
                                       title="Visualizar e imprimir relatório da receita"
                                     >
-                                      <Printer className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400"/>
+                                      <Printer className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                                       <span>Gerar Relatório</span>
                                     </button>
 
@@ -1276,9 +1274,9 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                         className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 rounded-xl transition-colors shadow-2xs"
                                         title="Ver receita assinada digitalmente"
                                       >
-                                        <FileCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"/>
+                                        <FileCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                                         <span>PDF Assinado</span>
-                                        <ExternalLink className="w-3 h-3 text-emerald-500"/>
+                                        <ExternalLink className="w-3 h-3 text-emerald-500" />
                                       </a>
                                     ) : (
                                       <button
@@ -1287,14 +1285,13 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                         className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 hover:bg-blue-100/70 rounded-xl transition-colors cursor-pointer shadow-2xs"
                                         title="Assinar com certificado digital VIDaaS"
                                       >
-                                        <FileCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"/>
+                                        <FileCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                                         <span>Assinar (VIDaaS)</span>
                                       </button>
                                     )}
                                   </>
                                 )}
 
-                                {/* 2. MODO PACIENTE (isPatientView) */}
                                 {isPatientView && (
                                   rx.pdf_assinado_url ? (
                                     <a
@@ -1304,7 +1301,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                       className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl transition-all shadow-2xs"
                                       title="Baixar receituário assinado digitalmente"
                                     >
-                                      <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"/>
+                                      <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                                       <span>Baixar Receita Assinada</span>
                                     </a>
                                   ) : (
@@ -1321,13 +1318,12 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                       className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-xl cursor-pointer hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors shadow-2xs"
                                       title="Documento pendente de assinatura"
                                     >
-                                      <Download className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500"/>
+                                      <Download className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                                       <span>Receita Assinada (Pendente)</span>
                                     </button>
                                   )
                                 )}
 
-                                {/* 3. Badge de Status (Ativo / Suspenso) */}
                                 {rx.ativo || rx.status === "Ativo" ? (
                                   isPatientView ? (
                                     <span className="inline-flex items-center px-2.5 py-1.5 rounded-xl text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 cursor-default select-none">
@@ -1355,35 +1351,46 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                     Suspenso
                                   </span>
                                 )}
-
                               </div>
                             </div>
 
-                            {/* Conteúdo da Prescrição: Composição, Veículo, Posologia e Orientações */}
+                            {/* Bloco em Destaque: Dosagem e Veículo (Composição / Apresentação) */}
+                            {(rx.dosagem || rx.item?.dosagem) && (
+                              <div className="mb-3 p-3 rounded-xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200/60 dark:border-teal-900/50">
+                                <p className="text-xs font-semibold text-teal-950 dark:text-teal-200 leading-snug">
+                                  {rx.dosagem || rx.item?.dosagem}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Detalhes da Prescrição: Posologia, Duração e Observações */}
                             <div className="space-y-2.5">
                               {rx.componentes && rx.componentes.length > 0 && (
-                                <div className="p-2.5 rounded-xl bg-teal-50/40 dark:bg-teal-950/20 border border-teal-100/70 dark:border-teal-900/40 text-xs text-teal-900 dark:text-teal-200 font-medium">
+                                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 font-medium">
+                                  <strong className="text-slate-900 dark:text-white block mb-1">Composição:</strong>
                                   {rx.componentes.map((c: any) => `${c.nome}: ${c.quantidade}${c.unidade || ""}`).join(" | ")}
                                 </div>
                               )}
 
-                              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs space-y-1.5">
-                                {rx.item?.posologia && (
-                                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                                    <strong className="text-slate-900 dark:text-white">Posologia:</strong> {rx.item.posologia}
-                                  </p>
-                                )}
-                                {rx.item?.duracao && (
-                                  <p className="text-slate-600 dark:text-slate-400">
-                                    <strong className="text-slate-800 dark:text-slate-200">Duração:</strong> {rx.item.duracao}
-                                  </p>
-                                )}
-                                {rx.item?.orient_paciente && (
-                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
-                                    <strong>Obs:</strong> {rx.item.orient_paciente}
-                                  </p>
-                                )}
-                              </div>
+                              {(rx.posologia || rx.item?.posologia || rx.duracao || rx.item?.duracao || rx.orient_paciente || rx.item?.orient_paciente) && (
+                                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs space-y-1.5">
+                                  {(rx.posologia || rx.item?.posologia) && (
+                                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                                      <strong className="text-slate-900 dark:text-white">Posologia:</strong> {rx.posologia || rx.item?.posologia}
+                                    </p>
+                                  )}
+                                  {(rx.duracao || rx.item?.duracao) && (
+                                    <p className="text-slate-600 dark:text-slate-400">
+                                      <strong className="text-slate-800 dark:text-slate-200">Duração:</strong> {rx.duracao || rx.item?.duracao}
+                                    </p>
+                                  )}
+                                  {(rx.orient_paciente || rx.item?.orient_paciente) && (
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+                                      <strong>Obs:</strong> {rx.orient_paciente || rx.item?.orient_paciente}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
