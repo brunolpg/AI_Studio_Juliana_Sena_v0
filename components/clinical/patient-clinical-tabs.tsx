@@ -93,11 +93,18 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [pdfDownloaded, setPdfDownloaded] = useState(false);
   const [isDraggingSigned, setIsDraggingSigned] = useState(false);
+  const [signedNotificationPrompt, setSignedNotificationPrompt] = useState<{
+    isOpen: boolean;
+    rxId: string;
+    formulaName: string;
+    pdfUrl: string;
+  } | null>(null);
 
   const openSigningModal = (rx: PrescriptionItem) => {
     setSignError(null);
     setPdfDownloaded(false);
     setIsDraggingSigned(false);
+    setSignedNotificationPrompt(null);
     setSigningRx(rx);
   };
 
@@ -105,6 +112,88 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
     if (isUploadingSignedPdf) return;
     setSigningRx(null);
     setSignError(null);
+    setPdfDownloaded(false);
+    setIsDraggingSigned(false);
+    setSignedNotificationPrompt(null);
+  };
+
+  // Dispara e-mail em 2º plano e abre o WhatsApp do paciente
+  const handleNotifyPatientAfterSigning = (promptData: {
+    rxId: string;
+    formulaName: string;
+    pdfUrl: string;
+  }) => {
+    const selectedPatient = client;
+    const patientName = selectedPatient?.nome || (selectedPatient as any)?.name || "Paciente";
+    const patientEmail = selectedPatient?.email || "";
+    const rawPhone = (selectedPatient?.telefone || (selectedPatient as any)?.phone || "").replace(/\D/g, "");
+
+    // 1. Dispara o e-mail com o PDF assinado em segundo plano (sem bloquear a UI)
+    if (patientEmail) {
+      fetch("/api/prescricoes/notify-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patientName,
+          patientEmail,
+          formulaName: promptData.formulaName,
+          pdfUrl: promptData.pdfUrl,
+        }),
+      })
+        .then((res) => {
+          if (res.ok) {
+            toast({
+              type: "success",
+              title: "E-mail enviado",
+              description: `O PDF assinado foi enviado em segundo plano para ${patientEmail}.`,
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn("Falha no envio de e-mail em segundo plano:", err);
+        });
+    } else {
+      toast({
+        type: "warning",
+        title: "Paciente sem e-mail",
+        description: "Não foi possível enviar o e-mail pois o paciente não possui endereço cadastrado.",
+      });
+    }
+
+    // 2. Abre o WhatsApp do Paciente com a mensagem de disponibilidade no site
+    if (rawPhone) {
+      const phoneWithDdi = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
+      const portalUrl = typeof window !== "undefined" ? window.location.origin : "";
+      const firstName = patientName.trim().split(/\s+/)[0];
+
+      const whatsappMessage = [
+        `Olá, *${firstName}*! Tudo bem? ✨`,
+        ``,
+        `Sua prescrição *${promptData.formulaName}* já foi assinada digitalmente pela *Dra. Juliana Sena* e está disponível para acesso e download no seu *Portal do Paciente*:`,
+        `🔗 ${portalUrl}`,
+        ``,
+        patientEmail
+          ? `📩 Também enviamos uma cópia da receita em PDF diretamente para o seu e-mail (${patientEmail}).`
+          : ``,
+        ``,
+        `Qualquer dúvida, estamos à disposição!`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      const waUrl = `https://wa.me/${phoneWithDdi}?text=${encodeURIComponent(whatsappMessage)}`;
+      window.open(waUrl, "_blank", "noopener,noreferrer");
+    } else {
+      toast({
+        type: "warning",
+        title: "Telefone não cadastrado",
+        description: "O paciente não possui telefone válido para abertura do WhatsApp.",
+      });
+    }
+
+    // Fecha os modais
+    setSignedNotificationPrompt(null);
+    setSigningRx(null);
     setPdfDownloaded(false);
     setIsDraggingSigned(false);
   };
@@ -176,9 +265,17 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
         title: "Receita assinada registrada!",
         description: warnings.length > 0 ? warnings[0] : "O documento assinado com ICP-Brasil foi vinculado ao prontuário.",
       });
-      setSigningRx(null);
-      setPdfDownloaded(false);
+      
+      const uploadedPdfUrl = data.pdf_assinado_url || data.url || signingRx.pdf_assinado_url || `/api/prescricoes/${signingRx.id}/pdf`;
       loadClinicalData();
+
+      // Em vez de fechar imediatamente o modal, abre a confirmação para comunicar o paciente:
+      setSignedNotificationPrompt({
+        isOpen: true,
+        rxId: signingRx.id,
+        formulaName: signingRx.medicamento || (signingRx as any).nome_formula || "Prescrição Magistral",
+        pdfUrl: uploadedPdfUrl,
+      });
     } catch {
       setSignError("Falha de conexão ao enviar o arquivo. Tente novamente.");
     } finally {
@@ -1653,92 +1750,151 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               </button>
             </div>
 
-            <div className="text-xs text-slate-600 dark:text-slate-300">
-              Prescrição: <strong className="text-slate-800 dark:text-slate-100">{signingRx.medicamento}</strong>
-            </div>
-
-            {/* Passo 1: baixar o PDF */}
-            <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 space-y-2">
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                1º Passo: Baixar a receita em PDF
-              </p>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Baixe o PDF, assine no aplicativo VIDaaS ou no portal VIDaaS Connect e volte aqui.
-              </p>
-              <button
-                type="button"
-                disabled={isDownloadingPdf}
-                onClick={() => handleDownloadPrescriptionPdf(signingRx)}
-                className="w-full py-2.5 px-3 text-xs font-bold rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Download className="w-4 h-4" />
-                <span>{isDownloadingPdf ? "Gerando PDF..." : pdfDownloaded ? "Baixar novamente" : "Baixar Receita em PDF"}</span>
-              </button>
-              <button
-                type="button"
-                onClick={openVidaasStore}
-                className="block mx-auto text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline-offset-2 hover:underline cursor-pointer"
-              >
-                Não tem o app? Instalar o VIDaaS
-              </button>
-            </div>
-
-            {/* Passo 2: anexar o PDF assinado (conferido pelo servidor) */}
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsDraggingSigned(true);
-              }}
-              onDragLeave={() => setIsDraggingSigned(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setIsDraggingSigned(false);
-                handleSignedFile(e.dataTransfer.files?.[0]);
-              }}
-              className={`p-3.5 rounded-2xl border space-y-2 transition-colors ${
-                isDraggingSigned || pdfDownloaded
-                  ? "bg-teal-50 dark:bg-teal-950/30 border-teal-400"
-                  : "bg-teal-50/40 dark:bg-slate-800/60 border-teal-200/60 dark:border-slate-700"
-              }`}
-            >
-              <span className="text-xs font-bold text-teal-900 dark:text-teal-200 block">
-                2º Passo: Anexar o PDF assinado
-              </span>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Selecione (ou arraste) o arquivo assinado. O sistema confere a assinatura e se é desta receita antes de salvar.
-              </p>
-              <label className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer">
-                <UploadCloud className="w-4 h-4" />
-                <span>{isUploadingSignedPdf ? "Conferindo e salvando..." : "Selecionar PDF Assinado"}</span>
-                <input
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  disabled={isUploadingSignedPdf}
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = ""; // permite reenviar o mesmo arquivo após corrigir
-                    handleSignedFile(file);
-                  }}
-                />
-              </label>
-              {signError && (
-                <div role="alert" className="flex items-start gap-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-[11px] text-rose-800 dark:text-rose-200 leading-relaxed">
-                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                  <span>{signError}</span>
+            {signedNotificationPrompt?.isOpen ? (
+              <div className="py-4 space-y-5 text-center animate-in fade-in zoom-in-95 duration-200">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-xs">
+                  <FileCheck className="w-7 h-7"/>
                 </div>
-              )}
-            </div>
 
-            <div className="pt-1 flex justify-end">
-              <button
-                type="button"
-                onClick={closeSigningModal}
-                className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
-              >
-                Fechar
-              </button>
-            </div>
+                <div className="space-y-1.5">
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                    Receita Assinada Anexada com Sucesso!
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+                    Deseja comunicar <strong>{client?.nome || (client as any)?.name || "o paciente"}</strong> agora sobre a liberação da prescrição{" "}
+                    <strong>{signedNotificationPrompt.formulaName}</strong>?
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 text-left text-xs space-y-2">
+                  <p className="font-semibold text-slate-700 dark:text-slate-200">
+                    Ao confirmar, o sistema irá:
+                  </p>
+                  <ul className="space-y-1.5 text-slate-600 dark:text-slate-400">
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
+                      <span>Enviar e-mail em segundo plano com o PDF assinado em anexo ({client?.email || "e-mail cadastrado"}).</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
+                      <span>Abrir o WhatsApp do paciente ({client?.telefone || (client as any)?.phone || "telefone cadastrado"}) com o aviso de disponibilidade no site.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSignedNotificationPrompt(null);
+                      setSigningRx(null);
+                      setPdfDownloaded(false);
+                      setIsDraggingSigned(false);
+                    }}
+                    className="w-full sm:flex-1 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  >
+                    Agora não
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleNotifyPatientAfterSigning(signedNotificationPrompt)}
+                    className="w-full sm:flex-1 py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <span>Sim, Comunicar Paciente</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="text-xs text-slate-600 dark:text-slate-300">
+                  Prescrição: <strong className="text-slate-800 dark:text-slate-100">{signingRx.medicamento}</strong>
+                </div>
+
+                {/* Passo 1: baixar o PDF */}
+                <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 space-y-2">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                    1º Passo: Baixar a receita em PDF
+                  </p>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Baixe o PDF, assine no aplicativo VIDaaS ou no portal VIDaaS Connect e volte aqui.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={isDownloadingPdf}
+                    onClick={() => handleDownloadPrescriptionPdf(signingRx)}
+                    className="w-full py-2.5 px-3 text-xs font-bold rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>{isDownloadingPdf ? "Gerando PDF..." : pdfDownloaded ? "Baixar novamente" : "Baixar Receita em PDF"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openVidaasStore}
+                    className="block mx-auto text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline-offset-2 hover:underline cursor-pointer"
+                  >
+                    Não tem o app? Instalar o VIDaaS
+                  </button>
+                </div>
+
+                {/* Passo 2: anexar o PDF assinado (conferido pelo servidor) */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDraggingSigned(true);
+                  }}
+                  onDragLeave={() => setIsDraggingSigned(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDraggingSigned(false);
+                    handleSignedFile(e.dataTransfer.files?.[0]);
+                  }}
+                  className={`p-3.5 rounded-2xl border space-y-2 transition-colors ${
+                    isDraggingSigned || pdfDownloaded
+                      ? "bg-teal-50 dark:bg-teal-950/30 border-teal-400"
+                      : "bg-teal-50/40 dark:bg-slate-800/60 border-teal-200/60 dark:border-slate-700"
+                  }`}
+                >
+                  <span className="text-xs font-bold text-teal-900 dark:text-teal-200 block">
+                    2º Passo: Anexar o PDF assinado
+                  </span>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Selecione (ou arraste) o arquivo assinado. O sistema confere a assinatura e se é desta receita antes de salvar.
+                  </p>
+                  <label className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer">
+                    <UploadCloud className="w-4 h-4" />
+                    <span>{isUploadingSignedPdf ? "Conferindo e salvando..." : "Selecionar PDF Assinado"}</span>
+                    <input
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      disabled={isUploadingSignedPdf}
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = ""; // permite reenviar o mesmo arquivo após corrigir
+                        handleSignedFile(file);
+                      }}
+                    />
+                  </label>
+                  {signError && (
+                    <div role="alert" className="flex items-start gap-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-[11px] text-rose-800 dark:text-rose-200 leading-relaxed">
+                      <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                      <span>{signError}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-1 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={closeSigningModal}
+                    className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
