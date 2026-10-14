@@ -100,6 +100,8 @@ const REPLACEMENTS: Record<string, string> = {
   "←": "<-",
   "×": "x",
   "−": "-",
+  "": "",
+  "": "",
 };
 
 function sanitize(font: PDFFont, text: string): string {
@@ -118,30 +120,7 @@ function sanitize(font: PDFFont, text: string): string {
   return out;
 }
 
-/** Desenha um arco de 90 graus com espessura para fechar perfeitamente o contorno do canto */
-function drawCornerArc(
-  page: PDFPage,
-  cx: number,
-  cy: number,
-  r: number,
-  startAngle: number,
-  thickness: number,
-  color: ReturnType<typeof rgb>,
-  steps: number = 8
-) {
-  for (let i = 0; i < steps; i++) {
-    const a1 = startAngle + (i * Math.PI) / (2 * steps);
-    const a2 = startAngle + ((i + 1) * Math.PI) / (2 * steps);
-    page.drawLine({
-      start: { x: cx + r * Math.cos(a1), y: cy + r * Math.sin(a1) },
-      end: { x: cx + r * Math.cos(a2), y: cy + r * Math.sin(a2) },
-      thickness,
-      color,
-    });
-  }
-}
-
-/** Desenha retângulo com cantos arredondados e contorno contínuo fechado */
+/** Desenha retângulo com cantos arredondados de forma robusta e compatível */
 function drawRoundedRectangle(
   page: PDFPage,
   opts: {
@@ -158,7 +137,7 @@ function drawRoundedRectangle(
   const { x, y, width: w, height: h, borderRadius = 4, color, borderColor, borderWidth = 0.8 } = opts;
   const r = Math.min(borderRadius, w / 2, h / 2);
 
-  // Preenchimento com cantos preenchidos
+  // Preenchimento com cantos curvos
   if (color) {
     page.drawRectangle({
       x: x + r,
@@ -180,19 +159,12 @@ function drawRoundedRectangle(
     page.drawCircle({ x: x + w - r, y: y + h - r, size: r, color });
   }
 
-  // Contorno completo (linhas retas + arcos contínuos nos 4 cantos)
+  // Linhas de borda conectadas
   if (borderColor) {
-    // 4 retas
     page.drawLine({ start: { x: x + r, y }, end: { x: x + w - r, y }, thickness: borderWidth, color: borderColor });
     page.drawLine({ start: { x: x + r, y: y + h }, end: { x: x + w - r, y: y + h }, thickness: borderWidth, color: borderColor });
     page.drawLine({ start: { x, y: y + r }, end: { x, y: y + h - r }, thickness: borderWidth, color: borderColor });
     page.drawLine({ start: { x: x + w, y: y + r }, end: { x: x + w, y: y + h - r }, thickness: borderWidth, color: borderColor });
-
-    // 4 curvas de concordância
-    drawCornerArc(page, x + r, y + r, r, Math.PI, borderWidth, borderColor);         // canto inferior esquerdo
-    drawCornerArc(page, x + w - r, y + r, r, (3 * Math.PI) / 2, borderWidth, borderColor); // canto inferior direito
-    drawCornerArc(page, x + w - r, y + h - r, r, 0, borderWidth, borderColor);       // canto superior direito
-    drawCornerArc(page, x + r, y + h - r, r, Math.PI / 2, borderWidth, borderColor); // canto superior esquerdo
   }
 }
 
@@ -380,7 +352,7 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
   page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_W - MARGIN, y }, thickness: 0.8, color: C.line });
   y -= 16;
 
-  // 2. Card do Paciente com Cantos Arredondados e Bordas Fechadas
+  // 2. Card do Paciente com Fundo e Cantos Suaves
   const patientBoxH = 42;
   drawRoundedRectangle(page, {
     x: MARGIN,
@@ -416,7 +388,7 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
     const tableTop = y;
     const tableH = rowH * (componentes.length + 1);
 
-    // Contorno arredondado fechado da tabela
+    // Contorno da tabela
     drawRoundedRectangle(page, {
       x: MARGIN,
       y: tableTop - tableH,
@@ -483,30 +455,28 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
     y -= h + 14;
   }
 
-  // 6. Posologia: Totalmente Retangular (SEM cantos arredondados) com faixa lateral verde
+  // 6. Posologia com Caixa e Linha Lateral de Destaque
   if (present(item.posologia)) {
     const w = CONTENT_W - 28;
     const bodyH = measure(String(item.posologia), w, regular, 9.5, 14);
     const h = bodyH + 32;
     ensure(h + 6);
 
-    // Caixa retangular clássica sem arredondamento
-    page.drawRectangle({
+    drawRoundedRectangle(page, {
       x: MARGIN,
       y: y - h,
       width: CONTENT_W,
       height: h,
+      borderRadius: 4,
       color: C.tealBg,
       borderColor: C.tealLine,
       borderWidth: 0.8,
     });
 
-    // Faixa vertical teal à esquerda cobrindo exatamente a altura total do card
-    page.drawRectangle({
-      x: MARGIN,
-      y: y - h,
-      width: 3.5,
-      height: h,
+    page.drawLine({
+      start: { x: MARGIN + 1.5, y: y - 2 },
+      end: { x: MARGIN + 1.5, y: y - h + 2 },
+      thickness: 3,
       color: C.teal,
     });
 
