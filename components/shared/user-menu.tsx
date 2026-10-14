@@ -118,32 +118,32 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
           e.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        className="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-teal-400 dark:hover:border-teal-500 bg-white dark:bg-slate-800 transition-all text-left shadow-2xs group cursor-pointer font-sans"
+        className="flex items-center gap-2 p-1.5 sm:px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-teal-400 dark:hover:border-teal-500 bg-white dark:bg-slate-800 transition-all text-left shadow-2xs group cursor-pointer font-sans shrink-0"
       >
         {avatarSrc ? (
           <img
             src={avatarSrc}
             alt={userDisplayName || 'Avatar'}
-            className="w-7 h-7 rounded-lg object-cover shadow-2xs"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover shadow-2xs shrink-0"
           />
         ) : (
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0">
             {initials || "U"}
           </div>
         )}
-        <div className="hidden sm:block leading-tight">
+        <div className="hidden md:hidden xl:flex flex-col leading-tight">
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold text-slate-900 dark:text-white truncate max-w-[120px]">
               {userDisplayName}
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
           </div>
           <span className="text-[10px] text-teal-700 dark:text-teal-400 block truncate max-w-[120px] font-medium">
             {userRoleLabel}
           </span>
         </div>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform ${
+          className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform shrink-0 ${
             isOpen ? "rotate-180" : ""
           }`}
         />

@@ -32,54 +32,53 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
           </div>
         </div>
 
-        {/* Navigation Tabs & User Profile */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto no-scrollbar shrink-0 max-w-full">
-            <button
-              id="nav-tab-pacientes"
-              onClick={() => onTabChange("pacientes")}
-              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 ${
-                currentTab === "pacientes"
-                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Pacientes</span>
-            </button>
+        {/* Menu Central de Navegação */}
+        <div className="flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100/80 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 shrink min-w-0">
+          <button
+            id="nav-tab-pacientes"
+            onClick={() => onTabChange("pacientes")}
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer shrink-0 ${
+              currentTab === "pacientes"
+                ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-2xs font-semibold"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+            }`}
+          >
+            <Users className="shrink-0 w-3.5 h-3.5" />
+            <span className="truncate">Pacientes</span>
+          </button>
 
-            <button
-              id="nav-tab-prontuarios"
-              onClick={() => onTabChange("prontuarios")}
-              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 ${
-                currentTab === "prontuarios"
-                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <Stethoscope className="w-3.5 h-3.5" />
-              <span>Prontuários & Evoluções</span>
-            </button>
+          <button
+            id="nav-tab-prontuarios"
+            onClick={() => onTabChange("prontuarios")}
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer shrink-0 ${
+              currentTab === "prontuarios"
+                ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-2xs font-semibold"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+            }`}
+          >
+            <Stethoscope className="shrink-0 w-3.5 h-3.5" />
+            <span className="hidden xl:inline">Prontuários & Evoluções</span>
+            <span className="xl:hidden">Prontuários</span>
+          </button>
 
-            <button
-              id="nav-tab-agendamentos"
-              onClick={() => onTabChange("agendamentos")}
-              className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer relative shrink-0 ${
-                currentTab === "agendamentos"
-                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Agendamentos</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block animate-pulse" />
-            </button>
-          </div>
+          <button
+            id="nav-tab-agendamentos"
+            onClick={() => onTabChange("agendamentos")}
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer relative shrink-0 ${
+              currentTab === "agendamentos"
+                ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-2xs font-semibold"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+            }`}
+          >
+            <Calendar className="shrink-0 w-3.5 h-3.5" />
+            <span className="truncate">Agendamentos</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block animate-pulse shrink-0" />
+          </button>
+        </div>
 
-          {/* Menu de Autenticação / Perfil */}
-          <div className="shrink-0 flex items-center gap-2">
-            <UserMenu />
-          </div>
+        {/* Lado Direito (Perfil / Avatar do Usuário) */}
+        <div className="shrink-0 flex items-center gap-2 pl-1">
+          <UserMenu />
         </div>
       </div>
     </header>
