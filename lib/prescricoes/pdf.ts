@@ -100,8 +100,8 @@ const REPLACEMENTS: Record<string, string> = {
   "←": "<-",
   "×": "x",
   "−": "-",
-  "": "",
-  "": "",
+  "–": "-",
+  "—": "-",
 };
 
 function sanitize(font: PDFFont, text: string): string {
@@ -120,7 +120,22 @@ function sanitize(font: PDFFont, text: string): string {
   return out;
 }
 
-/** Desenha retângulo com cantos arredondados de forma robusta e compatível */
+function roundedRectSvgPath(w: number, h: number, r: number): string {
+  const radius = Math.min(r, w / 2, h / 2);
+  return [
+    `M ${radius} 0`,
+    `L ${w - radius} 0`,
+    `Q ${w} 0 ${w} ${radius}`,
+    `L ${w} ${h - radius}`,
+    `Q ${w} ${h} ${w - radius} ${h}`,
+    `L ${radius} ${h}`,
+    `Q 0 ${h} 0 ${h - radius}`,
+    `L 0 ${radius}`,
+    `Q 0 0 ${radius} 0`,
+    `Z`,
+  ].join(" ");
+}
+
 function drawRoundedRectangle(
   page: PDFPage,
   opts: {
@@ -132,40 +147,65 @@ function drawRoundedRectangle(
     color?: ReturnType<typeof rgb>;
     borderColor?: ReturnType<typeof rgb>;
     borderWidth?: number;
+    borderDashArray?: number[];
   }
 ) {
-  const { x, y, width: w, height: h, borderRadius = 4, color, borderColor, borderWidth = 0.8 } = opts;
-  const r = Math.min(borderRadius, w / 2, h / 2);
+  const {
+    x,
+    y,
+    width: w,
+    height: h,
+    borderRadius = 6,
+    color,
+    borderColor,
+    borderWidth = 0.8,
+    borderDashArray,
+  } = opts;
 
-  // Preenchimento com cantos curvos
-  if (color) {
-    page.drawRectangle({
-      x: x + r,
-      y: y,
-      width: w - 2 * r,
-      height: h,
-      color,
-    });
-    page.drawRectangle({
-      x: x,
-      y: y + r,
-      width: w,
-      height: h - 2 * r,
-      color,
-    });
-    page.drawCircle({ x: x + r, y: y + r, size: r, color });
-    page.drawCircle({ x: x + w - r, y: y + r, size: r, color });
-    page.drawCircle({ x: x + r, y: y + h - r, size: r, color });
-    page.drawCircle({ x: x + w - r, y: y + h - r, size: r, color });
-  }
+  const pathData = roundedRectSvgPath(w, h, borderRadius);
+  page.drawSvgPath(pathData, {
+    x,
+    y: y + h,
+    color,
+    borderColor,
+    borderWidth: borderColor ? borderWidth : 0,
+    borderDashArray,
+  });
+}
 
-  // Linhas de borda conectadas
-  if (borderColor) {
-    page.drawLine({ start: { x: x + r, y }, end: { x: x + w - r, y }, thickness: borderWidth, color: borderColor });
-    page.drawLine({ start: { x: x + r, y: y + h }, end: { x: x + w - r, y: y + h }, thickness: borderWidth, color: borderColor });
-    page.drawLine({ start: { x, y: y + r }, end: { x, y: y + h - r }, thickness: borderWidth, color: borderColor });
-    page.drawLine({ start: { x: x + w, y: y + r }, end: { x: x + w, y: y + h - r }, thickness: borderWidth, color: borderColor });
+function topRoundedRectSvgPath(w: number, h: number, r: number): string {
+  const radius = Math.min(r, w / 2, h);
+  return [
+    `M ${radius} 0`,
+    `L ${w - radius} 0`,
+    `Q ${w} 0 ${w} ${radius}`,
+    `L ${w} ${h}`,
+    `L 0 ${h}`,
+    `L 0 ${radius}`,
+    `Q 0 0 ${radius} 0`,
+    `Z`,
+  ].join(" ");
+}
+
+function drawTopRoundedRect(
+  page: PDFPage,
+  opts: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    borderRadius?: number;
+    color?: ReturnType<typeof rgb>;
   }
+) {
+  const { x, y, width: w, height: h, borderRadius = 6, color } = opts;
+  const pathData = topRoundedRectSvgPath(w, h, borderRadius);
+  page.drawSvgPath(pathData, {
+    x,
+    y: y + h,
+    color,
+    borderWidth: 0,
+  });
 }
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
@@ -359,7 +399,7 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
     y: y - patientBoxH,
     width: CONTENT_W,
     height: patientBoxH,
-    borderRadius: 5,
+    borderRadius: 6,
     color: C.panel,
     borderColor: C.line,
     borderWidth: 0.8,
@@ -388,35 +428,37 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
     const tableTop = y;
     const tableH = rowH * (componentes.length + 1);
 
-    // Contorno da tabela
-    drawRoundedRectangle(page, {
+    // 1. Fundo do cabeçalho da tabela com cantos superiores arredondados
+    drawTopRoundedRect(page, {
       x: MARGIN,
-      y: tableTop - tableH,
-      width: CONTENT_W,
-      height: tableH,
-      borderRadius: 4,
-      borderColor: C.line,
-      borderWidth: 0.8,
-    });
-
-    // Fundo do cabeçalho da tabela
-    page.drawRectangle({
-      x: MARGIN + 1,
       y: tableTop - rowH,
-      width: CONTENT_W - 2,
-      height: rowH - 1,
+      width: CONTENT_W,
+      height: rowH,
+      borderRadius: 6,
       color: rgb(0.95, 0.96, 0.98),
     });
 
     text("Componente / Ativo", MARGIN + 10, tableTop - 13, { font: bold, size: 8, color: C.text });
     text("Concentração", MARGIN, tableTop - 13, { font: bold, size: 8, color: C.text, align: "right", width: CONTENT_W - 10 });
 
+    // 2. Linhas horizontais divisórias e textos das linhas
     componentes.forEach((c, i) => {
       const top = tableTop - rowH * (i + 1);
       page.drawLine({ start: { x: MARGIN, y: top }, end: { x: PAGE_W - MARGIN, y: top }, thickness: 0.5, color: C.line });
       text(String(c.nome), MARGIN + 10, top - 13, { font: bold, size: 9.5 });
       const qty = present(c.quantidade) ? `${c.quantidade}${c.unidade ? c.unidade : ""}` : "";
       text(qty, MARGIN, top - 13, { font: bold, size: 9.5, align: "right", width: CONTENT_W - 10 });
+    });
+
+    // 3. Contorno externo da tabela por cima do cabeçalho
+    drawRoundedRectangle(page, {
+      x: MARGIN,
+      y: tableTop - tableH,
+      width: CONTENT_W,
+      height: tableH,
+      borderRadius: 6,
+      borderColor: C.line,
+      borderWidth: 0.8,
     });
 
     y = tableTop - tableH - 14;
@@ -440,7 +482,7 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
       y: y - h,
       width: CONTENT_W,
       height: h,
-      borderRadius: 4,
+      borderRadius: 6,
       color: C.panel,
       borderColor: C.line,
       borderWidth: 0.8,
@@ -455,28 +497,28 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
     y -= h + 14;
   }
 
-  // 6. Posologia com Caixa e Linha Lateral de Destaque
+  // 6. Posologia com Caixa e Linha Lateral de Destaque (Cantos Retos - 90 graus)
   if (present(item.posologia)) {
     const w = CONTENT_W - 28;
     const bodyH = measure(String(item.posologia), w, regular, 9.5, 14);
     const h = bodyH + 32;
     ensure(h + 6);
 
-    drawRoundedRectangle(page, {
+    page.drawRectangle({
       x: MARGIN,
       y: y - h,
       width: CONTENT_W,
       height: h,
-      borderRadius: 4,
       color: C.tealBg,
       borderColor: C.tealLine,
       borderWidth: 0.8,
     });
 
-    page.drawLine({
-      start: { x: MARGIN + 1.5, y: y - 2 },
-      end: { x: MARGIN + 1.5, y: y - h + 2 },
-      thickness: 3,
+    page.drawRectangle({
+      x: MARGIN,
+      y: y - h,
+      width: 3,
+      height: h,
       color: C.teal,
     });
 
@@ -506,7 +548,7 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
       y: y - h,
       width: CONTENT_W,
       height: h,
-      borderRadius: 4,
+      borderRadius: 6,
       color: C.panel,
       borderColor: C.line,
       borderWidth: 0.8,
@@ -527,11 +569,12 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
   const sigH = 60;
   const sigX = MARGIN + (CONTENT_W - sigW) / 2;
 
-  page.drawRectangle({
+  drawRoundedRectangle(page, {
     x: sigX,
     y: y - sigH,
     width: sigW,
     height: sigH,
+    borderRadius: 6,
     color: C.tealBg,
     borderColor: C.teal,
     borderWidth: 1,
