@@ -1230,21 +1230,15 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                               : "bg-slate-50/70 dark:bg-slate-900/60 border-slate-200/60 opacity-60"
                           }`}
                         >
+                          {/* 1. Linha Superior: Título, Metadados e Ações/Status */}
                           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                            <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 flex-1 min-w-0">
-                              <div className="flex flex-col gap-1.5 min-w-0 max-w-full">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className="font-bold text-slate-900 dark:text-white text-sm">
-                                    {rx.medicamento}
-                                  </h4>
-                                  <span className="inline-block max-w-full text-xs font-plus-jakarta font-medium px-3 py-2 rounded-lg bg-teal-50/80 border border-teal-200/80 text-teal-900 dark:bg-teal-950/60 dark:border-teal-800/60 dark:text-teal-300 break-words whitespace-normal leading-relaxed">
-                                    {rx.dosagem}
-                                  </span>
-                                </div>
-                                <span className="text-[11px] text-slate-400 block mt-0.5">
-                                  Via {rx.via} • Prescrito em {dateFormatted}
-                                </span>
-                              </div>
+                            <div className="flex flex-col gap-1 min-w-0 flex-1">
+                              <h4 className="font-bold text-slate-900 dark:text-white text-sm">
+                                {rx.medicamento}
+                              </h4>
+                              <span className="text-[11px] text-slate-400 block">
+                                Via {rx.via} • Prescrito em {dateFormatted}
+                              </span>
                             </div>
 
                             <div className="flex items-center gap-2 self-start md:self-auto shrink-0 flex-wrap">
@@ -1285,7 +1279,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                 </>
                               )}
 
-                              {/* 2. MODO PACIENTE: Botão para Baixar Prescrição Assinada */}
+                              {/* 2. MODO PACIENTE */}
                               {isPatientView && (
                                 rx.pdf_assinado_url ? (
                                   <a
@@ -1349,7 +1343,15 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                             </div>
                           </div>
 
-                          <div className="mt-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/50 text-xs text-slate-700 dark:text-slate-300 space-y-1">
+                          {/* 2. ÁREA EM DESTAQUE (Fórmula / Dosagem): w-full para ter a mesma largura da caixa de Posologia */}
+                          {rx.dosagem && (
+                            <div className="mt-3 w-full p-2.5 sm:p-3 rounded-xl bg-teal-50/80 border border-teal-200/80 text-teal-900 dark:bg-teal-950/60 dark:border-teal-800/60 dark:text-teal-300 text-xs font-plus-jakarta font-medium break-words leading-relaxed">
+                              {rx.dosagem}
+                            </div>
+                          )}
+
+                          {/* 3. Caixa de Posologia: w-full (perfeitamente alinhada com a caixa de destaque acima) */}
+                          <div className="mt-2.5 p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/50 text-xs text-slate-700 dark:text-slate-300 space-y-1">
                             <div>
                               <strong>Posologia:</strong> {rx.posologia}
                             </div>
