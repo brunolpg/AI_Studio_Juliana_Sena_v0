@@ -1216,7 +1216,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
                     {prescriptions.map((rx) => {
                       const [year, month, day] = rx.data.split("-");
                       const dateFormatted = `${day}/${month}/${year}`;
@@ -1224,150 +1224,167 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                       return (
                         <div
                           key={rx.id}
-                          className={`p-4 rounded-2xl border transition-all ${
-                            rx.ativo || rx.status === "Ativo"
-                              ? "bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 shadow-2xs"
-                              : "bg-slate-50/70 dark:bg-slate-900/60 border-slate-200/60 opacity-60"
-                          }`}
+                          className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between"
                         >
-                          {/* 1. Linha Superior: Título, Metadados e Ações/Status */}
-                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                            <div className="flex flex-col gap-1 min-w-0 flex-1">
-                              <h4 className="font-bold text-slate-900 dark:text-white text-sm">
-                                {rx.medicamento}
-                              </h4>
-                              <span className="text-[11px] text-slate-400 block">
-                                Via {rx.via} • Prescrito em {dateFormatted}
-                              </span>
-                            </div>
+                          {/* Cabeçalho do Card: Fluxo flexível sem absolute e sem sobreposição */}
+                          <div>
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 sm:gap-3 mb-3.5 pb-3 border-b border-slate-100 dark:border-slate-800/70">
+                              
+                              {/* Título da Fórmula e Metadados */}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-baseline gap-2 flex-wrap">
+                                  <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white break-words leading-snug">
+                                    {rx.item?.nome_formula || rx.nome_formula || "Fórmula Magistral"}
+                                  </h4>
+                                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
+                                    (Uso {rx.item?.via ? (rx.item.via.toLowerCase() === "oral" ? "Oral" : "Tópico") : "Oral"})
+                                  </span>
+                                </div>
 
-                            <div className="flex items-center gap-2 self-start md:self-auto shrink-0 flex-wrap">
-                              {/* 1. MODO PROFISSIONAL */}
-                              {!isPatientView && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => setSelectedRxForPrint(rx)}
-                                    className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 hover:bg-teal-50/50 rounded-lg cursor-pointer transition-colors"
-                                  >
-                                    <Printer className="w-3.5 h-3.5" />
-                                    <span>Gerar Relatório</span>
-                                  </button>
-                                  {rx.pdf_assinado_url ? (
+                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1 flex-wrap">
+                                  <span>Prescrito em {dateFormatted}</span>
+                                  {rx.item?.dosagem && (
+                                    <>
+                                      <span>•</span>
+                                      <span>Dose: {rx.item.dosagem} {rx.item.tipo_veiculo || ""}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Ações e Badges (Fluxo dinâmico sem sobrepor o texto) */}
+                              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap shrink-0">
+                                
+                                {/* 1. MODO PROFISSIONAL / ADMINISTRADOR (!isPatientView) */}
+                                {!isPatientView && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedRxForPrint(rx)}
+                                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 hover:bg-teal-50/70 dark:hover:bg-slate-800/80 rounded-xl cursor-pointer transition-colors shadow-2xs"
+                                      title="Visualizar e imprimir relatório da receita"
+                                    >
+                                      <Printer className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400"/>
+                                      <span>Gerar Relatório</span>
+                                    </button>
+
+                                    {rx.pdf_assinado_url ? (
+                                      <a
+                                        href={rx.pdf_assinado_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 rounded-xl transition-colors shadow-2xs"
+                                        title="Ver receita assinada digitalmente"
+                                      >
+                                        <FileCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"/>
+                                        <span>PDF Assinado</span>
+                                        <ExternalLink className="w-3 h-3 text-emerald-500"/>
+                                      </a>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => openSigningModal(rx)}
+                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 hover:bg-blue-100/70 rounded-xl transition-colors cursor-pointer shadow-2xs"
+                                        title="Assinar com certificado digital VIDaaS"
+                                      >
+                                        <FileCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"/>
+                                        <span>Assinar (VIDaaS)</span>
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+
+                                {/* 2. MODO PACIENTE (isPatientView) */}
+                                {isPatientView && (
+                                  rx.pdf_assinado_url ? (
                                     <a
                                       href={rx.pdf_assinado_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 rounded-lg transition-colors"
-                                      title="Ver receita assinada digitalmente"
+                                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl transition-all shadow-2xs"
+                                      title="Baixar receituário assinado digitalmente"
                                     >
-                                      <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                      <span>PDF Assinado</span>
-                                      <ExternalLink className="w-3 h-3 text-emerald-500" />
+                                      <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"/>
+                                      <span>Baixar Receita Assinada</span>
                                     </a>
                                   ) : (
                                     <button
                                       type="button"
-                                      onClick={() => openSigningModal(rx)}
-                                      className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100/70 rounded-lg transition-colors cursor-pointer"
-                                      title="Assinar com certificado digital VIDaaS"
+                                      onClick={() =>
+                                        toast({
+                                          type: "warning",
+                                          title: "Prescrição em Processamento",
+                                          description:
+                                            "Este documento ainda está aguardando a assinatura digital qualificada. Por favor, solicite a liberação à profissional.",
+                                        })
+                                      }
+                                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-xl cursor-pointer hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors shadow-2xs"
+                                      title="Documento pendente de assinatura"
                                     >
-                                      <FileCheck className="w-3.5 h-3.5 text-blue-600" />
-                                      <span>Assinar (VIDaaS)</span>
+                                      <Download className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500"/>
+                                      <span>Receita Assinada (Pendente)</span>
                                     </button>
-                                  )}
-                                </>
-                              )}
+                                  )
+                                )}
 
-                              {/* 2. MODO PACIENTE */}
-                              {isPatientView && (
-                                rx.pdf_assinado_url ? (
-                                  <a
-                                    href={rx.pdf_assinado_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition-all shadow-2xs"
-                                    title="Baixar receituário assinado digitalmente"
-                                  >
-                                    <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                    <span>Baixar Receita Assinada</span>
-                                  </a>
+                                {/* 3. Badge de Status (Ativo / Suspenso) */}
+                                {rx.ativo || rx.status === "Ativo" ? (
+                                  isPatientView ? (
+                                    <span className="inline-flex items-center px-2.5 py-1.5 rounded-xl text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 cursor-default select-none">
+                                      Em Uso (Ativo)
+                                    </span>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedRxForSuspension(rx.id);
+                                        setJustificativaTexto("");
+                                        setIsSuspensionModalOpen(true);
+                                      }}
+                                      className="inline-flex items-center px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 dark:hover:border-rose-800 shadow-2xs"
+                                      title="Clique para suspender esta receita"
+                                    >
+                                      Em Uso (Ativo)
+                                    </button>
+                                  )
                                 ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      toast({
-                                        type: "warning",
-                                        title: "Prescrição em Processamento",
-                                        description:
-                                          "Este documento ainda está aguardando a assinatura digital qualificada. Por favor, solicite a liberação à profissional.",
-                                      })
-                                    }
-                                    className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-slate-400 dark:text-slate-500 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-lg cursor-pointer hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
-                                    title="Documento pendente de assinatura"
+                                  <span
+                                    className="inline-flex items-center px-2.5 py-1.5 rounded-xl text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 cursor-default"
+                                    title="Receita suspensa"
                                   >
-                                    <Download className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-                                    <span>Receita Assinada (Pendente)</span>
-                                  </button>
-                                )
-                              )}
-
-                              {/* 3. Badge de Status (Em Uso / Suspenso) */}
-                              {rx.ativo || rx.status === "Ativo" ? (
-                                isPatientView ? (
-                                  <span className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 cursor-default select-none">
-                                    Em Uso (Ativo)
+                                    Suspenso
                                   </span>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedRxForSuspension(rx.id);
-                                      setJustificativaTexto("");
-                                      setIsSuspensionModalOpen(true);
-                                    }}
-                                    className="px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 dark:hover:border-rose-800"
-                                    title="Suspender receita"
-                                  >
-                                    Em Uso (Ativo)
-                                  </button>
-                                )
-                              ) : (
-                                <span
-                                  className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 cursor-default"
-                                  title="Receita suspensa"
-                                >
-                                  Suspenso
-                                </span>
+                                )}
+
+                              </div>
+                            </div>
+
+                            {/* Conteúdo da Prescrição: Composição, Veículo, Posologia e Orientações */}
+                            <div className="space-y-2.5">
+                              {rx.componentes && rx.componentes.length > 0 && (
+                                <div className="p-2.5 rounded-xl bg-teal-50/40 dark:bg-teal-950/20 border border-teal-100/70 dark:border-teal-900/40 text-xs text-teal-900 dark:text-teal-200 font-medium">
+                                  {rx.componentes.map((c: any) => `${c.nome}: ${c.quantidade}${c.unidade || ""}`).join(" | ")}
+                                </div>
                               )}
-                            </div>
-                          </div>
 
-                          {/* 2. ÁREA EM DESTAQUE (Fórmula / Dosagem): w-full para ter a mesma largura da caixa de Posologia */}
-                          {rx.dosagem && (
-                            <div className="mt-3 w-full p-2.5 sm:p-3 rounded-xl bg-teal-50/80 border border-teal-200/80 text-teal-900 dark:bg-teal-950/60 dark:border-teal-800/60 dark:text-teal-300 text-xs font-plus-jakarta font-medium break-words leading-relaxed">
-                              {rx.dosagem}
-                            </div>
-                          )}
-
-                          {/* 3. Caixa de Posologia: w-full (perfeitamente alinhada com a caixa de destaque acima) */}
-                          <div className="mt-2.5 p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/50 text-xs text-slate-700 dark:text-slate-300 space-y-1">
-                            <div>
-                              <strong>Posologia:</strong> {rx.posologia}
-                            </div>
-                            <div>
-                              <strong>Duração:</strong> {rx.duracao}
-                            </div>
-                            {rx.instrucoes && (
-                              <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
-                                <em>Obs: {rx.instrucoes}</em>
+                              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs space-y-1.5">
+                                {rx.item?.posologia && (
+                                  <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                                    <strong className="text-slate-900 dark:text-white">Posologia:</strong> {rx.item.posologia}
+                                  </p>
+                                )}
+                                {rx.item?.duracao && (
+                                  <p className="text-slate-600 dark:text-slate-400">
+                                    <strong className="text-slate-800 dark:text-slate-200">Duração:</strong> {rx.item.duracao}
+                                  </p>
+                                )}
+                                {rx.item?.orient_paciente && (
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+                                    <strong>Obs:</strong> {rx.item.orient_paciente}
+                                  </p>
+                                )}
                               </div>
-                            )}
-                            {(!rx.ativo || rx.status === "Suspenso") && rx.justificativa_suspensao && (
-                              <div className="mt-2 text-xs text-rose-600 dark:text-rose-400 font-medium">
-                                Motivo da suspensão: {rx.justificativa_suspensao}
-                              </div>
-                            )}
+                            </div>
                           </div>
                         </div>
                       );
