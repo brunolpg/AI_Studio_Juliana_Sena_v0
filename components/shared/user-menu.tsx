@@ -5,6 +5,12 @@ import { createPortal } from "react-dom";
 import { ChevronDown, LogOut, Sun, Moon, ShieldCheck } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
+function getFirstAndLastName(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 2) return fullName.trim();
+  return `${parts[0]} ${parts[parts.length - 1]}`;
+}
+
 export interface UserMenuProps {
   user?: {
     nome?: string;
@@ -44,7 +50,13 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
         setUserRole(propUser.roleLabel);
       } else if (propUser.role) {
         const r = String(propUser.role).toLowerCase();
-        setUserRole(r === "admin" || r === "administrador" ? "Administrador(a)" : r === "paciente" ? "Paciente" : propUser.role);
+        if (r === "admin" || r === "administrador" || r === "administrador(a)") {
+          setUserRole("Administrador(a)");
+        } else if (r === "paciente") {
+          setUserRole("Paciente");
+        } else {
+          setUserRole(propUser.role);
+        }
       }
       if (propUser.avatar_url || propUser.foto_perfil || propUser.avatar) {
         setAvatarUrl(propUser.avatar_url || propUser.foto_perfil || propUser.avatar || null);
@@ -62,12 +74,18 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
           if ((meta?.nome || meta?.full_name) && !propUser?.nome && !propUser?.name) {
             setUserName(meta.nome || meta.full_name);
           }
-          if (meta?.avatar_url && !propUser?.avatar_url && !propUser?.foto_perfil) {
-            setAvatarUrl(meta.avatar_url);
+          if ((meta?.avatar_url || meta?.picture) && !propUser?.avatar_url && !propUser?.foto_perfil) {
+            setAvatarUrl(meta.avatar_url || meta.picture);
           }
           if (meta?.role && !propUser?.role && !propUser?.roleLabel) {
             const r = String(meta.role).toLowerCase();
-            setUserRole(r === "admin" || r === "administrador" ? "Administrador(a)" : r === "paciente" ? "Paciente" : meta.role);
+            if (r === "admin" || r === "administrador" || r === "administrador(a)") {
+              setUserRole("Administrador(a)");
+            } else if (r === "paciente") {
+              setUserRole("Paciente");
+            } else {
+              setUserRole(meta.role);
+            }
           }
         }
       } catch (e) {
@@ -94,7 +112,6 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
     setIsOpen((prev) => !prev);
   };
 
-  // Fecha ao clicar fora ou ao rolar/redimensionar a janela
   useEffect(() => {
     if (!isOpen) return;
 
@@ -157,45 +174,44 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
     }
   };
 
+  const displayName = getFirstAndLastName(userName);
+
   return (
-    <div className="relative inline-block overflow-visible">
+    <div className="relative inline-block">
+      {/* Botão Pill Completo visível em Mobile e Desktop */}
       <button
         ref={buttonRef}
         type="button"
         onClick={handleToggle}
-        className="flex items-center gap-2 p-1 sm:pr-2.5 rounded-2xl border border-teal-500/40 dark:border-teal-500/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer bg-white dark:bg-slate-900 shadow-2xs"
+        className="flex items-center gap-2 py-1 pl-1.5 pr-2.5 rounded-full border border-teal-500/40 dark:border-teal-500/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer bg-white dark:bg-slate-900 shadow-2xs"
         aria-expanded={isOpen}
       >
         <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600">
           {avatarUrl ? (
-            <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
+            <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center font-bold text-xs text-slate-700 dark:text-slate-200">
-              {userName.charAt(0).toUpperCase()}
+              {displayName.charAt(0).toUpperCase()}
             </div>
           )}
         </div>
 
-        <div className="hidden sm:flex flex-col text-left">
+        {/* Nome/Sobrenome + Indicador Verde + Tipo do Perfil sempre visíveis */}
+        <div className="flex flex-col text-left min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 max-w-[130px] truncate leading-tight">
-              {userName}
+            <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-100 max-w-[115px] sm:max-w-[140px] truncate leading-tight">
+              {displayName}
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
           </div>
-          <span className="text-[10px] text-teal-600 dark:text-teal-400 leading-tight">
+          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-medium leading-tight truncate">
             {userRole}
           </span>
         </div>
 
-        <ChevronDown
-          className={`w-3.5 h-3.5 text-slate-400 ml-0.5 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        />
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 ml-0.5 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
-      {/* Renderiza o Dropdown no document.body via Portal para nunca ser cortado nem gerar scrollbar */}
       {mounted &&
         isOpen &&
         createPortal(
@@ -209,7 +225,6 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
             }}
             className="w-72 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-150 font-sans"
           >
-            {/* Header da Sessão */}
             <div className="flex items-center justify-between mb-2.5">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 rounded-md border border-emerald-200/60 dark:border-emerald-800/60">
                 <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400"/>
@@ -227,7 +242,6 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
 
             <hr className="my-3 border-slate-100 dark:border-slate-800" />
 
-            {/* Seletor de Tema */}
             <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
               <span>Tema do Sistema:</span>
               <button
@@ -251,7 +265,6 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
 
             <hr className="my-3 border-slate-100 dark:border-slate-800" />
 
-            {/* Botão Logout */}
             <button
               type="button"
               onClick={handleLogout}

@@ -202,76 +202,101 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col antialiased">
       {/* Header Dedicado do Portal do Paciente */}
-      <header className="w-full bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-3 self-start sm:self-auto">
-            <div className="w-9 h-9 rounded-2xl bg-teal-600 flex items-center justify-center text-white shadow-sm">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                Dra. Juliana Sena
-              </h1>
-              <p className="text-[11px] text-teal-600 dark:text-teal-400 font-semibold tracking-wide">
-                Portal do Paciente • Acesso Restrito
-              </p>
-            </div>
-          </div>
+      <header className="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-50 overflow-visible shadow-2xs">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 overflow-visible">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 sm:gap-3 overflow-visible">
+            
+            {/* Linha 1 no Mobile / Lado Esquerdo no Desktop: Identidade + Perfil Mobile */}
+            <div className="flex items-center justify-between w-full md:w-auto gap-2 overflow-visible">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-teal-600 flex items-center justify-center text-white shadow-sm shrink-0">
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate leading-tight">
+                    Dra. Juliana Sena
+                  </h1>
+                  <p className="text-[10px] sm:text-[11px] text-teal-600 dark:text-teal-400 font-semibold tracking-wide truncate">
+                    Portal do Paciente • Acesso Restrito
+                  </p>
+                </div>
+              </div>
 
-          {/* Navegação entre Abas */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl w-full sm:w-auto overflow-x-auto">
-            <button
-              type="button"
-              onClick={() => setActiveTab("prontuario")}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "prontuario"
-                  ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-400 shadow-2xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <ClipboardList className="w-3.5 h-3.5" />
-              <span>Documentos</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("agendamentos")}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "agendamentos"
-                  ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-400 shadow-2xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Agendamentos</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("ficha")}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === "ficha"
-                  ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-400 shadow-2xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <UserIcon className="w-3.5 h-3.5" />
-              <span>Minha Ficha</span>
-            </button>
-          </div>
+              {/* UserMenu no Mobile (posicionado à direita na Linha 1) */}
+              <div className="md:hidden shrink-0 relative overflow-visible z-50">
+                <UserMenu
+                  user={{
+                    nome: patientData?.nome || user?.name || user?.nome || "Paciente",
+                    email: patientData?.email || user?.email,
+                    role: "paciente",
+                    foto_perfil: userPhotoUrl,
+                    avatar: userPhotoUrl,
+                    avatar_url: userPhotoUrl,
+                    roleLabel: "Paciente"
+                  }}
+                  onLogout={onLogout ? async () => onLogout() : undefined}
+                />
+              </div>
+            </div>
 
-          {/* Menu do Usuário */}
-          <div className="flex items-center gap-2">
-            <UserMenu
-              user={{
-                nome: patientData?.nome || user?.name || user?.nome || "Paciente",
-                email: patientData?.email || user?.email,
-                role: "paciente",
-                foto_perfil: userPhotoUrl,
-                avatar: userPhotoUrl,
-                avatar_url: userPhotoUrl,
-                roleLabel: "Paciente"
-              }}
-              onLogout={onLogout ? async () => onLogout() : undefined}
-            />
+            {/* Linha 2 no Mobile / Centro no Desktop: Navegação entre Abas */}
+            <div className="flex items-center justify-center w-full md:w-auto overflow-x-auto no-scrollbar py-0.5 shrink-0">
+              <nav className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 w-full sm:w-auto justify-between sm:justify-center shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("prontuario")}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                    activeTab === "prontuario"
+                      ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-400 shadow-2xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <ClipboardList className="w-3.5 h-3.5 shrink-0" />
+                  <span>Documentos</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("agendamentos")}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                    activeTab === "agendamentos"
+                      ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-400 shadow-2xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5 shrink-0" />
+                  <span>Agendamentos</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("ficha")}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                    activeTab === "ficha"
+                      ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-400 shadow-2xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <UserIcon className="w-3.5 h-3.5 shrink-0" />
+                  <span>Minha Ficha</span>
+                </button>
+              </nav>
+            </div>
+
+            {/* Lado Direito no Desktop */}
+            <div className="hidden md:flex items-center shrink-0 relative overflow-visible z-50">
+              <UserMenu
+                user={{
+                  nome: patientData?.nome || user?.name || user?.nome || "Paciente",
+                  email: patientData?.email || user?.email,
+                  role: "paciente",
+                  foto_perfil: userPhotoUrl,
+                  avatar: userPhotoUrl,
+                  avatar_url: userPhotoUrl,
+                  roleLabel: "Paciente"
+                }}
+                onLogout={onLogout ? async () => onLogout() : undefined}
+              />
+            </div>
+
           </div>
         </div>
       </header>
