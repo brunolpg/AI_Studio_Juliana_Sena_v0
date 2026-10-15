@@ -20,6 +20,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/auth/auth-context";
 import { validateFileSize } from "@/lib/validations/file-upload";
+import { compressReceiptFile } from "@/lib/utils/compressFile";
 import type { Appointment, AppointmentStatus, TimeSlot } from "@/types/appointment";
 import {
   isAllowedAppointmentDay,
@@ -117,12 +118,13 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
     setIsUploadingAttachment(true);
     try {
       const supabase = getSupabaseClient();
-      const fileExt = file.name.split(".").pop() || "png";
+      const optimizedFile = await compressReceiptFile(file, { maxWidth: 1200, quality: 0.80 });
+      const fileExt = optimizedFile.name.split(".").pop() || "png";
       const filePath = `consultas/${appointment.id}_${Date.now()}.${fileExt}`;
 
       const { error: uploadErr } = await supabase.storage
         .from("anexos-consultas")
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, optimizedFile, { upsert: true });
 
       if (uploadErr) throw uploadErr;
 
