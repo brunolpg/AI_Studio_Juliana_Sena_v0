@@ -1351,12 +1351,11 @@ function AppointmentFormModalContent({
               </div>
 
               {/* CONTAINER INTERNO DA CHAVE PIX */}
-              <div className="w-full rounded-2xl border border-emerald-100 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 box-border overflow-hidden">
-                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 w-full">
+              <div className="w-full rounded-2xl border border-emerald-100 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 box-border">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 w-full">
                   
-                  {/* Bloco Esquerdo: QR Code + Informações da Chave */}
-                  <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                    {/* Box do QR Code */}
+                  {/* Coluna 1: QR Code */}
+                  <div className="shrink-0">
                     <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl border border-emerald-100 dark:border-teal-800 flex items-center justify-center p-1 bg-white">
                       <img
                         src={pixQrCodeUrl}
@@ -1364,21 +1363,23 @@ function AppointmentFormModalContent({
                         className="w-full h-full object-contain"
                       />
                     </div>
-
-                    {/* Textos da Chave */}
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-xs text-slate-500 dark:text-slate-400 truncate">Chave PIX da Clínica:</span>
-                      <span className="text-sm md:text-base font-bold text-slate-800 dark:text-slate-100 tracking-tight truncate">{PIX_KEY}</span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400 truncate">Beneficiário: {PIX_BENEFICIARIO}</span>
-                    </div>
                   </div>
 
-                  {/* Botão Copiar Código PIX: Alinhado no topo direito no PC, contido rigorosamente dentro da borda */}
-                  <div className="shrink-0 w-full md:w-auto self-start">
+                  {/* Coluna 2: Informações da Chave + Botão Copiar abaixo */}
+                  <div className="flex flex-col justify-between items-center sm:items-start text-center sm:text-left flex-1 min-w-0 w-full gap-2.5">
+                    <div className="flex flex-col min-w-0 w-full">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Chave PIX da Clínica:</span>
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">{PIX_KEY}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 break-words">
+                        Beneficiário: {PIX_BENEFICIARIO}
+                      </span>
+                    </div>
+
+                    {/* Botão Copiar Código PIX totalmente contido dentro do card */}
                     <button
                       type="button"
                       onClick={handleCopyPix}
-                      className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-50/60 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 transition-colors text-xs md:text-sm font-medium whitespace-nowrap cursor-pointer"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-50/60 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 transition-colors text-xs font-medium cursor-pointer"
                     >
                       {copiedPix ? (
                         <>
