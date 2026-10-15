@@ -1317,6 +1317,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     {prescriptions.map((rx) => {
                       const [year, month, day] = (rx.data || "").split("-");
                       const dateFormatted = year && month && day ? `${day}/${month}/${year}` : rx.data;
+                      const formulaName = rx.item?.nome_formula || rx.nome_formula || (rx.medicamento && rx.medicamento !== "Fórmula Magistral" ? rx.medicamento : null);
+                      const viaLabel = rx.item?.via ? (rx.item.via.toLowerCase() === "oral" ? "Oral" : "Tópico") : (rx.via === "oral" || rx.via === "Oral" ? "Oral" : "Tópico");
 
                       return (
                         <div
@@ -1324,22 +1326,29 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                           className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between"
                         >
                           <div>
-                            {/* Cabeçalho do Card: Título + Ações (Responsivo e sem sobreposição) */}
-                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 sm:gap-3 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70">
+                            {/* Cabeçalho do Card: Estrutura Flexível md:flex-row totalmente responsiva */}
+                            <div className="flex flex-col md:flex-row justify-between items-start gap-3 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70">
                               
-                              {/* Título da Fórmula e Metadados */}
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-baseline gap-2 flex-wrap">
-                                  <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white break-words leading-snug">
-                                    {rx.item?.nome_formula || rx.nome_formula || "Fórmula Magistral"}
-                                  </h4>
-                                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 shrink-0">
-                                    (Uso {rx.item?.via ? (rx.item.via.toLowerCase() === "oral" ? "Oral" : "Tópico") : "Oral"})
-                                  </span>
-                                </div>
+                              {/* Título Principal, Subtítulo (Nome da Fórmula) e Metadados */}
+                              <div className="min-w-0 flex-1 w-full md:w-auto">
+                                <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white break-words leading-snug">
+                                  Fórmula Magistral
+                                </h4>
 
-                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1 flex-wrap">
-                                  <span>Prescrito em {dateFormatted}</span>
+                                {/* Subtítulo em Destaque Sutil: Nome da Fórmula */}
+                                {formulaName && (
+                                  <p className="text-xs sm:text-sm font-medium text-slate-700/80 dark:text-slate-300/80 mt-0.5 break-words leading-snug">
+                                    {formulaName}
+                                  </p>
+                                )}
+
+                                {/* Metadados: Via + Data + Dose */}
+                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex-wrap">
+                                  <span className="font-medium text-slate-600 dark:text-slate-300 shrink-0">
+                                    (Uso {viaLabel})
+                                  </span>
+                                  <span>•</span>
+                                  <span className="shrink-0">Prescrito em {dateFormatted}</span>
                                   {rx.item?.dosagem && (
                                     <>
                                       <span>•</span>
@@ -1349,8 +1358,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                 </div>
                               </div>
 
-                              {/* Ações e Badges */}
-                              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap shrink-0">
+                              {/* Ações e Badges (Container Flexível com flex-wrap) */}
+                              <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap shrink-0 w-full md:w-auto justify-start md:justify-end">
                                 {!isPatientView && (
                                   <>
                                     <button
