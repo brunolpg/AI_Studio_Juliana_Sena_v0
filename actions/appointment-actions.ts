@@ -23,6 +23,7 @@ import {
   getGoogleCalendarCredentials,
 } from "@/lib/google-calendar/calendar-service";
 import { deleteAppointmentFromGoogle } from "@/lib/google-calendar/calendar-sync-service";
+import { sendNewAppointmentAdminNotification } from "@/lib/notifications/appointment-notification";
 import type { ActionResponse, PaginatedResult } from "@/types/client";
 import type { UserRole } from "@/types/auth";
 
@@ -649,6 +650,21 @@ export async function createAppointmentAction(
     }
 
     const newAppointment = mapRowToAppointment(inserted as unknown as RawAppointmentRow);
+
+    // Dispara notificações administrativas em segundo plano (assíncrono / não-bloqueante)
+    sendNewAppointmentAdminNotification({
+      patientName: newAppointment.client_nome || input.client_nome,
+      patientEmail: newAppointment.client_email || input.client_email,
+      patientPhone: newAppointment.client_telefone || input.client_telefone,
+      data: input.data,
+      horario_inicio: input.horario_inicio,
+      horario_fim,
+      procedimento: input.procedimento,
+      valor: matchedProc?.valor,
+      observacoes: input.observacoes,
+    }).catch((err) => {
+      console.warn("[actions/appointment-actions] Notificação em 2º plano omitida:", err);
+    });
 
     revalidatePath("/");
 
