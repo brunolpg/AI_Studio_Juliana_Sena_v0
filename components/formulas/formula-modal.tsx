@@ -162,14 +162,14 @@ export function FormulaModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto font-sans">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto font-['Plus_Jakarta_Sans',sans-serif]">
       <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90dvh] overflow-hidden">
         
         {/* Cabeçalho Fixo */}
-        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/9ોર્ dark:bg-slate-800/90">
+        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/90">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 flex items-center justify-center text-teal-600 dark:text-teal-400">
-              <FlaskConical className="w-5 h-5" />
+            <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <FlaskConical className="w-6 h-6 text-white stroke-[2.2]" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">
@@ -190,7 +190,7 @@ export function FormulaModal({
         </div>
 
         {/* Formulário com Rolagem Interna */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-4 font-['Plus_Jakarta_Sans',sans-serif]">
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-200 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -201,7 +201,7 @@ export function FormulaModal({
           {/* Grid de Campos Básicos (Responsivo para 1 ou 2 colunas) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2 space-y-1">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Nome da Fórmula *
               </label>
               <input
@@ -209,19 +209,19 @@ export function FormulaModal({
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 placeholder="Ex: Cápsulas Antioxidantes Avançadas"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
                 required
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Via de Administração *
               </label>
               <select
                 value={via}
                 onChange={(e) => setVia(e.target.value as "oral" | "tópico")}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 <option value="oral">Oral (Uso Oral)</option>
                 <option value="tópico">Tópico (Uso Tópico / Cutâneo)</option>
@@ -229,7 +229,7 @@ export function FormulaModal({
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Veículo Base
               </label>
               <input
@@ -237,12 +237,12 @@ export function FormulaModal({
                 value={veiculo}
                 onChange={(e) => setVeiculo(e.target.value)}
                 placeholder="Ex: Cápsula Vegetal / Gel Creme Oil Free"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Dosagem / Concentração
               </label>
               <input
@@ -251,18 +251,18 @@ export function FormulaModal({
                 value={dosagem}
                 onChange={(e) => setDosagem(e.target.value)}
                 placeholder="Ex: 1 ou 30"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Tipo de Veículo (Apresentação)
               </label>
               <select
                 value={tipoVeiculo}
                 onChange={(e) => setTipoVeiculo(e.target.value as any)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 <option value="">Nenhum / Padrão</option>
                 <option value="dose(s)">dose(s)</option>
@@ -272,7 +272,7 @@ export function FormulaModal({
             </div>
 
             <div className="sm:col-span-2 space-y-1">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Descrição Resumida
               </label>
               <input
@@ -280,7 +280,7 @@ export function FormulaModal({
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
                 placeholder="Ex: Fórmula antioxidante para suporte mitocondrial"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
           </div>
@@ -288,7 +288,7 @@ export function FormulaModal({
           {/* Construtor Dinâmico de Componentes */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight uppercase tracking-wider">
                 Componentes / Ativos da Fórmula *
               </label>
               <button
@@ -311,7 +311,7 @@ export function FormulaModal({
                       <select
                         value={item.componente_id}
                         onChange={(e) => handleItemChange(index, "componente_id", e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-100 focus:outline-none"
+                        className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
                         required
                       >
                         <option value="">Selecione o componente...</option>
@@ -330,7 +330,7 @@ export function FormulaModal({
                         value={item.quantidade}
                         onChange={(e) => handleItemChange(index, "quantidade", e.target.value)}
                         placeholder="Qtd"
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-800 dark:text-slate-100 focus:outline-none"
+                        className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
                         required
                       />
                       <span className="text-[11px] font-bold text-slate-500 w-12 truncate" title={unidadeStr}>
@@ -366,7 +366,7 @@ export function FormulaModal({
           {/* Posologia e Orientações */}
           <div className="space-y-4 pt-2">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Posologia Padrão
               </label>
               <textarea
@@ -374,12 +374,12 @@ export function FormulaModal({
                 onChange={(e) => setPosologia(e.target.value)}
                 placeholder="Ex: Tomar 1 cápsula ao dia pela manhã, em jejum."
                 rows={2}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Orientações ao Paciente
               </label>
               <textarea
@@ -387,12 +387,12 @@ export function FormulaModal({
                 onChange={(e) => setOrientPaciente(e.target.value)}
                 placeholder="Ex: Evitar consumo de alimentos ácidos 30 minutos antes."
                 rows={2}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Observações à Farmácia Magistral
               </label>
               <textarea
@@ -400,7 +400,7 @@ export function FormulaModal({
                 onChange={(e) => setOrientFarmacia(e.target.value)}
                 placeholder="Ex: Manipular em cápsulas gastroresistentes sem corantes."
                 rows={2}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
           </div>
