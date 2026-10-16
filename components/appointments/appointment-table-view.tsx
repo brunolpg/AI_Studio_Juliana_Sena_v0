@@ -697,16 +697,16 @@ export function AppointmentTableView() {
         </div>
 
         {/* Filtros Rápidos em Pílulas (Tabs) + Ações */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-col sm:flex-row flex-wrap sm:items-center justify-between sm:justify-start gap-2.5 w-full xl:w-auto">
           {/* Pílulas de Filtro */}
-          <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs">
+          <div className="flex flex-wrap sm:flex-nowrap items-center justify-center sm:justify-start gap-1.5 sm:gap-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs w-full sm:w-auto">
             <button
               id="filter-all-appointments"
               onClick={() => {
                 setActiveFilterTab("todos");
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+              className={`text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
                 activeFilterTab === "todos"
                   ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
@@ -721,7 +721,7 @@ export function AppointmentTableView() {
                 setActiveFilterTab("hoje");
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+              className={`text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
                 activeFilterTab === "hoje"
                   ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 font-bold shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
@@ -736,7 +736,7 @@ export function AppointmentTableView() {
                 setActiveFilterTab("proximos");
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+              className={`text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
                 activeFilterTab === "proximos"
                   ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
@@ -751,7 +751,7 @@ export function AppointmentTableView() {
                 setActiveFilterTab("concluidos");
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+              className={`text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
                 activeFilterTab === "concluidos"
                   ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
@@ -766,7 +766,7 @@ export function AppointmentTableView() {
                 setActiveFilterTab("cancelados");
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+              className={`text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
                 activeFilterTab === "cancelados"
                   ? "bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
@@ -776,26 +776,29 @@ export function AppointmentTableView() {
             </button>
           </div>
 
-          {/* Botão de Atualizar Circular */}
-          <button
-            id="refresh-appointments-btn"
-            onClick={() => loadAppointments()}
-            disabled={isPending}
-            className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors cursor-pointer"
-            title="Recarregar / sincronizar dados com o Google Agenda"
-          >
-            <RefreshCw className={`w-4 h-4 ${isPending ? "animate-spin text-teal-600" : ""}`} />
-          </button>
+          {/* Botões de Ação Auxiliares (Atualizar e Novo Agendamento) */}
+          <div className="flex items-center justify-end sm:justify-start gap-2 w-full sm:w-auto">
+            {/* Botão de Atualizar Circular */}
+            <button
+              id="refresh-appointments-btn"
+              onClick={() => loadAppointments()}
+              disabled={isPending}
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors cursor-pointer shrink-0"
+              title="Recarregar / sincronizar dados com o Google Agenda"
+            >
+              <RefreshCw className={`w-4 h-4 ${isPending ? "animate-spin text-teal-600" : ""}`} />
+            </button>
 
-          {/* Botão Principal de Ação Verde Arredondado */}
-          <button
-            id="open-new-appointment-btn"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs hover:shadow transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Novo Agendamento</span>
-          </button>
+            {/* Botão Principal de Ação Verde Arredondado */}
+            <button
+              id="open-new-appointment-btn"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs hover:shadow transition-all cursor-pointer whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Novo Agendamento</span>
+            </button>
+          </div>
         </div>
       </div>
 
