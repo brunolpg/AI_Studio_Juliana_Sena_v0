@@ -49,6 +49,11 @@ export function FormulaModal({
   const [newUnidadeNome, setNewUnidadeNome] = useState("");
   const [isCreatingQuick, setIsCreatingQuick] = useState(false);
 
+  const fieldClassName =
+    "w-full rounded-xl border transition-all text-sm font-['Plus_Jakarta_Sans',sans-serif] px-3.5 py-2.5 " +
+    "bg-slate-50/70 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 " +
+    "dark:bg-slate-900/60 dark:border-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-900 dark:focus:border-emerald-500 dark:focus:ring-1 dark:focus:ring-emerald-500";
+
   if (!isOpen) return null;
 
   const handleAddItem = () => {
@@ -209,7 +214,7 @@ export function FormulaModal({
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 placeholder="Ex: Cápsulas Antioxidantes Avançadas"
-                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className={fieldClassName}
                 required
               />
             </div>
@@ -221,7 +226,7 @@ export function FormulaModal({
               <select
                 value={via}
                 onChange={(e) => setVia(e.target.value as "oral" | "tópico")}
-                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className={fieldClassName}
               >
                 <option value="oral">Oral (Uso Oral)</option>
                 <option value="tópico">Tópico (Uso Tópico / Cutâneo)</option>
@@ -237,7 +242,7 @@ export function FormulaModal({
                 value={veiculo}
                 onChange={(e) => setVeiculo(e.target.value)}
                 placeholder="Ex: Cápsula Vegetal / Gel Creme Oil Free"
-                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className={fieldClassName}
               />
             </div>
 
@@ -251,7 +256,7 @@ export function FormulaModal({
                 value={dosagem}
                 onChange={(e) => setDosagem(e.target.value)}
                 placeholder="Ex: 1 ou 30"
-                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className={fieldClassName}
               />
             </div>
 
@@ -262,7 +267,7 @@ export function FormulaModal({
               <select
                 value={tipoVeiculo}
                 onChange={(e) => setTipoVeiculo(e.target.value as any)}
-                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className={fieldClassName}
               >
                 <option value="">Nenhum / Padrão</option>
                 <option value="dose(s)">dose(s)</option>
@@ -280,7 +285,7 @@ export function FormulaModal({
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
                 placeholder="Ex: Fórmula antioxidante para suporte mitocondrial"
-                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className={fieldClassName}
               />
             </div>
           </div>
@@ -311,7 +316,7 @@ export function FormulaModal({
                       <select
                         value={item.componente_id}
                         onChange={(e) => handleItemChange(index, "componente_id", e.target.value)}
-                        className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        className={fieldClassName}
                         required
                       >
                         <option value="">Selecione o componente...</option>
@@ -330,7 +335,7 @@ export function FormulaModal({
                         value={item.quantidade}
                         onChange={(e) => handleItemChange(index, "quantidade", e.target.value)}
                         placeholder="Qtd"
-                        className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        className={fieldClassName}
                         required
                       />
                       <span className="text-[11px] font-bold text-slate-500 w-12 truncate" title={unidadeStr}>
@@ -374,7 +379,7 @@ export function FormulaModal({
                 onChange={(e) => setPosologia(e.target.value)}
                 placeholder="Ex: Tomar 1 cápsula ao dia pela manhã, em jejum."
                 rows={2}
-                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className={fieldClassName}
               />
             </div>
 
@@ -387,7 +392,7 @@ export function FormulaModal({
                 onChange={(e) => setOrientPaciente(e.target.value)}
                 placeholder="Ex: Evitar consumo de alimentos ácidos 30 minutos antes."
                 rows={2}
-                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className={fieldClassName}
               />
             </div>
 
@@ -400,7 +405,7 @@ export function FormulaModal({
                 onChange={(e) => setOrientFarmacia(e.target.value)}
                 placeholder="Ex: Manipular em cápsulas gastroresistentes sem corantes."
                 rows={2}
-                className="w-full px-3.5 py-2.5 font-['Plus_Jakarta_Sans',sans-serif] text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className={fieldClassName}
               />
             </div>
           </div>
@@ -449,23 +454,23 @@ export function FormulaModal({
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nome do Componente *</label>
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">Nome do Componente *</label>
                 <input
                   type="text"
                   value={newCompNome}
                   onChange={(e) => setNewCompNome(e.target.value)}
                   placeholder="Ex: Coenzima Q10"
-                  className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                  className={fieldClassName + " mt-1"}
                   required
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Unidade de Medida *</label>
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">Unidade de Medida *</label>
                 <select
                   value={newCompUnidadeId}
                   onChange={(e) => setNewCompUnidadeId(e.target.value)}
-                  className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                  className={fieldClassName + " mt-1"}
                   required
                 >
                   <option value="">Selecione a unidade...</option>
@@ -478,13 +483,13 @@ export function FormulaModal({
 
               {newCompUnidadeId === "NEW" && (
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Nome da Nova Unidade *</label>
+                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">Nome da Nova Unidade *</label>
                   <input
                     type="text"
                     value={newUnidadeNome}
                     onChange={(e) => setNewUnidadeNome(e.target.value)}
                     placeholder="Ex: mg, ml, UI, gotas"
-                    className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                    className={fieldClassName + " mt-1"}
                     required
                   />
                 </div>
