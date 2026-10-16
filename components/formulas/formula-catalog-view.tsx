@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   FlaskConical,
   Search,
@@ -76,42 +77,49 @@ export function FormulaCatalogView({
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-16">
       
-      {/* Top Header / Hero */}
-      <header className="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-40 px-4 sm:px-8 py-4 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <a
-              href="/"
-              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
-              title="Voltar ao Início"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </a>
-            <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-xs">
-              <FlaskConical className="w-5 h-5" />
+      {/* Top Header / Hero Card */}
+      <motion.header
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="max-w-7xl mx-auto px-4 sm:px-8 pt-6 sm:pt-8"
+      >
+        <div className="bg-gradient-to-br from-emerald-950 via-teal-900 to-emerald-900 text-white rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+          <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="space-y-3 z-10">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-medium">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Prescrições & Fórmulas Magistrais</span>
             </div>
-            <div>
-              <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
-                Catálogo de Fórmulas Magistrais
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Gerenciamento de Fórmulas, Ativos & Prescrições Avançadas
-              </p>
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
+              Catálogo de Fórmulas
+            </h1>
+            <p className="text-sm text-emerald-100/80 leading-relaxed max-w-xl">
+              Gerencie fórmulas magistrais, ativos e diretrizes de manipulação com agilidade e precisão clínica.
+            </p>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-            <button
+          <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-start md:justify-end">
+            <a
+              href="/"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-medium transition-colors backdrop-blur-md cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Voltar</span>
+            </a>
+            <motion.button
+              whileTap={{ scale: 0.98 }}
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-medium shadow-sm transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Nova Fórmula</span>
-            </button>
+            </motion.button>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-6 sm:pt-8 space-y-6">
