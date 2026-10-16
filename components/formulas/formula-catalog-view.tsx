@@ -93,21 +93,19 @@ export function FormulaCatalogView({
         transition={{ duration: 0.3 }}
         className="max-w-7xl mx-auto px-4 sm:px-8 pt-6 sm:pt-8"
       >
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#042f2e] via-[#064e3b] to-[#0b1329] p-6 sm:p-8 text-white shadow-md border border-emerald-900/40">
-          <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="space-y-3 z-10 relative">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/25 text-emerald-300 text-xs font-semibold tracking-wide">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-              <span>Prescrições & Fórmulas Magistrais</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
-              Catálogo de Fórmulas
-            </h1>
-            <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed max-w-xl mt-2">
-              Gerencie fórmulas magistrais, ativos e diretrizes de manipulação com agilidade e precisão clínica.
-            </p>
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#042f2e] to-[#091522] p-5 sm:p-6 text-white shadow-sm border border-emerald-900/30 font-['Plus_Jakarta_Sans',sans-serif]">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/20 text-emerald-300 text-[11px] sm:text-xs font-medium">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0"/>
+            <span>Prescrições & Fórmulas Magistrais</span>
           </div>
+
+          <h1 className="mt-3 text-xl sm:text-2xl font-bold tracking-tight text-white leading-tight">
+            Catálogo de Fórmulas
+          </h1>
+
+          <p className="mt-2 text-xs sm:text-sm text-emerald-100/75 leading-relaxed max-w-xl font-normal">
+            Gerencie fórmulas magistrais, ativos e diretrizes de manipulação com agilidade e precisão clínica.
+          </p>
         </div>
       </motion.header>
 
