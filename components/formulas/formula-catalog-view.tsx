@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
   FlaskConical,
@@ -16,6 +17,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { FormulaModal } from "./formula-modal";
+import { AppHeader } from "@/components/shared/app-header";
 import { deleteFormulaAction } from "@/actions/formula-actions";
 import { useToast } from "@/components/ui/toast";
 import type { Formula, Componente, Unidade } from "@/types/formula";
@@ -31,6 +33,7 @@ export function FormulaCatalogView({
   componentes,
   unidades,
 }: FormulaCatalogViewProps) {
+  const router = useRouter();
   const { toast } = useToast();
   const [formulas, setFormulas] = useState<Formula[]>(initialFormulas);
   const [searchTerm, setSearchTerm] = useState("");
@@ -77,6 +80,12 @@ export function FormulaCatalogView({
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-16">
       
+      {/* App Header */}
+      <AppHeader
+        currentTab="prontuarios"
+        onTabChange={() => router.push("/dashboard")}
+      />
+
       {/* Top Header / Hero Card */}
       <motion.header
         initial={{ opacity: 0, y: -10 }}
@@ -84,7 +93,7 @@ export function FormulaCatalogView({
         transition={{ duration: 0.3 }}
         className="max-w-7xl mx-auto px-4 sm:px-8 pt-6 sm:pt-8"
       >
-        <div className="bg-gradient-to-br from-emerald-950 via-teal-900 to-emerald-900 text-white rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+        <div className="bg-gradient-to-br from-emerald-950 via-teal-900 to-emerald-900 text-white rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
           <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
           
           <div className="space-y-3 z-10">
@@ -99,31 +108,65 @@ export function FormulaCatalogView({
               Gerencie fórmulas magistrais, ativos e diretrizes de manipulação com agilidade e precisão clínica.
             </p>
           </div>
-
-          <div className="flex items-center gap-3 z-10 w-full md:w-auto justify-start md:justify-end">
-            <a
-              href="/"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-medium transition-colors backdrop-blur-md cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Voltar</span>
-            </a>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              type="button"
-              onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-medium shadow-sm transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Nova Fórmula</span>
-            </motion.button>
-          </div>
         </div>
       </motion.header>
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-6 sm:pt-8 space-y-6">
         
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">Fórmulas Cadastradas</span>
+              <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <FlaskConical className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                {formulas.length}
+              </span>
+              <span className="text-[10px] sm:text-[11px] text-slate-400">no catálogo</span>
+            </div>
+          </div>
+
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">Componentes Ativos</span>
+              <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <Pill className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                {componentes.length}
+              </span>
+              <span className="text-[10px] sm:text-[11px] text-slate-400">insumos disponíveis</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Bar (Estilo Prescrições) */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="flex items-center justify-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl py-3 px-4 text-xs sm:text-sm font-semibold shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Voltar ao Prontuário</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-3 px-4 text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nova Fórmula</span>
+          </button>
+        </div>
+
         {/* Barra de Filtros e Busca */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
           
@@ -177,101 +220,101 @@ export function FormulaCatalogView({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredFormulas.map((f) => {
-              const viaBadgeColor =
-                f.via === "oral"
-                  ? "bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border-teal-200/60"
-                  : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200/60";
-
               return (
                 <div
                   key={f.id}
-                  className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-2xs hover:border-teal-500/40 transition-all flex flex-col justify-between space-y-4"
+                  className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between"
                 >
-                  <div className="space-y-3">
+                  <div>
                     {/* Cabeçalho do Card */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border ${viaBadgeColor} mb-1.5`}>
-                          Uso {f.via}
-                        </span>
-                        <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-snug">
+                    <div className="flex flex-col md:flex-row justify-between items-start gap-3 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70">
+                      <div className="min-w-0 flex-1 w-full">
+                        <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white break-words leading-snug">
                           {f.nome}
-                        </h3>
+                        </h4>
+                        {f.descricao && (
+                          <p className="text-xs sm:text-sm font-medium text-slate-700/80 dark:text-slate-300/80 mt-0.5 break-words leading-snug">
+                            {f.descricao}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex-wrap">
+                          <span className="font-medium text-slate-600 dark:text-slate-300 shrink-0">
+                            (Uso {f.via === "oral" ? "Oral" : "Tópico"})
+                          </span>
+                          {f.veiculo && (
+                            <>
+                              <span>•</span>
+                              <span>Veículo: {f.veiculo}</span>
+                            </>
+                          )}
+                          {f.dosagem && (
+                            <>
+                              <span>•</span>
+                              <span>Dose: {f.dosagem} {f.tipo_veiculo || ""}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
 
-                      <button
-                        type="button"
-                        disabled={deletingId === f.id}
-                        onClick={() => handleDelete(f.id, f.nome)}
-                        className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer shrink-0"
-                        title="Excluir fórmula"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {/* Status / Ação */}
+                      <div className="flex items-center gap-2 flex-wrap shrink-0">
+                        <span className="inline-flex items-center px-2.5 py-1.5 rounded-xl text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 select-none">
+                          Em Uso (Ativo)
+                        </span>
+                        <button
+                          type="button"
+                          disabled={deletingId === f.id}
+                          onClick={() => handleDelete(f.id, f.nome)}
+                          className="border border-rose-200 bg-rose-50/50 dark:bg-rose-950/30 text-rose-600 hover:bg-rose-100 rounded-full px-3 py-1 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                          title="Excluir fórmula"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Excluir</span>
+                        </button>
+                      </div>
                     </div>
 
-                    {f.descricao && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                        {f.descricao}
-                      </p>
-                    )}
-
-                    {/* Veículo & Dosagem */}
-                    {(f.veiculo || f.dosagem) && (
-                      <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 text-xs space-y-1">
-                        {f.veiculo && (
-                          <p className="text-slate-700 dark:text-slate-300">
-                            <strong className="text-slate-400">Veículo:</strong> {f.veiculo}
-                          </p>
-                        )}
-                        {f.dosagem && (
-                          <p className="text-slate-700 dark:text-slate-300">
-                            <strong className="text-slate-400">Dosagem:</strong> {f.dosagem} {f.tipo_veiculo || ""}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Lista de Ativos / Componentes */}
-                    <div className="space-y-1.5">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        Componentes Ativos ({f.formula_componentes?.length || 0})
-                      </span>
-                      <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
-                        {f.formula_componentes?.map((fc, idx) => {
+                    {/* Bloco de Composição (Caixa Verde Suave) */}
+                    {f.formula_componentes && f.formula_componentes.length > 0 && (
+                      <div className="mt-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 p-3.5 text-xs sm:text-sm text-emerald-950 dark:text-emerald-200 font-semibold leading-relaxed space-y-1">
+                        <strong className="block text-[11px] uppercase tracking-wider text-emerald-800 dark:text-emerald-300 mb-1">Composição:</strong>
+                        {f.formula_componentes.map((fc, idx) => {
                           const compName = fc.componentes?.nome || "Ativo";
                           const qtd = fc.quantidade;
                           const unit = fc.componentes?.unidades?.unidade || "";
-
                           return (
-                            <div key={idx} className="flex items-center justify-between text-xs bg-slate-50/70 dark:bg-slate-800/40 px-2.5 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                              <span className="font-medium text-slate-800 dark:text-slate-200 truncate pr-2">
-                                {compName}
-                              </span>
-                              <span className="font-bold text-teal-700 dark:text-teal-300 shrink-0">
-                                {qtd} {unit}
-                              </span>
+                            <div key={idx}>
+                              {compName}: {qtd}{unit}
                             </div>
                           );
                         })}
                       </div>
-                    </div>
+                    )}
 
-                    {/* Posologia */}
-                    {f.posologia && (
-                      <div className="pt-1 border-t border-slate-100 dark:border-slate-800 text-xs">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
-                          Posologia
-                        </span>
-                        <p className="text-slate-700 dark:text-slate-300 font-medium italic">
-                          &ldquo;{f.posologia}&rdquo;
-                        </p>
+                    {/* Bloco de Posologia e Orientações (Caixa Cinza Suave, Sem Itálico/Aspas) */}
+                    {(f.posologia || f.orient_paciente || f.orient_farmacia) && (
+                      <div className="mt-3 rounded-2xl bg-slate-50/90 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 p-3.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed space-y-2">
+                        {f.posologia && (
+                          <p className="not-italic">
+                            <strong className="font-bold text-slate-800 dark:text-slate-200">Posologia:</strong> {f.posologia}
+                          </p>
+                        )}
+                        {f.orient_paciente && (
+                          <p className="not-italic">
+                            <strong className="font-bold text-slate-800 dark:text-slate-200">Orientação ao Paciente:</strong> {f.orient_paciente}
+                          </p>
+                        )}
+                        {f.orient_farmacia && (
+                          <p className="not-italic">
+                            <strong className="font-bold text-slate-800 dark:text-slate-200">Orientação à Farmácia:</strong> {f.orient_farmacia}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
 
                   {/* Rodapé do Card */}
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+                  <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
                     <span>ID: {f.id.substring(0, 8)}...</span>
                     <span className="text-teal-600 dark:text-teal-400 font-semibold">Magistral Oficial</span>
                   </div>
@@ -281,6 +324,11 @@ export function FormulaCatalogView({
           </div>
         )}
       </main>
+
+      {/* Footer Profissional */}
+      <footer className="max-w-7xl mx-auto px-4 sm:px-8 mt-16 pt-6 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500 dark:text-slate-400">
+        <p>Dra. Juliana Sena • Sistema Clínico e Prescrições Magistrais • Todos os direitos reservados.</p>
+      </footer>
 
       {/* Modal de Nova Fórmula */}
       <FormulaModal
