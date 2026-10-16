@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, LogOut, Sun, Moon, ShieldCheck } from "lucide-react";
+import { ChevronDown, LogOut, Sun, Moon, ShieldCheck, FlaskConical } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 function getFirstAndLastName(fullName: string): string {
@@ -241,6 +241,20 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
             </p>
 
             <hr className="my-3 border-slate-100 dark:border-slate-800" />
+
+            {!userRole.toLowerCase().includes("paciente") && (
+              <>
+                <a
+                  href="/formulas"
+                  className="w-full flex items-center gap-2 px-2.5 py-2 mb-2 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 rounded-xl transition-colors cursor-pointer"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <FlaskConical className="w-4 h-4"/>
+                  <span>Catálogo de Fórmulas</span>
+                </a>
+                <hr className="my-3 border-slate-100 dark:border-slate-800" />
+              </>
+            )}
 
             <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
               <span>Tema do Sistema:</span>

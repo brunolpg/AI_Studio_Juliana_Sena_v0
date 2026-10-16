@@ -1299,7 +1299,9 @@ export function AppointmentTableView() {
 
               {/* DADOS PIX E BOTÃO DE CÓPIA */}
               <div className="relative w-full rounded-2xl border border-teal-100 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 box-border">
-                <div className="flex flex-col md:flex-row items-center md:items-start gap-4 w-full">
+                
+                <div className="flex flex-col md:flex-row items-center md:items-stretch gap-4 w-full">
+                  {/* QR Code */}
                   <div className="shrink-0">
                     <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-xl border border-teal-200 dark:border-teal-800 flex items-center justify-center p-1 bg-white overflow-hidden shadow-xs">
                       {modalPixQrCodeUrl ? (
@@ -1314,15 +1316,24 @@ export function AppointmentTableView() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col min-w-0 flex-1 text-center md:text-left">
-                    <span className="text-xs text-slate-500 dark:text-slate-400 md:pr-40">Chave PIX da Clínica:</span>
-                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight md:pr-40">{PIX_KEY}</span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 break-words md:pr-40">
+                  {/* Coluna de Textos: Topo (Chave) e Base (Beneficiário em linha única) */}
+                  <div className="flex flex-col justify-between min-w-0 flex-1 text-center md:text-left py-0.5">
+                    
+                    {/* Topo: Chave PIX (com recuo à direita no PC para não colidir com o botão) */}
+                    <div className="flex flex-col md:pr-44">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Chave PIX da Clínica:</span>
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100 tracking-tight">{PIX_KEY}</span>
+                    </div>
+
+                    {/* Parte Inferior: Beneficiário ocupando uma única linha no PC */}
+                    <span className="text-xs text-slate-500 dark:text-slate-400 mt-2 md:mt-auto md:whitespace-nowrap">
                       Beneficiário: {PIX_BENEFICIARIO}
                     </span>
+
                   </div>
                 </div>
 
+                {/* Botão Copiar Código PIX mantido no canto superior direito no PC */}
                 <button
                   type="button"
                   onClick={handleCopyPixPaymentModal}
@@ -1340,6 +1351,7 @@ export function AppointmentTableView() {
                     </>
                   )}
                 </button>
+
               </div>
 
               {/* SEÇÃO ANEXAR COMPROVANTE PIX */}
