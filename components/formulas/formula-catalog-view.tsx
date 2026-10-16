@@ -78,7 +78,7 @@ export function FormulaCatalogView({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 pb-16">
+    <div className="font-['Plus_Jakarta_Sans',sans-serif] min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16">
       
       {/* App Header */}
       <AppHeader
@@ -93,18 +93,18 @@ export function FormulaCatalogView({
         transition={{ duration: 0.3 }}
         className="max-w-7xl mx-auto px-4 sm:px-8 pt-6 sm:pt-8"
       >
-        <div className="bg-gradient-to-br from-emerald-950 via-teal-900 to-emerald-900 text-white rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#042f2e] via-[#064e3b] to-[#0b1329] p-6 sm:p-8 text-white shadow-md border border-emerald-900/40">
           <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
           
-          <div className="space-y-3 z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-medium">
+          <div className="space-y-3 z-10 relative">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/25 text-emerald-300 text-xs font-semibold tracking-wide">
               <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
               <span>Prescrições & Fórmulas Magistrais</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
               Catálogo de Fórmulas
             </h1>
-            <p className="text-sm text-emerald-100/80 leading-relaxed max-w-xl">
+            <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed max-w-xl mt-2">
               Gerencie fórmulas magistrais, ativos e diretrizes de manipulação com agilidade e precisão clínica.
             </p>
           </div>
