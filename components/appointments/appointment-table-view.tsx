@@ -698,15 +698,15 @@ export function AppointmentTableView() {
 
         {/* Filtros Rápidos em Pílulas (Tabs) + Ações */}
         <div className="flex flex-col sm:flex-row flex-wrap sm:items-center justify-between sm:justify-start gap-2.5 w-full xl:w-auto">
-          {/* Pílulas de Filtro */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center justify-center sm:justify-start gap-1.5 sm:gap-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs w-full sm:w-auto">
+          {/* Pílulas de Filtro (Scroll Horizontal com linha única) */}
+          <div className="flex items-center flex-nowrap overflow-x-auto w-full sm:w-auto max-w-full gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs shrink-0 no-scrollbar">
             <button
               id="filter-all-appointments"
               onClick={() => {
                 setActiveFilterTab("todos");
                 setCurrentPage(1);
               }}
-              className={`text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 text-center ${
                 activeFilterTab === "todos"
                   ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
@@ -721,7 +721,7 @@ export function AppointmentTableView() {
                 setActiveFilterTab("hoje");
                 setCurrentPage(1);
               }}
-              className={`text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 text-center ${
                 activeFilterTab === "hoje"
                   ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 font-bold shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
@@ -736,7 +736,7 @@ export function AppointmentTableView() {
                 setActiveFilterTab("proximos");
                 setCurrentPage(1);
               }}
-              className={`text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 text-center ${
                 activeFilterTab === "proximos"
                   ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
@@ -751,7 +751,7 @@ export function AppointmentTableView() {
                 setActiveFilterTab("concluidos");
                 setCurrentPage(1);
               }}
-              className={`text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 text-center ${
                 activeFilterTab === "concluidos"
                   ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
@@ -766,7 +766,7 @@ export function AppointmentTableView() {
                 setActiveFilterTab("cancelados");
                 setCurrentPage(1);
               }}
-              className={`text-xs px-2.5 sm:px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap text-center ${
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 text-center ${
                 activeFilterTab === "cancelados"
                   ? "bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
