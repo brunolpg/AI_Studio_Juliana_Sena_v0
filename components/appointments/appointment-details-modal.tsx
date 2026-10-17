@@ -42,8 +42,8 @@ export function AppointmentDetailsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif]">
+      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Cabeçalho */}
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3">
@@ -51,10 +51,10 @@ export function AppointmentDetailsModal({
               {(appointment.client_nome || "P")[0].toUpperCase()}
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Detalhes do Atendimento
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {formatDateBR(appointment.data)}
               </p>
             </div>
@@ -71,23 +71,23 @@ export function AppointmentDetailsModal({
         {/* Conteúdo rolável */}
         <div className="p-6 space-y-4 overflow-y-auto">
           {/* Card do Paciente */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 space-y-2">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+          <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-2">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
               PACIENTE
             </span>
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+            <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
               {appointment.client_nome}
             </p>
             <div className="space-y-1 pt-1 text-xs text-slate-600 dark:text-slate-300">
               {appointment.client_telefone && (
                 <p className="flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                  <Phone className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                   <span>{appointment.client_telefone}</span>
                 </p>
               )}
               {appointment.client_email && (
                 <p className="flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                  <Mail className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                   <span>{appointment.client_email}</span>
                 </p>
               )}
@@ -96,20 +96,20 @@ export function AppointmentDetailsModal({
 
           {/* Grid Horário e Status */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+            <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80">
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                 Horário Agendado
               </span>
               <p className="text-sm font-bold text-teal-700 dark:text-teal-400 flex items-center gap-1.5 mt-1">
-                <Clock className="w-4 h-4 shrink-0" />
+                <Clock className="w-4 h-4 shrink-0 text-teal-600 dark:text-teal-400" />
                 <span>
                   {appointment.horario_inicio} - {appointment.horario_fim}
                 </span>
               </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+            <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80">
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                 Status da Consulta
               </span>
               <div className="mt-1">
@@ -121,15 +121,15 @@ export function AppointmentDetailsModal({
           </div>
 
           {/* Procedimento */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 space-y-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+          <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 space-y-1">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
               Procedimento / Especialidade
             </span>
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+            <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
               {appointment.procedimento}
             </p>
             {appointment.observacoes && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 mt-2">
+              <p className="text-xs text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-200/60 dark:border-slate-700/60 mt-2">
                 {appointment.observacoes}
               </p>
             )}
@@ -139,7 +139,7 @@ export function AppointmentDetailsModal({
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between p-3 rounded-2xl bg-teal-50/50 dark:bg-slate-800/60 border border-teal-200/70 dark:border-slate-700">
               <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Paperclip className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                <Paperclip className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                 Total de ficheiros anexados
               </span>
               <span className="text-xs font-bold text-teal-700 dark:text-teal-400">
@@ -148,12 +148,12 @@ export function AppointmentDetailsModal({
             </div>
 
             <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider block">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
                 FICHEIROS NO PRONTUÁRIO
               </span>
 
               {attachments.length === 0 ? (
-                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 text-center text-xs text-slate-400 italic">
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 text-center text-xs text-slate-400 dark:text-slate-400 italic">
                   Nenhum exame ou foto clínica anexada a esta consulta.
                 </div>
               ) : (
@@ -169,9 +169,9 @@ export function AppointmentDetailsModal({
                         className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 hover:bg-teal-50 dark:hover:bg-slate-700/60 text-xs text-slate-700 dark:text-slate-200 transition-colors group cursor-pointer"
                       >
                         {isImage ? (
-                          <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
+                          <ImageIcon className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
                         ) : (
-                          <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                          <FileText className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
                         )}
                         <span className="truncate flex-1 font-medium group-hover:text-teal-700 dark:group-hover:text-teal-300">
                           Anexo {idx + 1} ({isImage ? "Foto" : "Documento"})
@@ -189,7 +189,7 @@ export function AppointmentDetailsModal({
           {appointment.google_html_link && (
             <div className="p-4 rounded-2xl bg-teal-50/40 dark:bg-slate-800/40 border border-teal-200/60 dark:border-slate-700 flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-medium text-teal-800 dark:text-teal-300">
-                <Calendar className="w-4 h-4 text-teal-600" />
+                <Calendar className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                 <span>Sincronizado na Agenda Oficial</span>
               </div>
               <a
