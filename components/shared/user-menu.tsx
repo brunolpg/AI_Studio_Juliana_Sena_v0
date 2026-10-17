@@ -2,8 +2,9 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, LogOut, Sun, Moon, ShieldCheck, FlaskConical } from "lucide-react";
+import { ChevronDown, LogOut, Sun, Moon, ShieldCheck, FlaskConical, KeyRound } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { ChangePasswordModal } from "@/components/ChangePasswordModal";
 
 function getFirstAndLastName(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
@@ -33,6 +34,8 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
   const [userEmail, setUserEmail] = useState("brunolpgbackup@gmail.com");
   const [userRole, setUserRole] = useState("Administrador(a)");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<any>(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; right: number }>({ top: 60, right: 16 });
 
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -69,6 +72,7 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
         if (!supabase) return;
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          setSupabaseUser(user);
           if (user.email && !propUser?.email) setUserEmail(user.email);
           const meta = user.user_metadata;
           if ((meta?.nome || meta?.full_name) && !propUser?.nome && !propUser?.name) {
@@ -175,121 +179,144 @@ export function UserMenu({ user: propUser, onLogout: propLogout }: UserMenuProps
   };
 
   const displayName = getFirstAndLastName(userName);
+  const providers = supabaseUser?.app_metadata?.providers || (supabaseUser?.app_metadata?.provider ? [supabaseUser.app_metadata.provider] : []);
+  const isGoogleOnly = providers.includes("google") && !providers.includes("email");
 
   return (
-    <div className="relative inline-block">
-      {/* Botão Pill Completo visível em Mobile e Desktop */}
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={handleToggle}
-        className="flex items-center gap-2 py-1 pl-1.5 pr-2.5 rounded-full border border-teal-500/40 dark:border-teal-500/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer bg-white dark:bg-slate-900 shadow-2xs"
-        aria-expanded={isOpen}
-      >
-        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center font-bold text-xs text-slate-700 dark:text-slate-200">
-              {displayName.charAt(0).toUpperCase()}
-            </div>
-          )}
-        </div>
-
-        {/* Nome/Sobrenome + Indicador Verde + Tipo do Perfil sempre visíveis */}
-        <div className="flex flex-col text-left min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-100 max-w-[115px] sm:max-w-[140px] truncate leading-tight">
-              {displayName}
-            </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-          </div>
-          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-medium leading-tight truncate">
-            {userRole}
-          </span>
-        </div>
-
-        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 ml-0.5 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
-      </button>
-
-      {mounted &&
-        isOpen &&
-        createPortal(
-          <div
-            ref={dropdownRef}
-            style={{
-              position: "fixed",
-              top: `${coords.top}px`,
-              right: `${coords.right}px`,
-              zIndex: 99999,
-            }}
-            className="w-72 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-150 font-sans"
-          >
-            <div className="flex items-center justify-between mb-2.5">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 rounded-md border border-emerald-200/60 dark:border-emerald-800/60">
-                <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400"/>
-                Sessão Autenticada
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">JWT HS256</span>
-            </div>
-
-            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-              {userName}
-            </p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-              {userEmail}
-            </p>
-
-            <hr className="my-3 border-slate-100 dark:border-slate-800" />
-
-            {!userRole.toLowerCase().includes("paciente") && (
-              <>
-                <a
-                  href="/formulas"
-                  className="w-full flex items-center gap-2 px-2.5 py-2 mb-2 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 rounded-xl transition-colors cursor-pointer"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <FlaskConical className="w-4 h-4"/>
-                  <span>Catálogo de Fórmulas</span>
-                </a>
-                <hr className="my-3 border-slate-100 dark:border-slate-800" />
-              </>
+    <>
+      <div className="relative inline-block">
+        {/* Botão Pill Completo visível em Mobile e Desktop */}
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={handleToggle}
+          className="flex items-center gap-2 py-1 pl-1.5 pr-2.5 rounded-full border border-teal-500/40 dark:border-teal-500/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer bg-white dark:bg-slate-900 shadow-2xs"
+          aria-expanded={isOpen}
+        >
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center font-bold text-xs text-slate-700 dark:text-slate-200">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
             )}
+          </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
-              <span>Tema do Sistema:</span>
+          {/* Nome/Sobrenome + Indicador Verde + Tipo do Perfil sempre visíveis */}
+          <div className="flex flex-col text-left min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-100 max-w-[115px] sm:max-w-[140px] truncate leading-tight">
+                {displayName}
+              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+            </div>
+            <span className="text-[10px] text-teal-600 dark:text-teal-400 font-medium leading-tight truncate">
+              {userRole}
+            </span>
+          </div>
+
+          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 ml-0.5 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+        </button>
+
+        {mounted &&
+          isOpen &&
+          createPortal(
+            <div
+              ref={dropdownRef}
+              style={{
+                position: "fixed",
+                top: `${coords.top}px`,
+                right: `${coords.right}px`,
+                zIndex: 99999,
+              }}
+              className="w-72 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-150 font-['Plus_Jakarta_Sans',sans-serif]"
+            >
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 rounded-md border border-emerald-200/60 dark:border-emerald-800/60">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400"/>
+                  Sessão Autenticada
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">JWT HS256</span>
+              </div>
+
+              <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                {userName}
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                {userEmail}
+              </p>
+
+              <hr className="my-3 border-slate-100 dark:border-slate-800" />
+
+              {!userRole.toLowerCase().includes("paciente") && (
+                <>
+                  <a
+                    href="/formulas"
+                    className="w-full flex items-center gap-2 px-2.5 py-2 mb-2 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 rounded-xl transition-colors cursor-pointer"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <FlaskConical className="w-4 h-4"/>
+                    <span>Catálogo de Fórmulas</span>
+                  </a>
+                  <hr className="my-3 border-slate-100 dark:border-slate-800" />
+                </>
+              )}
+
+              {/* Gestão de Palavra-passe */}
               <button
                 type="button"
-                onClick={toggleTheme}
-                className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsPasswordModalOpen(true);
+                }}
+                className="w-full flex items-center gap-2 px-2.5 py-2 mb-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
               >
-                {theme === "dark" ? (
-                  <>
-                    <Moon className="w-3.5 h-3.5 text-indigo-400"/>
-                    <span>Escuro</span>
-                  </>
-                ) : (
-                  <>
-                    <Sun className="w-3.5 h-3.5 text-amber-500"/>
-                    <span>Claro</span>
-                  </>
-                )}
+                <KeyRound className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                <span>{isGoogleOnly ? "Criar palavra-passe de acesso" : "Alterar palavra-passe"}</span>
               </button>
-            </div>
 
-            <hr className="my-3 border-slate-100 dark:border-slate-800" />
+              <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
+                <span>Tema do Sistema:</span>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  {theme === "dark" ? (
+                    <>
+                      <Moon className="w-3.5 h-3.5 text-indigo-400"/>
+                      <span>Escuro</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sun className="w-3.5 h-3.5 text-amber-500"/>
+                      <span>Claro</span>
+                    </>
+                  )}
+                </button>
+              </div>
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer"
-            >
-              <LogOut className="w-4 h-4"/>
-              <span>Encerrar Sessão (Logout)</span>
-            </button>
-          </div>,
-          document.body
-        )}
-    </div>
+              <hr className="my-3 border-slate-100 dark:border-slate-800" />
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4"/>
+                <span>Encerrar Sessão (Logout)</span>
+              </button>
+            </div>,
+            document.body
+          )}
+      </div>
+
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        isGoogleOnly={isGoogleOnly}
+      />
+    </>
   );
 }

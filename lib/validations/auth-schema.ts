@@ -4,6 +4,16 @@ export const RoleEnum = z.enum(["paciente", "profissional", "administrador"], {
   message: "Selecione um perfil de acesso válido (paciente, profissional ou administrador)",
 });
 
+export const passwordSchema = z
+  .string()
+  .min(8, { message: "A palavra-passe deve ter no mínimo 8 caracteres." })
+  .regex(/[A-Z]/, { message: "A palavra-passe deve conter pelo menos 1 letra maiúscula." })
+  .regex(/[a-z]/, { message: "A palavra-passe deve conter pelo menos 1 letra minúscula." })
+  .regex(/[0-9]/, { message: "A palavra-passe deve conter pelo menos 1 número." })
+  .regex(/[\!@#\$%\^&\*\(\)_\+\-\=\[\]\{\}\|;\:,.<>\?]/, {
+    message: "A palavra-passe deve conter pelo menos 1 símbolo/caratere especial (!@#$%^&*()_+-=[]{}|;:,.<>?).",
+  });
+
 export const loginSchema = z.object({
   email: z
     .string()
@@ -32,11 +42,7 @@ export const registerSchema = z
       .min(1, { message: "O e-mail é obrigatório." })
       .email({ message: "Informe um endereço de e-mail válido." })
       .max(150, { message: "O e-mail não pode exceder 150 caracteres." }),
-    password: z
-      .string()
-      .min(1, { message: "A senha é obrigatória." })
-      .min(6, { message: "A senha deve ter no mínimo 6 caracteres." })
-      .max(72, { message: "A senha não pode exceder 72 caracteres." }),
+    password: passwordSchema,
     confirmPassword: z
       .string()
       .min(1, { message: "A confirmação de senha é obrigatória." }),
