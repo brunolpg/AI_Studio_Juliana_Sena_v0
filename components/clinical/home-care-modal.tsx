@@ -20,6 +20,7 @@ import {
 import {
   getHomeCareCatalogAndFormulas,
   getPatientAppointments,
+  getActivePatients,
   saveHomeCareFicha,
 } from "@/app/actions/home-care";
 import type {
@@ -32,7 +33,7 @@ import type {
 interface HomeCareModalProps {
   isOpen: boolean;
   onClose: () => void;
-  pacienteId: string;
+  pacienteId?: string;
   pacienteNome?: string;
   initialData?: HomeCareFichaCompleta | null;
   onSuccess?: () => void;
@@ -81,6 +82,9 @@ export function HomeCareModal({
   const [topicosCatalogo, setTopicosCatalogo] = useState<HomeCareTopico[]>([]);
   const [formulasCatalogo, setFormulasCatalogo] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [pacientesList, setPacientesList] = useState<Array<{ id: string; nome: string; cpf?: string | null }>>([]);
+  const [selectedPacienteId, setSelectedPacienteId] = useState<string>("");
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
 
   // Estados do formulário
   const [tituloProtocolo, setTituloProtocolo] = useState("");
@@ -121,13 +125,30 @@ export function HomeCareModal({
 
     async function loadData() {
       try {
-        const [catRes, aptsRes] = await Promise.all([
+        const targetPacienteId = initialData?.paciente_id || pacienteId || "";
+        setSelectedPacienteId(targetPacienteId);
+
+        const [catRes, pacientesRes, aptsRes] = await Promise.all([
           getHomeCareCatalogAndFormulas(),
-          getPatientAppointments(pacienteId),
+          getActivePatients(),
+          targetPacienteId ? getPatientAppointments(targetPacienteId) : Promise.resolve([]),
         ]);
 
         if (!mounted) return;
 
+        let pacList = pacientesRes || [];
+        if (targetPacienteId && !pacList.some((p) => p.id === targetPacienteId)) {
+          pacList = [
+            {
+              id: targetPacienteId,
+              nome: pacienteNome || "Paciente Selecionado",
+              cpf: null,
+            },
+            ...pacList,
+          ];
+        }
+
+        setPacientesList(pacList);
         setTopicosCatalogo(catRes.topicos || []);
         setFormulasCatalogo(catRes.formulas || []);
         setAppointments(aptsRes || []);
@@ -174,6 +195,7 @@ export function HomeCareModal({
           }
         } else {
           // Reset default para novo
+          setSelectedPacienteId(pacienteId || "");
           setTituloProtocolo("Protocolo de Cuidados Domiciliares (Home Care)");
           setAppointmentId("");
           setDataHomeCare(getTodayISODate());
@@ -230,6 +252,28 @@ export function HomeCareModal({
   }, [isOpen, pacienteId, initialData]);
 
   if (!isOpen) return null;
+
+  // Handler para troca de paciente
+  const handleSelectPaciente = async (newPacienteId: string) => {
+    setSelectedPacienteId(newPacienteId);
+    setAppointmentId(""); // Reseta o agendamento vinculado
+
+    if (!newPacienteId) {
+      setAppointments([]);
+      return;
+    }
+
+    setLoadingAppointments(true);
+    try {
+      const apts = await getPatientAppointments(newPacienteId);
+      setAppointments(apts || []);
+    } catch (err) {
+      console.error("Erro ao carregar agendamentos do paciente selecionado:", err);
+      setAppointments([]);
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
 
   // Handler de seleção de agendamento (autopreenchimento da data)
   const handleSelectAppointment = (aptId: string) => {
@@ -351,6 +395,11 @@ export function HomeCareModal({
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    if (!selectedPacienteId) {
+      setErrorMsg("A seleção do paciente é obrigatória.");
+      return;
+    }
+
     if (!tituloProtocolo.trim()) {
       setErrorMsg("O título do protocolo é obrigatório.");
       return;
@@ -398,7 +447,7 @@ export function HomeCareModal({
     try {
       const payload: SaveHomeCareFichaInput = {
         id: initialData?.id,
-        paciente_id: pacienteId,
+        paciente_id: selectedPacienteId,
         appointment_id: appointmentId || null,
         titulo_protocolo: tituloProtocolo.trim(),
         data_home_care: dataHomeCare,
@@ -448,6 +497,9 @@ export function HomeCareModal({
     }
   };
 
+  const currentPaciente = pacientesList.find((p) => p.id === selectedPacienteId);
+  const headerPacienteNome = currentPaciente?.nome || pacienteNome;
+
   return (
     <div className="fixed inset-0 z-[999999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-xs animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif]">
       <div className="relative w-full max-w-4xl bg-white dark:bg-[#0c1626] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-slate-800 dark:text-slate-100">
@@ -469,7 +521,7 @@ export function HomeCareModal({
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {pacienteNome ? `Paciente: ${pacienteNome}` : "Orientações e Cronograma de Tratamento Domiciliar"}
+                {headerPacienteNome ? `Paciente: ${headerPacienteNome}` : "Orientações e Cronograma de Tratamento Domiciliar"}
               </p>
             </div>
           </div>
@@ -514,8 +566,8 @@ export function HomeCareModal({
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                  {/* Título do Protocolo */}
-                  <div className="sm:col-span-2">
+                  {/* 1. Título do Protocolo * */}
+                  <div>
                     <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                       Título do Protocolo *
                     </label>
@@ -529,7 +581,27 @@ export function HomeCareModal({
                     />
                   </div>
 
-                  {/* Agendamento Vinculado (Opcional) */}
+                  {/* 2. Paciente * */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                      Paciente *
+                    </label>
+                    <select
+                      value={selectedPacienteId}
+                      onChange={(e) => handleSelectPaciente(e.target.value)}
+                      required
+                      className="w-full px-3 py-2.5 rounded-xl border transition-all text-xs font-['Plus_Jakarta_Sans',sans-serif] bg-white border-slate-200 text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100"
+                    >
+                      <option value="">Selecione o paciente...</option>
+                      {pacientesList.map((paciente) => (
+                        <option key={paciente.id} value={paciente.id}>
+                          {paciente.nome}{paciente.cpf ? ` — CPF: ${paciente.cpf}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 3. Vínculo com Agendamento */}
                   <div>
                     <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                       Vínculo com Agendamento
@@ -537,9 +609,16 @@ export function HomeCareModal({
                     <select
                       value={appointmentId}
                       onChange={(e) => handleSelectAppointment(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border transition-all text-xs font-['Plus_Jakarta_Sans',sans-serif] bg-white border-slate-200 text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100"
+                      disabled={!selectedPacienteId || loadingAppointments}
+                      className="w-full px-3 py-2.5 rounded-xl border transition-all text-xs font-['Plus_Jakarta_Sans',sans-serif] bg-white border-slate-200 text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <option value="">Sem vínculo específico</option>
+                      <option value="">
+                        {loadingAppointments
+                          ? "Carregando agendamentos..."
+                          : appointments.length === 0
+                          ? (selectedPacienteId ? "Sem agendamentos vinculados" : "Selecione um paciente primeiro")
+                          : "Sem vínculo específico"}
+                      </option>
                       {appointments.map((apt) => (
                         <option key={apt.id} value={apt.id}>
                           {apt.data} — {apt.horario_inicio} ({apt.procedimento})
@@ -548,7 +627,7 @@ export function HomeCareModal({
                     </select>
                   </div>
 
-                  {/* Data Home Care */}
+                  {/* 4. Data da Ficha * */}
                   <div>
                     <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                       Data da Ficha *

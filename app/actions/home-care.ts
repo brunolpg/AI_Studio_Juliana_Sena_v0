@@ -90,6 +90,34 @@ export async function getPatientAppointments(pacienteId: string) {
 }
 
 /**
+ * 2.1 Busca todos os pacientes ativos ordenados por nome para seleção no modal
+ */
+export async function getActivePatients(): Promise<
+  Array<{ id: string; nome: string; cpf?: string | null }>
+> {
+  try {
+    const { db } = await getClient();
+    if (!db) return [];
+
+    const { data, error } = await db
+      .from("pacientes")
+      .select("id, nome, cpf")
+      .is("deleted_at", null)
+      .eq("status", "Ativo")
+      .order("nome", { ascending: true });
+
+    if (error) {
+      console.warn("Aviso ao carregar pacientes ativos:", error.message);
+      return [];
+    }
+    return (data as Array<{ id: string; nome: string; cpf?: string | null }>) || [];
+  } catch (err) {
+    console.error("Erro em getActivePatients:", err);
+    return [];
+  }
+}
+
+/**
  * 3. Atualiza diretamente um tópico no catálogo central
  */
 export async function updateCatalogTopic(id: string, titulo: string, texto: string) {
