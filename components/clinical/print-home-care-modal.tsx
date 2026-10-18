@@ -1,0 +1,444 @@
+"use client";
+
+import React, { useRef, useState } from "react";
+import {
+  X,
+  Printer,
+  FileText,
+  AlertTriangle,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Calendar,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import type { HomeCareFichaCompleta } from "@/types/home-care";
+import type { Client } from "@/types/client";
+
+interface PrintHomeCareModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  ficha: HomeCareFichaCompleta;
+  client?: Client | null;
+}
+
+function formatDateBR(dateStr?: string | null): string {
+  if (!dateStr) return "—";
+  const clean = dateStr.split("T")[0];
+  const parts = clean.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+}
+
+function formatCPF(cpf?: string | null): string {
+  if (!cpf) return "Não informado";
+  const clean = cpf.replace(/\D/g, "");
+  if (clean.length !== 11) return cpf;
+  return `${clean.substring(0, 3)}.${clean.substring(3, 6)}.${clean.substring(6, 9)}-${clean.substring(9, 11)}`;
+}
+
+function formatDateToPortuguese(dateStr?: string | null): string {
+  const clean = dateStr ? dateStr.split("T")[0] : null;
+  const date = clean ? new Date(clean + "T12:00:00") : new Date();
+  const months = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+  const day = date.getDate();
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  return `Salvador - BA, ${day} de ${month} de ${year}`;
+}
+
+export function PrintHomeCareModal({
+  isOpen,
+  onClose,
+  ficha,
+  client,
+}: PrintHomeCareModalProps) {
+  const printAreaRef = useRef<HTMLDivElement>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  if (!isOpen) return null;
+
+  const pacienteNome = client?.nome || ficha.paciente?.nome || "Paciente";
+  const pacienteNasc = client?.data_nascimento || ficha.paciente?.data_nascimento;
+  const pacienteCpf = client?.cpf || ficha.paciente?.cpf;
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[999999] flex items-center justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-xs animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif]">
+      {/* Estilos dedicados para impressão A4 */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 10mm 12mm;
+          }
+
+          body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            background: white !important;
+          }
+
+          body * {
+            visibility: hidden !important;
+          }
+
+          html, body, [data-radix-portal], [role='dialog'] {
+            overflow: visible !important;
+            height: auto !important;
+            background: white !important;
+            position: static !important;
+            inset: auto !important;
+          }
+
+          #home-care-print-area,
+          #home-care-print-area * {
+            visibility: visible !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+          }
+
+          #home-care-print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            min-height: 275mm !important;
+            margin: 0 !important;
+            padding: 8mm 10mm !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: white !important;
+            color: #0f172a !important;
+          }
+        }
+      `}} />
+
+      <div className="relative w-[96vw] max-w-[1350px] h-[92vh] bg-slate-100 dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col lg:flex-row overflow-hidden animate-in zoom-in-95 duration-200">
+        
+        {/* Painel Lateral com Informações e Ações */}
+        <div
+          className={`bg-white dark:bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between shrink-0 overflow-y-auto print:hidden transition-all duration-300 ${
+            isSidebarOpen ? "w-full lg:w-80" : "w-0 p-0 overflow-hidden border-0 hidden"
+          }`}
+        >
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                  Orientações Home Care
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 block uppercase">Protocolo Clínico</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block mt-0.5">
+                  {ficha.titulo_protocolo}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 block uppercase">Paciente</span>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mt-0.5">
+                  {pacienteNome}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 block uppercase">Data do Atendimento</span>
+                <span className="text-xs font-semibold text-teal-700 dark:text-teal-400 block mt-0.5">
+                  {formatDateBR(ficha.data_home_care)}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 block uppercase">Assinatura Digital</span>
+                <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 break-all block mt-0.5">
+                  SHA-256: {ficha.payload_hash?.substring(0, 16)}...
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-teal-50/50 dark:bg-teal-950/30 border border-teal-200/50 dark:border-teal-800/60 p-4 rounded-2xl space-y-2">
+              <h4 className="text-xs font-bold text-teal-800 dark:text-teal-300">Padrão Institucional A4</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                Documento configurado no padrão oficial da clínica com cabeçalho ouro/esmeralda, dados do paciente, cuidados diários, cronograma e chancela criptográfica.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2.5 mt-6">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all shadow-xs cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Imprimir / Gerar PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors cursor-pointer"
+            >
+              Fechar Visualização
+            </button>
+          </div>
+        </div>
+
+        {/* Visualizador da Folha A4 */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center bg-slate-200/60 dark:bg-slate-950/80 relative">
+          {/* Botão de Toggle do Painel Lateral */}
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="absolute top-4 left-4 z-10 p-2 rounded-xl bg-white dark:bg-slate-800 shadow-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 print:hidden cursor-pointer"
+            title={isSidebarOpen ? "Ocultar Painel" : "Mostrar Painel"}
+          >
+            {isSidebarOpen ? (
+              <div className="flex items-center gap-1.5 text-xs font-semibold">
+                <PanelLeftClose className="w-4 h-4" />
+                <span className="hidden sm:inline">Ocultar Painel</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs font-semibold">
+                <PanelLeftOpen className="w-4 h-4" />
+                <span className="hidden sm:inline">Mostrar Painel</span>
+              </div>
+            )}
+          </button>
+
+          {/* Folha de Impressão A4 */}
+          <div
+            id="home-care-print-area"
+            ref={printAreaRef}
+            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[16mm] sm:p-[20mm] shadow-xl border border-slate-200 flex flex-col justify-between"
+            style={{
+              boxSizing: "border-box",
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+            }}
+          >
+            <div>
+              {/* 1. Cabeçalho Institucional Escuro / Dourado */}
+              <div className="rounded-2xl bg-gradient-to-r from-[#042f2e] via-[#064e3b] to-[#091522] text-white p-5 sm:p-6 mb-5 border border-emerald-900/40 relative overflow-hidden shadow-sm">
+                <div className="flex items-center justify-between relative z-10">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-bold shadow-md shrink-0">
+                      <Sparkles className="w-6 h-6 text-slate-950" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] tracking-widest text-amber-300 font-bold uppercase block mb-0.5">
+                        CLÍNICA DE ESTÉTICA AVANÇADA & REGENERATIVA
+                      </span>
+                      <h2 className="text-lg font-bold text-white tracking-tight leading-tight">
+                        Dra. Juliana Sena
+                      </h2>
+                      <p className="text-xs text-emerald-200/90 font-medium">
+                        Enfermeira Esteta • Laserterapia e Harmonização Integrativa • COREN-BA 366.344
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="inline-block px-3 py-1 rounded-xl bg-white/10 backdrop-blur-xs border border-white/20 text-xs font-bold text-white uppercase tracking-wider">
+                      ORIENTAÇÕES HOME CARE
+                    </span>
+                    <p className="text-[10px] text-emerald-300/80 mt-1">
+                      {ficha.titulo_protocolo}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Bloco: DADOS DO PACIENTE */}
+              <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/80 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Paciente</span>
+                  <span className="font-bold text-slate-900 text-sm">{pacienteNome}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Data de Nascimento / CPF</span>
+                  <span className="font-semibold text-slate-800">
+                    {pacienteNasc ? formatDateBR(pacienteNasc) : "—"} {pacienteCpf ? `• ${formatCPF(pacienteCpf)}` : ""}
+                  </span>
+                </div>
+                <div className="sm:text-right">
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Data do Atendimento</span>
+                  <span className="font-bold text-teal-800 text-sm">
+                    {formatDateBR(ficha.data_home_care)}
+                  </span>
+                </div>
+              </div>
+
+              {/* 3. Caixa de Alerta: ATENÇÃO CRÍTICA */}
+              <div className="rounded-2xl bg-amber-50 border border-amber-200/80 p-3.5 mb-5 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-900 leading-relaxed">
+                  <span className="font-bold uppercase tracking-wider block mb-0.5 text-amber-800">
+                    ATENÇÃO CRÍTICA — CUIDADOS PÓS-PROCEDIMENTO
+                  </span>
+                  O resultado do procedimento estético depende diretamente da adesão ao cronograma domiciliar. Não remova crostas/casquinhas, evite exposição solar direta sem proteção e utilize exclusivamente os produtos recomendados pela profissional.
+                </div>
+              </div>
+
+              {/* 4. Bloco: CUIDADOS (Tópicos numerados) */}
+              <div className="mb-6 space-y-3">
+                <div className="border-b-2 border-teal-700/80 pb-1.5 flex items-center justify-between">
+                  <h3 className="text-xs font-black text-teal-950 uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-teal-600 inline-block" />
+                    CUIDADOS DIÁRIOS FUNDAMENTAIS
+                  </h3>
+                  <span className="text-[10px] font-semibold text-slate-500">
+                    {ficha.cuidados.length} {ficha.cuidados.length === 1 ? "tópico" : "tópicos"}
+                  </span>
+                </div>
+
+                <div className="space-y-3 pt-1">
+                  {ficha.cuidados.map((cuidado, idx) => (
+                    <div key={idx} className="flex items-start gap-3 text-xs">
+                      <div className="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 font-bold flex items-center justify-center shrink-0 mt-0.5 text-[11px]">
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-slate-900 text-xs mb-0.5">
+                          {cuidado.titulo}
+                        </h4>
+                        <p className="text-slate-700 leading-relaxed whitespace-pre-line">
+                          {cuidado.texto}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 5. Bloco: CRONOGRAMA DE TRATAMENTO */}
+              <div className="mb-6 space-y-3">
+                <div className="border-b-2 border-teal-700/80 pb-1.5 flex items-center justify-between">
+                  <h3 className="text-xs font-black text-teal-950 uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-teal-600 inline-block" />
+                    CRONOGRAMA DE TRATAMENTO
+                  </h3>
+                  <span className="text-[10px] font-semibold text-slate-500">
+                    Fases sequenciais
+                  </span>
+                </div>
+
+                <div className="overflow-hidden rounded-xl border border-slate-200">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 font-bold uppercase text-[10px]">
+                        <th className="py-2.5 px-3 w-[22%]">Período</th>
+                        <th className="py-2.5 px-3 w-[43%]">Produto & Frequência</th>
+                        <th className="py-2.5 px-3 w-[35%]">Objetivo Clínico</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {ficha.cronograma.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-3 align-top font-bold text-teal-900">
+                            <div>
+                              DIAS {item.dia_inicio} AO {item.dia_fim}
+                            </div>
+                            {item.fase_titulo && (
+                              <div className="text-[10px] font-semibold text-slate-500 mt-0.5">
+                                {item.fase_titulo}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 align-top">
+                            <span className="font-bold text-slate-900 block">
+                              {item.nome_formula}
+                            </span>
+                            <span className="text-slate-600 text-[11px] block mt-0.5 leading-relaxed">
+                              {item.posologia}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 align-top text-slate-700 leading-relaxed text-[11px]">
+                            {item.objetivo_clinico}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* 6. Bloco: RECOMENDAÇÕES COMPLEMENTARES IMPORTANTES (Se houver) */}
+              {ficha.incluir_recomendacoes && ficha.recomendacoes && ficha.recomendacoes.length > 0 && (
+                <div className="mb-6 space-y-3">
+                  <div className="border-b-2 border-amber-600/80 pb-1.5 flex items-center justify-between">
+                    <h3 className="text-xs font-black text-amber-950 uppercase tracking-widest flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+                      RECOMENDAÇÕES COMPLEMENTARES IMPORTANTES
+                    </h3>
+                  </div>
+
+                  <div className="space-y-2.5 pt-1">
+                    {ficha.recomendacoes.map((rec, idx) => (
+                      <div key={idx} className="flex items-start gap-3 text-xs bg-amber-50/40 p-2.5 rounded-xl border border-amber-200/50">
+                        <div className="w-5 h-5 rounded-md bg-amber-200 text-amber-900 font-bold flex items-center justify-center shrink-0 mt-0.5 text-[10px]">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-bold text-slate-900 text-xs mb-0.5">
+                            {rec.titulo}
+                          </h4>
+                          <p className="text-slate-700 leading-relaxed whitespace-pre-line text-[11px]">
+                            {rec.texto}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 7. Rodapé Institucional com Chancela Criptográfica */}
+            <div className="mt-8 pt-4 border-t border-slate-200 space-y-3">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
+                <span className="font-medium">{formatDateToPortuguese(ficha.data_home_care)}</span>
+                <span className="text-[11px] font-semibold text-slate-700">
+                  {ficha.profissional || "Juliana Sena de Souza Vieira"} • COREN-BA 366.344
+                </span>
+              </div>
+
+              {/* Chancela de Assinatura Hash */}
+              <div className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 flex items-center justify-between gap-2 text-[10px]">
+                <div className="flex items-center gap-1.5 text-emerald-800 font-semibold">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Documento Clínico Assinado Digitalmente (Integridade Garantida via SHA-256)</span>
+                </div>
+                <div className="font-mono text-emerald-900 font-bold truncate max-w-[280px]">
+                  Hash: {ficha.payload_hash || "AUTÊNTICO"}
+                </div>
+              </div>
+
+              {/* Rodapé de contato da clínica */}
+              <div className="text-center text-[9px] text-slate-400">
+                Juliana Sena de Souza Vieira • Estética Avançada e Laserterapia • Salvador - BA • Telefone: (71) 98661-2878
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}

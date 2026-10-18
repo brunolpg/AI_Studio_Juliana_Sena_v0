@@ -43,6 +43,10 @@ import { MedicalHistoryModal } from "./medical-history-modal";
 import { PrescriptionModal } from "./prescription-modal";
 import { PrintPrescriptionModal } from "./print-prescription-modal";
 import { AestheticEvaluationModal } from "./aesthetic-evaluation-modal";
+import { HomeCareCards } from "./home-care-cards";
+import { HomeCareModal } from "./home-care-modal";
+import { getPatientHomeCareFichas } from "@/app/actions/home-care";
+import type { HomeCareFichaCompleta } from "@/types/home-care";
 import { useToast } from "@/components/ui/toast";
 import type { Client } from "@/types/client";
 import type {
@@ -87,6 +91,11 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   // Avaliação Estética Integrada
   const [isAestheticModalOpen, setIsAestheticModalOpen] = useState(false);
   const [aestheticData, setAestheticData] = useState<{ facial: any; corporal: any } | null>(null);
+
+  // Fichas de Home Care (Cuidados & Orientações)
+  const [homeCareFichas, setHomeCareFichas] = useState<HomeCareFichaCompleta[]>([]);
+  const [isHomeCareModalOpen, setIsHomeCareModalOpen] = useState(false);
+  const [selectedHomeCareForEdit, setSelectedHomeCareForEdit] = useState<HomeCareFichaCompleta | null>(null);
 
   // --- Assinatura digital (VIDaaS) ---------------------------------------
   const [signError, setSignError] = useState<string | null>(null);
@@ -396,6 +405,14 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             console.warn("Erro ao buscar avaliações estéticas:", aesErr);
           }
 
+          // Busca Fichas de Home Care (Cuidados & Orientações)
+          try {
+            const hcareRes = await getPatientHomeCareFichas(client.id);
+            setHomeCareFichas(hcareRes || []);
+          } catch (hcareErr) {
+            console.warn("Erro ao buscar fichas de Home Care:", hcareErr);
+          }
+
           setClinicalRecord(record);
         } else {
           toast({
@@ -629,12 +646,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               <button
                 type="button"
                 onClick={() => {
-                  console.log("Abrir cuidados & orientações");
-                  toast({
-                    type: "info",
-                    title: "Em desenvolvimento",
-                    description: "Módulo de Cuidados & Orientações será disponibilizado em breve.",
-                  });
+                  setSelectedHomeCareForEdit(null);
+                  setIsHomeCareModalOpen(true);
                 }}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer shadow-2xs"
               >
@@ -1289,31 +1302,52 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             {/* ======================================================== */}
             {activeSubTab === "prescricoes" && (
               <div className="space-y-4">
-                {prescriptions.length === 0 ? (
+                {prescriptions.length === 0 && homeCareFichas.length === 0 ? (
                   <div className="py-12 text-center max-w-sm mx-auto">
                     <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 flex items-center justify-center mx-auto mb-3">
                       <Pill className="w-6 h-6" />
                     </div>
                     <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">
-                      Nenhuma prescrição registrada
+                      Nenhuma prescrição ou ficha de home care registrada
                     </h4>
                     <p className="text-xs text-slate-500 mt-1">
                       {isPatientView 
-                        ? "Não há prescrições registradas para você no momento." 
-                        : "Emita receitas e prescrições médicas para ficarem arquivadas no histórico do paciente."}
+                        ? "Não há prescrições ou orientações de home care registradas para você no momento." 
+                        : "Emita receitas e orientações de home care para ficarem arquivadas no histórico do paciente."}
                     </p>
                     {!isPatientView && (
-                      <button
-                        type="button"
-                        onClick={() => setIsPrescriptionModalOpen(true)}
-                        className="mt-4 px-4 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all cursor-pointer"
-                      >
-                        + Prescrever Receita
-                      </button>
+                      <div className="flex items-center justify-center gap-2 mt-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedHomeCareForEdit(null);
+                            setIsHomeCareModalOpen(true);
+                          }}
+                          className="px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
+                        >
+                          + Cuidados & Orientações
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsPrescriptionModalOpen(true)}
+                          className="px-4 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all cursor-pointer"
+                        >
+                          + Prescrever Receita
+                        </button>
+                      </div>
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                  <>
+                    {prescriptions.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Pill className="w-4 h-4 text-teal-600" />
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                            Receituário & Fórmulas Magistrais ({prescriptions.length})
+                          </h4>
+                        </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
                     {prescriptions.map((rx) => {
                       const [year, month, day] = (rx.data || "").split("-");
                       const dateFormatted = year && month && day ? `${day}/${month}/${year}` : rx.data;
@@ -1502,7 +1536,22 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                         </div>
                       );
                     })}
-                  </div>
+                    </div>
+                      </div>
+                    )}
+
+                    {/* Seção Integrada de Fichas de Home Care (Cuidados & Orientações) */}
+                    <HomeCareCards
+                      fichas={homeCareFichas}
+                      client={client}
+                      isPatientView={isPatientView}
+                      onEdit={(f) => {
+                        setSelectedHomeCareForEdit(f);
+                        setIsHomeCareModalOpen(true);
+                      }}
+                      onRefresh={loadClinicalData}
+                    />
+                  </>
                 )}
               </div>
             )}
@@ -1938,6 +1987,23 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
         onSuccess={() => {
           loadClinicalData();
           setIsAestheticModalOpen(false);
+        }}
+      />
+
+      {/* Modal de Ficha de Home Care (Cuidados & Orientações) */}
+      <HomeCareModal
+        isOpen={isHomeCareModalOpen}
+        onClose={() => {
+          setIsHomeCareModalOpen(false);
+          setSelectedHomeCareForEdit(null);
+        }}
+        pacienteId={client.id}
+        pacienteNome={client.nome}
+        initialData={selectedHomeCareForEdit}
+        onSuccess={() => {
+          loadClinicalData();
+          setIsHomeCareModalOpen(false);
+          setSelectedHomeCareForEdit(null);
         }}
       />
     </div>
