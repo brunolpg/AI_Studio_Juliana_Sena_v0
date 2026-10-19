@@ -1,4 +1,4 @@
-export type HomeCareGrupo = "CUIDADOS" | "RECOMENDACOES";
+export type HomeCareGrupo = "CUIDADOS" | "RECOMENDACOES" | "ATENCAO_CRITICA";
 export type HomeCareStatus = "Ativo" | "Concluído" | "Cancelado";
 
 export interface HomeCareTopico {
@@ -39,6 +39,9 @@ export interface HomeCareFicha {
   appointment_id?: string | null;
   titulo_protocolo: string;
   data_home_care: string; // YYYY-MM-DD
+  incluir_atencao_critica?: boolean;
+  atencao_critica_titulo?: string | null;
+  atencao_critica_texto?: string | null;
   incluir_recomendacoes: boolean;
   status: HomeCareStatus;
   profissional: string;
@@ -78,6 +81,9 @@ export interface SaveHomeCareFichaInput {
   appointment_id?: string | null;
   titulo_protocolo: string;
   data_home_care: string;
+  incluir_atencao_critica?: boolean;
+  atencao_critica_titulo?: string | null;
+  atencao_critica_texto?: string | null;
   incluir_recomendacoes: boolean;
   status?: HomeCareStatus;
   profissional?: string;

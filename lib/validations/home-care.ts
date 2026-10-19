@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const homeCareGrupoEnum = z.enum(["CUIDADOS", "RECOMENDACOES"]);
+export const homeCareGrupoEnum = z.enum(["CUIDADOS", "RECOMENDACOES", "ATENCAO_CRITICA"]);
 export const homeCareStatusEnum = z.enum(["Ativo", "Concluído", "Cancelado"]);
 
 export const topicoItemSchema = z.object({
@@ -43,6 +43,9 @@ export const homeCareFichaSchema = z.object({
   data_home_care: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato AAAA-MM-DD"),
+  incluir_atencao_critica: z.boolean().default(true),
+  atencao_critica_titulo: z.string().trim().optional().nullable(),
+  atencao_critica_texto: z.string().trim().optional().nullable(),
   incluir_recomendacoes: z.boolean().default(false),
   status: homeCareStatusEnum.default("Ativo"),
   profissional: z.string().optional().default("Dra. Juliana Sena"),

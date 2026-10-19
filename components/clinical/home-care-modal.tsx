@@ -13,6 +13,7 @@ import {
   BookOpen,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   ShieldCheck,
   ChevronDown,
@@ -20,7 +21,6 @@ import {
 import {
   getHomeCareCatalogAndFormulas,
   getPatientAppointments,
-  getActivePatients,
   saveHomeCareFicha,
 } from "@/app/actions/home-care";
 import type {
@@ -82,8 +82,6 @@ export function HomeCareModal({
   const [topicosCatalogo, setTopicosCatalogo] = useState<HomeCareTopico[]>([]);
   const [formulasCatalogo, setFormulasCatalogo] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [pacientesList, setPacientesList] = useState<Array<{ id: string; nome: string; cpf?: string | null }>>([]);
-  const [selectedPacienteId, setSelectedPacienteId] = useState<string>("");
   const [loadingAppointments, setLoadingAppointments] = useState(false);
 
   // Estados do formulário
@@ -92,6 +90,14 @@ export function HomeCareModal({
   const [dataHomeCare, setDataHomeCare] = useState<string>(getTodayISODate());
   const [status, setStatus] = useState<HomeCareStatus>("Ativo");
   const [incluirRecomendacoes, setIncluirRecomendacoes] = useState(false);
+
+  // Atenção Crítica (configurável)
+  const [incluirAtencaoCritica, setIncluirAtencaoCritica] = useState(true);
+  const [atencaoCriticaTitulo, setAtencaoCriticaTitulo] = useState("ATENÇÃO CRÍTICA — CUIDADOS PÓS-PROCEDIMENTO");
+  const [atencaoCriticaTexto, setAtencaoCriticaTexto] = useState(
+    "O resultado do procedimento estético depende diretamente da adesão ao cronograma domiciliar. Não remova crostas/casquinhas, evite exposição solar direta sem proteção e utilize exclusivamente os produtos recomendados pela profissional."
+  );
+  const [selectedAtencaoCatalogoId, setSelectedAtencaoCatalogoId] = useState("");
 
   // Grupos dinâmicos
   const [cuidados, setCuidados] = useState<CuidadoFormItem[]>([
@@ -114,6 +120,9 @@ export function HomeCareModal({
 
   const [recomendacoes, setRecomendacoes] = useState<CuidadoFormItem[]>([]);
 
+  const targetPacienteId = initialData?.paciente_id || pacienteId || "";
+  const targetPacienteNome = initialData?.paciente?.nome || pacienteNome || "Paciente Selecionado";
+
   // Inicialização e preenchimento de dados
   useEffect(() => {
     if (!isOpen) return;
@@ -125,30 +134,13 @@ export function HomeCareModal({
 
     async function loadData() {
       try {
-        const targetPacienteId = initialData?.paciente_id || pacienteId || "";
-        setSelectedPacienteId(targetPacienteId);
-
-        const [catRes, pacientesRes, aptsRes] = await Promise.all([
+        const [catRes, aptsRes] = await Promise.all([
           getHomeCareCatalogAndFormulas(),
-          getActivePatients(),
           targetPacienteId ? getPatientAppointments(targetPacienteId) : Promise.resolve([]),
         ]);
 
         if (!mounted) return;
 
-        let pacList = pacientesRes || [];
-        if (targetPacienteId && !pacList.some((p) => p.id === targetPacienteId)) {
-          pacList = [
-            {
-              id: targetPacienteId,
-              nome: pacienteNome || "Paciente Selecionado",
-              cpf: null,
-            },
-            ...pacList,
-          ];
-        }
-
-        setPacientesList(pacList);
         setTopicosCatalogo(catRes.topicos || []);
         setFormulasCatalogo(catRes.formulas || []);
         setAppointments(aptsRes || []);
@@ -159,6 +151,13 @@ export function HomeCareModal({
           setDataHomeCare(initialData.data_home_care || getTodayISODate());
           setStatus(initialData.status || "Ativo");
           setIncluirRecomendacoes(Boolean(initialData.incluir_recomendacoes));
+          
+          setIncluirAtencaoCritica(initialData.incluir_atencao_critica !== false);
+          setAtencaoCriticaTitulo(initialData.atencao_critica_titulo || "ATENÇÃO CRÍTICA — CUIDADOS PÓS-PROCEDIMENTO");
+          setAtencaoCriticaTexto(
+            initialData.atencao_critica_texto ||
+            "O resultado do procedimento estético depende diretamente da adesão ao cronograma domiciliar. Não remova crostas/casquinhas, evite exposição solar direta sem proteção e utilize exclusivamente os produtos recomendados pela profissional."
+          );
 
           if (initialData.cuidados && initialData.cuidados.length > 0) {
             setCuidados(
@@ -195,11 +194,15 @@ export function HomeCareModal({
           }
         } else {
           // Reset default para novo
-          setSelectedPacienteId(pacienteId || "");
           setTituloProtocolo("Protocolo de Cuidados Domiciliares (Home Care)");
           setAppointmentId("");
           setDataHomeCare(getTodayISODate());
           setStatus("Ativo");
+          setIncluirAtencaoCritica(true);
+          setAtencaoCriticaTitulo("ATENÇÃO CRÍTICA — CUIDADOS PÓS-PROCEDIMENTO");
+          setAtencaoCriticaTexto(
+            "O resultado do procedimento estético depende diretamente da adesão ao cronograma domiciliar. Não remova crostas/casquinhas, evite exposição solar direta sem proteção e utilize exclusivamente os produtos recomendados pela profissional."
+          );
           setIncluirRecomendacoes(false);
           setCuidados([
             {
@@ -249,31 +252,9 @@ export function HomeCareModal({
     return () => {
       mounted = false;
     };
-  }, [isOpen, pacienteId, initialData]);
+  }, [isOpen, targetPacienteId, initialData]);
 
   if (!isOpen) return null;
-
-  // Handler para troca de paciente
-  const handleSelectPaciente = async (newPacienteId: string) => {
-    setSelectedPacienteId(newPacienteId);
-    setAppointmentId(""); // Reseta o agendamento vinculado
-
-    if (!newPacienteId) {
-      setAppointments([]);
-      return;
-    }
-
-    setLoadingAppointments(true);
-    try {
-      const apts = await getPatientAppointments(newPacienteId);
-      setAppointments(apts || []);
-    } catch (err) {
-      console.error("Erro ao carregar agendamentos do paciente selecionado:", err);
-      setAppointments([]);
-    } finally {
-      setLoadingAppointments(false);
-    }
-  };
 
   // Handler de seleção de agendamento (autopreenchimento da data)
   const handleSelectAppointment = (aptId: string) => {
@@ -395,8 +376,8 @@ export function HomeCareModal({
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    if (!selectedPacienteId) {
-      setErrorMsg("A seleção do paciente é obrigatória.");
+    if (!targetPacienteId) {
+      setErrorMsg("Identificação do paciente não informada no contexto.");
       return;
     }
 
@@ -447,10 +428,13 @@ export function HomeCareModal({
     try {
       const payload: SaveHomeCareFichaInput = {
         id: initialData?.id,
-        paciente_id: selectedPacienteId,
+        paciente_id: targetPacienteId,
         appointment_id: appointmentId || null,
         titulo_protocolo: tituloProtocolo.trim(),
         data_home_care: dataHomeCare,
+        incluir_atencao_critica: incluirAtencaoCritica,
+        atencao_critica_titulo: incluirAtencaoCritica ? atencaoCriticaTitulo.trim() : null,
+        atencao_critica_texto: incluirAtencaoCritica ? atencaoCriticaTexto.trim() : null,
         incluir_recomendacoes: incluirRecomendacoes,
         status: status,
         cuidados: cuidados.map((c, i) => ({
@@ -497,9 +481,6 @@ export function HomeCareModal({
     }
   };
 
-  const currentPaciente = pacientesList.find((p) => p.id === selectedPacienteId);
-  const headerPacienteNome = currentPaciente?.nome || pacienteNome;
-
   return (
     <div className="fixed inset-0 z-[999999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-xs animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif]">
       <div className="relative w-full max-w-4xl bg-white dark:bg-[#0c1626] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-slate-800 dark:text-slate-100">
@@ -521,7 +502,7 @@ export function HomeCareModal({
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {headerPacienteNome ? `Paciente: ${headerPacienteNome}` : "Orientações e Cronograma de Tratamento Domiciliar"}
+                Paciente: <span className="font-semibold text-slate-700 dark:text-slate-200">{targetPacienteNome}</span>
               </p>
             </div>
           </div>
@@ -565,9 +546,9 @@ export function HomeCareModal({
                   Identificação do Protocolo
                 </span>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                   {/* 1. Título do Protocolo * */}
-                  <div>
+                  <div className="sm:col-span-2 lg:col-span-1">
                     <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                       Título do Protocolo *
                     </label>
@@ -581,27 +562,7 @@ export function HomeCareModal({
                     />
                   </div>
 
-                  {/* 2. Paciente * */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
-                      Paciente *
-                    </label>
-                    <select
-                      value={selectedPacienteId}
-                      onChange={(e) => handleSelectPaciente(e.target.value)}
-                      required
-                      className="w-full px-3 py-2.5 rounded-xl border transition-all text-xs font-['Plus_Jakarta_Sans',sans-serif] bg-white border-slate-200 text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100"
-                    >
-                      <option value="">Selecione o paciente...</option>
-                      {pacientesList.map((paciente) => (
-                        <option key={paciente.id} value={paciente.id}>
-                          {paciente.nome}{paciente.cpf ? ` — CPF: ${paciente.cpf}` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* 3. Vínculo com Agendamento */}
+                  {/* 2. Vínculo com Agendamento */}
                   <div>
                     <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                       Vínculo com Agendamento
@@ -609,14 +570,14 @@ export function HomeCareModal({
                     <select
                       value={appointmentId}
                       onChange={(e) => handleSelectAppointment(e.target.value)}
-                      disabled={!selectedPacienteId || loadingAppointments}
+                      disabled={loadingAppointments}
                       className="w-full px-3 py-2.5 rounded-xl border transition-all text-xs font-['Plus_Jakarta_Sans',sans-serif] bg-white border-slate-200 text-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       <option value="">
                         {loadingAppointments
                           ? "Carregando agendamentos..."
                           : appointments.length === 0
-                          ? (selectedPacienteId ? "Sem agendamentos vinculados" : "Selecione um paciente primeiro")
+                          ? "Sem agendamentos registrados"
                           : "Sem vínculo específico"}
                       </option>
                       {appointments.map((apt) => (
@@ -627,7 +588,7 @@ export function HomeCareModal({
                     </select>
                   </div>
 
-                  {/* 4. Data da Ficha * */}
+                  {/* 3. Data da Ficha * */}
                   <div>
                     <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                       Data da Ficha *
@@ -642,7 +603,7 @@ export function HomeCareModal({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-800 flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Status da Ficha:</span>
                     <select
@@ -669,6 +630,119 @@ export function HomeCareModal({
                   </label>
                 </div>
               </div>
+
+              {/* SEÇÃO CONFIGURÁVEL: ATENÇÃO CRÍTICA (Logo acima do Grupo 1) */}
+              {!incluirAtencaoCritica ? (
+                <div className="p-3.5 rounded-2xl border border-dashed border-amber-300/80 dark:border-amber-800/80 bg-amber-50/50 dark:bg-amber-950/20 flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                      <AlertTriangle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-amber-950 dark:text-amber-200 block">
+                        Atenção Crítica (Opcional)
+                      </span>
+                      <span className="text-[11px] text-amber-800/80 dark:text-amber-400/80">
+                        Destacar aviso de risco e cuidados pós-procedimento imediatos no topo do relatório
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIncluirAtencaoCritica(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Adicionar Atenção Crítica</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 sm:p-5 rounded-2xl border-2 border-amber-400/70 dark:border-amber-600/60 bg-amber-50/70 dark:bg-amber-950/30 space-y-3.5 shadow-sm">
+                  <div className="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-amber-200/80 dark:border-amber-900/60">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center font-bold">
+                        <AlertTriangle className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-amber-950 dark:text-amber-200 uppercase tracking-wider block">
+                          Atenção Crítica — Cuidados Pós-Procedimento
+                        </span>
+                        <span className="text-[10px] text-amber-700 dark:text-amber-400">
+                          Banner destacado em amarelo na primeira seção do relatório impresso
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Selecionar Modelo de Atenção Crítica do Catálogo */}
+                      {topicosCatalogo.filter((t) => t.grupo === "ATENCAO_CRITICA").length > 0 && (
+                        <select
+                          value={selectedAtencaoCatalogoId}
+                          onChange={(e) => {
+                            const tId = e.target.value;
+                            setSelectedAtencaoCatalogoId(tId);
+                            const t = topicosCatalogo.find((item) => item.id === tId);
+                            if (t) {
+                              setAtencaoCriticaTitulo(t.titulo);
+                              setAtencaoCriticaTexto(t.texto);
+                            }
+                          }}
+                          className="text-xs px-2.5 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-200 max-w-[220px] truncate"
+                        >
+                          <option value="">Carregar modelo do catálogo...</option>
+                          {topicosCatalogo
+                            .filter((t) => t.grupo === "ATENCAO_CRITICA")
+                            .map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.titulo}
+                              </option>
+                            ))}
+                        </select>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setIncluirAtencaoCritica(false)}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 rounded-lg border border-rose-200 dark:border-rose-900 transition-colors cursor-pointer"
+                        title="Ocultar Atenção Crítica deste protocolo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Remover Bloco</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-amber-900 dark:text-amber-200 mb-1">
+                        Título da Atenção Crítica *
+                      </label>
+                      <input
+                        type="text"
+                        value={atencaoCriticaTitulo}
+                        onChange={(e) => setAtencaoCriticaTitulo(e.target.value)}
+                        placeholder="Ex: ATENÇÃO CRÍTICA — CUIDADOS PÓS-PROCEDIMENTO"
+                        required={incluirAtencaoCritica}
+                        className="w-full px-3.5 py-2 rounded-xl border text-xs font-bold bg-white dark:bg-slate-900 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-100 placeholder:text-amber-700/50 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-amber-900 dark:text-amber-200 mb-1">
+                        Texto da Atenção Crítica *
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={atencaoCriticaTexto}
+                        onChange={(e) => setAtencaoCriticaTexto(e.target.value)}
+                        placeholder="Descreva as orientações de risco, restrições e sinais de alerta imediatos..."
+                        required={incluirAtencaoCritica}
+                        className="w-full px-3.5 py-2 rounded-xl border text-xs bg-white dark:bg-slate-900 border-amber-300 dark:border-amber-800 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 leading-relaxed"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* GRUPO 1: CUIDADOS (Obrigatório, mín. 1 item) */}
               <div className="space-y-3">
@@ -792,75 +866,90 @@ export function HomeCareModal({
                       key={idx}
                       className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-3"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-bold text-teal-700 dark:text-teal-400">
-                            Etapa {idx + 1}:
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center justify-center shrink-0">
+                            {idx + 1}
                           </span>
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <span className="text-slate-500 font-medium">Dia</span>
-                            <input
-                              type="number"
-                              min={1}
-                              value={item.dia_inicio}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value) || 1;
-                                setCronograma((prev) => {
-                                  const copy = [...prev];
-                                  copy[idx].dia_inicio = val;
-                                  return copy;
-                                });
-                              }}
-                              className="w-14 px-2 py-1 rounded-lg border text-center font-bold bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800"
-                            />
-                            <span className="text-slate-500 font-medium">ao Dia</span>
-                            <input
-                              type="number"
-                              min={item.dia_inicio}
-                              value={item.dia_fim}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value) || item.dia_inicio;
-                                setCronograma((prev) => {
-                                  const copy = [...prev];
-                                  copy[idx].dia_fim = val;
-                                  return copy;
-                                });
-                              }}
-                              className="w-14 px-2 py-1 rounded-lg border text-center font-bold bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800"
-                            />
-                          </div>
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                            Etapa {idx + 1}
+                          </span>
+                        </div>
 
-                          {/* Seletor de Fórmula Magistral Cadastrada */}
+                        <div className="flex items-center gap-2">
+                          {/* Seleção de Fórmula Pré-cadastrada */}
                           <select
                             value={item.formula_id || ""}
                             onChange={(e) => handleSelectFormula(idx, e.target.value)}
-                            className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 max-w-[220px] truncate"
+                            className="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 max-w-[240px] truncate"
                           >
-                            <option value="">Vincular Fórmula...</option>
+                            <option value="">Carregar Fórmula Magistral...</option>
                             {formulasCatalogo.map((f) => (
                               <option key={f.id} value={f.id}>
                                 {f.nome}
                               </option>
                             ))}
                           </select>
-                        </div>
 
-                        {cronograma.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveCronograma(idx)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 transition-colors self-end sm:self-center cursor-pointer"
-                            title="Remover esta etapa"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                          {cronograma.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCronograma(idx)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                              title="Remover esta etapa"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase">
-                            Nome da Fase (Opcional)
+                          <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                            Dia Inicial *
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={item.dia_inicio}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 1;
+                              setCronograma((prev) => {
+                                const copy = [...prev];
+                                copy[idx].dia_inicio = val;
+                                return copy;
+                              });
+                            }}
+                            required
+                            className="w-full px-3 py-1.5 rounded-xl border text-xs bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                            Dia Final *
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={item.dia_fim}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 1;
+                              setCronograma((prev) => {
+                                const copy = [...prev];
+                                copy[idx].dia_fim = val;
+                                return copy;
+                              });
+                            }}
+                            required
+                            className="w-full px-3 py-1.5 rounded-xl border text-xs bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                            Título da Fase (Opcional)
                           </label>
                           <input
                             type="text"
@@ -873,14 +962,16 @@ export function HomeCareModal({
                                 return copy;
                               });
                             }}
-                            placeholder="Ex: Fase de Barreira e Conforto"
-                            className="w-full px-3 py-2 rounded-xl border text-xs bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200"
+                            placeholder="Ex: Fase de Barreira"
+                            className="w-full px-3 py-1.5 rounded-xl border text-xs bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800"
                           />
                         </div>
+                      </div>
 
+                      <div className="space-y-2">
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase">
-                            Produto / Fórmula Magistral *
+                          <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                            Nome do Produto / Fórmula *
                           </label>
                           <input
                             type="text"
@@ -893,18 +984,18 @@ export function HomeCareModal({
                                 return copy;
                               });
                             }}
-                            placeholder="Ex: Bálsamo Regenerador Dérmico"
+                            placeholder="Ex: Bálsamo Regenerador Dérmico 30g"
                             required
-                            className="w-full px-3 py-2 rounded-xl border text-xs font-semibold bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+                            className="w-full px-3 py-1.5 rounded-xl border text-xs font-bold bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase">
+                          <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
                             Posologia e Frequência *
                           </label>
-                          <textarea
-                            rows={2}
+                          <input
+                            type="text"
                             value={item.posologia}
                             onChange={(e) => {
                               const val = e.target.value;
@@ -914,18 +1005,18 @@ export function HomeCareModal({
                                 return copy;
                               });
                             }}
-                            placeholder="Ex: Aplicar camada fina 3x ao dia (manhã, tarde e noite)."
+                            placeholder="Ex: Aplicar camada fina 3x ao dia (manhã, tarde e noite)"
                             required
-                            className="w-full px-3 py-2 rounded-xl border text-xs bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200"
+                            className="w-full px-3 py-1.5 rounded-xl border text-xs bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase">
+                          <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
                             Objetivo Clínico *
                           </label>
-                          <textarea
-                            rows={2}
+                          <input
+                            type="text"
                             value={item.objetivo_clinico}
                             onChange={(e) => {
                               const val = e.target.value;
@@ -935,9 +1026,9 @@ export function HomeCareModal({
                                 return copy;
                               });
                             }}
-                            placeholder="Ex: Restaurar a barreira cutânea e evitar ressecamento."
+                            placeholder="Ex: Promover reepitelização acelerada e restaurar a barreira cutânea"
                             required
-                            className="w-full px-3 py-2 rounded-xl border text-xs bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200"
+                            className="w-full px-3 py-1.5 rounded-xl border text-xs bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800"
                           />
                         </div>
                       </div>
@@ -949,17 +1040,17 @@ export function HomeCareModal({
               {/* GRUPO 3: RECOMENDAÇÕES COMPLEMENTARES (Opcional) */}
               {incluirRecomendacoes && (
                 <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between border-b border-amber-200/60 dark:border-amber-900/60 pb-2">
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-amber-500" />
-                      <h4 className="text-xs font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">
-                        Grupo 3: Recomendações Complementares Importantes ({recomendacoes.length})
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Grupo 3: Recomendações Complementares ({recomendacoes.length})
                       </h4>
                     </div>
                     <button
                       type="button"
                       onClick={handleAddRecomendacao}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-semibold hover:bg-amber-100 transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-semibold hover:bg-amber-100 transition-colors cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Adicionar Recomendação</span>
@@ -967,110 +1058,100 @@ export function HomeCareModal({
                   </div>
 
                   <div className="space-y-3">
-                    {recomendacoes.length === 0 ? (
-                      <p className="text-xs text-slate-400 italic py-2">
-                        Nenhuma recomendação adicional cadastrada. Clique em &quot;Adicionar Recomendação&quot; acima.
-                      </p>
-                    ) : (
-                      recomendacoes.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="p-4 rounded-2xl border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-950/20 space-y-3"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <span className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold text-xs flex items-center justify-center shrink-0">
-                                {idx + 1}
-                              </span>
-
-                              <select
-                                value={item.topico_id || ""}
-                                onChange={(e) => handleSelectRecomendacaoCatalogo(idx, e.target.value)}
-                                className="text-xs px-2.5 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 max-w-[260px] truncate"
-                              >
-                                <option value="">Carregar do Catálogo...</option>
-                                {topicosCatalogo
-                                  .filter((t) => t.grupo === "RECOMENDACOES")
-                                  .map((t) => (
-                                    <option key={t.id} value={t.id}>
-                                      {t.titulo}
-                                    </option>
-                                  ))}
-                              </select>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveRecomendacao(idx)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                              title="Remover recomendação"
+                    {recomendacoes.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span className="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <select
+                              value={item.topico_id || ""}
+                              onChange={(e) => handleSelectRecomendacaoCatalogo(idx, e.target.value)}
+                              className="text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 max-w-[260px] truncate"
                             >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                              <option value="">Carregar do Catálogo...</option>
+                              {topicosCatalogo
+                                .filter((t) => t.grupo === "RECOMENDACOES")
+                                .map((t) => (
+                                  <option key={t.id} value={t.id}>
+                                    {t.titulo}
+                                  </option>
+                                ))}
+                            </select>
                           </div>
 
-                          <div className="space-y-2">
-                            <input
-                              type="text"
-                              value={item.titulo}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setRecomendacoes((prev) => {
-                                  const copy = [...prev];
-                                  copy[idx].titulo = val;
-                                  return copy;
-                                });
-                              }}
-                              placeholder="Título da recomendação (ex: Não puxar casquinhas)"
-                              required
-                              className="w-full px-3 py-2 rounded-xl border text-xs font-bold bg-white dark:bg-slate-950 border-amber-200 dark:border-amber-900 text-slate-900 dark:text-white"
-                            />
-                            <textarea
-                              rows={2}
-                              value={item.texto}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setRecomendacoes((prev) => {
-                                  const copy = [...prev];
-                                  copy[idx].texto = val;
-                                  return copy;
-                                });
-                              }}
-                              placeholder="Instruções ou advertências complementares..."
-                              required
-                              className="w-full px-3 py-2 rounded-xl border text-xs bg-white dark:bg-slate-950 border-amber-200 dark:border-amber-900 text-slate-700 dark:text-slate-200 leading-relaxed"
-                            />
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRecomendacao(idx)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                            title="Remover recomendação"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
-                      ))
-                    )}
+
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={item.titulo}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setRecomendacoes((prev) => {
+                                const copy = [...prev];
+                                copy[idx].titulo = val;
+                                return copy;
+                              });
+                            }}
+                            placeholder="Título da recomendação (ex: Não puxar crostas ou casquinhas)"
+                            className="w-full px-3 py-2 rounded-xl border text-xs font-bold bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+                          />
+                          <textarea
+                            rows={2}
+                            value={item.texto}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setRecomendacoes((prev) => {
+                                const copy = [...prev];
+                                copy[idx].texto = val;
+                                return copy;
+                              });
+                            }}
+                            placeholder="Instruções da recomendação complementar..."
+                            className="w-full px-3 py-2 rounded-xl border text-xs bg-slate-50/50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 leading-relaxed"
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
             </>
           )}
 
-          {/* Botões do Rodapé */}
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3 sticky bottom-0 bg-white dark:bg-[#0c1626] py-2">
+          {/* Rodapé com Ações */}
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading || initLoading}
-              className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-xs font-semibold text-white shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>{initialData ? "Salvar Alterações" : "Emitir Ficha de Home Care"}</span>
+              <span>{loading ? "Salvando Protocolo..." : "Salvar Ficha de Home Care"}</span>
             </button>
           </div>
         </form>
-
       </div>
     </div>
   );

@@ -228,8 +228,15 @@ export function HomeCareCards({
                       </div>
                     </div>
 
+                    {ficha.incluir_atencao_critica !== false && Boolean(ficha.atencao_critica_texto) && (
+                      <div className="px-2 pt-1 flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+                        <AlertCircle className="w-3 h-3 shrink-0" />
+                        <span className="truncate">Alerta: {ficha.atencao_critica_titulo || "Atenção Crítica ativa"}</span>
+                      </div>
+                    )}
+
                     {recCount > 0 && (
-                      <div className="px-2 pt-1 flex items-center justify-between text-[10px] text-amber-700 dark:text-amber-400 font-semibold">
+                      <div className="px-2 pt-0.5 flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400 font-medium">
                         <span>{recCount} recomendação(ões) complementar(es) inclusa(s)</span>
                       </div>
                     )}

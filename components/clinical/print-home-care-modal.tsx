@@ -284,16 +284,18 @@ export function PrintHomeCareModal({
                 </div>
               </div>
 
-              {/* 3. Caixa de Alerta: ATENÇÃO CRÍTICA */}
-              <div className="rounded-2xl bg-amber-50 border border-amber-200/80 p-3.5 mb-5 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-amber-900 leading-relaxed">
-                  <span className="font-bold uppercase tracking-wider block mb-0.5 text-amber-800">
-                    ATENÇÃO CRÍTICA — CUIDADOS PÓS-PROCEDIMENTO
-                  </span>
-                  O resultado do procedimento estético depende diretamente da adesão ao cronograma domiciliar. Não remova crostas/casquinhas, evite exposição solar direta sem proteção e utilize exclusivamente os produtos recomendados pela profissional.
+              {/* 3. Caixa de Alerta: ATENÇÃO CRÍTICA (Configurável) */}
+              {ficha.incluir_atencao_critica !== false && Boolean(ficha.atencao_critica_texto?.trim()) && (
+                <div className="rounded-2xl bg-amber-50 border border-amber-200/80 p-3.5 mb-5 flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-900 leading-relaxed">
+                    <span className="font-bold uppercase tracking-wider block mb-0.5 text-amber-800">
+                      {ficha.atencao_critica_titulo || "ATENÇÃO CRÍTICA — CUIDADOS PÓS-PROCEDIMENTO"}
+                    </span>
+                    {ficha.atencao_critica_texto}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* 4. Bloco: CUIDADOS (Tópicos numerados) */}
               <div className="mb-6 space-y-3">

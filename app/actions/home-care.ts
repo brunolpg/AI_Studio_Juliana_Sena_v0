@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { canonicalizeJson, gerarHashSha256, assinarHash } from "@/lib/crypto-payload";
 import { homeCareFichaSchema } from "@/lib/validations/home-care";
 import type {
@@ -12,12 +13,98 @@ import type {
 } from "@/types/home-care";
 
 /**
- * Obtém o cliente Supabase adequado (Server Client com sessão ou fallback Admin).
+ * Obtém o cliente Supabase administrativo com service_role para operações administrativas
+ * nas tabelas de Home Care (evitando erros de 'permission denied' por RLS)
+ * e o cliente com sessão de cookies para validação de autenticação do usuário.
  */
-async function getClient() {
+async function getSupabaseClients() {
   const serverClient = await createClient();
   const adminClient = getSupabaseAdminClient();
-  return { serverClient, adminClient, db: adminClient || serverClient };
+  const adminDb = adminClient || serverClient;
+  return { serverClient, adminClient, adminDb };
+}
+
+/**
+ * Cadastra ou atualiza um tópico de Home Care no catálogo central:
+ * - Se possui id: atualiza título e texto.
+ * - Se NÃO possui id: verifica se já existe um tópico no mesmo grupo com o mesmo título (case-insensitive).
+ *   - Se existir: atualiza o texto e reutiliza o id existente em vez de duplicar.
+ *   - Se não existir: insere o novo tópico no grupo e retorna o id gerado.
+ */
+async function upsertCatalogTopic(
+  adminDb: SupabaseClient,
+  grupo: "CUIDADOS" | "RECOMENDACOES" | "ATENCAO_CRITICA",
+  item: { topico_id?: string; titulo: string; texto: string }
+): Promise<string> {
+  const trimmedTitulo = item.titulo.trim();
+  const trimmedTexto = item.texto.trim();
+
+  // 1. Se já veio com ID, atualiza o tópico existente
+  if (item.topico_id) {
+    const { error: updateError } = await adminDb
+      .from("home_care_topicos")
+      .update({
+        titulo: trimmedTitulo,
+        texto: trimmedTexto,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", item.topico_id);
+
+    if (updateError) {
+      console.warn("Aviso ao atualizar tópico existente no catálogo:", updateError.message);
+    }
+    return item.topico_id;
+  }
+
+  // 2. Tópico sem ID: verificar se já existe no mesmo grupo com o mesmo título (case-insensitive)
+  const { data: existingTopics, error: findError } = await adminDb
+    .from("home_care_topicos")
+    .select("id, titulo, texto")
+    .eq("grupo", grupo)
+    .ilike("titulo", trimmedTitulo)
+    .limit(1);
+
+  if (findError) {
+    console.warn("Aviso ao buscar duplicata de tópico:", findError.message);
+  }
+
+  const existingTopic = existingTopics && existingTopics.length > 0 ? existingTopics[0] : null;
+
+  if (existingTopic?.id) {
+    // Reutiliza o id existente e atualiza o texto com a versão mais recente
+    const { error: updateExistingError } = await adminDb
+      .from("home_care_topicos")
+      .update({
+        texto: trimmedTexto,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existingTopic.id);
+
+    if (updateExistingError) {
+      console.warn("Aviso ao atualizar texto do tópico reutilizado:", updateExistingError.message);
+    }
+
+    return existingTopic.id;
+  }
+
+  // 3. Se não existir, faz o insert e retorna o novo id
+  const { data: novoTopico, error: insertError } = await adminDb
+    .from("home_care_topicos")
+    .insert({
+      grupo,
+      titulo: trimmedTitulo,
+      texto: trimmedTexto,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !novoTopico) {
+    throw new Error(`Falha ao cadastrar tópico '${trimmedTitulo}' no catálogo: ${insertError?.message}`);
+  }
+
+  return novoTopico.id;
 }
 
 /**
@@ -28,13 +115,13 @@ export async function getHomeCareCatalogAndFormulas(): Promise<{
   formulas: Array<{ id: string; nome: string; posologia?: string | null; via?: string }>;
 }> {
   try {
-    const { db } = await getClient();
-    if (!db) {
+    const { adminDb } = await getSupabaseClients();
+    if (!adminDb) {
       return { topicos: [], formulas: [] };
     }
 
-    // Busca tópicos de catálogo
-    const { data: topicosData, error: topicosError } = await db
+    // Busca tópicos de catálogo com o cliente administrativo
+    const { data: topicosData, error: topicosError } = await adminDb
       .from("home_care_topicos")
       .select("*")
       .order("grupo", { ascending: true })
@@ -45,7 +132,7 @@ export async function getHomeCareCatalogAndFormulas(): Promise<{
     }
 
     // Busca fórmulas magistrais
-    const { data: formulasData, error: formulasError } = await db
+    const { data: formulasData, error: formulasError } = await adminDb
       .from("formulas")
       .select("id, nome, posologia, via")
       .order("nome", { ascending: true });
@@ -69,10 +156,10 @@ export async function getHomeCareCatalogAndFormulas(): Promise<{
  */
 export async function getPatientAppointments(pacienteId: string) {
   try {
-    const { db } = await getClient();
-    if (!db || !pacienteId) return [];
+    const { adminDb } = await getSupabaseClients();
+    if (!adminDb || !pacienteId) return [];
 
-    const { data, error } = await db
+    const { data, error } = await adminDb
       .from("appointments")
       .select("id, data, horario_inicio, horario_fim, procedimento")
       .eq("client_id", pacienteId)
@@ -96,10 +183,10 @@ export async function getActivePatients(): Promise<
   Array<{ id: string; nome: string; cpf?: string | null }>
 > {
   try {
-    const { db } = await getClient();
-    if (!db) return [];
+    const { adminDb } = await getSupabaseClients();
+    if (!adminDb) return [];
 
-    const { data, error } = await db
+    const { data, error } = await adminDb
       .from("pacientes")
       .select("id, nome, cpf")
       .is("deleted_at", null)
@@ -122,10 +209,15 @@ export async function getActivePatients(): Promise<
  */
 export async function updateCatalogTopic(id: string, titulo: string, texto: string) {
   try {
-    const { db } = await getClient();
-    if (!db) throw new Error("Banco de dados indisponível");
+    const { serverClient, adminDb } = await getSupabaseClients();
+    if (!serverClient || !adminDb) throw new Error("Banco de dados indisponível");
 
-    const { error } = await db
+    const { data: { user }, error: authError } = await serverClient.auth.getUser();
+    if (authError || !user) {
+      return { error: "Usuário não autenticado." };
+    }
+
+    const { error } = await adminDb
       .from("home_care_topicos")
       .update({
         titulo: titulo.trim(),
@@ -159,103 +251,58 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
     }
 
     const validData = parsed.data;
-    const { serverClient, db } = await getClient();
-    if (!db) {
+    const { serverClient, adminDb } = await getSupabaseClients();
+    if (!serverClient || !adminDb) {
       return { error: "Serviço de banco de dados não configurado." };
     }
 
-    // Identificar profissional logado ou default
-    let profissionalNome = validData.profissional || "Dra. Juliana Sena";
-    if (serverClient) {
-      try {
-        const { data: { user } } = await serverClient.auth.getUser();
-        if (user) {
-          profissionalNome =
-            user.user_metadata?.nome ||
-            user.user_metadata?.full_name ||
-            user.email?.split("@")[0] ||
-            profissionalNome;
-        }
-      } catch {}
+    // 1. Validação obrigatória da autenticação do usuário
+    const { data: { user }, error: authError } = await serverClient.auth.getUser();
+    if (authError || !user) {
+      return { error: "Acesso não autorizado. Por favor, realize login novamente." };
     }
 
-    // 1. Processar e sincronizar Tópicos de CUIDADOS
+    // Identificar profissional autenticado ou valor padrão
+    let profissionalNome = validData.profissional;
+    if (!profissionalNome) {
+      profissionalNome =
+        user.user_metadata?.nome ||
+        user.user_metadata?.full_name ||
+        user.email?.split("@")[0] ||
+        "Dra. Juliana Sena";
+    }
+
+    // 2. Processar e sincronizar Tópicos de CUIDADOS usando cliente administrativo
     const processadosCuidados: Array<{ topico_id: string; titulo: string; texto: string; ordem: number }> = [];
     for (let i = 0; i < validData.cuidados.length; i++) {
       const item = validData.cuidados[i];
-      let topicoId = item.topico_id;
-
-      if (topicoId) {
-        // Sincronização automática: atualiza tópico existente no catálogo central
-        await db
-          .from("home_care_topicos")
-          .update({
-            titulo: item.titulo.trim(),
-            texto: item.texto.trim(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", topicoId);
-      } else {
-        // Cria novo tópico no catálogo central
-        const { data: novoTopico, error: topicoError } = await db
-          .from("home_care_topicos")
-          .insert({
-            grupo: "CUIDADOS",
-            titulo: item.titulo.trim(),
-            texto: item.texto.trim(),
-          })
-          .select("id")
-          .single();
-
-        if (topicoError || !novoTopico) {
-          throw new Error(`Falha ao cadastrar tópico no catálogo: ${topicoError?.message}`);
-        }
-        topicoId = novoTopico.id;
-      }
+      const topicoId = await upsertCatalogTopic(adminDb, "CUIDADOS", {
+        topico_id: item.topico_id,
+        titulo: item.titulo,
+        texto: item.texto,
+      });
 
       processadosCuidados.push({
-        topico_id: topicoId!,
+        topico_id: topicoId,
         titulo: item.titulo.trim(),
         texto: item.texto.trim(),
         ordem: i + 1,
       });
     }
 
-    // 2. Processar e sincronizar Tópicos de RECOMENDAÇÕES (se habilitado)
+    // 3. Processar e sincronizar Tópicos de RECOMENDAÇÕES (se habilitado) usando cliente administrativo
     const processadasRecomendacoes: Array<{ topico_id: string; titulo: string; texto: string; ordem: number }> = [];
     if (validData.incluir_recomendacoes && validData.recomendacoes?.length) {
       for (let i = 0; i < validData.recomendacoes.length; i++) {
         const item = validData.recomendacoes[i];
-        let topicoId = item.topico_id;
-
-        if (topicoId) {
-          await db
-            .from("home_care_topicos")
-            .update({
-              titulo: item.titulo.trim(),
-              texto: item.texto.trim(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", topicoId);
-        } else {
-          const { data: novoTopico, error: topicoError } = await db
-            .from("home_care_topicos")
-            .insert({
-              grupo: "RECOMENDACOES",
-              titulo: item.titulo.trim(),
-              texto: item.texto.trim(),
-            })
-            .select("id")
-            .single();
-
-          if (topicoError || !novoTopico) {
-            throw new Error(`Falha ao cadastrar recomendação no catálogo: ${topicoError?.message}`);
-          }
-          topicoId = novoTopico.id;
-        }
+        const topicoId = await upsertCatalogTopic(adminDb, "RECOMENDACOES", {
+          topico_id: item.topico_id,
+          titulo: item.titulo,
+          texto: item.texto,
+        });
 
         processadasRecomendacoes.push({
-          topico_id: topicoId!,
+          topico_id: topicoId,
           titulo: item.titulo.trim(),
           texto: item.texto.trim(),
           ordem: i + 1,
@@ -263,13 +310,32 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
       }
     }
 
-    // 3. Montar payload canônico determinístico
+    // 3.1 Processar e sincronizar Atenção Crítica (se habilitada e com texto informado)
+    const incluirAtencaoCritica = validData.incluir_atencao_critica !== false;
+    const atencaoCriticaTitulo = validData.atencao_critica_titulo?.trim() || null;
+    const atencaoCriticaTexto = validData.atencao_critica_texto?.trim() || null;
+
+    if (incluirAtencaoCritica && atencaoCriticaTexto) {
+      try {
+        await upsertCatalogTopic(adminDb, "ATENCAO_CRITICA", {
+          titulo: atencaoCriticaTitulo || "ATENÇÃO CRÍTICA — CUIDADOS PÓS-PROCEDIMENTO",
+          texto: atencaoCriticaTexto,
+        });
+      } catch (catErr: any) {
+        console.warn("Aviso ao sincronizar tópico de Atenção Crítica no catálogo:", catErr?.message);
+      }
+    }
+
+    // 4. Montar payload canônico determinístico
     const canonicalPayload = {
       paciente_id: validData.paciente_id,
       appointment_id: validData.appointment_id || null,
       titulo_protocolo: validData.titulo_protocolo.trim(),
       data_home_care: validData.data_home_care,
       profissional: profissionalNome,
+      incluir_atencao_critica: incluirAtencaoCritica,
+      atencao_critica_titulo: atencaoCriticaTitulo,
+      atencao_critica_texto: atencaoCriticaTexto,
       cuidados: processadosCuidados.map((c) => ({
         ordem: c.ordem,
         titulo: c.titulo,
@@ -304,6 +370,9 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
       appointment_id: validData.appointment_id || null,
       titulo_protocolo: validData.titulo_protocolo.trim(),
       data_home_care: validData.data_home_care,
+      incluir_atencao_critica: incluirAtencaoCritica,
+      atencao_critica_titulo: atencaoCriticaTitulo,
+      atencao_critica_texto: atencaoCriticaTexto,
       incluir_recomendacoes: validData.incluir_recomendacoes,
       status: validData.status || "Ativo",
       profissional: profissionalNome,
@@ -318,16 +387,16 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
     let fichaId = validData.id;
 
     if (fichaId) {
-      // Atualização de ficha existente
-      const { error: updateError } = await db
+      // Atualização de ficha existente com cliente admin
+      const { error: updateError } = await adminDb
         .from("home_care_fichas")
         .update(fichaRecord)
         .eq("id", fichaId);
 
       if (updateError) throw updateError;
     } else {
-      // Inserção de nova ficha
-      const { data: newFicha, error: insertError } = await db
+      // Inserção de nova ficha com cliente admin
+      const { data: newFicha, error: insertError } = await adminDb
         .from("home_care_fichas")
         .insert({
           ...fichaRecord,
@@ -340,8 +409,8 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
       fichaId = newFicha.id;
     }
 
-    // 4. Sincronizar tabela associativa `home_care_ficha_topicos`
-    await db.from("home_care_ficha_topicos").delete().eq("ficha_id", fichaId);
+    // 5. Sincronizar tabela associativa `home_care_ficha_topicos` com cliente admin
+    await adminDb.from("home_care_ficha_topicos").delete().eq("ficha_id", fichaId);
 
     const relacoesTopicos = [
       ...processadosCuidados.map((c) => ({
@@ -359,14 +428,14 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
     ];
 
     if (relacoesTopicos.length > 0) {
-      const { error: relError } = await db
+      const { error: relError } = await adminDb
         .from("home_care_ficha_topicos")
         .insert(relacoesTopicos);
       if (relError) throw relError;
     }
 
-    // 5. Sincronizar tabela `home_care_cronograma`
-    await db.from("home_care_cronograma").delete().eq("ficha_id", fichaId);
+    // 6. Sincronizar tabela `home_care_cronograma` com cliente admin
+    await adminDb.from("home_care_cronograma").delete().eq("ficha_id", fichaId);
 
     const linhasCronograma = validData.cronograma.map((cr, idx) => ({
       ficha_id: fichaId,
@@ -381,7 +450,7 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
     }));
 
     if (linhasCronograma.length > 0) {
-      const { error: cronoError } = await db
+      const { error: cronoError } = await adminDb
         .from("home_care_cronograma")
         .insert(linhasCronograma);
       if (cronoError) throw cronoError;
@@ -403,14 +472,19 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
  */
 export async function deleteHomeCareFicha(id: string): Promise<{ success?: boolean; error?: string }> {
   try {
-    const { db } = await getClient();
-    if (!db) throw new Error("Banco de dados indisponível");
+    const { serverClient, adminDb } = await getSupabaseClients();
+    if (!serverClient || !adminDb) throw new Error("Banco de dados indisponível");
 
-    // Limpar relacionamentos dependentes
-    await db.from("home_care_ficha_topicos").delete().eq("ficha_id", id);
-    await db.from("home_care_cronograma").delete().eq("ficha_id", id);
+    const { data: { user }, error: authError } = await serverClient.auth.getUser();
+    if (authError || !user) {
+      return { error: "Usuário não autenticado." };
+    }
 
-    const { error } = await db.from("home_care_fichas").delete().eq("id", id);
+    // Limpar relacionamentos dependentes com adminDb
+    await adminDb.from("home_care_ficha_topicos").delete().eq("ficha_id", id);
+    await adminDb.from("home_care_cronograma").delete().eq("ficha_id", id);
+
+    const { error } = await adminDb.from("home_care_fichas").delete().eq("id", id);
     if (error) throw error;
 
     try {
@@ -429,11 +503,11 @@ export async function deleteHomeCareFicha(id: string): Promise<{ success?: boole
  */
 export async function getPatientHomeCareFichas(pacienteId: string): Promise<HomeCareFichaCompleta[]> {
   try {
-    const { db } = await getClient();
-    if (!db || !pacienteId) return [];
+    const { adminDb } = await getSupabaseClients();
+    if (!adminDb || !pacienteId) return [];
 
     // Busca as fichas do paciente
-    const { data: fichas, error: fichasError } = await db
+    const { data: fichas, error: fichasError } = await adminDb
       .from("home_care_fichas")
       .select(`
         *,
@@ -453,8 +527,8 @@ export async function getPatientHomeCareFichas(pacienteId: string): Promise<Home
 
     const fichaIds = fichas.map((f: any) => f.id);
 
-    // Busca tópicos relacionados
-    const { data: fichaTopicos, error: topicosError } = await db
+    // Busca tópicos relacionados usando adminDb
+    const { data: fichaTopicos, error: topicosError } = await adminDb
       .from("home_care_ficha_topicos")
       .select(`
         ficha_id,
@@ -470,8 +544,8 @@ export async function getPatientHomeCareFichas(pacienteId: string): Promise<Home
       console.warn("Aviso ao buscar home_care_ficha_topicos:", topicosError.message);
     }
 
-    // Busca linhas do cronograma
-    const { data: cronogramas, error: cronoError } = await db
+    // Busca linhas do cronograma usando adminDb
+    const { data: cronogramas, error: cronoError } = await adminDb
       .from("home_care_cronograma")
       .select("*")
       .in("ficha_id", fichaIds)
@@ -526,8 +600,8 @@ export async function getPatientHomeCareFichas(pacienteId: string): Promise<Home
  */
 export async function getLoggedInPatientHomeCareFichas(): Promise<HomeCareFichaCompleta[]> {
   try {
-    const { serverClient, db } = await getClient();
-    if (!serverClient || !db) return [];
+    const { serverClient, adminDb } = await getSupabaseClients();
+    if (!serverClient || !adminDb) return [];
 
     const { data: { user }, error: userError } = await serverClient.auth.getUser();
     if (userError || !user) return [];
@@ -535,7 +609,7 @@ export async function getLoggedInPatientHomeCareFichas(): Promise<HomeCareFichaC
     // Localizar cadastro na tabela pacientes por user_id ou email (não deletado)
     let pacienteId: string | null = null;
 
-    const { data: pacByUserId } = await db
+    const { data: pacByUserId } = await adminDb
       .from("pacientes")
       .select("id")
       .eq("user_id", user.id)
@@ -545,7 +619,7 @@ export async function getLoggedInPatientHomeCareFichas(): Promise<HomeCareFichaC
     if (pacByUserId?.id) {
       pacienteId = pacByUserId.id;
     } else if (user.email) {
-      const { data: pacByEmail } = await db
+      const { data: pacByEmail } = await adminDb
         .from("pacientes")
         .select("id")
         .eq("email", user.email)
