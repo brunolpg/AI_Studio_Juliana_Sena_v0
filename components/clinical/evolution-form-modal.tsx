@@ -13,8 +13,19 @@ import {
   User,
   Heart,
   Scale,
+  Pill,
+  FileHeart,
+  AlertTriangle,
+  CheckSquare,
+  Square,
 } from "lucide-react";
-import { addClinicalEvolutionAction } from "@/actions/clinical-actions";
+import {
+  addClinicalEvolutionAction,
+  getPatientPrescriptionsForEvolutionAction,
+  type PrescricaoParaEvolucao,
+} from "@/actions/clinical-actions";
+import { getPatientHomeCareFichas } from "@/app/actions/home-care";
+import type { HomeCareFichaCompleta } from "@/types/home-care";
 import { useToast } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { validateMultipleFiles } from "@/lib/validations/file-upload";
@@ -249,6 +260,55 @@ export function EvolutionFormModal({
   const [avaliacao, setAvaliacao] = useState("");
   const [plano, setPlano] = useState("");
 
+  // Estados dos Itens 5 e 6: Prescrições e Ficha de Home Care
+  const [prescricoesDisponiveis, setPrescricoesDisponiveis] = useState<PrescricaoParaEvolucao[]>([]);
+  const [isLoadingPrescricoes, setIsLoadingPrescricoes] = useState(false);
+  const [selectedPrescricoesIds, setSelectedPrescricoesIds] = useState<string[]>([]);
+
+  const [homeCareFichasDisponiveis, setHomeCareFichasDisponiveis] = useState<HomeCareFichaCompleta[]>([]);
+  const [isLoadingHomeCare, setIsLoadingHomeCare] = useState(false);
+  const [selectedHomeCareFichaId, setSelectedHomeCareFichaId] = useState<string>("");
+
+  // Carrega Prescrições e Fichas de Home Care vinculáveis ao abrir o modal
+  useEffect(() => {
+    async function loadPrescricoesEHomeCare() {
+      if (!isOpen || !client?.id) return;
+      setIsLoadingPrescricoes(true);
+      setIsLoadingHomeCare(true);
+
+      try {
+        const rxs = await getPatientPrescriptionsForEvolutionAction(client.id);
+        setPrescricoesDisponiveis(rxs || []);
+      } catch (err) {
+        console.error("Erro ao carregar prescrições na evolução:", err);
+      } finally {
+        setIsLoadingPrescricoes(false);
+      }
+
+      try {
+        const hcs = await getPatientHomeCareFichas(client.id);
+        setHomeCareFichasDisponiveis(hcs || []);
+      } catch (err) {
+        console.error("Erro ao carregar Home Care na evolução:", err);
+      } finally {
+        setIsLoadingHomeCare(false);
+      }
+    }
+
+    if (isOpen && client?.id) {
+      loadPrescricoesEHomeCare();
+    } else {
+      setSelectedPrescricoesIds([]);
+      setSelectedHomeCareFichaId("");
+    }
+  }, [isOpen, client?.id]);
+
+  // Ficha de Home Care selecionada para pré-visualização de detalhes
+  const selectedHomeCareFicha = useMemo(() => {
+    if (!selectedHomeCareFichaId) return null;
+    return homeCareFichasDisponiveis.find((f) => f.id === selectedHomeCareFichaId) || null;
+  }, [selectedHomeCareFichaId, homeCareFichasDisponiveis]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -306,9 +366,13 @@ export function EvolutionFormModal({
         },
         avaliacao: avaliacao.trim(),
         plano: plano.trim(),
+        prescricoes_ids: selectedPrescricoesIds,
+        home_care_ficha_id: selectedHomeCareFichaId || null,
       });
 
       if (res.success) {
+        setSelectedPrescricoesIds([]);
+        setSelectedHomeCareFichaId("");
         toast({
           type: "success",
           title: "Evolução registrada!",
@@ -591,20 +655,247 @@ export function EvolutionFormModal({
               />
             </div>
 
-            {/* Plano */}
-            <div>
-              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between mb-1">
-                <span>4. Plano (P) - Protocolo Regenerativo, Prescrições & Home Care *</span>
-                <span className="text-[10px] text-slate-400 font-normal">Procedimentos e cuidados recomendados</span>
+            {/* Item 4: Plano (P) – Protocolo Regenerativo */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>4. Plano (P) – Protocolo Regenerativo *</span>
+                </span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
+                  Procedimentos e protocolo clínico
+                </span>
               </label>
               <textarea
                 rows={3}
-                placeholder="Ex: 1. Aplicação de bioestimulador de colágeno (Sculptra) em pontos demarcados. 2. Prescrição de sérum hidratante com ácido hialurônico para home care."
+                placeholder="Ex: Realizada aplicação de bioestimulador de colágeno (Radiesse/Sculptra) em terço médio e inferior da face com cânula 22G. Protocolo de 3 sessões com intervalo de 30 dias. Cuidados imediatos repassados ao paciente."
                 value={plano}
                 onChange={(e) => setPlano(e.target.value)}
                 required
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-all resize-none"
               />
+            </div>
+
+            {/* Item 5: Prescrições & Medicamentos Associados */}
+            <div className="space-y-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Pill className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  <span>5. Prescrições & Medicamentos Associados</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
+                    Vínculo com receitas emitidas
+                  </span>
+                  {selectedPrescricoesIds.length > 0 && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                      {selectedPrescricoesIds.length} selecionada(s)
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {isLoadingPrescricoes ? (
+                <div className="py-4 text-center text-xs text-slate-400 dark:text-slate-500 animate-pulse bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                  Carregando prescrições do paciente...
+                </div>
+              ) : prescricoesDisponiveis.length === 0 ? (
+                <div className="p-3.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/30 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <Pill className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+                    <span>Nenhuma prescrição cadastrada para este paciente.</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 italic">Opcional</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {/* Barra de Ações Rápidas quando houver mais de 1 prescrição */}
+                  {prescricoesDisponiveis.length > 1 && (
+                    <div className="flex items-center justify-between px-1 text-[11px]">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Selecione as receitas associadas a esta sessão:
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPrescricoesIds(prescricoesDisponiveis.map((p) => p.id))}
+                          className="text-teal-600 dark:text-teal-400 hover:underline font-semibold cursor-pointer"
+                        >
+                          Selecionar todas
+                        </button>
+                        {selectedPrescricoesIds.length > 0 && (
+                          <>
+                            <span className="text-slate-300 dark:text-slate-600">•</span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedPrescricoesIds([])}
+                              className="text-slate-500 hover:text-rose-500 dark:text-slate-400 dark:hover:text-rose-400 font-semibold cursor-pointer"
+                            >
+                              Limpar
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {prescricoesDisponiveis.map((rx) => {
+                      const isSelected = selectedPrescricoesIds.includes(rx.id);
+                      const [year, month, day] = (rx.data_prescricao || "").split("-");
+                      const formattedDate = day && month && year ? `${day}/${month}/${year}` : rx.data_prescricao;
+
+                      return (
+                        <div
+                          key={rx.id}
+                          onClick={() => {
+                            setSelectedPrescricoesIds((prev) =>
+                              isSelected ? prev.filter((id) => id !== rx.id) : [...prev, rx.id]
+                            );
+                          }}
+                          className={`group relative p-3 rounded-xl border transition-all cursor-pointer select-none ${
+                            isSelected
+                              ? "bg-teal-50/70 dark:bg-teal-950/30 border-teal-500/70 dark:border-teal-500/70 shadow-2xs"
+                              : "bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2.5">
+                            <div className="flex items-start gap-2.5 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}} // tratado no onClick do card
+                                className="mt-0.5 w-4 h-4 rounded text-teal-600 border-slate-300 dark:border-slate-600 focus:ring-teal-500 cursor-pointer pointer-events-none"
+                              />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                    Receita de {formattedDate}
+                                  </span>
+                                  <span
+                                    className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
+                                      rx.status === "Ativo"
+                                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                        : rx.status === "Suspenso"
+                                        ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                                    }`}
+                                  >
+                                    {rx.status}
+                                  </span>
+                                </div>
+                                {rx.formulas && rx.formulas.length > 0 && (
+                                  <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                                    {rx.formulas.map((formulaName, i) => (
+                                      <span
+                                        key={i}
+                                        className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 font-medium"
+                                      >
+                                        {formulaName}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0">
+                              {isSelected ? "✓ Vinculada" : "Clique p/ vincular"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Item 6: Ficha de Home Care (Cuidados & Orientações) */}
+            <div className="space-y-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <FileHeart className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  <span>6. Ficha de Home Care (Cuidados & Orientações)</span>
+                </label>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
+                  Rotina pós-procedimento
+                </span>
+              </div>
+
+              {isLoadingHomeCare ? (
+                <div className="py-3 text-center text-xs text-slate-400 dark:text-slate-500 animate-pulse bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                  Carregando fichas de Home Care do paciente...
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <select
+                    value={selectedHomeCareFichaId}
+                    onChange={(e) => setSelectedHomeCareFichaId(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-all cursor-pointer"
+                  >
+                    <option value="">Sem ficha de Home Care vinculada</option>
+                    {homeCareFichasDisponiveis.map((ficha) => {
+                      const [year, month, day] = (ficha.data_home_care || "").split("-");
+                      const dateFormatted = day && month && year ? `${day}/${month}/${year}` : ficha.data_home_care;
+                      return (
+                        <option key={ficha.id} value={ficha.id}>
+                          {ficha.titulo_protocolo} ({dateFormatted}) — {ficha.status}
+                        </option>
+                      );
+                    })}
+                  </select>
+
+                  {/* Pré-visualização da Ficha Selecionada */}
+                  {selectedHomeCareFicha && (
+                    <div className="p-3.5 rounded-xl border border-teal-200/80 dark:border-teal-800/80 bg-teal-50/40 dark:bg-teal-950/20 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold text-slate-900 dark:text-white">
+                              {selectedHomeCareFicha.titulo_protocolo}
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300 border border-teal-200/80 dark:border-teal-700/80">
+                              {selectedHomeCareFicha.status}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            Data do protocolo: {selectedHomeCareFicha.data_home_care}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedHomeCareFichaId("")}
+                          className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+                        >
+                          Desvincular
+                        </button>
+                      </div>
+
+                      {/* Aviso de Atenção Crítica se houver */}
+                      {selectedHomeCareFicha.incluir_atencao_critica !== false &&
+                        Boolean(selectedHomeCareFicha.atencao_critica_texto?.trim()) && (
+                          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 p-2.5 flex items-start gap-2 text-xs text-amber-800 dark:text-amber-200">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <div className="min-w-0">
+                              <span className="font-bold text-[11px] block">
+                                {selectedHomeCareFicha.atencao_critica_titulo || "Atenção Crítica Cadastrada"}
+                              </span>
+                              <p className="text-[10px] text-amber-700 dark:text-amber-300 line-clamp-2 mt-0.5">
+                                {selectedHomeCareFicha.atencao_critica_texto}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  )}
+
+                  {homeCareFichasDisponiveis.length === 0 && (
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
+                      Nenhuma ficha de home care cadastrada para este paciente.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

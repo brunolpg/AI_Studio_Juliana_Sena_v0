@@ -830,15 +830,121 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                               </p>
                             </div>
 
-                            {/* P */}
+                            {/* 4. Plano (P) • Protocolo Regenerativo */}
                             <div>
                               <span className="inline-flex items-center gap-1 font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide text-[10px] bg-emerald-50 dark:bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-200/60">
-                                P • Plano & Conduta Terapêutica
+                                4. Plano (P) • Protocolo Regenerativo
                               </span>
                               <p className="mt-1 text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                                 {evo.plano}
                               </p>
                             </div>
+
+                            {/* 5. Prescrições & Medicamentos Associados */}
+                            {((evo.prescricoes_detalhes && evo.prescricoes_detalhes.length > 0) ||
+                              (evo.prescricoes_ids && evo.prescricoes_ids.length > 0)) && (
+                              <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60">
+                                <div className="flex items-center gap-1.5 mb-2">
+                                  <Pill className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                                  <span className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide text-[10px]">
+                                    5. Prescrições & Medicamentos Associados
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {evo.prescricoes_detalhes && evo.prescricoes_detalhes.length > 0 ? (
+                                    evo.prescricoes_detalhes.map((rx) => {
+                                      const [y, m, d] = (rx.data_prescricao || "").split("-");
+                                      const rxDate = d && m && y ? `${d}/${m}/${y}` : rx.data_prescricao;
+                                      return (
+                                        <div
+                                          key={rx.id}
+                                          className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-700/70 text-xs"
+                                        >
+                                          <div className="flex items-center justify-between gap-1 mb-1">
+                                            <span className="font-bold text-slate-900 dark:text-slate-100 text-[11px]">
+                                              Receita de {rxDate}
+                                            </span>
+                                            <span
+                                              className={`text-[9px] px-1.5 py-0.2 rounded font-semibold border ${
+                                                rx.status === "Ativo"
+                                                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                                  : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                                              }`}
+                                            >
+                                              {rx.status}
+                                            </span>
+                                          </div>
+                                          {rx.formulas && rx.formulas.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {rx.formulas.map((f, i) => (
+                                                <span
+                                                  key={i}
+                                                  className="text-[10px] px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60 font-medium"
+                                                >
+                                                  {f}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                                      {evo.prescricoes_ids?.length} receita(s) vinculada(s)
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 6. Ficha de Home Care Vinculada */}
+                            {Boolean(evo.home_care_ficha || evo.home_care_ficha_id) && (() => {
+                              const ficha =
+                                evo.home_care_ficha ||
+                                homeCareFichas.find((f) => f.id === evo.home_care_ficha_id);
+                              if (!ficha) return null;
+                              const [y, m, d] = (ficha.data_home_care || "").split("-");
+                              const hcDate = d && m && y ? `${d}/${m}/${y}` : ficha.data_home_care;
+
+                              return (
+                                <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60">
+                                  <div className="flex items-center gap-1.5 mb-1.5">
+                                    <FileHeart className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                                    <span className="font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide text-[10px]">
+                                      6. Ficha de Home Care (Cuidados & Orientações)
+                                    </span>
+                                  </div>
+                                  <div className="p-3 rounded-xl bg-teal-50/40 dark:bg-teal-950/20 border border-teal-200/70 dark:border-teal-800/70 space-y-1.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="font-bold text-xs text-slate-900 dark:text-white">
+                                        {ficha.titulo_protocolo}
+                                      </span>
+                                      <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-700">
+                                        {ficha.status || "Ativo"}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                      Início do protocolo: {hcDate}
+                                    </p>
+                                    {ficha.incluir_atencao_critica !== false &&
+                                      Boolean(ficha.atencao_critica_texto?.trim()) && (
+                                        <div className="rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 p-2 flex items-start gap-2 text-xs text-amber-800 dark:text-amber-200">
+                                          <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                                          <div className="min-w-0">
+                                            <span className="font-bold text-[11px] block">
+                                              {ficha.atencao_critica_titulo || "Atenção Crítica Cadastrada"}
+                                            </span>
+                                            <p className="text-[10px] text-amber-700 dark:text-amber-300 line-clamp-2 mt-0.5">
+                                              {ficha.atencao_critica_texto}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       );

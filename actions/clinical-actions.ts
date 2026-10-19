@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import type {
   PatientClinicalRecord,
   MedicalHistory,
@@ -148,41 +149,68 @@ export async function getPatientClinicalRecordAction(
       }
     }
 
-    // 3. Evoluções
+    // 3. Evoluções com relacionamentos
     let mappedEvolutions: ClinicalEvolution[] = [];
     try {
       const { data: evDb, error: evErr } = await supabase
         .from("evolucoes_clinicas")
-        .select("*")
+        .select(`
+          *,
+          home_care_ficha:home_care_fichas (
+            id,
+            titulo_protocolo,
+            data_home_care,
+            status,
+            payload_hash,
+            incluir_atencao_critica,
+            atencao_critica_titulo,
+            atencao_critica_texto
+          )
+        `)
         .eq("paciente_id", clientId)
         .order("created_at", { ascending: false });
 
       if (!evErr && evDb) {
-        mappedEvolutions = evDb.map((e: any) => ({
-          id: e.id,
-          client_id: e.paciente_id,
-          data: e.data,
-          horario: e.horario,
-          tipo: e.tipo,
-          tipo_atendimento: e.tipo_atendimento,
-          procedimento_id: e.procedimento_id,
-          appointment_id: e.appointment_id,
-          exames_anexos: e.exames_anexos || [],
-          fotos_paciente: e.fotos_paciente || [],
-          profissional: e.profissional,
-          especialidade: e.especialidade,
-          subjetivo: e.subjetivo,
-          objetivo: e.objetivo,
-          sinaisVitais: e.sinais_vitais || undefined,
-          avaliacao: e.avaliacao,
-          plano: e.plano,
-          payload_canonico: e.payload_canonico || undefined,
-          payload_hash: e.payload_hash || undefined,
-          assinatura: e.assinatura || undefined,
-          algoritmo: e.algoritmo || undefined,
-          assinado_em: e.assinado_em || undefined,
-          created_at: e.created_at,
-        }));
+        mappedEvolutions = evDb.map((e: any) => {
+          const linkedPrescs = (prescricoesDb || [])
+            .filter((p: any) => (e.prescricoes_ids || []).includes(p.id))
+            .map((p: any) => ({
+              id: p.id,
+              data_prescricao: p.data_prescricao,
+              status: p.status,
+              formulas: (p.prescricao_itens || []).map((it: any) => it.nome_formula),
+            }));
+
+          return {
+            id: e.id,
+            client_id: e.paciente_id,
+            data: e.data,
+            horario: e.horario,
+            tipo: e.tipo,
+            tipo_atendimento: e.tipo_atendimento,
+            procedimento_id: e.procedimento_id,
+            appointment_id: e.appointment_id,
+            exames_anexos: e.exames_anexos || [],
+            fotos_paciente: e.fotos_paciente || [],
+            profissional: e.profissional,
+            especialidade: e.especialidade,
+            subjetivo: e.subjetivo,
+            objetivo: e.objetivo,
+            sinaisVitais: e.sinais_vitais || undefined,
+            avaliacao: e.avaliacao,
+            plano: e.plano,
+            prescricoes_ids: e.prescricoes_ids || [],
+            home_care_ficha_id: e.home_care_ficha_id || null,
+            home_care_ficha: e.home_care_ficha || null,
+            prescricoes_detalhes: linkedPrescs,
+            payload_canonico: e.payload_canonico || undefined,
+            payload_hash: e.payload_hash || undefined,
+            assinatura: e.assinatura || undefined,
+            algoritmo: e.algoritmo || undefined,
+            assinado_em: e.assinado_em || undefined,
+            created_at: e.created_at,
+          };
+        });
       }
     } catch {
       // Falha silenciosa caso a tabela não exista, mantendo array vazio
@@ -236,6 +264,8 @@ export async function addClinicalEvolutionAction(
     }
 
     const assinadoEmServer = new Date().toISOString();
+    const prescricoesIds = input.prescricoes_ids || [];
+    const homeCareFichaId = input.home_care_ficha_id || null;
 
     const rawPayloadToSign = {
       paciente_id: clientId,
@@ -247,6 +277,8 @@ export async function addClinicalEvolutionAction(
       objetivo: input.objetivo || "Exame físico sumário preservado.",
       avaliacao: input.avaliacao || "Condição estável.",
       plano: input.plano || "Orientações gerais de saúde.",
+      prescricoes_ids: prescricoesIds,
+      home_care_ficha_id: homeCareFichaId,
       sinais_vitais: input.sinaisVitais
         ? {
             ...input.sinaisVitais,
@@ -280,6 +312,8 @@ export async function addClinicalEvolutionAction(
       sinaisVitais: rawPayloadToSign.sinais_vitais || undefined,
       avaliacao: rawPayloadToSign.avaliacao,
       plano: rawPayloadToSign.plano,
+      prescricoes_ids: prescricoesIds,
+      home_care_ficha_id: homeCareFichaId,
       payload_canonico: signatureResult.payloadCanonicoStr,
       payload_hash: signatureResult.payloadHash,
       assinatura: signatureResult.assinatura,
@@ -288,9 +322,20 @@ export async function addClinicalEvolutionAction(
       created_at: new Date().toISOString(),
     };
 
-    const supabase = await createClient();
+    // Validação de autenticação via server client e escrita via admin client
+    const serverClient = await createClient();
+    if (!serverClient) {
+      return { success: false, message: "Banco de dados não disponível." };
+    }
+
+    const { data: { user }, error: authErr } = await serverClient.auth.getUser();
+    if (authErr || !user) {
+      return { success: false, message: "Acesso não autorizado. Por favor, realize login novamente." };
+    }
+
+    const supabase = getSupabaseAdminClient() || serverClient;
     if (supabase) {
-      // Tenta gravar na tabela evolucoes_clinicas com assinatura digital do payload
+      // Grava na tabela evolucoes_clinicas com assinatura digital e vínculos
       try {
         const { error: insertErr } = await supabase.from("evolucoes_clinicas").insert({
           paciente_id: clientId,
@@ -309,6 +354,8 @@ export async function addClinicalEvolutionAction(
           sinais_vitais: newEvolution.sinaisVitais,
           avaliacao: newEvolution.avaliacao,
           plano: newEvolution.plano,
+          prescricoes_ids: newEvolution.prescricoes_ids,
+          home_care_ficha_id: newEvolution.home_care_ficha_id,
           payload_canonico: signatureResult.payloadCanonicoStr,
           payload_hash: signatureResult.payloadHash,
           assinatura: signatureResult.assinatura,
@@ -318,7 +365,7 @@ export async function addClinicalEvolutionAction(
 
         if (insertErr) {
           console.error("Erro ao salvar evolução clínica na tabela evolucoes_clinicas:", insertErr.message);
-          // Fallback seguro de salvamento sem colunas de assinatura caso o schema remoto ainda não as possua
+          // Fallback de salvamento
           const { error: fallbackErr } = await supabase.from("evolucoes_clinicas").insert({
             paciente_id: clientId,
             data: newEvolution.data,
@@ -336,6 +383,8 @@ export async function addClinicalEvolutionAction(
             sinais_vitais: newEvolution.sinaisVitais,
             avaliacao: newEvolution.avaliacao,
             plano: newEvolution.plano,
+            prescricoes_ids: newEvolution.prescricoes_ids,
+            home_care_ficha_id: newEvolution.home_care_ficha_id,
           });
 
           if (fallbackErr) {
@@ -1012,6 +1061,8 @@ export async function addStructuredPrescriptionAction(
       instrucoes: combinedInstrucoes || undefined,
     };
 
+    (newPrescription as any).prescricao_id = prescricao.id;
+
     revalidatePath("/");
 
     return {
@@ -1025,6 +1076,50 @@ export async function addStructuredPrescriptionAction(
       success: false,
       message: `Erro interno no servidor: ${error.message || error}`,
     };
+  }
+}
+
+/**
+ * Consulta Prescrições do Paciente com itens para vínculos em Evoluções
+ */
+export async function getPatientPrescriptionsWithItemsAction(
+  clientId: string
+): Promise<ActionResponse<any[]>> {
+  try {
+    const supabase = getSupabaseAdminClient() || (await createClient());
+    if (!supabase || !clientId) return { success: true, data: [] };
+
+    const { data, error } = await supabase
+      .from("prescricoes")
+      .select(`
+        id,
+        paciente_id,
+        data_prescricao,
+        status,
+        observacoes,
+        prescricao_itens (
+          id,
+          nome_formula,
+          via,
+          veiculo,
+          dosagem,
+          tipo_veiculo,
+          posologia,
+          duracao
+        )
+      `)
+      .eq("paciente_id", clientId)
+      .order("data_prescricao", { ascending: false });
+
+    if (error) {
+      console.warn("Aviso ao buscar prescrições do paciente:", error.message);
+      return { success: true, data: [] };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (err: any) {
+    console.error("Erro em getPatientPrescriptionsWithItemsAction:", err);
+    return { success: true, data: [] };
   }
 }
 
@@ -1171,5 +1266,82 @@ export async function saveAestheticEvaluationAction(
     };
   } catch (error: any) {
     return { success: false, message: error?.message || 'Falha ao salvar avaliação estética.' };
+  }
+}
+
+export interface PrescricaoItemParaEvolucao {
+  id: string;
+  nome_formula: string;
+  via: string;
+  dosagem?: string | number | null;
+  posologia?: string | null;
+  duracao?: string | null;
+}
+
+export interface PrescricaoParaEvolucao {
+  id: string;
+  data_prescricao: string;
+  status: string;
+  observacoes?: string | null;
+  formulas: string[];
+  itens: PrescricaoItemParaEvolucao[];
+}
+
+/**
+ * Busca todas as prescrições do paciente com suas fórmulas associadas
+ * para seleção/vínculo no modal de Nova Evolução Clínica.
+ */
+export async function getPatientPrescriptionsForEvolutionAction(
+  clientId: string
+): Promise<PrescricaoParaEvolucao[]> {
+  try {
+    if (!clientId) return [];
+    const serverClient = await createClient();
+    const adminClient = getSupabaseAdminClient();
+    const supabase = adminClient || serverClient;
+    if (!supabase) return [];
+
+    const { data: prescricoesDb, error } = await supabase
+      .from("prescricoes")
+      .select(`
+        id,
+        data_prescricao,
+        status,
+        observacoes,
+        prescricao_itens (
+          id,
+          nome_formula,
+          via,
+          dosagem,
+          posologia,
+          duracao
+        )
+      `)
+      .eq("paciente_id", clientId)
+      .order("data_prescricao", { ascending: false });
+
+    if (error || !prescricoesDb) {
+      console.warn("Aviso ao buscar prescrições para evolução:", error?.message);
+      return [];
+    }
+
+    return prescricoesDb.map((p: any) => ({
+      id: p.id,
+      data_prescricao: p.data_prescricao,
+      status: p.status || "Ativo",
+      observacoes: p.observacoes,
+      formulas: (p.prescricao_itens || []).map((it: any) => it.nome_formula).filter(Boolean),
+      itens: (p.prescricao_itens || []).map((it: any) => ({
+        id: it.id,
+        nome_formula: it.nome_formula,
+        via: it.via,
+        dosagem: it.dosagem,
+        posologia: it.posologia,
+        duracao: it.duracao,
+      })),
+    }));
+  } catch (err) {
+    console.error("Erro em getPatientPrescriptionsForEvolutionAction:", err);
+    return [];
   }
 }

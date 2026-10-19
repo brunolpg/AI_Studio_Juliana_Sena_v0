@@ -27,6 +27,24 @@ export interface ClinicalEvolution {
   sinaisVitais?: VitalSigns;
   avaliacao: string; // Hipótese diagnóstica, diagnóstico fechado
   plano: string; // Conduta terapêutica, prescrições, orientações
+  prescricoes_ids?: string[]; // IDs de public.prescricoes vinculadas
+  home_care_ficha_id?: string | null; // ID da ficha de Home Care vinculada
+  home_care_ficha?: {
+    id: string;
+    titulo_protocolo: string;
+    data_home_care: string;
+    status?: string;
+    payload_hash?: string;
+    incluir_atencao_critica?: boolean;
+    atencao_critica_titulo?: string | null;
+    atencao_critica_texto?: string | null;
+  } | null;
+  prescricoes_detalhes?: Array<{
+    id: string;
+    data_prescricao: string;
+    status: string;
+    formulas: string[];
+  }>;
   payload_canonico?: string;
   payload_hash?: string;
   assinatura?: string;

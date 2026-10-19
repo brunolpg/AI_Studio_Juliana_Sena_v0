@@ -15,8 +15,9 @@ import type { Client } from "@/types/client";
 interface PrescriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (newPrescriptionId?: string) => void;
   client: Client;
+  zIndex?: string;
 }
 
 interface ComponentRow {
@@ -33,6 +34,7 @@ export function PrescriptionModal({
   onClose,
   onSuccess,
   client,
+  zIndex = "z-50",
 }: PrescriptionModalProps) {
   const { toast } = useToast();
 
@@ -329,7 +331,8 @@ export function PrescriptionModal({
           title: "Prescrição Magistral Emitida!",
           description: `Receita gerada e salva com sucesso para ${client.nome}.`,
         });
-        onSuccess();
+        const createdPrescriptionId = res.data?.prescricao_id || res.data?.id;
+        onSuccess(createdPrescriptionId);
         onClose();
       } else {
         setErrorMsg(res.message || "Erro ao adicionar receita.");
@@ -343,8 +346,8 @@ export function PrescriptionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-6">
+    <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto`}>
+      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-6 max-h-[90dvh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
           <div className="flex items-center gap-3">
