@@ -1405,7 +1405,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             {/* ABA 3: RECEITUÁRIO & TRATAMENTOS */}
             {/* ======================================================== */}
             {activeSubTab === "prescricoes" && (
-              <div className="space-y-4">
+              <div className="w-full">
                 {prescriptions.length === 0 && homeCareFichas.length === 0 ? (
                   <div className="py-12 text-center max-w-sm mx-auto">
                     <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 flex items-center justify-center mx-auto mb-3">
@@ -1442,25 +1442,27 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     )}
                   </div>
                 ) : (
-                  <>
-                    {prescriptions.length > 0 && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-center shrink-0">
-                              <Pill className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                            </div>
-                            <div>
-                              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                                Receituário & Fórmulas Magistrais ({prescriptions.length})
-                              </h3>
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                Receituário e formulações magistrais prescritas para o tratamento
-                              </p>
-                            </div>
+                  <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    {/* COLUNA 1: RECEITUÁRIO */}
+                    <div className="w-full flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-center shrink-0">
+                            <Pill className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                              Receituário & Fórmulas Magistrais ({prescriptions.length})
+                            </h3>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              Receituário e formulações magistrais prescritas para o tratamento
+                            </p>
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                      </div>
+
+                      {prescriptions.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-3.5">
                     {prescriptions.map((rx) => {
                       const [year, month, day] = (rx.data || "").split("-");
                       const dateFormatted = year && month && day ? `${day}/${month}/${year}` : rx.data;
@@ -1649,22 +1651,55 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                         </div>
                       );
                     })}
+                        </div>
+                      ) : (
+                        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-center">
+                          <p className="text-xs text-slate-400 italic">
+                            Nenhuma fórmula magistral ou receita registrada no momento.
+                          </p>
+                        </div>
+                      )}
                     </div>
-                      </div>
-                    )}
 
-                    {/* Seção Integrada de Fichas de Home Care (Cuidados & Orientações) */}
-                    <HomeCareCards
-                      fichas={homeCareFichas}
-                      client={client}
-                      isPatientView={isPatientView}
-                      onEdit={(f) => {
-                        setSelectedHomeCareForEdit(f);
-                        setIsHomeCareModalOpen(true);
-                      }}
-                      onRefresh={loadClinicalData}
-                    />
-                  </>
+                    {/* COLUNA 2: HOME CARE */}
+                    <div className="w-full flex flex-col gap-4">
+                      {homeCareFichas.length > 0 ? (
+                        <HomeCareCards
+                          fichas={homeCareFichas}
+                          client={client}
+                          isPatientView={isPatientView}
+                          onEdit={(f) => {
+                            setSelectedHomeCareForEdit(f);
+                            setIsHomeCareModalOpen(true);
+                          }}
+                          onRefresh={loadClinicalData}
+                        />
+                      ) : (
+                        <div className="space-y-3.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-center shrink-0">
+                                <HeartHandshake className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                              </div>
+                              <div>
+                                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                                  Fichas de Home Care & Orientações (0)
+                                </h3>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                  Protocolos e cronogramas de cuidados domiciliares assinados digitalmente
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-center">
+                            <p className="text-xs text-slate-400 italic">
+                              Nenhuma ficha de home care ou orientação domiciliar registrada.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             )}

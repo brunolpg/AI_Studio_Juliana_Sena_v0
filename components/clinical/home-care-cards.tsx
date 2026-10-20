@@ -73,7 +73,7 @@ export function HomeCareCards({
 
   return (
     <>
-      <div className="space-y-3.5 pt-4">
+      <div className="space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-center shrink-0">
@@ -90,7 +90,7 @@ export function HomeCareCards({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+        <div className="grid grid-cols-1 gap-3.5">
           {fichas.map((ficha) => {
             const cuidadosCount = ficha.cuidados?.length || 0;
             const cronoCount = ficha.cronograma?.length || 0;

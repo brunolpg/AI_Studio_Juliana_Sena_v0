@@ -330,7 +330,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
           <>
             {/* ABA: DOCUMENTOS (Receituário & Fórmulas Magistrais & Home Care) */}
             {activeTab === "prontuario" && (
-              <div className="space-y-4">
+              <div className="w-full">
                 <PatientClinicalTabs
                   client={patientData}
                   isPatientView={true}
