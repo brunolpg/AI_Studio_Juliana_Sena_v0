@@ -10,7 +10,6 @@ import {
   PanelLeftOpen,
   Calendar,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
 import type { Client } from "@/types/client";
@@ -236,10 +235,13 @@ export function PrintHomeCareModal({
               {/* 1. Cabeçalho Institucional Escuro / Dourado */}
               <div className="rounded-2xl bg-gradient-to-r from-[#042f2e] via-[#064e3b] to-[#091522] text-white p-5 sm:p-6 mb-5 border border-emerald-900/40 relative overflow-hidden shadow-sm">
                 <div className="flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-bold shadow-md shrink-0">
-                      <Sparkles className="w-6 h-6 text-slate-950" />
-                    </div>
+                  <div className="flex items-center gap-4">
+                    <img
+                      src="/logo-clinica.png"
+                      alt="Dra. Juliana Sena"
+                      className="h-16 w-auto object-contain flex-shrink-0"
+                      referrerPolicy="no-referrer"
+                    />
                     <div>
                       <span className="text-[10px] tracking-widest text-amber-300 font-bold uppercase block mb-0.5">
                         CLÍNICA DE ESTÉTICA AVANÇADA & REGENERATIVA

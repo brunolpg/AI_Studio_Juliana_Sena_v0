@@ -535,136 +535,134 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-      {/* Barra de Navegação Interna das Abas Clínicas */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 gap-3">
-        {/* Abas */}
-        <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs overflow-x-auto">
-          {!isPatientView && (
-            <>
-              <button
-                type="button"
-                onClick={() => setActiveSubTab("evolucoes")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                  activeSubTab === "evolucoes"
-                    ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Evoluções & Consultas</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60">
-                  {evolutions.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveSubTab("historico")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                  activeSubTab === "historico"
-                    ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-                }`}
-              >
-                <FileHeart className="w-3.5 h-3.5" />
-                <span>Histórico & Anamnese</span>
-                {history?.alergias && history.alergias.length > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                    Alergias
-                  </span>
-                )}
-              </button>
-            </>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab("prescricoes")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              activeSubTab === "prescricoes"
-                ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-            }`}
-          >
-            <Pill className="w-3.5 h-3.5" />
-            <span>Prescrições</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-              {prescriptions.filter((p) => p.ativo).length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveSubTab("metricas")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
-              activeSubTab === "metricas"
-                ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-            }`}
-          >
-            <Gauge className="w-3.5 h-3.5" />
-            <span>Sinais Vitais & Biometria</span>
-          </button>
-        </div>
-
-        {/* Botão de Ação Primária Contextual */}
-        <div className="flex items-center gap-2 shrink-0">
-          {activeSubTab === "evolucoes" && !isPatientView && (
+      {/* Barra de Navegação Interna das Abas Clínicas (Apenas para Administrador / Profissional) */}
+      {!isPatientView && (
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 gap-3">
+          {/* Abas */}
+          <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs overflow-x-auto">
             <button
               type="button"
-              onClick={() => setIsEvolutionModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all cursor-pointer"
+              onClick={() => setActiveSubTab("evolucoes")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                activeSubTab === "evolucoes"
+                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+              }`}
             >
-              <Plus className="w-4 h-4" />
-              <span>Nova Evolução Clínica</span>
+              <Activity className="w-3.5 h-3.5" />
+              <span>Evoluções & Consultas</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60">
+                {evolutions.length}
+              </span>
             </button>
-          )}
 
-          {activeSubTab === "historico" && !isPatientView && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsAestheticModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-teal-500 text-teal-600 dark:text-teal-400 text-xs sm:text-sm font-semibold hover:bg-teal-50 dark:hover:bg-teal-950/40 transition-colors shadow-2xs cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Avaliação Estética</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsHistoryModalOpen(true)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 rounded-xl transition-all cursor-pointer"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                <span>Editar Histórico Clínico</span>
-              </button>
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("historico")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                activeSubTab === "historico"
+                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+              }`}
+            >
+              <FileHeart className="w-3.5 h-3.5" />
+              <span>Histórico & Anamnese</span>
+              {history?.alergias && history.alergias.length > 0 && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                  Alergias
+                </span>
+              )}
+            </button>
 
-          {activeSubTab === "prescricoes" && !isPatientView && (
-            <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("prescricoes")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                activeSubTab === "prescricoes"
+                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+              }`}
+            >
+              <Pill className="w-3.5 h-3.5" />
+              <span>Prescrições</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                {prescriptions.filter((p) => p.ativo).length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("metricas")}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                activeSubTab === "metricas"
+                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+              }`}
+            >
+              <Gauge className="w-3.5 h-3.5" />
+              <span>Sinais Vitais & Biometria</span>
+            </button>
+          </div>
+
+          {/* Botão de Ação Primária Contextual */}
+          <div className="flex items-center gap-2 shrink-0">
+            {activeSubTab === "evolucoes" && (
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedHomeCareForEdit(null);
-                  setIsHomeCareModalOpen(true);
-                }}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer shadow-2xs"
-              >
-                <span>+ Cuidados & Orientações</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsPrescriptionModalOpen(true)}
+                onClick={() => setIsEvolutionModalOpen(true)}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>Prescrever Receita</span>
+                <span>Nova Evolução Clínica</span>
               </button>
-            </div>
-          )}
+            )}
+
+            {activeSubTab === "historico" && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAestheticModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-teal-500 text-teal-600 dark:text-teal-400 text-xs sm:text-sm font-semibold hover:bg-teal-50 dark:hover:bg-teal-950/40 transition-colors shadow-2xs cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Avaliação Estética</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsHistoryModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 rounded-xl transition-all cursor-pointer"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Editar Histórico Clínico</span>
+                </button>
+              </div>
+            )}
+
+            {activeSubTab === "prescricoes" && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedHomeCareForEdit(null);
+                    setIsHomeCareModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer shadow-2xs"
+                >
+                  <span>+ Cuidados & Orientações</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPrescriptionModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Prescrever Receita</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Conteúdo das Abas */}
       <div className="p-6">
@@ -1665,7 +1663,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             {/* ======================================================== */}
             {/* ABA 4: SINAIS VITAIS & BIOMETRIA */}
             {/* ======================================================== */}
-            {activeSubTab === "metricas" && (
+            {activeSubTab === "metricas" && !isPatientView && (
               <div className="space-y-6">
                 {/* Resumo da Última Medição */}
                 {evolutions.length > 0 && evolutions[0].sinaisVitais ? (
