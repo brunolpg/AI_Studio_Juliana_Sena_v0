@@ -328,7 +328,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
           </div>
         ) : (
           <>
-            {/* ABA: DOCUMENTOS (RECEITUÁRIO & HOME CARE) */}
+            {/* ABA: DOCUMENTOS (Receituário & Fórmulas Magistrais & Home Care) */}
             {activeTab === "prontuario" && (
               <div className="space-y-4">
                 <PatientClinicalTabs
