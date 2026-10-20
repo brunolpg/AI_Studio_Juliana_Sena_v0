@@ -210,17 +210,17 @@ export function HomeCareCards({
                     </div>
 
                     {/* Cronograma */}
-                    <div className="p-3 rounded-xl bg-slate-900/90 dark:bg-slate-800/50 border border-slate-800 dark:border-slate-700/80">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 dark:text-slate-300 mb-1.5">
+                    <div className="bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-slate-900/90 dark:border-slate-800 dark:text-slate-100 rounded-xl p-3.5">
+                      <div className="flex items-center justify-between text-xs font-semibold tracking-wide text-slate-600 dark:text-slate-400 mb-2">
                         <span className="uppercase tracking-wider">Cronograma ({cronoCount} etapas)</span>
                       </div>
                       <div className="space-y-1.5">
                         {ficha.cronograma?.map((cr, idx) => (
                           <div key={idx} className="grid grid-cols-[88px_1fr] items-baseline gap-2 text-left">
-                            <span className="text-xs font-medium text-emerald-400 text-left shrink-0">
+                            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0 text-left">
                               Dias {cr.dia_inicio} ao {cr.dia_fim}
                             </span>
-                            <span className="text-xs text-slate-200 dark:text-slate-200 text-left truncate">
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate text-left">
                               {cr.nome_formula}
                             </span>
                           </div>
