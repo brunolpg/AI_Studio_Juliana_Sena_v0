@@ -751,8 +751,8 @@ export function EvolutionFormModal({
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {/* Linha com Menu Dropdown + Botão + Nova Prescrição */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  {/* Linha com Menu Dropdown + Botão + Adicionar Prescrição */}
+                  <div className="w-full flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     <select
                       value=""
                       onChange={(e) => {
@@ -761,7 +761,7 @@ export function EvolutionFormModal({
                           setSelectedPrescricoesIds((prev) => [...prev, val]);
                         }
                       }}
-                      className="w-full min-h-[44px] sm:min-h-0 sm:flex-1 min-w-0 px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-emerald-500/30 text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
+                      className="w-full sm:flex-1 min-w-0 px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-emerald-500/30 text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
                     >
                       <option value="">Selecione uma prescrição para vincular...</option>
                       {prescricoesDisponiveis.map((rx) => {
@@ -782,10 +782,10 @@ export function EvolutionFormModal({
                     <button
                       type="button"
                       onClick={() => setIsNewPrescriptionModalOpen(true)}
-                      className="w-full min-h-[42px] justify-center sm:w-auto shrink-0 whitespace-nowrap px-3.5 py-2 inline-flex items-center gap-1.5 rounded-xl font-semibold text-xs transition-all cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-500/30 shadow-2xs"
+                      className="w-full sm:w-auto shrink-0 whitespace-nowrap px-3.5 py-2 inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold text-xs transition-all cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-500/30 shadow-2xs"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>+ Nova Prescrição</span>
+                      <span>+ Adicionar Prescrição</span>
                     </button>
                   </div>
 
@@ -872,11 +872,11 @@ export function EvolutionFormModal({
               ) : (
                 <div className="space-y-2.5">
                   {/* Linha com Menu Dropdown + Botão + Novo Home Care */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  <div className="w-full flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     <select
                       value={selectedHomeCareFichaId}
                       onChange={(e) => setSelectedHomeCareFichaId(e.target.value)}
-                      className="w-full min-h-[44px] sm:min-h-0 sm:flex-1 min-w-0 px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-emerald-500/30 text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
+                      className="w-full sm:flex-1 min-w-0 px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-emerald-500/30 text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
                     >
                       <option value="">Sem ficha de Home Care vinculada</option>
                       {homeCareFichasDisponiveis.map((ficha) => {
@@ -893,7 +893,7 @@ export function EvolutionFormModal({
                     <button
                       type="button"
                       onClick={() => setIsNewHomeCareModalOpen(true)}
-                      className="w-full min-h-[42px] justify-center sm:w-auto shrink-0 whitespace-nowrap px-3.5 py-2 inline-flex items-center gap-1.5 rounded-xl font-semibold text-xs transition-all cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-500/30 shadow-2xs"
+                      className="w-full sm:w-auto shrink-0 whitespace-nowrap px-3.5 py-2 inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold text-xs transition-all cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-500/30 shadow-2xs"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>+ Novo Home Care</span>

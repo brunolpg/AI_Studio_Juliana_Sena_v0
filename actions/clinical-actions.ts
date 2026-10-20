@@ -449,7 +449,8 @@ export async function addClinicalEvolutionAction(
             const { error: rxAptErr } = await supabase
               .from("prescricoes")
               .update({ appointment_id: aptId, updated_at: new Date().toISOString() })
-              .in("id", prescricoesIds);
+              .in("id", prescricoesIds)
+              .is("appointment_id", null);
 
             if (rxAptErr) {
               console.warn(`[addClinicalEvolutionAction] Erro ao associar appointment_id em prescricoes:`, rxAptErr.message);
@@ -465,7 +466,8 @@ export async function addClinicalEvolutionAction(
             const { error: hcAptErr } = await supabase
               .from("home_care_fichas")
               .update({ appointment_id: aptId, updated_at: new Date().toISOString() })
-              .eq("id", homeCareFichaId);
+              .eq("id", homeCareFichaId)
+              .is("appointment_id", null);
 
             if (hcAptErr) {
               console.warn(`[addClinicalEvolutionAction] Erro ao associar appointment_id em home_care_fichas:`, hcAptErr.message);

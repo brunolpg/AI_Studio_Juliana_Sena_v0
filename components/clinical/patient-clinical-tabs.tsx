@@ -534,7 +534,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const prescriptions = clinicalRecord?.prescriptions || [];
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+    <div className={isPatientView ? "space-y-4" : "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden"}>
       {/* Barra de Navegação Interna das Abas Clínicas (Apenas para Administrador / Profissional) */}
       {!isPatientView && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 gap-3">
@@ -665,7 +665,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
       )}
 
       {/* Conteúdo das Abas */}
-      <div className="p-6">
+      <div className={isPatientView ? "p-0" : "p-6"}>
         {isLoading ? (
           <div className="py-16 text-center text-slate-500">
             <div className="flex flex-col items-center justify-center gap-2">
