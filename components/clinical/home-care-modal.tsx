@@ -35,8 +35,10 @@ interface HomeCareModalProps {
   onClose: () => void;
   pacienteId?: string;
   pacienteNome?: string;
+  initialAppointmentId?: string;
   initialData?: HomeCareFichaCompleta | null;
-  onSuccess?: () => void;
+  onSuccess?: (newFichaId?: string) => void;
+  zIndex?: string;
 }
 
 interface CuidadoFormItem {
@@ -70,8 +72,10 @@ export function HomeCareModal({
   onClose,
   pacienteId,
   pacienteNome,
+  initialAppointmentId,
   initialData,
   onSuccess,
+  zIndex = "z-[999999]",
 }: HomeCareModalProps) {
   const [loading, setLoading] = useState(false);
   const [initLoading, setInitLoading] = useState(true);
@@ -195,8 +199,17 @@ export function HomeCareModal({
         } else {
           // Reset default para novo
           setTituloProtocolo("Protocolo de Cuidados Domiciliares (Home Care)");
-          setAppointmentId("");
-          setDataHomeCare(getTodayISODate());
+          setAppointmentId(initialAppointmentId || "");
+          if (initialAppointmentId && aptsRes) {
+            const matchApt = aptsRes.find((a: any) => a.id === initialAppointmentId);
+            if (matchApt?.data) {
+              setDataHomeCare(matchApt.data);
+            } else {
+              setDataHomeCare(getTodayISODate());
+            }
+          } else {
+            setDataHomeCare(getTodayISODate());
+          }
           setStatus("Ativo");
           setIncluirAtencaoCritica(true);
           setAtencaoCriticaTitulo("ATENÇÃO CRÍTICA — CUIDADOS PÓS-PROCEDIMENTO");
@@ -471,7 +484,7 @@ export function HomeCareModal({
         setSuccessMsg("Ficha de Home Care salva com sucesso e autenticada com hash SHA-256!");
         setTimeout(() => {
           onClose();
-          if (onSuccess) onSuccess();
+          if (onSuccess) onSuccess(res.fichaId);
         }, 1200);
       }
     } catch (err: any) {
@@ -482,8 +495,8 @@ export function HomeCareModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[999999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-xs animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif]">
-      <div className="relative w-full max-w-4xl bg-white dark:bg-[#0c1626] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-slate-800 dark:text-slate-100">
+    <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-xs animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif]`}>
+      <div className="relative w-full max-w-4xl bg-white dark:bg-[#0c1626] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden text-slate-800 dark:text-slate-100">
         
         {/* Cabeçalho do Modal */}
         <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/60 shrink-0">

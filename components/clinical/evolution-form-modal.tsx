@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   CheckSquare,
   Square,
+  Plus,
 } from "lucide-react";
 import {
   addClinicalEvolutionAction,
@@ -26,6 +27,8 @@ import {
 } from "@/actions/clinical-actions";
 import { getPatientHomeCareFichas } from "@/app/actions/home-care";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
+import { PrescriptionModal } from "./prescription-modal";
+import { HomeCareModal } from "./home-care-modal";
 import { useToast } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { validateMultipleFiles } from "@/lib/validations/file-upload";
@@ -309,6 +312,53 @@ export function EvolutionFormModal({
     return homeCareFichasDisponiveis.find((f) => f.id === selectedHomeCareFichaId) || null;
   }, [selectedHomeCareFichaId, homeCareFichasDisponiveis]);
 
+  // Estados dos modais sobrepostos (z-[70])
+  const [isNewPrescriptionModalOpen, setIsNewPrescriptionModalOpen] = useState(false);
+  const [isNewHomeCareModalOpen, setIsNewHomeCareModalOpen] = useState(false);
+
+  // Callback de sucesso ao emitir uma nova prescrição no modal sobreposto
+  const handleNewPrescriptionSuccess = async (createdPrescriptionId?: string) => {
+    setIsNewPrescriptionModalOpen(false);
+    setIsLoadingPrescricoes(true);
+    try {
+      const updatedRxs = await getPatientPrescriptionsForEvolutionAction(client.id);
+      setPrescricoesDisponiveis(updatedRxs || []);
+      if (createdPrescriptionId) {
+        setSelectedPrescricoesIds((prev) =>
+          prev.includes(createdPrescriptionId) ? prev : [...prev, createdPrescriptionId]
+        );
+      } else if (updatedRxs && updatedRxs.length > 0) {
+        const latestId = updatedRxs[0].id;
+        setSelectedPrescricoesIds((prev) =>
+          prev.includes(latestId) ? prev : [...prev, latestId]
+        );
+      }
+    } catch (err) {
+      console.error("Erro ao atualizar lista de prescrições:", err);
+    } finally {
+      setIsLoadingPrescricoes(false);
+    }
+  };
+
+  // Callback de sucesso ao emitir uma nova ficha de Home Care no modal sobreposto
+  const handleNewHomeCareSuccess = async (createdFichaId?: string) => {
+    setIsNewHomeCareModalOpen(false);
+    setIsLoadingHomeCare(true);
+    try {
+      const updatedFichas = await getPatientHomeCareFichas(client.id);
+      setHomeCareFichasDisponiveis(updatedFichas || []);
+      if (createdFichaId) {
+        setSelectedHomeCareFichaId(createdFichaId);
+      } else if (updatedFichas && updatedFichas.length > 0) {
+        setSelectedHomeCareFichaId(updatedFichas[0].id);
+      }
+    } catch (err) {
+      console.error("Erro ao atualizar lista de fichas de Home Care:", err);
+    } finally {
+      setIsLoadingHomeCare(false);
+    }
+  };
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -393,9 +443,9 @@ export function EvolutionFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-6">
+      <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-6 max-h-[90dvh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-xs">
               <Stethoscope className="w-5 h-5" />
@@ -424,13 +474,13 @@ export function EvolutionFormModal({
         </div>
 
         {errorMsg && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-50 text-rose-800 text-xs flex items-center gap-2 border border-rose-200">
+          <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-50 text-rose-800 text-xs flex items-center gap-2 border border-rose-200 shrink-0">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[78vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto overscroll-contain flex-1">
           {/* Seletor de Vínculo de Agendamento */}
           <div className="space-y-1.5 p-3.5 rounded-xl border border-teal-200 dark:border-teal-900/40 bg-teal-50/10 dark:bg-teal-950/10">
             <label className="text-xs font-bold text-teal-900 dark:text-teal-200 flex items-center justify-between">
@@ -688,8 +738,8 @@ export function EvolutionFormModal({
                     Vínculo com receitas emitidas
                   </span>
                   {selectedPrescricoesIds.length > 0 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
-                      {selectedPrescricoesIds.length} selecionada(s)
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      {selectedPrescricoesIds.length} vinculada(s)
                     </span>
                   )}
                 </div>
@@ -699,113 +749,106 @@ export function EvolutionFormModal({
                 <div className="py-4 text-center text-xs text-slate-400 dark:text-slate-500 animate-pulse bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
                   Carregando prescrições do paciente...
                 </div>
-              ) : prescricoesDisponiveis.length === 0 ? (
-                <div className="p-3.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/30 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <Pill className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
-                    <span>Nenhuma prescrição cadastrada para este paciente.</span>
-                  </div>
-                  <span className="text-[10px] text-slate-400 italic">Opcional</span>
-                </div>
               ) : (
-                <div className="space-y-2">
-                  {/* Barra de Ações Rápidas quando houver mais de 1 prescrição */}
-                  {prescricoesDisponiveis.length > 1 && (
-                    <div className="flex items-center justify-between px-1 text-[11px]">
-                      <span className="text-slate-500 dark:text-slate-400">
-                        Selecione as receitas associadas a esta sessão:
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPrescricoesIds(prescricoesDisponiveis.map((p) => p.id))}
-                          className="text-teal-600 dark:text-teal-400 hover:underline font-semibold cursor-pointer"
-                        >
-                          Selecionar todas
-                        </button>
-                        {selectedPrescricoesIds.length > 0 && (
-                          <>
-                            <span className="text-slate-300 dark:text-slate-600">•</span>
+                <div className="space-y-2.5">
+                  {/* Linha com Menu Dropdown + Botão + Nova Prescrição */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val && !selectedPrescricoesIds.includes(val)) {
+                          setSelectedPrescricoesIds((prev) => [...prev, val]);
+                        }
+                      }}
+                      className="w-full min-h-[44px] sm:min-h-0 sm:flex-1 min-w-0 px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-emerald-500/30 text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
+                    >
+                      <option value="">Selecione uma prescrição para vincular...</option>
+                      {prescricoesDisponiveis.map((rx) => {
+                        const [year, month, day] = (rx.data_prescricao || "").split("-");
+                        const formattedDate = day && month && year ? `${day}/${month}/${year}` : rx.data_prescricao;
+                        const formulasStr = rx.formulas && rx.formulas.length > 0 ? rx.formulas.join(", ") : "Fórmulas da receita";
+                        const isAlreadySelected = selectedPrescricoesIds.includes(rx.id);
+
+                        return (
+                          <option key={rx.id} value={rx.id} disabled={isAlreadySelected}>
+                            Receita de {formattedDate} — {formulasStr} ({rx.status})
+                            {isAlreadySelected ? " [Já vinculada]" : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsNewPrescriptionModalOpen(true)}
+                      className="w-full min-h-[42px] justify-center sm:w-auto shrink-0 whitespace-nowrap px-3.5 py-2 inline-flex items-center gap-1.5 rounded-xl font-semibold text-xs transition-all cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-500/30 shadow-2xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Nova Prescrição</span>
+                    </button>
+                  </div>
+
+                  {/* Cards/Chips compactos das prescrições selecionadas */}
+                  {selectedPrescricoesIds.length > 0 ? (
+                    <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                      {selectedPrescricoesIds.map((id) => {
+                        const rx = prescricoesDisponiveis.find((p) => p.id === id);
+                        const [year, month, day] = (rx?.data_prescricao || "").split("-");
+                        const formattedDate = day && month && year ? `${day}/${month}/${year}` : rx?.data_prescricao || "Data n/d";
+
+                        return (
+                          <div
+                            key={id}
+                            className="p-2.5 sm:p-3 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 flex items-start justify-between gap-2.5 shadow-2xs transition-all"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                  Receita de {formattedDate}
+                                </span>
+                                <span
+                                  className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
+                                    rx?.status === "Ativo"
+                                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                      : rx?.status === "Suspenso"
+                                      ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                                  }`}
+                                >
+                                  {rx?.status || "Ativo"}
+                                </span>
+                              </div>
+                              {rx?.formulas && rx.formulas.length > 0 && (
+                                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                                  {rx.formulas.map((formulaName, i) => (
+                                    <span
+                                      key={i}
+                                      className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 font-medium"
+                                    >
+                                      {formulaName}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                             <button
                               type="button"
-                              onClick={() => setSelectedPrescricoesIds([])}
-                              className="text-slate-500 hover:text-rose-500 dark:text-slate-400 dark:hover:text-rose-400 font-semibold cursor-pointer"
+                              onClick={() => setSelectedPrescricoesIds((prev) => prev.filter((pId) => pId !== id))}
+                              className="p-1 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0 cursor-pointer"
+                              title="Remover prescrição desta evolução"
                             >
-                              Limpar
+                              <X className="w-4 h-4" />
                             </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {prescricoesDisponiveis.map((rx) => {
-                      const isSelected = selectedPrescricoesIds.includes(rx.id);
-                      const [year, month, day] = (rx.data_prescricao || "").split("-");
-                      const formattedDate = day && month && year ? `${day}/${month}/${year}` : rx.data_prescricao;
-
-                      return (
-                        <div
-                          key={rx.id}
-                          onClick={() => {
-                            setSelectedPrescricoesIds((prev) =>
-                              isSelected ? prev.filter((id) => id !== rx.id) : [...prev, rx.id]
-                            );
-                          }}
-                          className={`group relative p-3 rounded-xl border transition-all cursor-pointer select-none ${
-                            isSelected
-                              ? "bg-teal-50/70 dark:bg-teal-950/30 border-teal-500/70 dark:border-teal-500/70 shadow-2xs"
-                              : "bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2.5">
-                            <div className="flex items-start gap-2.5 min-w-0">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => {}} // tratado no onClick do card
-                                className="mt-0.5 w-4 h-4 rounded text-teal-600 border-slate-300 dark:border-slate-600 focus:ring-teal-500 cursor-pointer pointer-events-none"
-                              />
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-xs font-bold text-slate-900 dark:text-white">
-                                    Receita de {formattedDate}
-                                  </span>
-                                  <span
-                                    className={`text-[10px] px-1.5 py-0.2 rounded font-semibold border ${
-                                      rx.status === "Ativo"
-                                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-                                        : rx.status === "Suspenso"
-                                        ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800"
-                                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                                    }`}
-                                  >
-                                    {rx.status}
-                                  </span>
-                                </div>
-                                {rx.formulas && rx.formulas.length > 0 && (
-                                  <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                                    {rx.formulas.map((formulaName, i) => (
-                                      <span
-                                        key={i}
-                                        className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 font-medium"
-                                      >
-                                        {formulaName}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0">
-                              {isSelected ? "✓ Vinculada" : "Clique p/ vincular"}
-                            </span>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
+                      Nenhuma prescrição vinculada a esta evolução (opcional).
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -827,27 +870,39 @@ export function EvolutionFormModal({
                   Carregando fichas de Home Care do paciente...
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <select
-                    value={selectedHomeCareFichaId}
-                    onChange={(e) => setSelectedHomeCareFichaId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-all cursor-pointer"
-                  >
-                    <option value="">Sem ficha de Home Care vinculada</option>
-                    {homeCareFichasDisponiveis.map((ficha) => {
-                      const [year, month, day] = (ficha.data_home_care || "").split("-");
-                      const dateFormatted = day && month && year ? `${day}/${month}/${year}` : ficha.data_home_care;
-                      return (
-                        <option key={ficha.id} value={ficha.id}>
-                          {ficha.titulo_protocolo} ({dateFormatted}) — {ficha.status}
-                        </option>
-                      );
-                    })}
-                  </select>
+                <div className="space-y-2.5">
+                  {/* Linha com Menu Dropdown + Botão + Novo Home Care */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                    <select
+                      value={selectedHomeCareFichaId}
+                      onChange={(e) => setSelectedHomeCareFichaId(e.target.value)}
+                      className="w-full min-h-[44px] sm:min-h-0 sm:flex-1 min-w-0 px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-emerald-500/30 text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
+                    >
+                      <option value="">Sem ficha de Home Care vinculada</option>
+                      {homeCareFichasDisponiveis.map((ficha) => {
+                        const [year, month, day] = (ficha.data_home_care || "").split("-");
+                        const dateFormatted = day && month && year ? `${day}/${month}/${year}` : ficha.data_home_care;
+                        return (
+                          <option key={ficha.id} value={ficha.id}>
+                            {ficha.titulo_protocolo} ({dateFormatted}) — {ficha.status}
+                          </option>
+                        );
+                      })}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsNewHomeCareModalOpen(true)}
+                      className="w-full min-h-[42px] justify-center sm:w-auto shrink-0 whitespace-nowrap px-3.5 py-2 inline-flex items-center gap-1.5 rounded-xl font-semibold text-xs transition-all cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-500/30 shadow-2xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Novo Home Care</span>
+                    </button>
+                  </div>
 
                   {/* Pré-visualização da Ficha Selecionada */}
                   {selectedHomeCareFicha && (
-                    <div className="p-3.5 rounded-xl border border-teal-200/80 dark:border-teal-800/80 bg-teal-50/40 dark:bg-teal-950/20 space-y-2">
+                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 space-y-2 shadow-2xs transition-all">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
@@ -1094,6 +1149,30 @@ export function EvolutionFormModal({
             </button>
           </div>
         </form>
+
+        {/* Modal Sobreposto: Nova Prescrição */}
+        {isNewPrescriptionModalOpen && (
+          <PrescriptionModal
+            isOpen={isNewPrescriptionModalOpen}
+            onClose={() => setIsNewPrescriptionModalOpen(false)}
+            onSuccess={handleNewPrescriptionSuccess}
+            client={client}
+            zIndex="z-[70]"
+          />
+        )}
+
+        {/* Modal Sobreposto: Nova Ficha de Home Care */}
+        {isNewHomeCareModalOpen && (
+          <HomeCareModal
+            isOpen={isNewHomeCareModalOpen}
+            onClose={() => setIsNewHomeCareModalOpen(false)}
+            pacienteId={client.id}
+            pacienteNome={client.nome}
+            initialAppointmentId={selectedAppointmentId || initialAppointmentId}
+            onSuccess={handleNewHomeCareSuccess}
+            zIndex="z-[70]"
+          />
+        )}
       </div>
     </div>
   );

@@ -269,6 +269,7 @@ export async function addClinicalEvolutionAction(
 
     const rawPayloadToSign = {
       paciente_id: clientId,
+      appointment_id: input.appointment_id || null,
       data: input.data || new Date().toISOString().split("T")[0],
       horario:
         input.horario ||
@@ -335,38 +336,13 @@ export async function addClinicalEvolutionAction(
 
     const supabase = getSupabaseAdminClient() || serverClient;
     if (supabase) {
+      let savedEvolutionId = newEvolution.id;
+
       // Grava na tabela evolucoes_clinicas com assinatura digital e vínculos
       try {
-        const { error: insertErr } = await supabase.from("evolucoes_clinicas").insert({
-          paciente_id: clientId,
-          data: newEvolution.data,
-          horario: newEvolution.horario,
-          tipo: newEvolution.tipo,
-          tipo_atendimento: newEvolution.tipo_atendimento,
-          procedimento_id: newEvolution.procedimento_id,
-          appointment_id: newEvolution.appointment_id,
-          exames_anexos: newEvolution.exames_anexos,
-          fotos_paciente: newEvolution.fotos_paciente,
-          profissional: newEvolution.profissional,
-          especialidade: newEvolution.especialidade,
-          subjetivo: newEvolution.subjetivo,
-          objetivo: newEvolution.objetivo,
-          sinais_vitais: newEvolution.sinaisVitais,
-          avaliacao: newEvolution.avaliacao,
-          plano: newEvolution.plano,
-          prescricoes_ids: newEvolution.prescricoes_ids,
-          home_care_ficha_id: newEvolution.home_care_ficha_id,
-          payload_canonico: signatureResult.payloadCanonicoStr,
-          payload_hash: signatureResult.payloadHash,
-          assinatura: signatureResult.assinatura,
-          algoritmo: signatureResult.algoritmo,
-          assinado_em: signatureResult.assinadoEm,
-        });
-
-        if (insertErr) {
-          console.error("Erro ao salvar evolução clínica na tabela evolucoes_clinicas:", insertErr.message);
-          // Fallback de salvamento
-          const { error: fallbackErr } = await supabase.from("evolucoes_clinicas").insert({
+        const { data: insertedRecord, error: insertErr } = await supabase
+          .from("evolucoes_clinicas")
+          .insert({
             paciente_id: clientId,
             data: newEvolution.data,
             horario: newEvolution.horario,
@@ -385,7 +361,50 @@ export async function addClinicalEvolutionAction(
             plano: newEvolution.plano,
             prescricoes_ids: newEvolution.prescricoes_ids,
             home_care_ficha_id: newEvolution.home_care_ficha_id,
-          });
+            payload_canonico: signatureResult.payloadCanonicoStr,
+            payload_hash: signatureResult.payloadHash,
+            assinatura: signatureResult.assinatura,
+            algoritmo: signatureResult.algoritmo,
+            assinado_em: signatureResult.assinadoEm,
+          })
+          .select("id")
+          .maybeSingle();
+
+        if (insertedRecord?.id) {
+          savedEvolutionId = insertedRecord.id;
+          newEvolution.id = insertedRecord.id;
+        } else if (insertErr) {
+          console.error("Erro ao salvar evolução clínica na tabela evolucoes_clinicas:", insertErr.message);
+          // Fallback de salvamento
+          const { data: fallbackRecord, error: fallbackErr } = await supabase
+            .from("evolucoes_clinicas")
+            .insert({
+              paciente_id: clientId,
+              data: newEvolution.data,
+              horario: newEvolution.horario,
+              tipo: newEvolution.tipo,
+              tipo_atendimento: newEvolution.tipo_atendimento,
+              procedimento_id: newEvolution.procedimento_id,
+              appointment_id: newEvolution.appointment_id,
+              exames_anexos: newEvolution.exames_anexos,
+              fotos_paciente: newEvolution.fotos_paciente,
+              profissional: newEvolution.profissional,
+              especialidade: newEvolution.especialidade,
+              subjetivo: newEvolution.subjetivo,
+              objetivo: newEvolution.objetivo,
+              sinais_vitais: newEvolution.sinaisVitais,
+              avaliacao: newEvolution.avaliacao,
+              plano: newEvolution.plano,
+              prescricoes_ids: newEvolution.prescricoes_ids,
+              home_care_ficha_id: newEvolution.home_care_ficha_id,
+            })
+            .select("id")
+            .maybeSingle();
+
+          if (fallbackRecord?.id) {
+            savedEvolutionId = fallbackRecord.id;
+            newEvolution.id = fallbackRecord.id;
+          }
 
           if (fallbackErr) {
             console.error("Erro crítico ao salvar evolução no Supabase:", fallbackErr.message);
@@ -399,18 +418,75 @@ export async function addClinicalEvolutionAction(
         console.error("Exceção no registro da evolução clínica no Supabase:", e?.message || e);
       }
 
-      // Se houver um agendamento vinculado, atualiza seu status para 'Realizado' no Supabase
-      if (input.appointment_id) {
+      // 1. Sincroniza vínculos na tabela associativa public.evolucao_prescricoes
+      if (savedEvolutionId && prescricoesIds.length > 0) {
         try {
-          const { error } = await supabase
+          const associacoes = prescricoesIds.map((rxId: string) => ({
+            evolucao_id: savedEvolutionId,
+            prescricao_id: rxId,
+          }));
+
+          const { error: assocErr } = await supabase
+            .from("evolucao_prescricoes")
+            .upsert(associacoes, { onConflict: "evolucao_id,prescricao_id", ignoreDuplicates: true });
+
+          if (assocErr) {
+            // Tentativa alternativa com insert simples se não houver constraint de upsert
+            await supabase.from("evolucao_prescricoes").insert(associacoes);
+          }
+        } catch (assocEx: any) {
+          console.warn("[addClinicalEvolutionAction] Aviso ao gravar tabela evolucao_prescricoes:", assocEx?.message || assocEx);
+        }
+      }
+
+      // 2. Vínculo automático ao Atendimento selecionado (appointment_id)
+      if (input.appointment_id) {
+        const aptId = input.appointment_id;
+
+        // Atualiza appointment_id nas prescrições selecionadas que ainda não tenham esse vínculo
+        if (prescricoesIds.length > 0) {
+          try {
+            const { error: rxAptErr } = await supabase
+              .from("prescricoes")
+              .update({ appointment_id: aptId, updated_at: new Date().toISOString() })
+              .in("id", prescricoesIds);
+
+            if (rxAptErr) {
+              console.warn(`[addClinicalEvolutionAction] Erro ao associar appointment_id em prescricoes:`, rxAptErr.message);
+            }
+          } catch (rxEx: any) {
+            console.warn("[addClinicalEvolutionAction] Exceção ao associar appointment_id em prescricoes:", rxEx);
+          }
+        }
+
+        // Atualiza appointment_id na ficha de Home Care selecionada que ainda não tenha esse vínculo
+        if (homeCareFichaId) {
+          try {
+            const { error: hcAptErr } = await supabase
+              .from("home_care_fichas")
+              .update({ appointment_id: aptId, updated_at: new Date().toISOString() })
+              .eq("id", homeCareFichaId);
+
+            if (hcAptErr) {
+              console.warn(`[addClinicalEvolutionAction] Erro ao associar appointment_id em home_care_fichas:`, hcAptErr.message);
+            }
+          } catch (hcEx: any) {
+            console.warn("[addClinicalEvolutionAction] Exceção ao associar appointment_id em home_care_fichas:", hcEx);
+          }
+        }
+
+        // Atualiza status do agendamento para 'Realizado' no Supabase
+        try {
+          const { error: aptUpdErr } = await supabase
             .from("appointments")
             .update({ status: "Realizado", updated_at: new Date().toISOString() })
-            .eq("id", input.appointment_id);
-          if (error) {
-            console.warn(`[addClinicalEvolutionAction] Erro ao atualizar status do agendamento ${input.appointment_id}:`, error.message);
+            .eq("id", aptId);
+
+          if (aptUpdErr) {
+            console.warn(`[addClinicalEvolutionAction] Erro ao atualizar status do agendamento ${aptId}:`, aptUpdErr.message);
           }
         } catch (err) {
-          console.error(`[addClinicalEvolutionAction] Exceção ao atualizar agendamento ${input.appointment_id}:`, err);
+          console.error(`[addClinicalEvolutionAction] Exceção ao atualizar agendamento ${aptId}:`, err);
         }
       }
     }
