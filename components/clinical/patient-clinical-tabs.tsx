@@ -1445,11 +1445,20 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                   <>
                     {prescriptions.length > 0 && (
                       <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Pill className="w-4 h-4 text-teal-600" />
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                            Receituário & Fórmulas Magistrais ({prescriptions.length})
-                          </h4>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-center shrink-0">
+                              <Pill className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                            <div>
+                              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                                Receituário & Fórmulas Magistrais ({prescriptions.length})
+                              </h3>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                                Receituário e formulações magistrais prescritas para o tratamento
+                              </p>
+                            </div>
+                          </div>
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
                     {prescriptions.map((rx) => {

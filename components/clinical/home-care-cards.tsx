@@ -75,12 +75,12 @@ export function HomeCareCards({
     <>
       <div className="space-y-3.5 pt-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-teal-500/10 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center justify-center">
-              <HeartHandshake className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-center shrink-0">
+              <HeartHandshake className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                 Fichas de Home Care & Orientações ({fichas.length})
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
