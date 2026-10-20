@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   X,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { PatientClinicalTabs } from "@/components/clinical/patient-clinical-tabs";
@@ -50,9 +51,38 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showConfirmDeletePhoto, setShowConfirmDeletePhoto] = useState(false);
+  const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
 
   const userId = user?.id;
   const userEmail = (user?.email || "").toLowerCase().trim();
+
+  const handleConfirmDeletePhoto = async () => {
+    if (!patientData?.id) return;
+    setIsDeletingPhoto(true);
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { error } = await supabase
+          .from("pacientes")
+          .update({ foto_perfil: null, updated_at: new Date().toISOString() })
+          .eq("id", patientData.id);
+
+        if (error) {
+          console.error("Erro ao remover foto de perfil:", error);
+          alert("Não foi possível remover a foto de perfil. Tente novamente.");
+        } else {
+          setPatientData((prev: any) => ({ ...prev, foto_perfil: null }));
+          setShowConfirmDeletePhoto(false);
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao remover foto:", err);
+      alert("Ocorreu um erro ao remover a foto.");
+    } finally {
+      setIsDeletingPhoto(false);
+    }
+  };
 
   const refreshClinicalHistory = async () => {
     if (!patientData?.id) return;
@@ -420,16 +450,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                         {patientData?.foto_perfil && (
                           <button
                             type="button"
-                            onClick={async () => {
-                              const supabase = getSupabaseClient();
-                              if (supabase && patientData?.id) {
-                                await supabase
-                                  .from('pacientes')
-                                  .update({ foto_perfil: null, updated_at: new Date().toISOString() })
-                                  .eq('id', patientData.id);
-                                setPatientData((prev: any) => ({ ...prev, foto_perfil: null }));
-                              }
-                            }}
+                            onClick={() => setShowConfirmDeletePhoto(true)}
                             className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 hover:border-rose-300 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-xl transition-all cursor-pointer"
                           >
                             Remover foto
@@ -807,6 +828,69 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
           client={patientData}
           initialHistory={initialHistoryForModal}
         />
+      )}
+
+      {/* MODAL DE CONFIRMAÇÃO PARA REMOÇÃO DE FOTO DE PERFIL */}
+      {showConfirmDeletePhoto && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+          onClick={() => {
+            if (!isDeletingPhoto) setShowConfirmDeletePhoto(false);
+          }}
+        >
+          <div
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-2xl p-6 shadow-xl max-w-sm w-full space-y-4 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold">
+                <Trash2 className="w-5 h-5 shrink-0" />
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  Remover Foto de Perfil
+                </h3>
+              </div>
+              <button
+                type="button"
+                disabled={isDeletingPhoto}
+                onClick={() => setShowConfirmDeletePhoto(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer"
+                title="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Tem certeza de que deseja remover sua foto de perfil? Esta ação não pode ser desfeita.
+            </p>
+
+            <div className="flex items-center gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isDeletingPhoto}
+                onClick={() => setShowConfirmDeletePhoto(false)}
+                className="flex-1 min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingPhoto}
+                onClick={handleConfirmDeletePhoto}
+                className="flex-1 min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-xs"
+              >
+                {isDeletingPhoto ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Removendo...</span>
+                  </>
+                ) : (
+                  <span>Confirmar Remoção</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
