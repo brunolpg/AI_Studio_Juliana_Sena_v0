@@ -198,9 +198,9 @@ export function PatientClinicalDashboardView({
               <button
                 type="button"
                 onClick={onOpenAppointments}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold text-[#0d6e64] dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/60 hover:bg-teal-100/90 dark:hover:bg-teal-900/60 border border-teal-700/30 dark:border-teal-500/40 transition-all cursor-pointer md-state-layer shadow-2xs active:scale-[0.98]"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#0d6e64] dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/60 hover:bg-teal-100/90 dark:hover:bg-teal-900/60 border border-teal-700/30 dark:border-teal-500/40 transition-all cursor-pointer md-state-layer shadow-2xs active:scale-[0.98]"
               >
-                <Calendar className="w-4 h-4 text-[#0d6e64] dark:text-teal-400 shrink-0" />
+                <Calendar className="w-3.5 h-3.5 text-[#0d6e64] dark:text-teal-400 shrink-0" />
                 <span>Ver Agenda de Consultas</span>
               </button>
             )}
