@@ -109,10 +109,8 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
         </nav>
 
         {/* Rodapé do Drawer: Menu do Usuário */}
-        <div className="p-3 border-t border-slate-200/60 dark:border-slate-800/60">
-          <div className="w-full flex items-center justify-between p-2 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/70 dark:border-slate-800/70 shadow-2xs">
-            <UserMenu />
-          </div>
+        <div className="p-3 border-t border-slate-200/60 dark:border-slate-800/60 relative">
+          <UserMenu direction="up" variant="sidebar" align="left" />
         </div>
       </aside>
 
@@ -168,16 +166,16 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
         </nav>
 
         {/* Base do Rail: Perfil Compacto */}
-        <div className="shrink-0 flex items-center justify-center pb-1">
-          <UserMenu />
+        <div className="shrink-0 flex items-center justify-center pb-1 relative">
+          <UserMenu direction="up" variant="compact" align="left" />
         </div>
       </aside>
 
       {/* ====================================================================
-          3. TOP APP BAR (Compact Header para Desktop & Mobile)
-          No Desktop atua como barra superior contextual; no Landscape fica compacta (48px)
+          3. TOP APP BAR (Compact Header apenas para Mobile & Tablet - Oculto no Desktop)
+          No Desktop (lg:) fica oculto pois o Drawer Lateral já cumpre a navegação e identidade
           ==================================================================== */}
-      <header className="md4-top-bar w-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-30 transition-all duration-200 shadow-2xs">
+      <header className="md4-top-bar lg:hidden w-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-30 transition-all duration-200 shadow-2xs">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 overflow-visible">
           <div className="flex items-center justify-between gap-3 overflow-visible">
             {/* Lado Esquerdo: Identidade Visível no Mobile (no Desktop o Drawer já exibe) */}
@@ -227,9 +225,9 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
               </nav>
             </div>
 
-            {/* Lado Direito: UserMenu (visível no mobile portrait/desktop top bar) */}
+            {/* Lado Direito: UserMenu (visível no mobile portrait/landscape) */}
             <div className="flex items-center gap-2 shrink-0 relative overflow-visible z-50">
-              <UserMenu />
+              <UserMenu direction="down" align="right" />
             </div>
           </div>
         </div>

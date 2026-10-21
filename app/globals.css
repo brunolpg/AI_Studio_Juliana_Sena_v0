@@ -342,10 +342,11 @@ html, body, button, input, select, textarea {
   }
   .md4-main-content {
     margin-left: 17rem !important; /* 272px para Drawer lateral */
+    padding-top: 1.5rem !important;
     padding-bottom: 2.5rem !important;
   }
   .md4-top-bar {
-    margin-left: 17rem !important;
+    display: none !important;
   }
 }
 

@@ -183,24 +183,24 @@ export function PatientClinicalDashboardView({
 
         {/* Informações Rápidas de Contato do Paciente Ativo */}
         {selectedPatient && (
-          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-300">
-            <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 shadow-2xs">
-              <Phone className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-              <span className="font-medium">{selectedPatient.telefone}</span>
+          <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 font-semibold shadow-2xs">
+              <Phone className="w-3.5 h-3.5 text-[#0d6e64] dark:text-teal-400 shrink-0" />
+              <span>{selectedPatient.telefone}</span>
             </div>
 
-            <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 shadow-2xs">
-              <Mail className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-              <span className="truncate max-w-[180px] font-medium">{selectedPatient.email}</span>
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 font-semibold shadow-2xs">
+              <Mail className="w-3.5 h-3.5 text-[#0d6e64] dark:text-teal-400 shrink-0" />
+              <span className="truncate max-w-[180px]">{selectedPatient.email}</span>
             </div>
 
             {onOpenAppointments && (
               <button
                 type="button"
                 onClick={onOpenAppointments}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100/80 dark:hover:bg-teal-900/60 border border-teal-200/80 dark:border-teal-800 transition-all cursor-pointer md-state-layer shadow-2xs"
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold text-[#0d6e64] dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/60 hover:bg-teal-100/90 dark:hover:bg-teal-900/60 border border-teal-700/30 dark:border-teal-500/40 transition-all cursor-pointer md-state-layer shadow-2xs active:scale-[0.98]"
               >
-                <Calendar className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                <Calendar className="w-4 h-4 text-[#0d6e64] dark:text-teal-400 shrink-0" />
                 <span>Ver Agenda de Consultas</span>
               </button>
             )}
