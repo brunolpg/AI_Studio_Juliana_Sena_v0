@@ -7,9 +7,7 @@ export function MobileThemeSync() {
     if (typeof window === "undefined") return;
 
     const checkAndUpdateTheme = () => {
-      const isMobile = window.innerWidth < 768;
-      const darkModeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-
+      const storedTheme = localStorage.getItem("theme");
       const root = document.documentElement;
       let metaThemeColor = document.querySelector('meta[name="theme-color"]');
 
@@ -19,10 +17,24 @@ export function MobileThemeSync() {
         document.head.appendChild(metaThemeColor);
       }
 
-      if (isMobile && darkModeMediaQuery.matches) {
+      if (storedTheme === "light") {
+        root.classList.remove("dark");
+        metaThemeColor.setAttribute("content", "#f8fafc");
+        return;
+      }
+
+      if (storedTheme === "dark") {
         root.classList.add("dark");
         metaThemeColor.setAttribute("content", "#090d16");
-      } else if (isMobile && !darkModeMediaQuery.matches) {
+        return;
+      }
+
+      // Se for "system" ou indefinido, sincroniza com prefers-color-scheme
+      const darkModeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      if (darkModeMediaQuery.matches) {
+        root.classList.add("dark");
+        metaThemeColor.setAttribute("content", "#090d16");
+      } else {
         root.classList.remove("dark");
         metaThemeColor.setAttribute("content", "#f8fafc");
       }
@@ -42,3 +54,4 @@ export function MobileThemeSync() {
 
   return null;
 }
+

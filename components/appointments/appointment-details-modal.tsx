@@ -199,7 +199,7 @@ export function AppointmentDetailsModal({
                 href={appointment.google_html_link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-full shadow-2xs hover:shadow transition-all cursor-pointer md-state-layer"
               >
                 <span>Ver no Google Agenda</span>
                 <ExternalLink className="w-3.5 h-3.5" />

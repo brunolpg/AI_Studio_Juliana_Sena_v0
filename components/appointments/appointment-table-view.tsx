@@ -644,11 +644,12 @@ export function AppointmentTableView() {
               <>
                 <button
                   type="button"
+                  id="sync-google-calendar-btn"
                   onClick={handleTriggerSync}
                   disabled={isSyncing || !calendarHealth.healthy}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-[#3B9E8C] hover:bg-[#2d8272] disabled:opacity-50 transition-all shadow-xs cursor-pointer"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-full text-xs font-semibold text-white bg-[#3B9E8C] hover:bg-[#2d8272] dark:bg-teal-600 dark:hover:bg-teal-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs hover:shadow cursor-pointer md-state-layer"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+                  <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${isSyncing ? "animate-spin" : ""}`} />
                   <span>{isSyncing ? "Sincronizando..." : "Sincronizar Agenda"}</span>
                 </button>
               </>
@@ -864,10 +865,13 @@ export function AppointmentTableView() {
                           : "Clique no botão acima para agendar o primeiro atendimento."}
                       </p>
                       <button
+                        id="empty-state-schedule-now-btn"
+                        aria-label="+ Agendar Consulta Agora"
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="mt-4 px-3.5 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors cursor-pointer"
+                        className="mt-4 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-medium text-white dark:text-slate-950 bg-teal-700 dark:bg-teal-500 hover:bg-teal-800 dark:hover:bg-teal-400 rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer whitespace-nowrap md-state-layer"
                       >
-                        + Agendar Consulta Agora
+                        <Plus className="w-4 h-4 shrink-0" />
+                        <span>Agendar Consulta Agora</span>
                       </button>
                     </div>
                   </td>

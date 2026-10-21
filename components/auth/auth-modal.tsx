@@ -140,40 +140,42 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
         </p>
       </div>
 
-      {/* Abas Alternadoras */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-850 p-1.5 gap-1.5">
-        <button
-          id="tab-auth-login"
-          type="button"
-          onClick={() => {
-            setActiveTab("login");
-            setFormErrors({});
-          }}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-xl transition-all ${
-            activeTab === "login"
-              ? "bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 shadow-xs border border-slate-200 dark:border-slate-700"
-              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-          }`}
-        >
-          <LogIn className="w-4 h-4" />
-          <span>Entrar</span>
-        </button>
-        <button
-          id="tab-auth-register"
-          type="button"
-          onClick={() => {
-            setActiveTab("register");
-            setFormErrors({});
-          }}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-xl transition-all ${
-            activeTab === "register"
-              ? "bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 shadow-xs border border-slate-200 dark:border-slate-700"
-              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-          }`}
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>Cadastrar</span>
-        </button>
+      {/* Abas Alternadoras (Pill Switch MD4) */}
+      <div className="p-3 bg-slate-50/70 dark:bg-slate-850 border-b border-slate-200/80 dark:border-slate-800">
+        <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-full border border-slate-200/60 dark:border-slate-700/60">
+          <button
+            id="tab-auth-login"
+            type="button"
+            onClick={() => {
+              setActiveTab("login");
+              setFormErrors({});
+            }}
+            className={`w-full flex items-center justify-center gap-2 py-2 px-4 text-xs font-bold rounded-full transition-all cursor-pointer ${
+              activeTab === "login"
+                ? "bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-sm border border-slate-200/50 dark:border-slate-600/50"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium"
+            }`}
+          >
+            <LogIn className="w-4 h-4" />
+            <span>Entrar</span>
+          </button>
+          <button
+            id="tab-auth-register"
+            type="button"
+            onClick={() => {
+              setActiveTab("register");
+              setFormErrors({});
+            }}
+            className={`w-full flex items-center justify-center gap-2 py-2 px-4 text-xs font-bold rounded-full transition-all cursor-pointer ${
+              activeTab === "register"
+                ? "bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-sm border border-slate-200/50 dark:border-slate-600/50"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium"
+            }`}
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Cadastrar</span>
+          </button>
+        </div>
       </div>
 
       <div className="p-6 max-h-[80vh] overflow-y-auto">
@@ -182,9 +184,9 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
           <button
             type="button"
             onClick={handleGoogleOAuth}
-            className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-all shadow-xs"
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-all shadow-xs active:scale-[0.99] group cursor-pointer"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 shrink-0 transition-transform group-hover:scale-105" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
@@ -208,8 +210,8 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200 dark:border-slate-800" />
             </div>
-            <div className="relative flex justify-center text-[11px] uppercase">
-              <span className="bg-white dark:bg-slate-900 px-2 text-slate-400">ou com e-mail</span>
+            <div className="relative flex justify-center text-[10px] font-bold uppercase tracking-widest">
+              <span className="bg-white dark:bg-slate-900 px-3 text-slate-400">ou com e-mail</span>
             </div>
           </div>
         </div>
@@ -218,18 +220,18 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
           /* Formulário de Login */
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             {formErrors.geral && (
-              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 rounded-xl text-xs border border-rose-200 dark:border-rose-900">
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 rounded-2xl text-xs border border-rose-200 dark:border-rose-900">
                 {formErrors.geral.join(" ")}
               </div>
             )}
 
             {/* Campo E-mail */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                 E-mail
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   id="login-email-input"
                   type="email"
@@ -237,11 +239,11 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   placeholder="ex: seu.email@provedor.com"
-                  className={`w-full pl-9 pr-3 py-2 text-xs rounded-xl border ${
+                  className={`w-full pl-11 pr-4 py-3 text-xs rounded-2xl border ${
                     formErrors.email
                       ? "border-rose-500 bg-rose-50/30"
-                      : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                  } text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500`}
+                      : "border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60"
+                  } text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 transition-all`}
                 />
               </div>
               {formErrors.email && (
@@ -250,12 +252,12 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
             </div>
 
             {/* Campo Senha */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                 Senha
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   id="login-password-input"
                   type={showPassword ? "text" : "password"}
@@ -263,16 +265,16 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="Sua senha"
-                  className={`w-full pl-9 pr-10 py-2 text-xs rounded-xl border ${
+                  className={`w-full pl-11 pr-11 py-3 text-xs rounded-2xl border ${
                     formErrors.password
                       ? "border-rose-500 bg-rose-50/30"
-                      : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                  } text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500`}
+                      : "border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60"
+                  } text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 transition-all`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -287,7 +289,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
               id="submit-login-btn"
               type="submit"
               disabled={isSubmitting}
-              className="w-full mt-2 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 transition-all shadow-md shadow-teal-600/20"
+              className="w-full mt-3 flex items-center justify-center gap-2 py-3 px-5 rounded-full text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 disabled:opacity-50 transition-all shadow-md shadow-teal-700/20 active:scale-[0.98] cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -297,7 +299,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
-                  <span>Entrar</span>
+                  <span>Entrar / Avançar</span>
                 </>
               )}
             </button>
@@ -306,18 +308,18 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
           /* Formulário de Registro */
           <form onSubmit={handleRegisterSubmit} className="space-y-4">
             {formErrors.geral && (
-              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 rounded-xl text-xs border border-rose-200 dark:border-rose-900">
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 rounded-2xl text-xs border border-rose-200 dark:border-rose-900">
                 {formErrors.geral.join(" ")}
               </div>
             )}
 
             {/* Nome */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                 Nome Completo
               </label>
               <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <User className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   id="register-name-input"
                   type="text"
@@ -325,11 +327,11 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
                   placeholder="Seu nome"
-                  className={`w-full pl-9 pr-3 py-2 text-xs rounded-xl border ${
+                  className={`w-full pl-11 pr-4 py-3 text-xs rounded-2xl border ${
                     formErrors.name
                       ? "border-rose-500 bg-rose-50/30"
-                      : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                  } text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500`}
+                      : "border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60"
+                  } text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 transition-all`}
                 />
               </div>
               {formErrors.name && (
@@ -338,12 +340,12 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
             </div>
 
             {/* E-mail */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                 E-mail
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   id="register-email-input"
                   type="email"
@@ -351,11 +353,11 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
                   placeholder="ex: seu.email@provedor.com"
-                  className={`w-full pl-9 pr-3 py-2 text-xs rounded-xl border ${
+                  className={`w-full pl-11 pr-4 py-3 text-xs rounded-2xl border ${
                     formErrors.email
                       ? "border-rose-500 bg-rose-50/30"
-                      : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                  } text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500`}
+                      : "border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60"
+                  } text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 transition-all`}
                 />
               </div>
               {formErrors.email && (
@@ -364,15 +366,15 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
             </div>
 
             {/* Perfil / Função (3 Perfis) */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                 Perfil de Acesso
               </label>
               <select
                 id="register-role-select"
                 value={regRole}
                 onChange={(e) => setRegRole(e.target.value as "paciente" | "profissional" | "administrador")}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                className="w-full px-4 py-3 text-xs rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 transition-all cursor-pointer"
               >
                 <option value="paciente">Paciente</option>
                 <option value="profissional">Profissional / Especialista</option>
@@ -382,12 +384,12 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
 
             {/* Senha e Confirmação */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                   Senha (mín. 6 dígitos)
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     id="register-password-input"
                     type={showPassword ? "text" : "password"}
@@ -395,16 +397,16 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
                     placeholder="••••••••"
-                    className={`w-full pl-9 pr-9 py-2 text-xs rounded-xl border ${
+                    className={`w-full pl-11 pr-10 py-3 text-xs rounded-2xl border ${
                       formErrors.password
                         ? "border-rose-500 bg-rose-50/30"
-                        : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                    } text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500`}
+                        : "border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60"
+                    } text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 transition-all`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
@@ -413,12 +415,12 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                   <p className="text-[11px] text-rose-500 mt-1">{formErrors.password.join(", ")}</p>
                 )}
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                   Confirmar Senha
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     id="register-confirm-password-input"
                     type={showConfirmPassword ? "text" : "password"}
@@ -426,16 +428,16 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                     value={regConfirmPassword}
                     onChange={(e) => setRegConfirmPassword(e.target.value)}
                     placeholder="••••••••"
-                    className={`w-full pl-9 pr-9 py-2 text-xs rounded-xl border ${
+                    className={`w-full pl-11 pr-10 py-3 text-xs rounded-2xl border ${
                       formErrors.confirmPassword
                         ? "border-rose-500 bg-rose-50/30"
-                        : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
-                    } text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500`}
+                        : "border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60"
+                    } text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 transition-all`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
@@ -451,7 +453,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
               id="submit-register-btn"
               type="submit"
               disabled={isSubmitting}
-              className="w-full mt-2 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 transition-all shadow-md shadow-teal-600/20"
+              className="w-full mt-3 flex items-center justify-center gap-2 py-3 px-5 rounded-full text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 disabled:opacity-50 transition-all shadow-md shadow-teal-700/20 active:scale-[0.98] cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -461,7 +463,7 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
               ) : (
                 <>
                   <UserPlus className="w-4 h-4" />
-                  <span>Criar Conta</span>
+                  <span>Avançar / Cadastrar</span>
                 </>
               )}
             </button>

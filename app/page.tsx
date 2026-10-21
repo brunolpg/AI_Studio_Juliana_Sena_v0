@@ -344,15 +344,15 @@ export default function HomePage() {
     return <PatientDashboard />;
   }
 
-  // 3. Se não logado, exibe a Tela de Login (Idêntica à imagem "Tela_Login.png")
+  // 3. Se não logado, exibe a Tela de Login / Cadastro alinhada ao MD4 e Identidade Visual da clínica
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col justify-center items-center p-4 sm:p-6 select-none">
+    <div className="min-h-screen bg-slate-50/70 dark:bg-slate-950 flex flex-col justify-center items-center p-4 sm:p-6 select-none transition-colors duration-200">
       <div className="w-full max-w-[440px] space-y-6">
         
         {/* Logotipo e Nomes no Topo */}
         <div className="flex flex-col items-center text-center space-y-3">
-          <div className="w-[56px] h-[56px] rounded-[18px] bg-[#3B9E8C] text-white flex items-center justify-center shadow-md">
-            <Sparkles className="w-[28px] h-[28px]" />
+          <div className="w-14 h-14 rounded-2xl bg-teal-700 dark:bg-teal-600 text-white flex items-center justify-center shadow-md shadow-teal-700/20 transition-transform hover:scale-105">
+            <Sparkles className="w-7 h-7" />
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
@@ -365,20 +365,20 @@ export default function HomePage() {
         </div>
 
         {/* Card Principal */}
-        <div className="bg-white dark:bg-slate-900 rounded-[28px] border border-slate-100 dark:border-slate-850 p-6 sm:p-8 shadow-xl shadow-slate-200/40 dark:shadow-none space-y-6">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 sm:p-8 shadow-xl shadow-slate-900/5 dark:shadow-black/20 space-y-6">
           
-          {/* Abas Superiores */}
-          <div className="relative border-b border-slate-100 dark:border-slate-800 flex w-full">
+          {/* Seletor Superior Segmentado (Material Design 4 Pill Switch) */}
+          <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-full border border-slate-200/60 dark:border-slate-700/60">
             <button
               type="button"
               onClick={() => {
                 setActiveTab("entrar");
                 setErrors({});
               }}
-              className={`w-1/2 text-center pb-3 text-sm font-bold transition-all border-b-2 cursor-pointer ${
+              className={`w-full py-2.5 px-4 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "entrar"
-                  ? "text-[#3B9E8C] border-[#3B9E8C]"
-                  : "text-slate-400 dark:text-slate-500 border-transparent hover:text-slate-600"
+                  ? "bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-sm border border-slate-200/50 dark:border-slate-600/50 font-bold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium"
               }`}
             >
               Entrar
@@ -389,10 +389,10 @@ export default function HomePage() {
                 setActiveTab("criar");
                 setErrors({});
               }}
-              className={`w-1/2 text-center pb-3 text-sm font-bold transition-all border-b-2 cursor-pointer ${
+              className={`w-full py-2.5 px-4 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 activeTab === "criar"
-                  ? "text-[#3B9E8C] border-[#3B9E8C]"
-                  : "text-slate-400 dark:text-slate-500 border-transparent hover:text-slate-600"
+                  ? "bg-white dark:bg-slate-700 text-teal-800 dark:text-teal-200 shadow-sm border border-slate-200/50 dark:border-slate-600/50 font-bold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium"
               }`}
             >
               Criar Conta
@@ -401,7 +401,7 @@ export default function HomePage() {
 
           {/* Erro Geral */}
           {errors.general && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 rounded-xl text-xs border border-rose-200 dark:border-rose-900/40 flex items-start gap-2.5 animate-shake">
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 rounded-2xl text-xs border border-rose-200 dark:border-rose-900/40 flex items-start gap-2.5 animate-shake">
               <ShieldAlert className="w-4 h-4 mt-0.5 flex-shrink-0 text-rose-600" />
               <div className="flex-1 font-medium">{errors.general}</div>
             </div>
@@ -412,9 +412,9 @@ export default function HomePage() {
             <button
               type="button"
               onClick={handleGoogleOAuth}
-              className="w-full flex items-center justify-center gap-2.5 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-[12px] text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-750 transition-all cursor-pointer shadow-2xs"
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-full text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-750 transition-all cursor-pointer shadow-xs active:scale-[0.99] group"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0 transition-transform group-hover:scale-105" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
                   d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
@@ -451,12 +451,12 @@ export default function HomePage() {
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               
               {/* E-mail */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label htmlFor="email" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                   E-mail
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     id="email"
                     type="email"
@@ -467,10 +467,10 @@ export default function HomePage() {
                     }}
                     placeholder="ex: seu.email@clinica.com"
                     disabled={isSubmitting}
-                    className={`w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border focus:outline-hidden focus:ring-2 focus:ring-[#3B9E8C]/20 transition-all ${
+                    className={`w-full pl-11 pr-4 py-3 text-xs rounded-2xl border transition-all ${
                       errors.email
                         ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-900 dark:text-rose-300"
-                        : "border-slate-200/80 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-[#3B9E8C]"
+                        : "border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400"
                     }`}
                   />
                 </div>
@@ -483,7 +483,7 @@ export default function HomePage() {
               </div>
 
               {/* Senha */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label htmlFor="password" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     Senha
@@ -495,13 +495,13 @@ export default function HomePage() {
                       setResetEmailSent(false);
                       setIsForgotModalOpen(true);
                     }}
-                    className="text-[11px] font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 hover:underline transition-colors cursor-pointer"
+                    className="text-[11px] font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 hover:underline transition-colors cursor-pointer"
                   >
                     Esqueci minha senha
                   </button>
                 </div>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
@@ -512,17 +512,17 @@ export default function HomePage() {
                     }}
                     placeholder="Sua senha secreta"
                     disabled={isSubmitting}
-                    className={`w-full pl-10 pr-10 py-2.5 text-xs rounded-xl border focus:outline-hidden focus:ring-2 focus:ring-[#3B9E8C]/20 transition-all ${
+                    className={`w-full pl-11 pr-11 py-3 text-xs rounded-2xl border transition-all ${
                       errors.password
                         ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-900 dark:text-rose-300"
-                        : "border-slate-200/80 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-[#3B9E8C]"
+                        : "border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400"
                     }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isSubmitting}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-md p-1 cursor-pointer"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg p-1.5 cursor-pointer transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -539,7 +539,7 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-2 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-white bg-[#3B9E8C] hover:bg-[#2d8272] disabled:opacity-50 transition-all shadow-md shadow-teal-600/10 active:scale-[0.98] cursor-pointer"
+                className="w-full mt-3 flex items-center justify-center gap-2 py-3 px-5 rounded-full text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 disabled:opacity-50 transition-all shadow-md shadow-teal-700/20 active:scale-[0.98] cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
@@ -548,7 +548,7 @@ export default function HomePage() {
                   </>
                 ) : (
                   <>
-                    <LogIn className="w-4.5 h-4.5" />
+                    <LogIn className="w-4 h-4" />
                     <span>Entrar / Avançar</span>
                   </>
                 )}
@@ -559,12 +559,12 @@ export default function HomePage() {
             <form onSubmit={handleRegisterSubmit} className="space-y-4">
               
               {/* Nome Completo */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label htmlFor="regName" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                   Nome Completo
                 </label>
                 <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <User className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     id="regName"
                     type="text"
@@ -575,10 +575,10 @@ export default function HomePage() {
                     }}
                     placeholder="ex: Dr. Carlos Silva"
                     disabled={isSubmitting}
-                    className={`w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border focus:outline-hidden focus:ring-2 focus:ring-[#3B9E8C]/20 transition-all ${
+                    className={`w-full pl-11 pr-4 py-3 text-xs rounded-2xl border transition-all ${
                       errors.name
                         ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-900 dark:text-rose-300"
-                        : "border-slate-200/80 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-[#3B9E8C]"
+                        : "border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400"
                     }`}
                   />
                 </div>
@@ -591,12 +591,12 @@ export default function HomePage() {
               </div>
 
               {/* E-mail */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label htmlFor="regEmail" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                   E-mail
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     id="regEmail"
                     type="email"
@@ -607,10 +607,10 @@ export default function HomePage() {
                     }}
                     placeholder="ex: seu.email@clinica.com"
                     disabled={isSubmitting}
-                    className={`w-full pl-10 pr-4 py-2.5 text-xs rounded-xl border focus:outline-hidden focus:ring-2 focus:ring-[#3B9E8C]/20 transition-all ${
+                    className={`w-full pl-11 pr-4 py-3 text-xs rounded-2xl border transition-all ${
                       errors.email
                         ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-900 dark:text-rose-300"
-                        : "border-slate-200/80 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-[#3B9E8C]"
+                        : "border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400"
                     }`}
                   />
                 </div>
@@ -622,15 +622,13 @@ export default function HomePage() {
                 )}
               </div>
 
-
-
               {/* Senha */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label htmlFor="regPassword" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                   Senha
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     id="regPassword"
                     type={showPassword ? "text" : "password"}
@@ -641,17 +639,17 @@ export default function HomePage() {
                     }}
                     placeholder="Sua senha secreta (min. 6 dígitos)"
                     disabled={isSubmitting}
-                    className={`w-full pl-10 pr-10 py-2.5 text-xs rounded-xl border focus:outline-hidden focus:ring-2 focus:ring-[#3B9E8C]/20 transition-all ${
+                    className={`w-full pl-11 pr-11 py-3 text-xs rounded-2xl border transition-all ${
                       errors.password
                         ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-900 dark:text-rose-300"
-                        : "border-slate-200/80 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-[#3B9E8C]"
+                        : "border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400"
                     }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isSubmitting}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-md p-1"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg p-1.5 cursor-pointer transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -665,12 +663,12 @@ export default function HomePage() {
               </div>
 
               {/* Confirmar Senha */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label htmlFor="regConfirmPassword" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                   Confirmar Senha
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     id="regConfirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
@@ -681,17 +679,17 @@ export default function HomePage() {
                     }}
                     placeholder="Confirme sua senha secreta"
                     disabled={isSubmitting}
-                    className={`w-full pl-10 pr-10 py-2.5 text-xs rounded-xl border focus:outline-hidden focus:ring-2 focus:ring-[#3B9E8C]/20 transition-all ${
+                    className={`w-full pl-11 pr-11 py-3 text-xs rounded-2xl border transition-all ${
                       errors.confirmPassword
                         ? "border-rose-500 bg-rose-50/10 focus:border-rose-500 text-rose-900 dark:text-rose-300"
-                        : "border-slate-200/80 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-[#3B9E8C]"
+                        : "border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400"
                     }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     disabled={isSubmitting}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-md p-1"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg p-1.5 cursor-pointer transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -708,7 +706,7 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-2 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-white bg-[#3B9E8C] hover:bg-[#2d8272] disabled:opacity-50 transition-all shadow-md shadow-teal-600/10 active:scale-[0.98] cursor-pointer"
+                className="w-full mt-3 flex items-center justify-center gap-2 py-3 px-5 rounded-full text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 disabled:opacity-50 transition-all shadow-md shadow-teal-700/20 active:scale-[0.98] cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
@@ -717,7 +715,7 @@ export default function HomePage() {
                   </>
                 ) : (
                   <>
-                    <LogIn className="w-4.5 h-4.5" />
+                    <LogIn className="w-4 h-4" />
                     <span>Avançar / Cadastrar</span>
                   </>
                 )}
@@ -726,18 +724,18 @@ export default function HomePage() {
           )}
 
           {/* Consentimento Legal */}
-          <p className="text-[11px] leading-normal text-center text-slate-400 dark:text-slate-500 max-w-[290px] mx-auto">
+          <p className="text-[11px] leading-relaxed text-center text-slate-400 dark:text-slate-500 max-w-[320px] mx-auto">
             Ao clicar em &quot;Avançar/Cadastrar&quot;, você aceita nossos{" "}
             <Link
               href="/termos-de-uso"
-              className="text-[#3B9E8C] hover:underline font-semibold"
+              className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-semibold hover:underline"
             >
               Termos de Uso
             </Link>{" "}
             e nossa{" "}
             <Link
               href="/politica-de-privacidade"
-              className="text-[#3B9E8C] hover:underline font-semibold"
+              className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-semibold hover:underline"
             >
               Política de Privacidade
             </Link>
@@ -749,7 +747,7 @@ export default function HomePage() {
           {/* Rodapé Interno com alternância rápida */}
           <div className="text-center">
             {activeTab === "entrar" ? (
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Não tem conta?{" "}
                 <button
                   type="button"
@@ -757,13 +755,13 @@ export default function HomePage() {
                     setActiveTab("criar");
                     setErrors({});
                   }}
-                  className="text-[#3B9E8C] font-semibold hover:underline cursor-pointer"
+                  className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-semibold hover:underline cursor-pointer"
                 >
                   Cadastre-se aqui.
                 </button>
               </p>
             ) : (
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Já possui uma conta?{" "}
                 <button
                   type="button"
@@ -771,7 +769,7 @@ export default function HomePage() {
                     setActiveTab("entrar");
                     setErrors({});
                   }}
-                  className="text-[#3B9E8C] font-semibold hover:underline cursor-pointer"
+                  className="text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-semibold hover:underline cursor-pointer"
                 >
                   Entre aqui.
                 </button>
@@ -826,7 +824,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setIsForgotModalOpen(false)}
-                  className="w-full mt-4 py-2.5 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                  className="w-full mt-4 py-2.5 px-4 bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 text-white rounded-full text-xs font-semibold transition-all cursor-pointer shadow-sm shadow-teal-700/20 active:scale-[0.99]"
                 >
                   Entendido / Voltar ao Login
                 </button>
@@ -837,18 +835,18 @@ export default function HomePage() {
                   Informe o e-mail cadastrado em sua conta para receber um link seguro de recuperação de senha.
                 </p>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                     E-mail cadastrado
                   </label>
                   <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"/>
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"/>
                     <input
                       type="email"
                       required
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
                       placeholder="seu.email@provedor.com"
-                      className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                      className="w-full pl-11 pr-4 py-3 text-xs rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 transition-all"
                     />
                   </div>
                 </div>
@@ -857,14 +855,14 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setIsForgotModalOpen(false)}
-                    className="flex-1 py-2 px-3 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    className="flex-1 py-2.5 px-4 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={isSendingReset}
-                    className="flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+                    className="flex-1 py-2.5 px-4 bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 disabled:opacity-50 text-white text-xs font-semibold rounded-full shadow-sm shadow-teal-700/20 transition-all cursor-pointer active:scale-[0.99]"
                   >
                     {isSendingReset ? "Enviando link..." : "Enviar link"}
                   </button>
@@ -897,11 +895,11 @@ export default function HomePage() {
               </p>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Nova Senha (mínimo 6 caracteres)
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"/>
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"/>
                   <input
                     type={showNewPassword ? "text" : "password"}
                     required
@@ -909,12 +907,12 @@ export default function HomePage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-9 pr-10 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                    className="w-full pl-11 pr-11 py-3 text-xs rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer transition-colors"
                   >
                     {showNewPassword ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                   </button>
@@ -922,11 +920,11 @@ export default function HomePage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                   Confirmar Nova Senha
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"/>
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"/>
                   <input
                     type={showNewPassword ? "text" : "password"}
                     required
@@ -934,7 +932,7 @@ export default function HomePage() {
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                    className="w-full pl-11 pr-4 py-3 text-xs rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 transition-all"
                   />
                 </div>
               </div>
@@ -942,7 +940,7 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={isUpdatingPassword}
-                className="w-full mt-2 py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+                className="w-full mt-2 py-3 px-4 bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 disabled:opacity-50 text-white text-xs font-semibold rounded-full shadow-md shadow-teal-700/20 transition-all cursor-pointer active:scale-[0.99]"
               >
                 {isUpdatingPassword ? "Salvando nova senha..." : "Salvar Nova Senha"}
               </button>
