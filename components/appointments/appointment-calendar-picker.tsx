@@ -102,12 +102,12 @@ export function AppointmentCalendarPicker({
   const isCurrentSelectionAllowed = selectedDate ? isAllowedAppointmentDay(selectedDate) : true;
 
   return (
-    <div className="bg-slate-50/80 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700/80 select-none space-y-2.5">
+    <div className="bg-white dark:bg-slate-850 p-4 rounded-3xl border border-slate-200/90 dark:border-slate-800 select-none space-y-3 shadow-2xs">
       {/* Cabeçalho do Mês */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <CalendarIcon className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-          <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
             {MONTH_NAMES[currentMonth]} {currentYear}
           </span>
         </div>
@@ -116,10 +116,10 @@ export function AppointmentCalendarPicker({
             type="button"
             onClick={handlePrevMonth}
             disabled={isPrevMonthDisabled}
-            className={`p-1 rounded-lg transition-colors ${
+            className={`p-1.5 rounded-full transition-colors md-state-layer ${
               isPrevMonthDisabled
                 ? "text-slate-300 dark:text-slate-700 cursor-not-allowed opacity-40"
-                : "hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 cursor-pointer"
+                : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 cursor-pointer"
             }`}
             title={isPrevMonthDisabled ? "Navegação retroativa bloqueada para pacientes" : "Mês anterior"}
           >
@@ -128,7 +128,7 @@ export function AppointmentCalendarPicker({
           <button
             type="button"
             onClick={handleNextMonth}
-            className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors cursor-pointer md-state-layer"
             title="Próximo mês"
           >
             <ChevronRight className="w-4 h-4" />
@@ -141,7 +141,7 @@ export function AppointmentCalendarPicker({
         {WEEKDAY_CONFIG.map((w) => (
           <div
             key={w.day}
-            className={`py-1 rounded-md transition-colors ${
+            className={`py-1 rounded-full transition-colors ${
               w.isAllowed
                 ? "text-teal-700 dark:text-teal-300 font-bold bg-teal-500/10"
                 : "text-slate-400 dark:text-slate-500"
@@ -199,19 +199,19 @@ export function AppointmentCalendarPicker({
                   ? "Data selecionada"
                   : "Clique para selecionar este dia"
               }
-              className={`h-8 rounded-xl flex items-center justify-center text-xs transition-all relative ${
+              className={`h-8 w-8 mx-auto rounded-full flex items-center justify-center text-xs transition-all relative md-state-layer ${
                 isSelected
-                  ? "bg-teal-600 text-white font-bold shadow-xs scale-105 z-10 cursor-pointer"
+                  ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 font-bold shadow-xs scale-105 z-10 cursor-pointer"
                   : isDisabled
-                  ? "text-slate-300 dark:text-slate-700 cursor-not-allowed bg-slate-100/40 dark:bg-slate-900/30"
+                  ? "text-slate-300 dark:text-slate-700 cursor-not-allowed bg-transparent"
                   : isToday
                   ? "border border-teal-500 text-teal-700 dark:text-teal-400 font-bold bg-teal-50/50 dark:bg-teal-950/40 cursor-pointer hover:bg-teal-100/60"
-                  : "text-slate-700 dark:text-slate-200 font-medium hover:bg-teal-50 hover:text-teal-700 dark:hover:bg-slate-700 cursor-pointer"
+                  : "text-slate-700 dark:text-slate-200 font-medium hover:bg-teal-50 hover:text-teal-700 dark:hover:bg-slate-800 cursor-pointer"
               }`}
             >
               {day}
               {isToday && !isSelected && (
-                <span className="w-1 h-1 bg-teal-600 rounded-full absolute bottom-1" />
+                <span className="w-1 h-1 bg-teal-600 dark:bg-teal-400 rounded-full absolute bottom-1" />
               )}
             </button>
           );
@@ -220,14 +220,14 @@ export function AppointmentCalendarPicker({
 
       {/* Alerta se o usuário selecionou manualmente uma data não permitida */}
       {!isCurrentSelectionAllowed && (
-        <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-1.5">
+        <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2 shadow-2xs">
           <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
           <span>A Dra. Juliana atende apenas às segundas, quintas (09h-16h) e sábados (13h-18h).</span>
         </div>
       )}
 
       {/* Legenda de expediente */}
-      <div className="pt-2 border-t border-slate-200/70 dark:border-slate-700/70 flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
         <Info className="w-3 h-3 text-teal-600 dark:text-teal-400 shrink-0" />
         <span>Expediente: Seg e Qui (09h às 16h) • Sáb (13h às 18h)</span>
       </div>

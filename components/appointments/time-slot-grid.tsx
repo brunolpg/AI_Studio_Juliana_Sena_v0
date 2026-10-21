@@ -119,14 +119,14 @@ export function TimeSlotGrid({
             return (
               <div
                 key={s.slot}
-                className="flex items-center justify-between px-3 py-2 rounded-xl border border-slate-200/70 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 cursor-not-allowed select-none text-xs transition-colors"
+                className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 cursor-not-allowed select-none text-xs transition-colors shadow-2xs"
                 title={`Horário ocupado ${s.occupiedPatientName ? `(${s.occupiedPatientName})` : ""}`}
               >
                 <div className="flex items-center gap-1.5 font-mono">
                   <Ban className="w-3 h-3 text-slate-400" />
                   <span className="font-bold line-through">{s.slot}</span>
                 </div>
-                <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                <span className="text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
                   Ocupado
                 </span>
               </div>
@@ -138,14 +138,14 @@ export function TimeSlotGrid({
             return (
               <div
                 key={s.slot}
-                className="flex items-center justify-between px-3 py-2 rounded-xl border border-dashed border-rose-200/80 dark:border-rose-900/30 bg-rose-50/20 dark:bg-rose-950/10 text-rose-600/80 dark:text-rose-400/80 cursor-not-allowed select-none text-xs"
+                className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-dashed border-rose-200/80 dark:border-rose-900/30 bg-rose-50/20 dark:bg-rose-950/10 text-rose-600/80 dark:text-rose-400/80 cursor-not-allowed select-none text-xs shadow-2xs"
                 title={`Duração de ${duracao}h ultrapassa o expediente (${H_f}:00)`}
               >
                 <div className="flex items-center gap-1.5 font-mono opacity-60">
                   <Ban className="w-3.5 h-3.5" />
                   <span className="font-bold">{s.slot}</span>
                 </div>
-                <span className="text-[9px] font-semibold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 px-1.5 py-0.5 rounded border border-rose-200/50 dark:border-rose-800/30">
+                <span className="text-[9px] font-semibold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-full border border-rose-200/50 dark:border-rose-800/30">
                   Excede exp.
                 </span>
               </div>
@@ -157,14 +157,14 @@ export function TimeSlotGrid({
             return (
               <div
                 key={s.slot}
-                className="flex items-center justify-between px-3 py-2 rounded-xl border border-dashed border-amber-200/80 dark:border-amber-900/30 bg-amber-50/20 dark:bg-amber-950/10 text-amber-700/80 dark:text-amber-400/80 cursor-not-allowed select-none text-xs"
+                className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-dashed border-amber-200/80 dark:border-amber-900/30 bg-amber-50/20 dark:bg-amber-950/10 text-amber-700/80 dark:text-amber-400/80 cursor-not-allowed select-none text-xs shadow-2xs"
                 title={`Requer ${duracao} horas seguidas livres, mas os horários seguintes estão ocupados.`}
               >
                 <div className="flex items-center gap-1.5 font-mono opacity-60">
                   <Ban className="w-3.5 h-3.5" />
                   <span className="font-bold">{s.slot}</span>
                 </div>
-                <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-200/50 dark:border-amber-800/30">
+                <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-full border border-amber-200/50 dark:border-amber-800/30">
                   Indisponível
                 </span>
               </div>
@@ -177,16 +177,16 @@ export function TimeSlotGrid({
               key={s.slot}
               type="button"
               onClick={() => onSelectSlot(s.slot)}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer select-none ${
+              className={`flex items-center justify-between px-3 py-2.5 rounded-2xl border text-xs font-semibold transition-all cursor-pointer select-none md-state-layer ${
                 isSelected
-                  ? "bg-teal-600 border-teal-600 text-white shadow-xs ring-2 ring-teal-500/20 scale-102"
-                  : "bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:border-teal-500 hover:bg-teal-50/40 hover:text-teal-700 dark:hover:bg-teal-950/30 shadow-2xs"
+                  ? "bg-teal-700 dark:bg-teal-500 border-teal-700 dark:border-teal-500 text-white dark:text-slate-950 shadow-xs ring-2 ring-teal-500/20"
+                  : "bg-white dark:bg-slate-850 border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-teal-500 hover:bg-teal-50/40 hover:text-teal-700 dark:hover:bg-teal-950/30 shadow-2xs"
               }`}
             >
               <div className="flex items-center gap-1.5 font-mono">
                 <Clock
                   className={`w-3.5 h-3.5 ${
-                    isSelected ? "text-white" : "text-teal-600 dark:text-teal-400"
+                    isSelected ? "text-white dark:text-slate-950" : "text-teal-600 dark:text-teal-400"
                   }`}
                 />
                 <span className="font-bold text-xs">{s.slot}</span>
@@ -207,7 +207,7 @@ export function TimeSlotGrid({
                   )}
                 </div>
               ) : (
-                <span className="text-[10px] font-normal text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/50">
+                <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200/80 dark:border-emerald-800/60">
                   {duracao}h
                 </span>
               )}

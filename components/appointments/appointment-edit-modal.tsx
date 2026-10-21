@@ -234,7 +234,10 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
   };
 
   return (
-    <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-auto max-h-[calc(100dvh-1rem)] sm:max-h-[90vh] flex flex-col">
+    <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl landscape:rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-2xl overflow-hidden max-h-[92dvh] sm:max-h-[85dvh] landscape:max-h-[85dvh] flex flex-col transition-all">
+      {/* Handle indicador para Bottom Sheet no Mobile Vertical */}
+      <div className="sm:hidden landscape:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto my-2 shrink-0" />
+
       <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xs z-10">
         <div>
           <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
@@ -247,7 +250,7 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
         <button
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+          className="p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -275,22 +278,22 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
           <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1.5">
             Status do Atendimento
           </label>
-          <div className={`grid grid-cols-${availableStatusOptions.length} gap-2`}>
+          <div className="flex flex-wrap gap-2">
             {availableStatusOptions.map((opt) => (
               <button
                 key={opt}
                 type="button"
                 onClick={() => setStatus(opt)}
-                className={`py-1.5 text-xs font-semibold rounded-xl border transition-all ${
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all cursor-pointer md-state-layer shadow-2xs ${
                   status === opt
                     ? opt === "Confirmado"
                       ? "bg-emerald-600 text-white border-emerald-600"
                       : opt === "Pendente"
                       ? "bg-amber-500 text-white border-amber-500"
                       : opt === "Concluído"
-                      ? "bg-blue-600 text-white border-blue-600"
+                      ? "bg-sky-600 text-white border-sky-600"
                       : "bg-rose-600 text-white border-rose-600"
-                    : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                    : "bg-slate-100/90 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-700/80 hover:bg-slate-200/60 dark:hover:bg-slate-700"
                 }`}
               >
                 {opt}
@@ -304,13 +307,13 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
           <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1.5">
             Status do Pagamento
           </label>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="flex flex-wrap gap-2">
             {PAYMENT_STATUS_OPTIONS.map((opt) => (
               <button
                 key={opt}
                 type="button"
                 onClick={() => setPaymentStatus(opt)}
-                className={`py-1.5 text-xs font-semibold rounded-xl border transition-all ${
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all cursor-pointer md-state-layer shadow-2xs ${
                   paymentStatus === opt
                     ? opt === "Pago"
                       ? "bg-emerald-600 text-white border-emerald-600"
@@ -319,7 +322,7 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
                       : opt === "Em Análise"
                       ? "bg-sky-600 text-white border-sky-600"
                       : "bg-rose-600 text-white border-rose-600"
-                    : "bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                    : "bg-slate-100/90 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-700/80 hover:bg-slate-200/60 dark:hover:bg-slate-700"
                 }`}
               >
                 {opt}
@@ -461,14 +464,14 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 rounded-xl cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full cursor-pointer md-state-layer transition-colors"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl cursor-pointer"
+            className="flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-white dark:text-slate-950 bg-teal-700 dark:bg-teal-500 hover:bg-teal-800 dark:hover:bg-teal-400 rounded-full cursor-pointer md-state-layer shadow-xs transition-all"
           >
             <Check className="w-3.5 h-3.5" />
             <span>Salvar Alterações</span>
@@ -488,7 +491,7 @@ export function AppointmentEditModal({
   if (!isOpen || !appointment) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center landscape:items-center justify-center p-0 sm:p-4 landscape:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
       <AppointmentEditModalContent
         key={appointment.id}
         appointment={appointment}

@@ -826,9 +826,9 @@ function AppointmentFormModalContent({
   }
 
   return (
-    <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-2xl overflow-hidden max-h-[92dvh] sm:max-h-[85dvh] flex flex-col transition-all">
+    <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl landscape:rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-2xl overflow-hidden max-h-[92dvh] sm:max-h-[85dvh] landscape:max-h-[85dvh] flex flex-col transition-all">
       {/* Handle indicador para Bottom Sheet no Mobile Vertical */}
-      <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto my-2 shrink-0" />
+      <div className="sm:hidden landscape:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto my-2 shrink-0" />
 
       {/* Header Fixo do Modal */}
       <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xs z-20">
@@ -1081,19 +1081,19 @@ function AppointmentFormModalContent({
                 4. Procedimento / Especialidade *
               </label>
 
-              {/* Campo de Busca de Procedimentos */}
+              {/* Campo de Busca de Procedimentos MD4 */}
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Pesquise o procedimento desejado..."
                   value={procedimentoSearch}
                   onChange={(e) => setProcedimentoSearch(e.target.value)}
-                  className="w-full pl-9 pr-3.5 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  className="w-full pl-9 pr-4 py-2 text-xs rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all shadow-2xs"
                 />
               </div>
 
-              {/* Abas de Categorias */}
+              {/* Abas de Categorias (Chips MD4) */}
               <div className="flex flex-wrap gap-1.5 py-1">
                 {categoriesList.map((cat) => (
                   <button
@@ -1103,10 +1103,10 @@ function AppointmentFormModalContent({
                       setSelectedCategoria(cat);
                       setProcedimentoSearch("");
                     }}
-                    className={`text-[10px] sm:text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                    className={`text-[11px] px-3 py-1 rounded-full border transition-all cursor-pointer md-state-layer ${
                       selectedCategoria === cat && !procedimentoSearch
-                        ? "bg-teal-600 text-white border-teal-600 font-semibold shadow-xs"
-                        : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                        ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 border-teal-700 dark:border-teal-500 font-semibold shadow-2xs"
+                        : "bg-slate-100/90 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-slate-700/80 hover:bg-slate-200/60 dark:hover:bg-slate-700"
                     }`}
                   >
                     {cat}
@@ -1114,7 +1114,7 @@ function AppointmentFormModalContent({
                 ))}
               </div>
 
-              {/* Lista Dinâmica de Procedimentos */}
+              {/* Lista Dinâmica de Procedimentos (Cards MD4) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
                 {isLoadingProcedimentos ? (
                   <div className="col-span-full py-4 text-center text-xs text-slate-400">
@@ -1144,13 +1144,13 @@ function AppointmentFormModalContent({
                         key={p.id}
                         type="button"
                         onClick={() => setProcedimento(p.procedimento)}
-                        className={`text-left p-2.5 rounded-xl border transition-all flex flex-col justify-between cursor-pointer ${
+                        className={`text-left p-3 rounded-2xl border transition-all flex flex-col justify-between cursor-pointer md-state-layer shadow-2xs ${
                           isSelected
-                            ? "bg-teal-500/10 border-teal-500 text-teal-950 dark:text-teal-200 font-semibold"
-                            : "bg-slate-50/50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 hover:bg-slate-100/70"
+                            ? "bg-teal-50 dark:bg-teal-950/40 border-teal-500 text-teal-950 dark:text-teal-200 font-semibold ring-1 ring-teal-500"
+                            : "bg-white dark:bg-slate-850 border-slate-200/90 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
                         }`}
                       >
-                        <div className="text-xs font-semibold truncate w-full">
+                        <div className="text-xs font-semibold truncate w-full text-slate-900 dark:text-slate-100">
                           {p.procedimento}
                         </div>
                         <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500 dark:text-slate-400 w-full">
@@ -1172,7 +1172,7 @@ function AppointmentFormModalContent({
                   const matched = procedimentosList.find((p) => p.procedimento === procedimento);
                   if (matched) {
                     return (
-                      <div className="p-3.5 rounded-xl border border-teal-500/30 bg-teal-500/5 dark:bg-teal-950/20 flex items-center justify-between gap-3 shadow-xs">
+                      <div className="p-3.5 rounded-2xl border border-teal-500/40 bg-teal-50/60 dark:bg-teal-950/30 flex items-center justify-between gap-3 shadow-2xs">
                         <div className="truncate">
                           <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                             {matched.procedimento}
@@ -1196,7 +1196,7 @@ function AppointmentFormModalContent({
                       readOnly
                       value={procedimento}
                       placeholder="Selecione um dos procedimentos listados acima"
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:outline-none font-semibold text-teal-700 dark:text-teal-300 cursor-not-allowed select-none"
+                      className="w-full px-4 py-2 text-xs rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:outline-none font-semibold text-teal-700 dark:text-teal-300 cursor-not-allowed select-none"
                     />
                   );
                 })()}
@@ -1620,7 +1620,7 @@ export function AppointmentFormModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center landscape:items-center justify-center p-0 sm:p-4 landscape:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
       <AppointmentFormModalContent
         key={initialPatient?.id || "new-appointment"}
         onClose={onClose}

@@ -56,14 +56,14 @@ export function DeleteConfirmModal({
   return (
     <div
       id="delete-confirm-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-end sm:items-center landscape:items-center justify-center p-0 sm:p-4 landscape:p-4 bg-slate-900/60 backdrop-blur-xs"
     >
       <div
         id="delete-confirm-modal-dialog"
-        className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-6 overflow-hidden transition-all max-h-[92dvh] sm:max-h-[85dvh]"
+        className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl landscape:rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-6 overflow-hidden transition-all max-h-[92dvh] sm:max-h-[85dvh] landscape:max-h-[85dvh]"
       >
         {/* Handle indicador para Bottom Sheet no Mobile Vertical */}
-        <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-2 mb-4 shrink-0" />
+        <div className="sm:hidden landscape:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-2 mb-4 shrink-0" />
 
         <button
           type="button"

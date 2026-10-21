@@ -410,7 +410,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                         Foto de Perfil do Paciente
                       </p>
                       <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer">
+                        <label className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-full transition-all shadow-xs cursor-pointer md-state-layer">
                           <span>+ Foto</span>
                           <input
                             type="file"
@@ -452,7 +452,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                           <button
                             type="button"
                             onClick={() => setShowConfirmDeletePhoto(true)}
-                            className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 hover:border-rose-300 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+                            className="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:border-rose-300 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-full transition-all cursor-pointer md-state-layer shadow-2xs"
                           >
                             Remover foto
                           </button>
@@ -529,7 +529,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                     <button
                       type="button"
                       onClick={() => setIsHistoryModalOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-teal-600 hover:bg-teal-700 text-white transition-all shadow-2xs cursor-pointer shrink-0"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full bg-teal-600 hover:bg-teal-700 text-white transition-all shadow-xs cursor-pointer shrink-0 md-state-layer"
                     >
                       {clinicalHistory ? (
                         <>
@@ -831,18 +831,21 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
         />
       )}
 
-      {/* MODAL DE CONFIRMAÇÃO PARA REMOÇÃO DE FOTO DE PERFIL */}
+      {/* MODAL DE CONFIRMAÇÃO PARA REMOÇÃO DE FOTO DE PERFIL MD4 */}
       {showConfirmDeletePhoto && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-end sm:items-center landscape:items-center justify-center p-0 sm:p-4 landscape:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150 font-['Plus_Jakarta_Sans',sans-serif]"
           onClick={() => {
             if (!isDeletingPhoto) setShowConfirmDeletePhoto(false);
           }}
         >
           <div
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-2xl p-6 shadow-xl max-w-sm w-full space-y-4 animate-in zoom-in-95 duration-150"
+            className="relative bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-t-3xl sm:rounded-3xl landscape:rounded-3xl p-6 shadow-2xl max-w-sm w-full space-y-4 animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Mobile Drag Handle */}
+            <div className="sm:hidden landscape:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-2 mb-2 shrink-0" />
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold">
                 <Trash2 className="w-5 h-5 shrink-0" />
@@ -854,7 +857,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                 type="button"
                 disabled={isDeletingPhoto}
                 onClick={() => setShowConfirmDeletePhoto(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer"
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer md-state-layer"
                 title="Fechar"
               >
                 <X className="w-4 h-4" />
@@ -870,7 +873,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                 type="button"
                 disabled={isDeletingPhoto}
                 onClick={() => setShowConfirmDeletePhoto(false)}
-                className="flex-1 min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors cursor-pointer disabled:opacity-50"
+                className="flex-1 min-h-[42px] px-5 py-2 text-xs font-semibold rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors cursor-pointer disabled:opacity-50 md-state-layer"
               >
                 Cancelar
               </button>
@@ -878,7 +881,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                 type="button"
                 disabled={isDeletingPhoto}
                 onClick={handleConfirmDeletePhoto}
-                className="flex-1 min-h-[42px] px-4 py-2 text-xs font-semibold rounded-xl bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-xs"
+                className="flex-1 min-h-[42px] px-5 py-2 text-xs font-semibold rounded-full bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-xs md-state-layer"
               >
                 {isDeletingPhoto ? (
                   <>

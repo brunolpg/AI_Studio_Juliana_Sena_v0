@@ -359,10 +359,10 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
   return (
     <div
       id="client-form-modal-dialog"
-      className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-800 overflow-hidden transition-all flex flex-col max-h-[92dvh] sm:max-h-[85dvh]"
+      className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl landscape:rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-800 overflow-hidden transition-all flex flex-col max-h-[92dvh] sm:max-h-[85dvh] landscape:max-h-[85dvh]"
     >
       {/* Handle indicador para Bottom Sheet no Mobile Vertical */}
-      <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto my-2 shrink-0" />
+      <div className="sm:hidden landscape:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto my-2 shrink-0" />
 
       {/* Cabeçalho do Modal */}
       <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
@@ -1022,7 +1022,7 @@ export function ClientFormModal({
   return (
     <div
       id="client-form-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-end sm:items-center landscape:items-center justify-center p-0 sm:p-4 landscape:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
     >
       <ClientFormContent
         key={clientToEdit ? clientToEdit.id : "new"}

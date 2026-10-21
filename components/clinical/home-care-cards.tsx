@@ -137,11 +137,12 @@ export function HomeCareCards({
                     </div>
 
                     {/* Ações e Badges */}
+                    {/* Ações e Badges MD4 */}
                     <div className="flex items-center gap-2 flex-wrap shrink-0">
                       <button
                         type="button"
                         onClick={() => setSelectedFichaForPrint(ficha)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 hover:bg-teal-50/70 dark:hover:bg-slate-800/80 rounded-xl cursor-pointer transition-colors shadow-2xs"
+                        className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 hover:bg-teal-50/70 dark:hover:bg-slate-800/80 rounded-full cursor-pointer transition-colors shadow-2xs md-state-layer"
                         title="Visualizar e imprimir relatório oficial"
                       >
                         <Printer className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
@@ -149,7 +150,7 @@ export function HomeCareCards({
                       </button>
 
                       <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-xl text-[11px] font-semibold select-none ${
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold select-none shadow-2xs ${
                           ficha.status === "Ativo"
                             ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                             : ficha.status === "Concluído"
@@ -166,7 +167,7 @@ export function HomeCareCards({
                             <button
                               type="button"
                               onClick={() => onEdit(ficha)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-full text-slate-400 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer"
                               title="Editar ficha"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -176,7 +177,7 @@ export function HomeCareCards({
                             type="button"
                             onClick={() => handleDelete(ficha.id)}
                             disabled={deletingId === ficha.id}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer md-state-layer"
                             title="Excluir ficha"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

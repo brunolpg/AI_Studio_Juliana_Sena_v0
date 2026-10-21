@@ -612,13 +612,13 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             </button>
           </div>
 
-          {/* Botão de Ação Primária Contextual */}
+          {/* Botão de Ação Primária Contextual MD4 */}
           <div className="flex items-center gap-2 shrink-0">
             {activeSubTab === "evolucoes" && (
               <button
                 type="button"
                 onClick={() => setIsEvolutionModalOpen(true)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-full shadow-xs transition-all cursor-pointer md-state-layer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Nova Evolução Clínica</span>
@@ -630,7 +630,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                 <button
                   type="button"
                   onClick={() => setIsAestheticModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-teal-500 text-teal-600 dark:text-teal-400 text-xs sm:text-sm font-semibold hover:bg-teal-50 dark:hover:bg-teal-950/40 transition-colors shadow-2xs cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-teal-500 text-teal-600 dark:text-teal-400 text-xs sm:text-sm font-semibold hover:bg-teal-50 dark:hover:bg-teal-950/40 transition-colors shadow-2xs cursor-pointer md-state-layer"
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>Avaliação Estética</span>
@@ -638,7 +638,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                 <button
                   type="button"
                   onClick={() => setIsHistoryModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 rounded-xl transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 rounded-full transition-all cursor-pointer md-state-layer shadow-2xs"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   <span>Editar Histórico Clínico</span>
@@ -654,14 +654,14 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     setSelectedHomeCareForEdit(null);
                     setIsHomeCareModalOpen(true);
                   }}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer shadow-2xs"
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-all cursor-pointer shadow-2xs md-state-layer"
                 >
                   <span>+ Cuidados & Orientações</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsPrescriptionModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-full shadow-xs transition-all cursor-pointer md-state-layer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Prescrever Receita</span>
@@ -702,7 +702,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     <button
                       type="button"
                       onClick={() => setIsEvolutionModalOpen(true)}
-                      className="mt-4 px-4 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all cursor-pointer"
+                      className="mt-4 px-5 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-full transition-all cursor-pointer shadow-xs md-state-layer"
                     >
                       + Adicionar Primeira Evolução
                     </button>
@@ -1522,7 +1522,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                     <button
                                       type="button"
                                       onClick={() => setSelectedRxForPrint(rx)}
-                                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 hover:bg-teal-50/70 dark:hover:bg-slate-800/80 rounded-xl cursor-pointer transition-colors shadow-2xs"
+                                      className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 hover:bg-teal-50/70 dark:hover:bg-slate-800/80 rounded-full cursor-pointer transition-colors shadow-2xs md-state-layer"
                                       title="Visualizar e imprimir relatório da receita"
                                     >
                                       <Printer className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
@@ -1534,7 +1534,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                         href={rx.pdf_assinado_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 rounded-xl transition-colors shadow-2xs"
+                                        className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 rounded-full transition-colors shadow-2xs md-state-layer"
                                         title="Ver receita assinada digitalmente"
                                       >
                                         <FileCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -1545,7 +1545,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                       <button
                                         type="button"
                                         onClick={() => openSigningModal(rx)}
-                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 hover:bg-blue-100/70 rounded-xl transition-colors cursor-pointer shadow-2xs"
+                                        className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 hover:bg-blue-100/70 rounded-full transition-colors cursor-pointer shadow-2xs md-state-layer"
                                         title="Assinar com certificado digital VIDaaS"
                                       >
                                         <FileCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -1561,7 +1561,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                       href={rx.pdf_assinado_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl transition-all shadow-2xs"
+                                      className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-full transition-all shadow-2xs md-state-layer"
                                       title="Baixar receituário assinado digitalmente"
                                     >
                                       <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -1578,7 +1578,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                             "Este documento ainda está aguardando a assinatura digital qualificada. Por favor, solicite a liberação à profissional.",
                                         })
                                       }
-                                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-xl cursor-pointer hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors shadow-2xs"
+                                      className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-full cursor-pointer hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors shadow-2xs md-state-layer"
                                       title="Documento pendente de assinatura"
                                     >
                                       <Download className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
@@ -1589,7 +1589,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
 
                                 {rx.ativo || rx.status === "Ativo" ? (
                                   isPatientView ? (
-                                    <span className="inline-flex items-center px-2.5 py-1.5 rounded-xl text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 cursor-default select-none">
+                                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 cursor-default select-none shadow-2xs">
                                       Em Uso (Ativo)
                                     </span>
                                   ) : (
@@ -1600,7 +1600,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                         setJustificativaTexto("");
                                         setIsSuspensionModalOpen(true);
                                       }}
-                                      className="inline-flex items-center px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all cursor-pointer bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 dark:hover:border-rose-800 shadow-2xs"
+                                      className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 dark:hover:border-rose-800 shadow-2xs md-state-layer"
                                       title="Clique para suspender esta receita"
                                     >
                                       Em Uso (Ativo)
@@ -1608,7 +1608,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                   )
                                 ) : (
                                   <span
-                                    className="inline-flex items-center px-2.5 py-1.5 rounded-xl text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 cursor-default"
+                                    className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 cursor-default shadow-2xs"
                                     title="Receita suspensa"
                                   >
                                     Suspenso
@@ -1862,11 +1862,14 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
         />
       )}
 
-      {/* Modal de Confirmação de Suspensão de Receita */}
+      {/* Modal de Confirmação de Suspensão de Receita MD4 */}
       {isSuspensionModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center landscape:items-center justify-center p-0 sm:p-4 landscape:p-4 bg-slate-900/60 backdrop-blur-xs font-['Plus_Jakarta_Sans',sans-serif]">
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl landscape:rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-2xl overflow-hidden max-h-[92dvh] sm:max-h-[85dvh] landscape:max-h-[85dvh] flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Drag Handle Mobile */}
+            <div className="sm:hidden landscape:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
+
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/70 dark:bg-slate-900/60 shrink-0">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-rose-500" />
                 <h3 className="font-bold text-slate-950 dark:text-white text-base">Suspender Receita</h3>
@@ -1878,13 +1881,13 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                   setJustificativaTexto("");
                   setSelectedRxForSuspension(null);
                 }}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors md-state-layer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Deseja suspender o uso desta receita? Informe a justificativa clínica abaixo:
               </p>
@@ -1898,13 +1901,13 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                   onChange={(e) => setJustificativaTexto(e.target.value)}
                   placeholder="Ex: Reação adversa observada, troca de abordagem clínica, alcance do objetivo terapêutico..."
                   rows={4}
-                  className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900 focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 resize-none"
+                  className="w-full text-xs p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900 focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 resize-none transition-all"
                   required
                 />
               </div>
             </div>
             
-            <div className="p-5 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
+            <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2.5 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -1912,7 +1915,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                   setJustificativaTexto("");
                   setSelectedRxForSuspension(null);
                 }}
-                className="px-3.5 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full cursor-pointer transition-colors md-state-layer"
                 disabled={isSubmittingSuspension}
               >
                 Cancelar
@@ -1921,7 +1924,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                 type="button"
                 onClick={handleConfirmSuspension}
                 disabled={!justificativaTexto.trim() || isSubmittingSuspension}
-                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl cursor-pointer flex items-center gap-1.5 transition-all shadow-xs"
+                className="px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-full cursor-pointer flex items-center gap-1.5 transition-all shadow-xs md-state-layer"
               >
                 {isSubmittingSuspension ? (
                   <>
@@ -1937,13 +1940,16 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
         </div>
       )}
 
-      {/* MODAL DE ASSINATURA DIGITAL ICP-BRASIL (VIDAAS) */}
+      {/* MODAL DE ASSINATURA DIGITAL ICP-BRASIL (VIDAAS) MD4 */}
       {signingRx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center landscape:items-center justify-center p-0 sm:p-4 landscape:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif] overflow-y-auto">
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl landscape:rounded-3xl p-5 sm:p-6 shadow-2xl border border-slate-200/90 dark:border-slate-800 space-y-4 max-h-[92dvh] sm:max-h-[85dvh] landscape:max-h-[85dvh] overflow-y-auto flex flex-col">
+            {/* Drag Handle Mobile */}
+            <div className="sm:hidden landscape:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-1 mb-1 shrink-0" />
+
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600">
+                <div className="p-2 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 shrink-0">
                   <FileCheck className="w-5 h-5" />
                 </div>
                 <div>
@@ -1958,15 +1964,15 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               <button
                 type="button"
                 onClick={closeSigningModal}
-                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors md-state-layer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {signedNotificationPrompt?.isOpen ? (
-              <div className="py-4 space-y-5 text-center animate-in fade-in zoom-in-95 duration-200">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-xs">
+              <div className="py-4 space-y-5 text-center animate-in fade-in zoom-in-95 duration-200 flex-1">
+                <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-xs">
                   <FileCheck className="w-7 h-7"/>
                 </div>
 
@@ -2005,7 +2011,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                       setPdfDownloaded(false);
                       setIsDraggingSigned(false);
                     }}
-                    className="w-full sm:flex-1 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    className="w-full sm:flex-1 py-2.5 px-4 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer"
                   >
                     Agora não
                   </button>
@@ -2013,14 +2019,14 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                   <button
                     type="button"
                     onClick={() => handleNotifyPatientAfterSigning(signedNotificationPrompt)}
-                    className="w-full sm:flex-1 py-2.5 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full sm:flex-1 py-2.5 px-4 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2 md-state-layer"
                   >
                     <span>Sim, Comunicar Paciente</span>
                   </button>
                 </div>
               </div>
             ) : (
-              <>
+              <div className="space-y-4 flex-1">
                 <div className="text-xs text-slate-600 dark:text-slate-300">
                   Prescrição: <strong className="text-slate-800 dark:text-slate-100">{signingRx.medicamento}</strong>
                 </div>
@@ -2037,7 +2043,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     type="button"
                     disabled={isDownloadingPdf}
                     onClick={() => handleDownloadPrescriptionPdf(signingRx)}
-                    className="w-full py-2.5 px-3 text-xs font-bold rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-2.5 px-4 text-xs font-bold rounded-full bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer md-state-layer"
                   >
                     <Download className="w-4 h-4" />
                     <span>{isDownloadingPdf ? "Gerando PDF..." : pdfDownloaded ? "Baixar novamente" : "Baixar Receita em PDF"}</span>
@@ -2075,7 +2081,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                   <p className="text-[11px] text-slate-500 leading-relaxed">
                     Selecione (ou arraste) o arquivo assinado. O sistema confere a assinatura e se é desta receita antes de salvar.
                   </p>
-                  <label className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer">
+                  <label className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer md-state-layer">
                     <UploadCloud className="w-4 h-4" />
                     <span>{isUploadingSignedPdf ? "Conferindo e salvando..." : "Selecionar PDF Assinado"}</span>
                     <input
@@ -2091,7 +2097,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     />
                   </label>
                   {signError && (
-                    <div role="alert" className="flex items-start gap-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-[11px] text-rose-800 dark:text-rose-200 leading-relaxed">
+                    <div role="alert" className="flex items-start gap-2 p-2.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-[11px] text-rose-800 dark:text-rose-200 leading-relaxed">
                       <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                       <span>{signError}</span>
                     </div>
@@ -2102,12 +2108,12 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                   <button
                     type="button"
                     onClick={closeSigningModal}
-                    className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
+                    className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-full cursor-pointer md-state-layer"
                   >
                     Fechar
                   </button>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>

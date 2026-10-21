@@ -452,7 +452,6 @@ export function ClientTableView() {
                       </td>
 
                       {/* Status */}
-                      {/* Status */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {client.deleted_at ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 shadow-2xs">
