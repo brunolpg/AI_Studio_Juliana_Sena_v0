@@ -359,16 +359,19 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
   return (
     <div
       id="client-form-modal-dialog"
-      className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 my-8 overflow-hidden transition-all"
+      className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-800 overflow-hidden transition-all flex flex-col max-h-[92dvh] sm:max-h-[85dvh]"
     >
+      {/* Handle indicador para Bottom Sheet no Mobile Vertical */}
+      <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto my-2 shrink-0" />
+
       {/* Cabeçalho do Modal */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-teal-500/10 text-teal-700 dark:text-teal-400">
+      <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-teal-500/10 text-teal-700 dark:text-teal-400">
             <UserCheck className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-lg leading-none">
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-base sm:text-lg leading-none">
               {clientToEdit ? "Editar Dados do Paciente" : "Novo Cadastro de Paciente"}
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
@@ -380,14 +383,14 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
           id="close-client-form-modal"
           type="button"
           onClick={onClose}
-          className="p-1.5 rounded-lg text-slate-600 hover:text-slate-700 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors"
+          className="p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-200/70 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors md-state-layer cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* Formulário */}
-      <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+      <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
         {/* Seção 1: Identificação Pessoal */}
         <div>
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-3 flex items-center gap-1.5">
@@ -895,7 +898,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
             type="button"
             onClick={onClose}
             disabled={isPending}
-            className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="px-5 py-2.5 text-xs font-semibold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors md-state-layer cursor-pointer"
           >
             Cancelar
           </button>
@@ -903,7 +906,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
             id="client-form-submit-btn"
             type="submit"
             disabled={isPending}
-            className="px-5 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg shadow-sm hover:shadow transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-6 py-2.5 text-xs font-bold text-white dark:text-slate-950 bg-teal-700 dark:bg-teal-500 hover:bg-teal-800 dark:hover:bg-teal-400 rounded-full shadow-xs hover:shadow transition-all flex items-center gap-2 disabled:opacity-50 md-state-layer cursor-pointer"
           >
             {isPending ? (
               <>
@@ -1019,7 +1022,7 @@ export function ClientFormModal({
   return (
     <div
       id="client-form-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
     >
       <ClientFormContent
         key={clientToEdit ? clientToEdit.id : "new"}

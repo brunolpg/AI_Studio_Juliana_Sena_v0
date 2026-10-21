@@ -19,12 +19,12 @@ export function PatientDashboard() {
       <AppHeader currentTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Functional Highlights Banner */}
-        <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-slate-900 text-white p-6 rounded-2xl border border-teal-800/40 shadow-xs relative overflow-hidden">
-          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-teal-500/10 to-transparent pointer-events-none" />
+      <main className="md4-main-content flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+        {/* MD4 Functional Highlights Banner */}
+        <div className="bg-gradient-to-br from-teal-950 via-slate-900 to-slate-900 dark:from-slate-900 dark:via-teal-950/70 dark:to-slate-950 text-white p-6 sm:p-7 rounded-3xl border border-teal-800/40 dark:border-teal-700/30 shadow-xs relative overflow-hidden transition-all duration-300">
+          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-teal-500/15 to-transparent pointer-events-none" />
           <div className="relative z-10">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30 mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30 mb-3.5 backdrop-blur-xs">
               {activeTab === "prontuarios" ? (
                 <>
                   <Stethoscope className="w-3.5 h-3.5 text-teal-400" />
@@ -48,7 +48,7 @@ export function PatientDashboard() {
               )}
             </div>
 
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white leading-tight">
               {activeTab === "prontuarios"
                 ? "Prontuário Médico, Anamnese & Evoluções"
                 : activeTab === "agendamentos"
@@ -58,7 +58,7 @@ export function PatientDashboard() {
                 : "Sistema de Gestão & Cadastro de Pacientes"}
             </h2>
 
-            <p className="text-xs sm:text-sm text-slate-300 max-w-3xl mt-1.5 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-300 max-w-3xl mt-2 leading-relaxed">
               {activeTab === "prontuarios"
                 ? "Dra. Juliana Sena • Gestão de histórico clínico, alergias com alertas, anotações de evolução no padrão SOAP, sinais vitais e receituário integrado."
                 : activeTab === "agendamentos"
@@ -102,10 +102,10 @@ export function PatientDashboard() {
       </main>
 
       {/* Rodapé do Sistema */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
+      <footer className="md4-main-content border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>
-            Dra. Juliana Sena • Gestão de Pacientes & Agendamentos com Google Calendar • Next.js 15 & Supabase
+            Dra. Juliana Sena • Gestão de Pacientes & Agendamentos • Next.js 15 & Supabase
           </p>
           <div className="flex items-center gap-4 text-slate-600 dark:text-slate-400">
             <button

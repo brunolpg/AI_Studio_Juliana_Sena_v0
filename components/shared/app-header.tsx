@@ -3,6 +3,7 @@
 import React from "react";
 import { Users, Calendar, Stethoscope, Sparkles } from "lucide-react";
 import { UserMenu } from "@/components/shared/user-menu";
+import { motion } from "motion/react";
 
 export type DashboardTab = "pacientes" | "prontuarios" | "agendamentos";
 
@@ -12,95 +13,268 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
+  const navItems = [
+    {
+      id: "pacientes" as DashboardTab,
+      label: "Pacientes",
+      shortLabel: "Pacientes",
+      icon: Users,
+      badge: null,
+    },
+    {
+      id: "prontuarios" as DashboardTab,
+      label: "Prontuários & Evoluções",
+      shortLabel: "Prontuários",
+      icon: Stethoscope,
+      badge: null,
+    },
+    {
+      id: "agendamentos" as DashboardTab,
+      label: "Agendamentos",
+      shortLabel: "Agenda",
+      icon: Calendar,
+      badge: "Ativo",
+    },
+  ];
+
   return (
-    <header className="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-50 overflow-visible shadow-2xs">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 overflow-visible">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 sm:gap-3 overflow-visible">
-          
-          {/* Linha 1 no Mobile / Lado Esquerdo no Desktop: Identidade + Botão Completo do Usuário no Mobile */}
-          <div className="flex items-center justify-between w-full md:w-auto gap-2 overflow-visible">
-            {/* Logo & Identidade */}
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-teal-500/10">
-                <Sparkles className="w-4 h-4 sm:w-4.5 sm:h-4.5"/>
+    <>
+      {/* ====================================================================
+          1. DESKTOP (PC): MD4 Navigation Drawer (Sidebar Tonal)
+          Superfície: surface-container-low, Indicadores: rounded-full pill
+          ==================================================================== */}
+      <aside
+        aria-label="Navegação Lateral do Sistema"
+        className="md4-desktop-drawer hidden lg:flex flex-col fixed inset-y-0 left-0 w-68 z-40 bg-slate-100/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 transition-colors duration-200 shadow-xs select-none"
+      >
+        {/* Topo do Drawer: Logo & Identidade Clínica */}
+        <div className="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-3">
+          <div className="w-10 h-10 shrink-0 rounded-2xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs transition-transform duration-200 hover:scale-105">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">
+                Juliana Sena
+              </h1>
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 shrink-0">
+                MD4
+              </span>
+            </div>
+            <p className="text-[11px] text-teal-700 dark:text-teal-400 font-semibold tracking-wide truncate mt-0.5">
+              Gestão Clínica Integrada
+            </p>
+          </div>
+        </div>
+
+        {/* Lista de Navegação Principal MD4 */}
+        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+          <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Menu Principal
+          </div>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentTab === item.id;
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onTabChange(item.id)}
+                className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-full text-xs font-semibold transition-all cursor-pointer group ${
+                  isActive
+                    ? "bg-teal-100/90 dark:bg-teal-950/80 text-teal-900 dark:text-teal-200 border border-teal-200/70 dark:border-teal-800/70 shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="md4-desktop-drawer-indicator"
+                    className="absolute inset-0 rounded-full bg-teal-100/90 dark:bg-teal-950/80 -z-10"
+                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  />
+                )}
+                <Icon
+                  className={`w-4.5 h-4.5 shrink-0 transition-transform group-hover:scale-105 ${
+                    isActive ? "text-teal-700 dark:text-teal-400" : "text-slate-500 dark:text-slate-400"
+                  }`}
+                />
+                <span className="truncate flex-1 text-left">{item.label}</span>
+                {item.badge && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Rodapé do Drawer: Menu do Usuário */}
+        <div className="p-3 border-t border-slate-200/60 dark:border-slate-800/60">
+          <div className="w-full flex items-center justify-between p-2 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/70 dark:border-slate-800/70 shadow-2xs">
+            <UserMenu />
+          </div>
+        </div>
+      </aside>
+
+      {/* ====================================================================
+          2. MOBILE HORIZONTAL (LANDSCAPE): MD4 Navigation Rail Lateral Compacta
+          Largura: 72px, alinhado à esquerda para salvar espaço vertical
+          ==================================================================== */}
+      <aside
+        aria-label="Barra Lateral de Navegação Móvel"
+        className="md4-nav-rail hidden fixed inset-y-0 left-0 w-18 z-40 bg-slate-100/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 flex-col items-center justify-between py-2 shadow-sm select-none"
+      >
+        {/* Topo do Rail: Ícone Compacto */}
+        <div className="w-9 h-9 rounded-xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs shrink-0">
+          <Sparkles className="w-4.5 h-4.5" />
+        </div>
+
+        {/* Itens do Rail (Ícones com Indicador Pílula Vertical) */}
+        <nav className="flex flex-col items-center gap-2 w-full px-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentTab === item.id;
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onTabChange(item.id)}
+                className={`w-full min-h-[48px] flex flex-col items-center justify-center gap-1 rounded-2xl py-1 transition-all cursor-pointer ${
+                  isActive
+                    ? "text-teal-700 dark:text-teal-400 font-bold"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium"
+                }`}
+                title={item.label}
+              >
+                <div
+                  className={`px-3 py-1 rounded-full transition-colors relative ${
+                    isActive
+                      ? "bg-teal-100 dark:bg-teal-950/80 border border-teal-200/70 dark:border-teal-800/70 shadow-2xs"
+                      : "hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
+                  }`}
+                >
+                  <Icon className="w-4.5 h-4.5" />
+                  {item.badge && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  )}
+                </div>
+                <span className="text-[10px] leading-tight truncate max-w-[56px] text-center">
+                  {item.shortLabel}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Base do Rail: Perfil Compacto */}
+        <div className="shrink-0 flex items-center justify-center pb-1">
+          <UserMenu />
+        </div>
+      </aside>
+
+      {/* ====================================================================
+          3. TOP APP BAR (Compact Header para Desktop & Mobile)
+          No Desktop atua como barra superior contextual; no Landscape fica compacta (48px)
+          ==================================================================== */}
+      <header className="md4-top-bar w-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-30 transition-all duration-200 shadow-2xs">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 overflow-visible">
+          <div className="flex items-center justify-between gap-3 overflow-visible">
+            {/* Lado Esquerdo: Identidade Visível no Mobile (no Desktop o Drawer já exibe) */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="lg:hidden w-8 h-8 rounded-xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs shrink-0">
+                <Sparkles className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <h1 className="text-xs sm:text-base font-bold text-slate-900 dark:text-white leading-tight truncate">
-                    Juliana Sena
-                    <span className="hidden lg:inline font-normal text-slate-500 dark:text-slate-400">
-                      {" "}– Gestão de Pacientes
-                    </span>
-                  </h1>
-                  <span className="hidden xs:inline-flex sm:inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0">
-                    Produção
+                <h1 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">
+                  Juliana Sena
+                  <span className="hidden sm:inline font-normal text-slate-500 dark:text-slate-400">
+                    {" "}– Gestão de Pacientes
                   </span>
-                </div>
+                </h1>
+                <p className="text-[10px] text-teal-700 dark:text-teal-400 font-semibold tracking-wide truncate">
+                  {currentTab === "pacientes"
+                    ? "Painel de Pacientes & Cadastros"
+                    : currentTab === "prontuarios"
+                    ? "Prontuário Eletrônico & Evoluções"
+                    : "Grade de Consultas & Agendamentos"}
+                </p>
               </div>
             </div>
 
-            {/* No Mobile: Botão de Perfil com Foto + Nome/Sobrenome + Cargo alinhado à direita */}
-            <div className="md:hidden shrink-0 relative overflow-visible z-50">
-              <UserMenu/>
+            {/* Centro no Desktop: Segmented Pill Pills (Rápida Alternância Opcional) */}
+            <div className="hidden md:flex lg:hidden items-center justify-center overflow-x-auto no-scrollbar py-0.5 shrink-0">
+              <nav className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-full border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => onTabChange(item.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span>{item.shortLabel}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Lado Direito: UserMenu (visível no mobile portrait/desktop top bar) */}
+            <div className="flex items-center gap-2 shrink-0 relative overflow-visible z-50">
+              <UserMenu />
             </div>
           </div>
-
-          {/* Linha 2 no Mobile / Centro no Desktop: Abas de Navegação */}
-          <div className="flex items-center justify-center w-full md:w-auto overflow-x-auto no-scrollbar py-0.5 shrink-0">
-            <nav className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 w-full sm:w-auto justify-between sm:justify-center shrink-0">
-              <button
-                id="nav-tab-pacientes"
-                type="button"
-                onClick={() => onTabChange("pacientes")}
-                className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 ${
-                  currentTab === "pacientes"
-                    ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-2xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-                }`}
-              >
-                <Users className="shrink-0 w-3.5 h-3.5"/>
-                <span>Pacientes</span>
-              </button>
-
-              <button
-                id="nav-tab-prontuarios"
-                type="button"
-                onClick={() => onTabChange("prontuarios")}
-                className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 ${
-                  currentTab === "prontuarios"
-                    ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-2xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-                }`}
-              >
-                <Stethoscope className="shrink-0 w-3.5 h-3.5"/>
-                <span className="hidden sm:inline">Prontuários &amp; Evoluções</span>
-                <span className="sm:hidden">Prontuários</span>
-              </button>
-
-              <button
-                id="nav-tab-agendamentos"
-                type="button"
-                onClick={() => onTabChange("agendamentos")}
-                className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer relative shrink-0 ${
-                  currentTab === "agendamentos"
-                    ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-2xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-                }`}
-              >
-                <Calendar className="shrink-0 w-3.5 h-3.5"/>
-                <span>Agendamentos</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block animate-pulse shrink-0" />
-              </button>
-            </nav>
-          </div>
-
-          {/* Lado Direito no Desktop */}
-          <div className="hidden md:flex items-center shrink-0 relative overflow-visible z-50">
-            <UserMenu/>
-          </div>
-
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* ====================================================================
+          4. MOBILE VERTICAL (PORTRAIT): MD4 Bottom Navigation Bar
+          Alvos de toque mínimos de 48x48px, indicador pílula e rótulos concisos
+          ==================================================================== */}
+      <nav
+        aria-label="Navegação Inferior Móvel"
+        className="md4-bottom-nav flex fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800/80 px-2 py-1.5 shadow-lg items-center justify-around select-none safe-area-pb"
+      >
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = currentTab === item.id;
+
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onTabChange(item.id)}
+              className={`flex-1 min-h-[48px] flex flex-col items-center justify-center gap-1 rounded-2xl py-1 transition-all cursor-pointer relative ${
+                isActive
+                  ? "text-teal-700 dark:text-teal-400 font-bold"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium"
+              }`}
+            >
+              <div
+                className={`px-4 py-1 rounded-full transition-colors relative ${
+                  isActive
+                    ? "bg-teal-100 dark:bg-teal-950/80 border border-teal-200/70 dark:border-teal-800/70 shadow-2xs"
+                    : "hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                {item.badge && (
+                  <span className="absolute top-0.5 right-2 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                )}
+              </div>
+              <span className="text-[11px] leading-tight">{item.shortLabel}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </>
   );
 }

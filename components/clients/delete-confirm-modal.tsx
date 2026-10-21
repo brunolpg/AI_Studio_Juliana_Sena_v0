@@ -56,23 +56,26 @@ export function DeleteConfirmModal({
   return (
     <div
       id="delete-confirm-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs"
     >
       <div
         id="delete-confirm-modal-dialog"
-        className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 overflow-hidden"
+        className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-800 p-6 overflow-hidden transition-all max-h-[92dvh] sm:max-h-[85dvh]"
       >
+        {/* Handle indicador para Bottom Sheet no Mobile Vertical */}
+        <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-2 mb-4 shrink-0" />
+
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors md-state-layer cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>
 
         <div className="flex items-start gap-4">
           <div
-            className={`p-3 rounded-xl flex-shrink-0 ${
+            className={`p-3 rounded-2xl flex-shrink-0 shadow-2xs ${
               isPermanent
                 ? "bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400"
                 : "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400"
@@ -96,7 +99,7 @@ export function DeleteConfirmModal({
               ) : (
                 <>
                   O paciente <strong className="text-slate-900 dark:text-slate-100 font-semibold">{client.nome}</strong> será
-                  inativado e o campo <code className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono text-[11px]">deleted_at</code>{" "}
+                  inativado e o campo <code className="px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-mono text-[11px]">deleted_at</code>{" "}
                   será preenchido. O histórico é mantido para fins de auditoria e pode ser restaurado a qualquer momento.
                 </>
               )}
@@ -108,7 +111,7 @@ export function DeleteConfirmModal({
                 type="button"
                 onClick={onClose}
                 disabled={isPending}
-                className="px-3.5 py-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                className="px-4 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors md-state-layer cursor-pointer"
               >
                 Cancelar
               </button>
@@ -117,10 +120,10 @@ export function DeleteConfirmModal({
                 type="button"
                 onClick={handleConfirm}
                 disabled={isPending}
-                className={`px-4 py-1.5 text-xs font-semibold text-white rounded-lg shadow-sm flex items-center gap-1.5 disabled:opacity-50 transition-colors ${
+                className={`px-5 py-2 text-xs font-bold text-white rounded-full shadow-xs hover:shadow flex items-center gap-1.5 disabled:opacity-50 transition-colors md-state-layer cursor-pointer ${
                   isPermanent
-                    ? "bg-rose-600 hover:bg-rose-700"
-                    : "bg-amber-600 hover:bg-amber-700"
+                    ? "bg-rose-600 hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600"
+                    : "bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
                 }`}
               >
                 {isPending ? (

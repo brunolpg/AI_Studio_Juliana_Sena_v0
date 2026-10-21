@@ -534,24 +534,28 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const prescriptions = clinicalRecord?.prescriptions || [];
 
   return (
-    <div className={isPatientView ? "space-y-4" : "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden"}>
+    <div className={isPatientView ? "space-y-6" : "bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden transition-all duration-200"}>
       {/* Barra de Navegação Interna das Abas Clínicas (Apenas para Administrador / Profissional) */}
       {!isPatientView && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 gap-3">
-          {/* Abas */}
-          <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs overflow-x-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 gap-3">
+          {/* Abas MD4 Segmented */}
+          <div className="flex items-center p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-full border border-slate-200/80 dark:border-slate-700/80 text-xs overflow-x-auto shadow-2xs">
             <button
               type="button"
               onClick={() => setActiveSubTab("evolucoes")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold transition-all cursor-pointer whitespace-nowrap md-state-layer ${
                 activeSubTab === "evolucoes"
-                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                  ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
               }`}
             >
               <Activity className="w-3.5 h-3.5" />
               <span>Evoluções & Consultas</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60">
+              <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                activeSubTab === "evolucoes"
+                  ? "bg-white/20 text-white dark:text-slate-950"
+                  : "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60"
+              }`}>
                 {evolutions.length}
               </span>
             </button>
@@ -559,16 +563,16 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             <button
               type="button"
               onClick={() => setActiveSubTab("historico")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold transition-all cursor-pointer whitespace-nowrap md-state-layer ${
                 activeSubTab === "historico"
-                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                  ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
               }`}
             >
               <FileHeart className="w-3.5 h-3.5" />
               <span>Histórico & Anamnese</span>
               {history?.alergias && history.alergias.length > 0 && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-bold">
                   Alergias
                 </span>
               )}
@@ -577,15 +581,19 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             <button
               type="button"
               onClick={() => setActiveSubTab("prescricoes")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold transition-all cursor-pointer whitespace-nowrap md-state-layer ${
                 activeSubTab === "prescricoes"
-                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                  ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
               }`}
             >
               <Pill className="w-3.5 h-3.5" />
               <span>Prescrições</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+              <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                activeSubTab === "prescricoes"
+                  ? "bg-white/20 text-white dark:text-slate-950"
+                  : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+              }`}>
                 {prescriptions.filter((p) => p.ativo).length}
               </span>
             </button>
@@ -593,10 +601,10 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             <button
               type="button"
               onClick={() => setActiveSubTab("metricas")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold transition-all cursor-pointer whitespace-nowrap md-state-layer ${
                 activeSubTab === "metricas"
-                  ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                  ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
               }`}
             >
               <Gauge className="w-3.5 h-3.5" />

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { motion } from "motion/react";
 import {
   Calendar,
   ClipboardList,
@@ -232,21 +233,21 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col antialiased">
       {/* Header Dedicado do Portal do Paciente */}
-      <header className="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-50 overflow-visible shadow-2xs">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 overflow-visible">
+      <header className="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-50 overflow-visible shadow-xs transition-colors duration-200 md-landscape-compact">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-2.5 overflow-visible">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 sm:gap-3 overflow-visible">
             
             {/* Linha 1 no Mobile / Lado Esquerdo no Desktop: Identidade + Perfil Mobile */}
             <div className="flex items-center justify-between w-full md:w-auto gap-2 overflow-visible">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-teal-600 flex items-center justify-center text-white shadow-sm shrink-0">
-                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-teal-700 dark:bg-teal-500 flex items-center justify-center text-white dark:text-slate-950 shadow-xs shrink-0 transition-transform hover:scale-105">
+                  <Sparkles className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate leading-tight">
                     Dra. Juliana Sena
                   </h1>
-                  <p className="text-[10px] sm:text-[11px] text-teal-600 dark:text-teal-400 font-semibold tracking-wide truncate">
+                  <p className="text-[10px] sm:text-[11px] text-teal-700 dark:text-teal-400 font-semibold tracking-wide truncate">
                     Portal do Paciente
                   </p>
                 </div>
@@ -269,16 +270,16 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
               </div>
             </div>
 
-            {/* Linha 2 no Mobile / Centro no Desktop: Navegação entre Abas */}
+            {/* Linha 2 no Mobile / Centro no Desktop: MD4 Segmented Navigation Bar */}
             <div className="flex items-center justify-center w-full md:w-auto overflow-x-auto no-scrollbar py-0.5 shrink-0">
-              <nav className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 w-full sm:w-auto justify-between sm:justify-center shrink-0">
+              <nav className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-full border border-slate-200/80 dark:border-slate-700/80 w-full sm:w-auto justify-between sm:justify-center shrink-0 shadow-2xs">
                 <button
                   type="button"
                   onClick={() => setActiveTab("prontuario")}
-                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                  className={`flex-1 sm:flex-initial min-h-[38px] md:min-h-[40px] flex items-center justify-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 md-state-layer ${
                     activeTab === "prontuario"
-                      ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-400 shadow-2xs"
-                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                      ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
                   }`}
                 >
                   <ClipboardList className="w-3.5 h-3.5 shrink-0" />
@@ -287,10 +288,10 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                 <button
                   type="button"
                   onClick={() => setActiveTab("agendamentos")}
-                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                  className={`flex-1 sm:flex-initial min-h-[38px] md:min-h-[40px] flex items-center justify-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 md-state-layer ${
                     activeTab === "agendamentos"
-                      ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-400 shadow-2xs"
-                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                      ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
                   }`}
                 >
                   <Calendar className="w-3.5 h-3.5 shrink-0" />
@@ -299,10 +300,10 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                 <button
                   type="button"
                   onClick={() => setActiveTab("ficha")}
-                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                  className={`flex-1 sm:flex-initial min-h-[38px] md:min-h-[40px] flex items-center justify-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer shrink-0 md-state-layer ${
                     activeTab === "ficha"
-                      ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-400 shadow-2xs"
-                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                      ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
                   }`}
                 >
                   <UserIcon className="w-3.5 h-3.5 shrink-0" />
@@ -332,7 +333,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
       </header>
 
       {/* Conteúdo Central */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-4">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 pb-28 md:pb-8">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-8 h-8 border-3 border-teal-500/20 border-t-teal-600 rounded-full animate-spin" />
@@ -892,6 +893,54 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
           </div>
         </div>
       )}
+
+      {/* MD4 Mobile Bottom Navigation Bar (Portrait Ergonômica) */}
+      <nav aria-label="Navegação do Paciente Móvel" className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800/80 px-3 py-2 shadow-lg flex items-center justify-around safe-area-pb">
+        <button
+          type="button"
+          onClick={() => setActiveTab("prontuario")}
+          className={`flex-1 min-h-[48px] flex flex-col items-center justify-center gap-1 rounded-2xl py-1 transition-all cursor-pointer md-state-layer ${
+            activeTab === "prontuario"
+              ? "text-teal-700 dark:text-teal-400 font-bold"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium"
+          }`}
+        >
+          <div className={`px-4 py-1 rounded-full transition-colors ${activeTab === "prontuario" ? "bg-teal-100 dark:bg-teal-950/80" : ""}`}>
+            <ClipboardList className="w-5 h-5" />
+          </div>
+          <span className="text-[11px] leading-tight">Documentos</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("agendamentos")}
+          className={`flex-1 min-h-[48px] flex flex-col items-center justify-center gap-1 rounded-2xl py-1 transition-all cursor-pointer md-state-layer ${
+            activeTab === "agendamentos"
+              ? "text-teal-700 dark:text-teal-400 font-bold"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium"
+          }`}
+        >
+          <div className={`px-4 py-1 rounded-full transition-colors ${activeTab === "agendamentos" ? "bg-teal-100 dark:bg-teal-950/80" : ""}`}>
+            <Calendar className="w-5 h-5" />
+          </div>
+          <span className="text-[11px] leading-tight">Agenda</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("ficha")}
+          className={`flex-1 min-h-[48px] flex flex-col items-center justify-center gap-1 rounded-2xl py-1 transition-all cursor-pointer md-state-layer ${
+            activeTab === "ficha"
+              ? "text-teal-700 dark:text-teal-400 font-bold"
+              : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium"
+          }`}
+        >
+          <div className={`px-4 py-1 rounded-full transition-colors ${activeTab === "ficha" ? "bg-teal-100 dark:bg-teal-950/80" : ""}`}>
+            <UserIcon className="w-5 h-5" />
+          </div>
+          <span className="text-[11px] leading-tight">Minha Ficha</span>
+        </button>
+      </nav>
     </div>
   );
 }

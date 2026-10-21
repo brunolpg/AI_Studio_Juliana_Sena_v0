@@ -39,16 +39,19 @@ export function ClientDetailsModal({
   return (
     <div
       id="client-details-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
     >
       <div
         id="client-details-modal-dialog"
-        className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 my-6 overflow-hidden"
+        className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[85dvh] transition-all"
       >
+        {/* Handle indicador para Bottom Sheet no Mobile Vertical */}
+        <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto my-2 shrink-0" />
+
         {/* Top bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-base">
+            <div className="w-10 h-10 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-base shadow-2xs">
               {client.nome.charAt(0)}
             </div>
             <div>
@@ -57,12 +60,12 @@ export function ClientDetailsModal({
                   {client.nome}
                 </h3>
                 <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold shadow-2xs ${
                     client.deleted_at
-                      ? "bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300"
+                      ? "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60"
                       : client.status === "Ativo"
-                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300"
-                      : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70"
+                      : "bg-slate-100 text-slate-600 dark:bg-slate-800/80 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
                   }`}
                 >
                   {client.deleted_at ? "Excluído (Lixeira)" : client.status}
@@ -79,23 +82,23 @@ export function ClientDetailsModal({
             id="close-details-btn"
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-700 hover:bg-slate-200 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-200/70 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors md-state-layer cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+        <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
           {/* Quick Metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+            <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shadow-2xs">
               <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 block">Idade Atual</span>
               <span className="text-lg font-bold text-teal-600 dark:text-teal-400">
                 {client.idade} anos
               </span>
             </div>
-            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+            <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shadow-2xs">
               <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400 block">Nascimento</span>
               <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                 {formattedBirthDate}
@@ -182,8 +185,8 @@ export function ClientDetailsModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-          <span className="text-xs font-mono text-slate-600 dark:text-slate-400 truncate max-w-[200px]">
+        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
+          <span className="text-xs font-mono text-slate-500 dark:text-slate-400 truncate max-w-[200px]">
             UUID: {client.id}
           </span>
           <div className="flex items-center gap-2">
@@ -191,7 +194,7 @@ export function ClientDetailsModal({
               id="details-close-bottom-btn"
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="px-5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors md-state-layer cursor-pointer"
             >
               Fechar
             </button>
@@ -203,7 +206,7 @@ export function ClientDetailsModal({
                   onClose();
                   onEdit(client);
                 }}
-                className="px-4 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg shadow-sm transition-colors"
+                className="px-5 py-2 text-xs font-bold text-white dark:text-slate-950 bg-teal-700 dark:bg-teal-500 hover:bg-teal-800 dark:hover:bg-teal-400 rounded-full shadow-xs hover:shadow transition-colors md-state-layer cursor-pointer"
               >
                 Editar Paciente
               </button>

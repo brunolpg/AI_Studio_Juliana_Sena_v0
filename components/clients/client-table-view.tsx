@@ -212,23 +212,23 @@ export function ClientTableView() {
         </div>
       )}
 
-      {/* Barra Superior com Busca e Filtros */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-        {/* Campo de Busca em Tempo Real */}
+      {/* Barra Superior com Busca e Filtros MD4 */}
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+        {/* Campo de Busca em Tempo Real (MD4 Search Pill) */}
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             id="client-search-input"
             type="text"
             placeholder="Buscar por nome, CPF, e-mail ou cidade..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+            className="w-full pl-10 pr-16 py-2.5 text-xs sm:text-sm rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
             >
               Limpar
             </button>
@@ -237,18 +237,18 @@ export function ClientTableView() {
 
         {/* Filtro por Status e Botão de Ação */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Status Pills */}
-          <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs">
+          {/* Status Pills MD4 */}
+          <div className="flex items-center p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-full border border-slate-200/80 dark:border-slate-700/80 text-xs shadow-2xs">
             <button
               id="filter-all-btn"
               onClick={() => {
                 setStatusFilter("todos");
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer md-state-layer ${
                 statusFilter === "todos"
-                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                  ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
               }`}
             >
               Todos
@@ -259,10 +259,10 @@ export function ClientTableView() {
                 setStatusFilter("Ativo");
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer md-state-layer ${
                 statusFilter === "Ativo"
-                  ? "bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                  ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
               }`}
             >
               Ativos
@@ -273,10 +273,10 @@ export function ClientTableView() {
                 setStatusFilter("Inativo");
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer md-state-layer ${
                 statusFilter === "Inativo"
-                  ? "bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                  ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
               }`}
             >
               Inativos
@@ -287,14 +287,14 @@ export function ClientTableView() {
                 setStatusFilter("excluidos");
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1 transition-all ${
+              className={`px-3.5 py-1.5 rounded-full font-semibold flex items-center gap-1.5 transition-all cursor-pointer md-state-layer ${
                 statusFilter === "excluidos"
-                  ? "bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                  ? "bg-rose-600 dark:bg-rose-500 text-white dark:text-slate-950 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
               }`}
             >
               <Archive className="w-3.5 h-3.5" />
-              Lixeira
+              <span>Lixeira</span>
             </button>
           </div>
 
@@ -302,17 +302,17 @@ export function ClientTableView() {
             id="refresh-client-list-btn"
             onClick={() => loadClients()}
             disabled={isPending}
-            className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors"
+            className="p-2.5 rounded-full border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors cursor-pointer md-state-layer"
             title="Atualizar lista"
           >
             <RefreshCw className={`w-4 h-4 ${isPending ? "animate-spin text-teal-600" : ""}`} />
           </button>
 
-          {/* Botão Novo Cadastro */}
+          {/* Botão Novo Cadastro MD4 */}
           <button
             id="open-new-client-btn"
             onClick={handleOpenCreate}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs hover:shadow transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white dark:text-slate-950 bg-teal-700 dark:bg-teal-500 hover:bg-teal-800 dark:hover:bg-teal-400 rounded-full shadow-xs hover:shadow transition-all cursor-pointer md-state-layer"
           >
             <Plus className="w-4 h-4" />
             <span>Cadastrar Paciente</span>
@@ -320,8 +320,8 @@ export function ClientTableView() {
         </div>
       </div>
 
-      {/* Tabela de pacientes */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+      {/* Tabela de pacientes MD4 */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -452,17 +452,18 @@ export function ClientTableView() {
                       </td>
 
                       {/* Status */}
+                      {/* Status */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {client.deleted_at ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 shadow-2xs">
                             Excluído (Soft)
                           </span>
                         ) : client.status === "Ativo" ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70 shadow-2xs">
                             Ativo
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800/80 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-2xs">
                             Inativo
                           </span>
                         )}
@@ -474,7 +475,7 @@ export function ClientTableView() {
                           <button
                             id={`view-details-${client.id}`}
                             onClick={() => handleOpenDetails(client)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            className="p-2 rounded-full text-slate-500 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors md-state-layer cursor-pointer"
                             title="Visualizar Prontuário, Histórico Clínico & Evoluções"
                           >
                             <Eye className="w-4 h-4" />
@@ -488,15 +489,15 @@ export function ClientTableView() {
                                   setPatientToSchedule(client);
                                   setIsScheduleModalOpen(true);
                                 }}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/40 transition-colors"
+                                className="p-2 rounded-full text-slate-500 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/40 transition-colors md-state-layer cursor-pointer"
                                 title="Agendar Consulta no Google Agenda"
                               >
-                                <Calendar className="w-4 h-4 text-teal-600" />
+                                <Calendar className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                               </button>
                               <button
                                 id={`edit-client-${client.id}`}
                                 onClick={() => handleOpenEdit(client)}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-sky-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                className="p-2 rounded-full text-slate-500 hover:text-sky-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors md-state-layer cursor-pointer"
                                 title="Editar dados"
                               >
                                 <Edit2 className="w-4 h-4" />
@@ -504,7 +505,7 @@ export function ClientTableView() {
                               <button
                                 id={`delete-client-${client.id}`}
                                 onClick={() => handleOpenSoftDelete(client)}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors"
+                                className="p-2 rounded-full text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors md-state-layer cursor-pointer"
                                 title="Excluir logicamente (Soft Delete)"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -515,7 +516,7 @@ export function ClientTableView() {
                               <button
                                 id={`restore-client-${client.id}`}
                                 onClick={() => handleRestore(client)}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                                className="p-2 rounded-full text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors md-state-layer cursor-pointer"
                                 title="Restaurar paciente para a lista ativa"
                               >
                                 <RotateCcw className="w-4 h-4" />
@@ -523,7 +524,7 @@ export function ClientTableView() {
                               <button
                                 id={`permanent-delete-${client.id}`}
                                 onClick={() => handleOpenPermanentDelete(client)}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                                className="p-2 rounded-full text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors md-state-layer cursor-pointer"
                                 title="Excluir permanentemente do banco"
                               >
                                 <Trash2 className="w-4 h-4 text-rose-500" />
@@ -541,7 +542,7 @@ export function ClientTableView() {
         </div>
 
         {/* Rodapé da Tabela & Paginação */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-500 dark:text-slate-400">
           <div className="flex items-center gap-2">
             <span>
               Mostrando {paginatedData.data.length} de {paginatedData.total} pacientes
@@ -556,7 +557,7 @@ export function ClientTableView() {
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none"
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300 focus:outline-none shadow-2xs"
               >
                 <option value={5}>5</option>
                 <option value={10}>10</option>
@@ -574,7 +575,7 @@ export function ClientTableView() {
                 id="prev-page-btn"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage <= 1 || isPending}
-                className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+                className="p-1.5 rounded-full border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors md-state-layer cursor-pointer"
                 title="Página anterior"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -583,7 +584,7 @@ export function ClientTableView() {
                 id="next-page-btn"
                 onClick={() => setCurrentPage((p) => p + 1)}
                 disabled={!paginatedData.hasMore || isPending}
-                className="p-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors"
+                className="p-1.5 rounded-full border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors md-state-layer cursor-pointer"
                 title="Próxima página"
               >
                 <ChevronRight className="w-4 h-4" />

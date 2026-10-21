@@ -3,19 +3,140 @@
 @variant dark (&:is(.dark *));
 @import "tw-animate-css";
 
+/* ==========================================================================
+   Google Material Design 4 (MD4) - Design Tokens & Theme Configuration
+   Cor Semente: Teal / Emerald Clínico
+   Tipografia Estrita: Plus Jakarta Sans
+   ========================================================================== */
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+
+  /* Superfícies Tonais MD4 */
+  --color-surface: var(--md-sys-color-surface);
+  --color-on-surface: var(--md-sys-color-on-surface);
+  --color-surface-dim: var(--md-sys-color-surface-dim);
+  --color-surface-bright: var(--md-sys-color-surface-bright);
+  --color-surface-container-lowest: var(--md-sys-color-surface-container-lowest);
+  --color-surface-container-low: var(--md-sys-color-surface-container-low);
+  --color-surface-container: var(--md-sys-color-surface-container);
+  --color-surface-container-high: var(--md-sys-color-surface-container-high);
+  --color-surface-container-highest: var(--md-sys-color-surface-container-highest);
+
+  /* Ações e Destaque MD4 */
+  --color-primary: var(--md-sys-color-primary);
+  --color-on-primary: var(--md-sys-color-on-primary);
+  --color-primary-container: var(--md-sys-color-primary-container);
+  --color-on-primary-container: var(--md-sys-color-on-primary-container);
+
+  --color-secondary: var(--md-sys-color-secondary);
+  --color-on-secondary: var(--md-sys-color-on-secondary);
+  --color-secondary-container: var(--md-sys-color-secondary-container);
+  --color-on-secondary-container: var(--md-sys-color-on-secondary-container);
+
+  --color-tertiary: var(--md-sys-color-tertiary);
+  --color-on-tertiary: var(--md-sys-color-on-tertiary);
+  --color-tertiary-container: var(--md-sys-color-tertiary-container);
+  --color-on-tertiary-container: var(--md-sys-color-on-tertiary-container);
+
+  /* Bordas e Divisores MD4 */
+  --color-outline: var(--md-sys-color-outline);
+  --color-outline-variant: var(--md-sys-color-outline-variant);
+
+  /* Raios de Borda Expressivos MD4 */
+  --radius-md-sm: 0.5rem;    /* 8px */
+  --radius-md-md: 0.75rem;   /* 12px */
+  --radius-md-lg: 1rem;      /* 16px */
+  --radius-md-xl: 1.25rem;   /* 20px */
+  --radius-md-2xl: 1.5rem;   /* 24px - rounded-2xl */
+  --radius-md-3xl: 1.75rem;  /* 28px - rounded-3xl */
+  --radius-md-full: 9999px;  /* rounded-full */
+}
+
+/* ==========================================================================
+   Variáveis Semânticas Tonais - Tema Claro (Light Mode)
+   ========================================================================== */
+:root {
+  --md-sys-color-surface: #f8fafc;
+  --md-sys-color-on-surface: #0f172a;
+  --md-sys-color-surface-dim: #f1f5f9;
+  --md-sys-color-surface-bright: #ffffff;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #f8fafc;
+  --md-sys-color-surface-container: #f1f5f9;
+  --md-sys-color-surface-container-high: #e2e8f0;
+  --md-sys-color-surface-container-highest: #cbd5e1;
+
+  /* Semente Clínica: Teal / Emerald */
+  --md-sys-color-primary: #0d9488;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #ccfbf1;
+  --md-sys-color-on-primary-container: #115e59;
+
+  --md-sys-color-secondary: #0284c7;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #e0f2fe;
+  --md-sys-color-on-secondary-container: #075985;
+
+  --md-sys-color-tertiary: #d97706;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #fef3c7;
+  --md-sys-color-on-tertiary-container: #78350f;
+
+  --md-sys-color-outline: #cbd5e1;
+  --md-sys-color-outline-variant: #e2e8f0;
+}
+
+/* ==========================================================================
+   Variáveis Semânticas Tonais - Tema Escuro (Dark Mode - Elevação Tonal)
+   ========================================================================== */
+html.dark,
+.dark {
+  --md-sys-color-surface: #0b1320;
+  --md-sys-color-on-surface: #f1f5f9;
+  --md-sys-color-surface-dim: #070d17;
+  --md-sys-color-surface-bright: #1b263b;
+  --md-sys-color-surface-container-lowest: #040810;
+  --md-sys-color-surface-container-low: #0f1929;
+  --md-sys-color-surface-container: #132034;
+  --md-sys-color-surface-container-high: #1a2a44;
+  --md-sys-color-surface-container-highest: #233656;
+
+  /* Semente Tonal Escura */
+  --md-sys-color-primary: #2dd4bf;
+  --md-sys-color-on-primary: #042f2e;
+  --md-sys-color-primary-container: #134e4a;
+  --md-sys-color-on-primary-container: #99f6e4;
+
+  --md-sys-color-secondary: #38bdf8;
+  --md-sys-color-on-secondary: #082f49;
+  --md-sys-color-secondary-container: #0369a1;
+  --md-sys-color-on-secondary-container: #bae6fd;
+
+  --md-sys-color-tertiary: #fbbf24;
+  --md-sys-color-on-tertiary: #451a03;
+  --md-sys-color-tertiary-container: #78350f;
+  --md-sys-color-on-tertiary-container: #fde68a;
+
+  --md-sys-color-outline: #475569;
+  --md-sys-color-outline-variant: #334155;
+}
+
+/* ==========================================================================
+   Configurações Globais de Renderização e Reset
+   ========================================================================== */
 html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
   position: relative;
-  background-color: #f8fafc;
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-html.dark,
-html.dark body {
-  background-color: #0b1320;
-}
-
+/* Tipografia Estrita: Plus Jakarta Sans aplicada universalmente */
 html, body, button, input, select, textarea {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
 }
@@ -28,5 +149,245 @@ html, body, button, input, select, textarea {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
+/* ==========================================================================
+   Escala Tipográfica Oficial Google Material Design 4 (MD4)
+   Display, Headline, Title, Body, Label baseadas em Plus Jakarta Sans
+   ========================================================================== */
 
+/* Display */
+.type-display-large {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 3.5rem;       /* 56px */
+  line-height: 4rem;        /* 64px */
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
 
+.type-display-medium {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 2.75rem;      /* 44px */
+  line-height: 3.25rem;     /* 52px */
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.type-display-small {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 2.25rem;      /* 36px */
+  line-height: 2.75rem;     /* 44px */
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+/* Headline */
+.type-headline-large {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 2rem;         /* 32px */
+  line-height: 2.5rem;      /* 40px */
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.type-headline-medium {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.75rem;      /* 28px */
+  line-height: 2.25rem;     /* 36px */
+  font-weight: 700;
+}
+
+.type-headline-small {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.5rem;       /* 24px */
+  line-height: 2rem;        /* 32px */
+  font-weight: 600;
+}
+
+/* Title */
+.type-title-large {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.25rem;      /* 20px */
+  line-height: 1.75rem;     /* 28px */
+  font-weight: 600;
+}
+
+.type-title-medium {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1rem;         /* 16px */
+  line-height: 1.5rem;      /* 24px */
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+
+.type-title-small {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;     /* 14px */
+  line-height: 1.25rem;     /* 20px */
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Body */
+.type-body-large {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1rem;         /* 16px */
+  line-height: 1.5rem;      /* 24px */
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+.type-body-medium {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;     /* 14px */
+  line-height: 1.25rem;     /* 20px */
+  font-weight: 400;
+  letter-spacing: 0.015em;
+}
+
+.type-body-small {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.75rem;      /* 12px */
+  line-height: 1rem;        /* 16px */
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* Label */
+.type-label-large {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.875rem;     /* 14px */
+  line-height: 1.25rem;     /* 20px */
+  font-weight: 600;
+  letter-spacing: 0.015em;
+}
+
+.type-label-medium {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.75rem;      /* 12px */
+  line-height: 1rem;        /* 16px */
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.type-label-small {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.6875rem;    /* 11px */
+  line-height: 0.875rem;    /* 14px */
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* ==========================================================================
+   Utilitários Base Material Design 4 (MD4)
+   Elevação Tonal (Dark/Light) e Raios de Borda Expressivos
+   ========================================================================== */
+
+/* Elevação Tonal (sem sombras pesadas, profundidade por luminosidade de superfície) */
+.md-elevation-0 {
+  background-color: var(--md-sys-color-surface);
+}
+
+.md-elevation-1 {
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.md-elevation-2 {
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.md-elevation-3 {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.md-elevation-4 {
+  background-color: var(--md-sys-color-surface-container-highest);
+}
+
+/* Containers e Formas Expressivas */
+.md-container {
+  border-radius: var(--radius-md-2xl); /* 24px - rounded-2xl */
+}
+
+.md-container-large {
+  border-radius: var(--radius-md-3xl); /* 28px - rounded-3xl */
+}
+
+.md-chip,
+.md-pill {
+  border-radius: var(--radius-md-full); /* rounded-full */
+}
+
+.md-outline {
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.md-outline-focus {
+  border: 1px solid var(--md-sys-color-outline);
+}
+
+/* ==========================================================================
+   Shell de Navegação MD4 e Responsividade Multi-Orientação
+   Desktop (PC Drawer), Mobile Portrait (Bottom Bar) e Mobile Landscape (Rail)
+   ========================================================================== */
+
+/* Padrão para telas grandes (Desktop) */
+@media (min-width: 1024px) {
+  .md4-desktop-drawer {
+    display: flex !important;
+  }
+  .md4-nav-rail {
+    display: none !important;
+  }
+  .md4-bottom-nav {
+    display: none !important;
+  }
+  .md4-main-content {
+    margin-left: 17rem !important; /* 272px para Drawer lateral */
+    padding-bottom: 2.5rem !important;
+  }
+  .md4-top-bar {
+    margin-left: 17rem !important;
+  }
+}
+
+/* Telas mobile/tablet no modo Paisagem (Landscape) */
+@media (max-width: 1023px) and (orientation: landscape) {
+  .md4-desktop-drawer {
+    display: none !important;
+  }
+  .md4-nav-rail {
+    display: flex !important;
+  }
+  .md4-bottom-nav {
+    display: none !important;
+  }
+  .md4-main-content {
+    margin-left: 4.5rem !important; /* 72px para Navigation Rail */
+    padding-bottom: 1.5rem !important;
+  }
+  .md4-top-bar {
+    margin-left: 4.5rem !important;
+    height: 48px !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+}
+
+/* Telas mobile/tablet no modo Retrato (Portrait) */
+@media (max-width: 1023px) and (orientation: portrait) {
+  .md4-desktop-drawer {
+    display: none !important;
+  }
+  .md4-nav-rail {
+    display: none !important;
+  }
+  .md4-bottom-nav {
+    display: flex !important;
+  }
+  .md4-main-content {
+    margin-left: 0 !important;
+    padding-bottom: 6rem !important; /* 96px para espaço do Bottom Nav */
+  }
+  .md4-top-bar {
+    margin-left: 0 !important;
+  }
+}
