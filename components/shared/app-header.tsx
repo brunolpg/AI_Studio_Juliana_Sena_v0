@@ -45,10 +45,10 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
           ==================================================================== */}
       <aside
         aria-label="Navegação Lateral do Sistema"
-        className="md4-desktop-drawer hidden lg:flex flex-col fixed inset-y-0 left-0 w-68 z-40 bg-slate-100/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 transition-colors duration-200 shadow-xs select-none"
+        className="md4-desktop-drawer hidden lg:flex flex-col fixed top-0 bottom-0 left-0 w-64 h-dvh max-h-screen z-40 bg-slate-100/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 transition-colors duration-200 shadow-xs select-none overflow-hidden"
       >
         {/* Topo do Drawer: Logo & Identidade Clínica */}
-        <div className="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-3">
+        <div className="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-3 shrink-0">
           <div className="w-10 h-10 shrink-0 rounded-2xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs transition-transform duration-200 hover:scale-105">
             <Sparkles className="w-5 h-5" />
           </div>
@@ -68,7 +68,7 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
         </div>
 
         {/* Lista de Navegação Principal MD4 */}
-        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto overscroll-contain">
           <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             Menu Principal
           </div>
@@ -109,26 +109,26 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
         </nav>
 
         {/* Rodapé do Drawer: Menu do Usuário */}
-        <div className="p-3 border-t border-slate-200/60 dark:border-slate-800/60 relative">
+        <div className="p-3 border-t border-slate-200/60 dark:border-slate-800/60 relative shrink-0">
           <UserMenu direction="up" variant="sidebar" align="left" />
         </div>
       </aside>
 
       {/* ====================================================================
           2. MOBILE HORIZONTAL (LANDSCAPE): MD4 Navigation Rail Lateral Compacta
-          Largura: 72px, alinhado à esquerda para salvar espaço vertical
+          Largura fixa: w-16 (64px), altura fixa à viewport (h-dvh max-h-screen)
           ==================================================================== */}
       <aside
         aria-label="Barra Lateral de Navegação Móvel"
-        className="md4-nav-rail hidden fixed inset-y-0 left-0 w-18 z-40 bg-slate-100/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 flex-col items-center justify-between py-2 shadow-sm select-none"
+        className="md4-nav-rail hidden fixed top-0 bottom-0 left-0 w-16 h-dvh max-h-screen z-40 bg-slate-100/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 flex-col items-center justify-between py-2 shadow-sm select-none overflow-hidden"
       >
         {/* Topo do Rail: Ícone Compacto */}
-        <div className="w-9 h-9 rounded-xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs shrink-0 mb-1">
           <Sparkles className="w-4.5 h-4.5" />
         </div>
 
         {/* Itens do Rail (Ícones com Indicador Pílula Vertical) */}
-        <nav className="flex flex-col items-center gap-2 w-full px-1">
+        <nav className="flex-1 flex flex-col items-center gap-1.5 w-full px-1 overflow-y-auto no-scrollbar overscroll-contain min-h-0">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
@@ -138,7 +138,7 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
                 key={item.id}
                 type="button"
                 onClick={() => onTabChange(item.id)}
-                className={`w-full min-h-[48px] flex flex-col items-center justify-center gap-1 rounded-2xl py-1 transition-all cursor-pointer ${
+                className={`w-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1 transition-all cursor-pointer ${
                   isActive
                     ? "text-teal-700 dark:text-teal-400 font-bold"
                     : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium"
@@ -152,12 +152,12 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
                       : "hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
                   }`}
                 >
-                  <Icon className="w-4.5 h-4.5" />
+                  <Icon className="w-4 h-4" />
                   {item.badge && (
                     <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   )}
                 </div>
-                <span className="text-[10px] leading-tight truncate max-w-[56px] text-center">
+                <span className="text-[9px] leading-tight truncate max-w-[52px] text-center">
                   {item.shortLabel}
                 </span>
               </button>
@@ -166,7 +166,7 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
         </nav>
 
         {/* Base do Rail: Perfil Compacto */}
-        <div className="shrink-0 flex items-center justify-center pb-1 relative">
+        <div className="shrink-0 flex items-center justify-center pt-1 border-t border-slate-200/50 dark:border-slate-800/50 w-full relative">
           <UserMenu direction="up" variant="compact" align="left" />
         </div>
       </aside>
@@ -200,30 +200,6 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
               </div>
             </div>
 
-            {/* Centro no Desktop: Segmented Pill Pills (Rápida Alternância Opcional) */}
-            <div className="hidden md:flex lg:hidden items-center justify-center overflow-x-auto no-scrollbar py-0.5 shrink-0">
-              <nav className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-full border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = currentTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => onTabChange(item.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
-                        isActive
-                          ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 shadow-xs"
-                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5 shrink-0" />
-                      <span>{item.shortLabel}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
 
             {/* Lado Direito: UserMenu (visível no mobile portrait/landscape) */}
             <div className="flex items-center gap-2 shrink-0 relative overflow-visible z-50">

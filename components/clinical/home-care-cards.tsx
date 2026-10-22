@@ -90,7 +90,7 @@ export function HomeCareCards({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3.5">
+        <div className="grid grid-cols-1 gap-3.5 min-w-0 w-full">
           {fichas.map((ficha) => {
             const cuidadosCount = ficha.cuidados?.length || 0;
             const cronoCount = ficha.cronograma?.length || 0;
@@ -99,11 +99,11 @@ export function HomeCareCards({
             return (
               <div
                 key={ficha.id}
-                className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between"
+                className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between min-w-0 w-full"
               >
-                <div>
+                <div className="min-w-0 w-full">
                   {/* Cabeçalho do Card */}
-                  <div className="flex flex-col md:flex-row justify-between items-start gap-3 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70 min-w-0 w-full">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60 uppercase tracking-wider">
@@ -115,7 +115,7 @@ export function HomeCareCards({
                         </span>
                       </div>
 
-                      <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1 break-words leading-snug">
+                      <h4 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 mt-1 break-words leading-snug">
                         {ficha.titulo_protocolo}
                       </h4>
 
@@ -136,13 +136,12 @@ export function HomeCareCards({
                       </div>
                     </div>
 
-                    {/* Ações e Badges */}
                     {/* Ações e Badges MD4 */}
-                    <div className="flex items-center gap-2 flex-wrap shrink-0">
+                    <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                       <button
                         type="button"
                         onClick={() => setSelectedFichaForPrint(ficha)}
-                        className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 hover:bg-teal-50/70 dark:hover:bg-slate-800/80 rounded-full cursor-pointer transition-colors shadow-2xs md-state-layer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 hover:bg-teal-50/70 dark:hover:bg-slate-800/80 rounded-full cursor-pointer transition-colors shadow-2xs md-state-layer"
                         title="Visualizar e imprimir relatório oficial"
                       >
                         <Printer className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
@@ -150,7 +149,7 @@ export function HomeCareCards({
                       </button>
 
                       <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold select-none shadow-2xs ${
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold select-none shadow-2xs ${
                           ficha.status === "Ativo"
                             ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
                             : ficha.status === "Concluído"

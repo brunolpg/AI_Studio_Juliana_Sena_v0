@@ -40,10 +40,10 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
   return (
     <aside
       aria-label="Navegação Lateral do Sistema"
-      className={`md4-desktop-drawer hidden lg:flex flex-col fixed inset-y-0 left-0 w-68 z-40 bg-slate-100/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 transition-colors duration-200 shadow-xs select-none ${className}`}
+      className={`md4-desktop-drawer hidden lg:flex flex-col fixed top-0 bottom-0 left-0 w-64 h-dvh max-h-screen z-40 bg-slate-100/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 transition-colors duration-200 shadow-xs select-none overflow-hidden ${className}`}
     >
       {/* Topo da Sidebar: Logo & Identidade Clínica */}
-      <div className="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-3">
+      <div className="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-3 shrink-0">
         <div className="w-10 h-10 shrink-0 rounded-2xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs transition-transform duration-200 hover:scale-105">
           <Sparkles className="w-5 h-5" />
         </div>

@@ -1455,16 +1455,16 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     )}
                   </div>
                 ) : (
-                  <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                  <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 items-start min-w-0">
                     {/* COLUNA 1: RECEITUÁRIO */}
-                    <div className="w-full flex flex-col gap-4">
+                    <div className="w-full min-w-0 flex flex-col gap-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-center shrink-0">
                             <Pill className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                           </div>
-                          <div>
-                            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 truncate">
                               Receituário & Fórmulas Magistrais ({prescriptions.length})
                             </h3>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -1485,15 +1485,15 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                       return (
                         <div
                           key={rx.id}
-                          className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between"
+                          className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between min-w-0 w-full"
                         >
-                          <div>
-                            {/* Cabeçalho do Card: Estrutura Flexível md:flex-row totalmente responsiva */}
-                            <div className="flex flex-col md:flex-row justify-between items-start gap-3 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70">
+                          <div className="min-w-0 w-full">
+                            {/* Cabeçalho do Card: Empilha no mobile estreito e alinha em sm: */}
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70 min-w-0 w-full">
                               
                               {/* Título Principal, Subtítulo (Nome da Fórmula) e Metadados */}
-                              <div className="min-w-0 flex-1 w-full md:w-auto">
-                                <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white break-words leading-snug">
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-base font-bold text-slate-800 dark:text-slate-100 break-words leading-snug">
                                   Fórmula Magistral
                                 </h4>
 
@@ -1521,7 +1521,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                               </div>
 
                               {/* Ações e Badges (Container Flexível com flex-wrap) */}
-                              <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap shrink-0 w-full md:w-auto justify-start md:justify-end">
+                              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                                 {!isPatientView && (
                                   <>
                                     <button
@@ -1675,7 +1675,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     </div>
 
                     {/* COLUNA 2: HOME CARE */}
-                    <div className="w-full flex flex-col gap-4">
+                    <div className="w-full min-w-0 flex flex-col gap-4">
                       {homeCareFichas.length > 0 ? (
                         <HomeCareCards
                           fichas={homeCareFichas}

@@ -341,7 +341,7 @@ html, body, button, input, select, textarea {
     display: none !important;
   }
   .md4-main-content {
-    margin-left: 17rem !important; /* 272px para Drawer lateral */
+    margin-left: 16rem !important; /* 256px para Drawer lateral w-64 */
     padding-top: 1.5rem !important;
     padding-bottom: 2.5rem !important;
   }
@@ -362,11 +362,11 @@ html, body, button, input, select, textarea {
     display: none !important;
   }
   .md4-main-content {
-    margin-left: 4.5rem !important; /* 72px para Navigation Rail */
+    margin-left: 4rem !important; /* 64px para Navigation Rail w-16 */
     padding-bottom: 1.5rem !important;
   }
   .md4-top-bar {
-    margin-left: 4.5rem !important;
+    margin-left: 4rem !important;
     height: 48px !important;
     padding-top: 0.25rem !important;
     padding-bottom: 0.25rem !important;
