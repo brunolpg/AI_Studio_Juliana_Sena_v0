@@ -39,8 +39,8 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
   const [logradouro, setLogradouro] = useState(clientToEdit?.logradouro ?? "");
   const [numero, setNumero] = useState(clientToEdit?.numero ?? "");
   const [complemento, setComplemento] = useState(clientToEdit?.complemento ?? "");
-  const [estado, setEstado] = useState(clientToEdit?.estado ?? "SP");
-  const [cidade, setCidade] = useState(clientToEdit?.cidade ?? CITIES_BY_STATE["SP"]?.[0] ?? "");
+  const [estado, setEstado] = useState(clientToEdit?.estado ?? "BA");
+  const [cidade, setCidade] = useState(clientToEdit?.cidade ?? "Salvador");
   const [profissao, setProfissao] = useState(clientToEdit?.profissao ?? "");
   const [status, setStatus] = useState<"Ativo" | "Inativo">(clientToEdit?.status ?? "Ativo");
   const [observacoes, setObservacoes] = useState(clientToEdit?.observacoes ?? "");
@@ -587,7 +587,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 id="client-form-telefone"
                 type="text"
                 required
-                placeholder="(11) 98765-4321"
+                placeholder="(71) 98765-4321"
                 maxLength={15}
                 value={telefone}
                 onChange={handleTelefoneChange}
@@ -719,7 +719,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 id="client-form-logradouro"
                 type="text"
                 required
-                placeholder="Ex: Avenida Paulista"
+                placeholder="Ex.: Avenida Garibaldi"
                 value={logradouro}
                 onChange={(e) => setLogradouro(e.target.value)}
                 className={`w-full px-3.5 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${
