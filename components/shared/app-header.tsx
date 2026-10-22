@@ -172,10 +172,10 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
       </aside>
 
       {/* ====================================================================
-          3. TOP APP BAR (Compact Header apenas para Mobile & Tablet - Oculto no Desktop)
-          No Desktop (lg:) fica oculto pois o Drawer Lateral já cumpre a navegação e identidade
+          3. TOP APP BAR (Compact Header apenas para Mobile Retrato/Portrait - Oculto no Desktop e Mobile Paisagem)
+          No Desktop (lg:) e Mobile Paisagem (landscape:) fica oculto pois o Drawer / Navigation Rail já cumprem a navegação e perfil
           ==================================================================== */}
-      <header className="md4-top-bar lg:hidden w-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-30 transition-all duration-200 shadow-2xs">
+      <header className="md4-top-bar lg:hidden landscape:hidden w-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-30 transition-all duration-200 shadow-2xs">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 overflow-visible">
           <div className="flex items-center justify-between gap-3 overflow-visible">
             {/* Lado Esquerdo: Identidade Visível no Mobile (no Desktop o Drawer já exibe) */}

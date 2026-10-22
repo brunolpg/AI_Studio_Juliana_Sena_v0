@@ -363,13 +363,11 @@ html, body, button, input, select, textarea {
   }
   .md4-main-content {
     margin-left: 4rem !important; /* 64px para Navigation Rail w-16 */
+    padding-top: 0.5rem !important; /* Alinhado ao topo sem espaço em branco inútil */
     padding-bottom: 1.5rem !important;
   }
   .md4-top-bar {
-    margin-left: 4rem !important;
-    height: 48px !important;
-    padding-top: 0.25rem !important;
-    padding-bottom: 0.25rem !important;
+    display: none !important;
   }
 }
 

@@ -19,7 +19,7 @@ export function PatientDashboard() {
       <AppHeader currentTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Main Content Area */}
-      <main className="md4-main-content flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-8 sm:pt-6 sm:pb-8 lg:pt-6 lg:pb-10 space-y-6">
+      <main className="md4-main-content flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-8 sm:pt-6 sm:pb-8 lg:pt-6 lg:pb-10 space-y-6 landscape:pt-2">
         {/* MD4 Functional Highlights Banner */}
         <div className="bg-gradient-to-br from-teal-950 via-slate-900 to-slate-900 dark:from-slate-900 dark:via-teal-950/70 dark:to-slate-950 text-white p-6 sm:p-7 rounded-3xl border border-teal-800/40 dark:border-teal-700/30 shadow-xs relative overflow-hidden transition-all duration-300">
           <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-teal-500/15 to-transparent pointer-events-none" />
