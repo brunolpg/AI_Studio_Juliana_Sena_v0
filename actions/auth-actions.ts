@@ -91,7 +91,7 @@ export async function registerAction(rawInput: unknown): Promise<AuthResponse> {
         message: "Por favor, preencha todos os campos corretamente.",
       };
     }
-    const { name, email, password, role } = parseResult.data;
+    const { name, email, password, role, estado, cidade } = parseResult.data;
     const supabase = await createClient();
     if (!supabase) {
       return {
@@ -109,6 +109,8 @@ export async function registerAction(rawInput: unknown): Promise<AuthResponse> {
         data: {
           full_name: name,
           role: assignedRole,
+          estado: estado || "BA",
+          cidade: cidade || "Salvador",
         },
       },
     });

@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/components/auth/auth-context";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
+import { BRAZILIAN_STATES, CITIES_BY_STATE } from "@/lib/brazil-data";
 
 interface AuthModalContentProps {
   initialTab: "login" | "register";
@@ -41,6 +42,21 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
   const [regPassword, setRegPassword] = useState("");
   const [regConfirmPassword, setRegConfirmPassword] = useState("");
   const [regRole, setRegRole] = useState<"paciente" | "profissional" | "administrador">("paciente");
+  const [regEstado, setRegEstado] = useState("BA");
+  const [regCidade, setRegCidade] = useState("Salvador");
+
+  const availableCities = CITIES_BY_STATE[regEstado] || ["Outra"];
+  const isPredefinedCity = availableCities.includes(regCidade) && regCidade !== "Outra";
+
+  const handleEstadoChange = (newEstado: string) => {
+    setRegEstado(newEstado);
+    const cities = CITIES_BY_STATE[newEstado] || ["Outra"];
+    if (newEstado === "BA") {
+      setRegCidade("Salvador");
+    } else {
+      setRegCidade(cities[0] || "Outra");
+    }
+  };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,12 +76,15 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
     e.preventDefault();
     setIsSubmitting(true);
     setFormErrors({});
+    const finalCidade = regCidade.trim() || (regEstado === "BA" ? "Salvador" : "Outra");
     const res = await register({
       name: regName,
       email: regEmail,
       password: regPassword,
       confirmPassword: regConfirmPassword,
       role: regRole,
+      estado: regEstado,
+      cidade: finalCidade,
     });
     setIsSubmitting(false);
     if (!res.success && res.errors) {
@@ -447,6 +466,81 @@ function AuthModalContent({ initialTab, onClose }: AuthModalContentProps) {
                 )}
               </div>
             </div>
+
+            {/* Estado (UF) e Cidade */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {/* Estado */}
+              <div className="space-y-1.5">
+                <label htmlFor="modal-reg-estado" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Estado (UF) *
+                </label>
+                <select
+                  id="modal-reg-estado"
+                  value={regEstado}
+                  onChange={(e) => handleEstadoChange(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full px-3.5 py-3 text-xs rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 cursor-pointer"
+                >
+                  {BRAZILIAN_STATES.map((st) => (
+                    <option key={st.uf} value={st.uf}>
+                      {st.uf} — {st.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Cidade */}
+              <div className="space-y-1.5">
+                <label htmlFor="modal-reg-cidade" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Cidade (Associada à seleção da UF) *
+                </label>
+                <select
+                  id="modal-reg-cidade"
+                  value={isPredefinedCity ? regCidade : "Outra"}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "Outra") {
+                      setRegCidade("");
+                    } else {
+                      setRegCidade(val);
+                    }
+                  }}
+                  disabled={isSubmitting}
+                  className="w-full px-3.5 py-3 text-xs rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 cursor-pointer"
+                >
+                  {availableCities.map((cityName) => (
+                    <option key={cityName} value={cityName}>
+                      {cityName === "Outra" ? "Outra (especificar cidade)" : cityName}
+                    </option>
+                  ))}
+                  {!isPredefinedCity && Boolean(regCidade && regCidade !== "Outra") && (
+                    <option value="Outra">{regCidade} (Personalizada)</option>
+                  )}
+                </select>
+              </div>
+            </div>
+
+            {/* Campo de digitação manual quando 'Outra' ou personalizada */}
+            {(!isPredefinedCity || regCidade === "Outra") && (
+              <div className="space-y-1.5 animate-fadeIn">
+                <label htmlFor="modal-reg-custom-cidade" className="block text-[11px] font-semibold text-teal-700 dark:text-teal-400">
+                  Nome da sua cidade *
+                </label>
+                <input
+                  id="modal-reg-custom-cidade"
+                  type="text"
+                  required
+                  placeholder="Digite o nome da sua cidade"
+                  value={regCidade === "Outra" ? "" : regCidade}
+                  onChange={(e) => setRegCidade(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full px-3.5 py-2.5 text-xs rounded-2xl border border-teal-500/50 bg-teal-50/20 dark:bg-teal-950/20 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+                />
+                <span className="text-[10px] text-slate-400 block">
+                  Insira o nome do seu município caso não conste na lista acima.
+                </span>
+              </div>
+            )}
 
             {/* Botão de Registro */}
             <button

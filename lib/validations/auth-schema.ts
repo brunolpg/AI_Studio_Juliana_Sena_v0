@@ -47,6 +47,8 @@ export const registerSchema = z
       .string()
       .min(1, { message: "A confirmação de senha é obrigatória." }),
     role: RoleEnum.default("paciente"),
+    estado: z.string().optional().default("BA"),
+    cidade: z.string().optional().default("Salvador"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "As senhas não coincidem. Digite novamente.",

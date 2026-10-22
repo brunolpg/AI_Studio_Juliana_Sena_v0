@@ -61,13 +61,18 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
   const idade = dataNascimento ? calculateAge(dataNascimento) : null;
 
   // Cidades dinâmicas pelo estado selecionado
-  const availableCities = CITIES_BY_STATE[estado] || [];
+  const availableCities = CITIES_BY_STATE[estado] || ["Outra"];
+  const isPredefinedCity = availableCities.includes(cidade) && cidade !== "Outra";
 
   // Atualiza cidade ao trocar estado
   const handleEstadoChange = (newEstado: string) => {
     setEstado(newEstado);
-    const cities = CITIES_BY_STATE[newEstado] || [];
-    setCidade(cities[0] || "");
+    const cities = CITIES_BY_STATE[newEstado] || ["Outra"];
+    if (newEstado === "BA") {
+      setCidade("Salvador");
+    } else {
+      setCidade(cities[0] || "Outra");
+    }
   };
 
   const searchCepAddress = async (cepDigits: string) => {
@@ -799,21 +804,58 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Cidade (Associada à seleção da UF) *
               </label>
-              <input
+              <select
                 id="client-form-cidade"
-                type="text"
-                required
-                list="cidades-list"
-                value={cidade}
-                onChange={(e) => setCidade(e.target.value)}
-                placeholder="Selecione ou digite a cidade"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
-              />
-              <datalist id="cidades-list">
+                value={isPredefinedCity ? cidade : "Outra"}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "Outra") {
+                    setCidade("");
+                  } else {
+                    setCidade(val);
+                  }
+                }}
+                className={`w-full px-3 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 cursor-pointer ${
+                  fieldErrors.cidade
+                    ? "border-rose-500 focus:ring-rose-500/20"
+                    : "border-slate-300 dark:border-slate-700 focus:ring-teal-500/20 focus:border-teal-500"
+                }`}
+              >
                 {availableCities.map((cityName) => (
-                  <option key={cityName} value={cityName} />
+                  <option key={cityName} value={cityName}>
+                    {cityName === "Outra" ? "Outra (especificar cidade)" : cityName}
+                  </option>
                 ))}
-              </datalist>
+                {!isPredefinedCity && Boolean(cidade && cidade !== "Outra") && (
+                  <option value="Outra">
+                    {cidade} (Personalizada)
+                  </option>
+                )}
+              </select>
+
+              {/* Digitação manual quando 'Outra' ou cidade personalizada */}
+              {(!isPredefinedCity || cidade === "Outra") && (
+                <div className="mt-2">
+                  <input
+                    id="client-form-cidade-custom"
+                    type="text"
+                    required
+                    placeholder="Digite o nome da sua cidade"
+                    value={cidade === "Outra" ? "" : cidade}
+                    onChange={(e) => setCidade(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-teal-500/50 bg-teal-50/20 dark:bg-teal-950/20 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                  />
+                  <span className="text-[11px] text-slate-400 mt-1 block">
+                    Preencha o nome do seu município caso não conste na lista acima.
+                  </span>
+                </div>
+              )}
+
+              {fieldErrors.cidade && (
+                <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> {fieldErrors.cidade}
+                </p>
+              )}
             </div>
           </div>
         </div>

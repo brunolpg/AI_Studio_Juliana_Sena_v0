@@ -16,7 +16,9 @@ import {
   User,
   AlertCircle,
   ShieldAlert,
+  MapPin,
 } from "lucide-react";
+import { BRAZILIAN_STATES, CITIES_BY_STATE } from "@/lib/brazil-data";
 
 interface AuthViewProps {
   initialTab?: "entrar" | "criar";
@@ -43,6 +45,21 @@ export function AuthView({ initialTab = "entrar" }: AuthViewProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [confirmPasswordValue, setConfirmPasswordValue] = useState("");
   const [role, setRole] = useState<"paciente" | "profissional" | "administrador">("paciente");
+  const [estado, setEstado] = useState("BA");
+  const [cidade, setCidade] = useState("Salvador");
+
+  const availableCities = CITIES_BY_STATE[estado] || ["Outra"];
+  const isPredefinedCity = availableCities.includes(cidade) && cidade !== "Outra";
+
+  const handleEstadoChange = (newEstado: string) => {
+    setEstado(newEstado);
+    const cities = CITIES_BY_STATE[newEstado] || ["Outra"];
+    if (newEstado === "BA") {
+      setCidade("Salvador");
+    } else {
+      setCidade(cities[0] || "Outra");
+    }
+  };
 
   // Estados para "Esqueci minha senha"
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
@@ -249,12 +266,16 @@ export function AuthView({ initialTab = "entrar" }: AuthViewProps) {
     e.preventDefault();
     setErrors({});
 
+    const finalCidade = cidade.trim() || (estado === "BA" ? "Salvador" : "Outra");
+
     const validation = registerSchema.safeParse({
       name,
       email,
       password,
       confirmPassword: confirmPasswordValue,
       role,
+      estado,
+      cidade: finalCidade,
     });
 
     if (!validation.success) {
@@ -285,6 +306,8 @@ export function AuthView({ initialTab = "entrar" }: AuthViewProps) {
         password,
         confirmPassword: confirmPasswordValue,
         role,
+        estado,
+        cidade: finalCidade,
       });
 
       if (!res.success) {
@@ -653,6 +676,81 @@ export function AuthView({ initialTab = "entrar" }: AuthViewProps) {
                   </p>
                 )}
               </div>
+
+              {/* Estado (UF) e Cidade */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* Estado */}
+                <div className="space-y-1.5">
+                  <label htmlFor="auth-reg-estado" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Estado (UF) *
+                  </label>
+                  <select
+                    id="auth-reg-estado"
+                    value={estado}
+                    onChange={(e) => handleEstadoChange(e.target.value)}
+                    disabled={isSubmitting}
+                    className="w-full px-3.5 py-3 text-xs rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 cursor-pointer"
+                  >
+                    {BRAZILIAN_STATES.map((st) => (
+                      <option key={st.uf} value={st.uf}>
+                        {st.uf} — {st.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Cidade */}
+                <div className="space-y-1.5">
+                  <label htmlFor="auth-reg-cidade" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Cidade (Associada à seleção da UF) *
+                  </label>
+                  <select
+                    id="auth-reg-cidade"
+                    value={isPredefinedCity ? cidade : "Outra"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "Outra") {
+                        setCidade("");
+                      } else {
+                        setCidade(val);
+                      }
+                    }}
+                    disabled={isSubmitting}
+                    className="w-full px-3.5 py-3 text-xs rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 dark:focus:border-teal-400 cursor-pointer"
+                  >
+                    {availableCities.map((cityName) => (
+                      <option key={cityName} value={cityName}>
+                        {cityName === "Outra" ? "Outra (especificar cidade)" : cityName}
+                      </option>
+                    ))}
+                    {!isPredefinedCity && Boolean(cidade && cidade !== "Outra") && (
+                      <option value="Outra">{cidade} (Personalizada)</option>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              {/* Campo de digitação manual quando 'Outra' ou personalizada */}
+              {(!isPredefinedCity || cidade === "Outra") && (
+                <div className="space-y-1.5 animate-fadeIn">
+                  <label htmlFor="auth-reg-custom-cidade" className="block text-[11px] font-semibold text-teal-700 dark:text-teal-400">
+                    Nome da sua cidade *
+                  </label>
+                  <input
+                    id="auth-reg-custom-cidade"
+                    type="text"
+                    required
+                    placeholder="Digite o nome da sua cidade"
+                    value={cidade === "Outra" ? "" : cidade}
+                    onChange={(e) => setCidade(e.target.value)}
+                    disabled={isSubmitting}
+                    className="w-full px-3.5 py-2.5 text-xs rounded-2xl border border-teal-500/50 bg-teal-50/20 dark:bg-teal-950/20 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+                  />
+                  <span className="text-[10px] text-slate-400 block">
+                    Insira o nome do seu município caso não conste na lista acima.
+                  </span>
+                </div>
+              )}
 
               {/* Botão Cadastrar */}
               <button
