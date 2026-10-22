@@ -102,39 +102,11 @@ export function PatientDashboard() {
       </main>
 
       {/* Rodapé do Sistema */}
-      <footer className="md4-main-content border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <footer className="md4-main-content border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pt-6 pb-24 sm:py-6 landscape:py-6 text-center text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-center">
           <p>
             Dra. Juliana Sena • Gestão de Pacientes & Agendamentos • Next.js 15 & Supabase
           </p>
-          <div className="flex items-center gap-4 text-slate-600 dark:text-slate-400">
-            <button
-              type="button"
-              onClick={() => setActiveTab("pacientes")}
-              className="hover:underline flex items-center gap-1 font-medium cursor-pointer"
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Pacientes</span>
-            </button>
-            <span>•</span>
-            <button
-              type="button"
-              onClick={() => setActiveTab("prontuarios")}
-              className="hover:underline flex items-center gap-1 font-medium cursor-pointer"
-            >
-              <Stethoscope className="w-3.5 h-3.5" />
-              <span>Prontuários</span>
-            </button>
-            <span>•</span>
-            <button
-              type="button"
-              onClick={() => setActiveTab("agendamentos")}
-              className="hover:underline flex items-center gap-1 font-medium cursor-pointer"
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Agendamentos</span>
-            </button>
-          </div>
         </div>
       </footer>
 
