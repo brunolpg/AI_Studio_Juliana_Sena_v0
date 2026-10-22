@@ -78,7 +78,7 @@ export function FormulaCatalogView({
   };
 
   return (
-    <div className="font-['Plus_Jakarta_Sans',sans-serif] min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-16">
+    <div className="font-['Plus_Jakarta_Sans',sans-serif] min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col w-full min-w-0 max-w-full overflow-x-hidden pb-16">
       
       {/* App Header */}
       <AppHeader
@@ -86,58 +86,56 @@ export function FormulaCatalogView({
         onTabChange={() => router.push("/dashboard")}
       />
 
-      {/* Top Header / Hero Card */}
-      <motion.header
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="max-w-7xl mx-auto px-4 sm:px-8 pt-6 sm:pt-8"
-      >
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#042f2e] to-[#091522] p-5 sm:p-6 text-white shadow-sm border border-emerald-900/30 font-['Plus_Jakarta_Sans',sans-serif]">
+      {/* Main Container com Compensação da Barra Lateral no Landscape e Desktop */}
+      <main className="md4-main-content flex-1 max-w-7xl w-full min-w-0 max-w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12 sm:pt-6 space-y-5 sm:space-y-6 landscape:pt-2 landscape:pl-20">
+        
+        {/* Top Header / Hero Card */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#042f2e] to-[#091522] p-5 sm:p-6 landscape:py-4 text-white shadow-sm border border-emerald-900/30 font-['Plus_Jakarta_Sans',sans-serif]"
+        >
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/20 text-emerald-300 text-[11px] sm:text-xs font-medium">
             <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0"/>
             <span>Prescrições & Fórmulas Magistrais</span>
           </div>
 
-          <h1 className="mt-3 text-xl sm:text-2xl font-bold tracking-tight text-white leading-tight">
+          <h1 className="mt-2.5 sm:mt-3 text-lg sm:text-2xl font-bold tracking-tight text-white leading-tight">
             Catálogo de Fórmulas
           </h1>
 
-          <p className="mt-2 text-xs sm:text-sm text-emerald-100/75 leading-relaxed max-w-xl font-normal">
+          <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-emerald-100/75 leading-relaxed max-w-xl font-normal">
             Gerencie fórmulas magistrais, ativos e diretrizes de manipulação com agilidade e precisão clínica.
           </p>
-        </div>
-      </motion.header>
-
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 pt-6 sm:pt-8 space-y-6">
+        </motion.div>
         
-        {/* KPI Cards */}
+        {/* KPI Cards (Idênticos a Pacientes Ativos e Consultas Hoje) */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30">
             <div className="flex items-center justify-between">
-              <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">Fórmulas Cadastradas</span>
-              <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-                <FlaskConical className="w-4 h-4" />
+              <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate">Fórmulas Cadastradas</span>
+              <div className="p-2 sm:p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1">
+                <FlaskConical className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            <div className="mt-2.5 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-emerald-700 dark:text-emerald-400">
                 {formulas.length}
               </span>
               <span className="text-[10px] sm:text-[11px] text-slate-400">no catálogo</span>
             </div>
           </div>
 
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30">
             <div className="flex items-center justify-between">
-              <span className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">Componentes Ativos</span>
-              <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-                <Pill className="w-4 h-4" />
+              <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate">Componentes Ativos</span>
+              <div className="p-2 sm:p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1">
+                <Pill className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            <div className="mt-2.5 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-emerald-700 dark:text-emerald-400">
                 {componentes.length}
               </span>
               <span className="text-[10px] sm:text-[11px] text-slate-400">insumos disponíveis</span>
@@ -145,58 +143,70 @@ export function FormulaCatalogView({
           </div>
         </div>
 
-        {/* Action Bar (Estilo Prescrições) */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => router.push("/dashboard")}
-            className="flex items-center justify-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl py-3 px-4 text-xs sm:text-sm font-semibold shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Voltar ao Prontuário</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-3 px-4 text-xs sm:text-sm font-semibold shadow-xs transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nova Fórmula</span>
-          </button>
-        </div>
-
-        {/* Barra de Filtros e Busca */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+        {/* Barra Superior de Controle, Busca MD4 e Ações */}
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
           
-          {/* Busca por texto */}
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          {/* Campo de Busca Amplo MD4 Search Pill */}
+          <div className="relative flex-1 max-w-lg">
+            <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por nome, descrição ou veículo..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full pl-10 pr-16 py-2.5 text-xs sm:text-sm rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all shadow-2xs"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                Limpar
+              </button>
+            )}
           </div>
 
-          {/* Filtro por Via */}
-          <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1 shrink-0">Via:</span>
-            {(["todos", "oral", "tópico"] as const).map((via) => (
+          {/* Filtros em Pílulas (Tabs MD4) + Botões de Ação */}
+          <div className="flex flex-col sm:flex-row flex-wrap sm:items-center justify-between sm:justify-start gap-2.5 w-full xl:w-auto">
+            {/* Pílulas de Filtro por Via */}
+            <div className="flex items-center flex-nowrap overflow-x-auto w-full sm:w-auto max-w-full gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-full border border-slate-200/80 dark:border-slate-700/80 text-xs shrink-0 no-scrollbar shadow-2xs">
+              {(["todos", "oral", "tópico"] as const).map((via) => (
+                <button
+                  key={via}
+                  type="button"
+                  onClick={() => setViaFilter(via)}
+                  className={`text-xs px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 text-center md-state-layer ${
+                    viaFilter === via
+                      ? "bg-[#0d6e64] text-white shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 hover:text-slate-900 dark:hover:text-slate-100"
+                  }`}
+                >
+                  {via === "todos" ? "Todas as Vias" : via === "oral" ? "Oral" : "Tópico"}
+                </button>
+              ))}
+            </div>
+
+            {/* Botões de Ação no Padrão Pílula Compacto */}
+            <div className="flex items-center justify-end sm:justify-start gap-2 w-full sm:w-auto">
               <button
-                key={via}
                 type="button"
-                onClick={() => setViaFilter(via)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all cursor-pointer shrink-0 ${
-                  viaFilter === via
-                    ? "bg-teal-600 text-white shadow-xs"
-                    : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
-                }`}
+                onClick={() => router.push("/dashboard")}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shadow-2xs active:scale-[0.98] md-state-layer whitespace-nowrap"
               >
-                {via === "todos" ? "Todas as Vias" : via === "oral" ? "Oral" : "Tópico"}
+                <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+                <span>Voltar ao Prontuário</span>
               </button>
-            ))}
+
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full transition-all cursor-pointer shadow-xs active:scale-[0.98] md-state-layer whitespace-nowrap"
+              >
+                <Plus className="w-3.5 h-3.5 shrink-0" />
+                <span>+ Nova Fórmula</span>
+              </button>
+            </div>
           </div>
         </div>
 
