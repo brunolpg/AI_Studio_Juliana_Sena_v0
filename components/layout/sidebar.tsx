@@ -40,7 +40,7 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
   return (
     <aside
       aria-label="Navegação Lateral do Sistema"
-      className={`md4-desktop-drawer hidden lg:flex flex-col fixed top-0 bottom-0 left-0 w-64 h-dvh max-h-screen z-40 bg-slate-100/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 transition-colors duration-200 shadow-xs select-none overflow-hidden ${className}`}
+      className={`md4-desktop-drawer hidden lg:flex flex-col fixed top-0 bottom-0 left-0 w-64 h-dvh max-h-screen z-40 bg-slate-100/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 transition-colors duration-200 shadow-xs select-none ${className}`}
     >
       {/* Topo da Sidebar: Logo & Identidade Clínica */}
       <div className="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-3 shrink-0">
@@ -104,7 +104,7 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
       </nav>
 
       {/* Rodapé da Sidebar: Menu do Usuário com abertura para cima */}
-      <div className="p-3 border-t border-slate-200/60 dark:border-slate-800/60 relative">
+      <div className="p-3 border-t border-slate-200/60 dark:border-slate-800/60 relative shrink-0 overflow-visible">
         <UserMenu direction="up" variant="sidebar" align="left" />
       </div>
     </aside>
