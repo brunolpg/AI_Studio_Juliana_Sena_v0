@@ -232,8 +232,116 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col antialiased">
-      {/* Header Dedicado do Portal do Paciente */}
-      <header className="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-50 overflow-visible shadow-xs transition-colors duration-200 md-landscape-compact">
+      {/* ====================================================================
+          Navigation Rail Lateral Fixa para o Ambiente do Paciente (Landscape)
+          Compacta (w-16 / w-20), visível apenas em orientação paisagem
+          ==================================================================== */}
+      <aside
+        aria-label="Barra Lateral de Navegação do Paciente"
+        className="hidden landscape:flex fixed top-0 bottom-0 left-0 w-16 sm:w-20 h-dvh max-h-screen z-50 bg-white/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 flex-col items-center justify-between py-2.5 shadow-sm select-none"
+      >
+        {/* Topo do Rail: Logo Sparkles com fundo verde */}
+        <div className="w-10 h-10 rounded-2xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs shrink-0 mb-1 transition-transform hover:scale-105">
+          <Sparkles className="w-5 h-5" />
+        </div>
+
+        {/* Itens do Rail (Ícones com Indicador Pílula Vertical) */}
+        <nav className="flex-1 flex flex-col items-center gap-1.5 w-full px-1 overflow-y-auto no-scrollbar overscroll-contain min-h-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab("prontuario")}
+            className={`w-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1 transition-all cursor-pointer ${
+              activeTab === "prontuario"
+                ? "text-emerald-800 dark:text-emerald-300 font-bold"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium"
+            }`}
+            title="Documentos"
+          >
+            <div
+              className={`px-3 py-1 rounded-full transition-colors relative ${
+                activeTab === "prontuario"
+                  ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 shadow-2xs"
+                  : "hover:bg-slate-100 dark:hover:bg-slate-800/50"
+              }`}
+            >
+              <ClipboardList className="w-4 h-4" />
+            </div>
+            <span className="text-[9px] leading-tight truncate max-w-[56px] text-center">
+              Documentos
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("agendamentos")}
+            className={`w-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1 transition-all cursor-pointer ${
+              activeTab === "agendamentos"
+                ? "text-emerald-800 dark:text-emerald-300 font-bold"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium"
+            }`}
+            title="Agenda"
+          >
+            <div
+              className={`px-3 py-1 rounded-full transition-colors relative ${
+                activeTab === "agendamentos"
+                  ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 shadow-2xs"
+                  : "hover:bg-slate-100 dark:hover:bg-slate-800/50"
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+            </div>
+            <span className="text-[9px] leading-tight truncate max-w-[56px] text-center">
+              Agenda
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("ficha")}
+            className={`w-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1 transition-all cursor-pointer ${
+              activeTab === "ficha"
+                ? "text-emerald-800 dark:text-emerald-300 font-bold"
+                : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium"
+            }`}
+            title="Minha Ficha"
+          >
+            <div
+              className={`px-3 py-1 rounded-full transition-colors relative ${
+                activeTab === "ficha"
+                  ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 shadow-2xs"
+                  : "hover:bg-slate-100 dark:hover:bg-slate-800/50"
+              }`}
+            >
+              <UserIcon className="w-4 h-4" />
+            </div>
+            <span className="text-[9px] leading-tight truncate max-w-[56px] text-center">
+              Minha Ficha
+            </span>
+          </button>
+        </nav>
+
+        {/* Base do Rail: Avatar do Paciente com Menu de Logout */}
+        <div className="shrink-0 flex items-center justify-center pt-1 border-t border-slate-200/50 dark:border-slate-800/50 w-full relative overflow-visible">
+          <UserMenu
+            user={{
+              nome: patientData?.nome || user?.name || user?.nome || "Paciente",
+              email: patientData?.email || user?.email,
+              role: "paciente",
+              foto_perfil: userPhotoUrl,
+              avatar: userPhotoUrl,
+              avatar_url: userPhotoUrl,
+              roleLabel: "Paciente"
+            }}
+            onLogout={onLogout ? async () => onLogout() : undefined}
+            direction="up"
+            variant="compact"
+            align="left"
+          />
+        </div>
+      </aside>
+
+      {/* Header Dedicado do Portal do Paciente (Oculto em Landscape e com abas pílula apenas no Desktop) */}
+      <header className="landscape:hidden w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-40 overflow-visible shadow-xs transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-2.5 overflow-visible">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 sm:gap-3 overflow-visible">
             
@@ -270,8 +378,8 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
               </div>
             </div>
 
-            {/* Linha 2 no Mobile / Centro no Desktop: MD4 Segmented Navigation Bar */}
-            <div className="flex items-center justify-center w-full md:w-auto overflow-x-auto no-scrollbar py-0.5 shrink-0">
+            {/* Linha 2 no Desktop: MD4 Segmented Navigation Bar (Oculto em telas menores para evitar duplicação com a barra inferior) */}
+            <div className="hidden md:flex items-center justify-center w-full md:w-auto overflow-x-auto no-scrollbar py-0.5 shrink-0">
               <nav className="flex items-center gap-1 p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-full border border-slate-200/80 dark:border-slate-700/80 w-full sm:w-auto justify-between sm:justify-center shrink-0 shadow-2xs">
                 <button
                   type="button"
@@ -333,7 +441,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
       </header>
 
       {/* Conteúdo Central */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 pb-28 md:pb-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 pb-28 md:pb-8 landscape:py-3 landscape:pl-20 landscape:pr-4 sm:landscape:pr-6 landscape:pb-6 min-w-0 overflow-x-hidden">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-8 h-8 border-3 border-teal-500/20 border-t-teal-600 rounded-full animate-spin" />
@@ -897,8 +1005,8 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
         </div>
       )}
 
-      {/* MD4 Mobile Bottom Navigation Bar (Portrait Ergonômica) */}
-      <nav aria-label="Navegação do Paciente Móvel" className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800/80 px-3 py-2 shadow-lg flex items-center justify-around safe-area-pb">
+      {/* MD4 Mobile Bottom Navigation Bar (Portrait Ergonômica - Oculta em Landscape) */}
+      <nav aria-label="Navegação do Paciente Móvel" className="md:hidden landscape:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800/80 px-3 py-2 shadow-lg flex items-center justify-around safe-area-pb">
         <button
           type="button"
           onClick={() => setActiveTab("prontuario")}
