@@ -86,8 +86,8 @@ export function FormulaCatalogView({
         onTabChange={() => router.push("/dashboard")}
       />
 
-      {/* Main Container com Alinhamento e Largura Padronizada (Desktop 1600px & Mobile Responsiva) */}
-      <main className="flex-1 min-w-0 p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-6 landscape:space-y-3 landscape:pt-2 landscape:pl-20 landscape:pr-5 box-border">
+      {/* Main Container com Alinhamento e Largura Total Fluida (Desktop w-full & Mobile Responsiva) */}
+      <main className="flex-1 min-w-0 w-full p-6 lg:p-8 space-y-6 landscape:space-y-3 landscape:pt-2 landscape:pl-20 landscape:pr-5 box-border">
         
         {/* Top Header / Hero Card */}
         <motion.div

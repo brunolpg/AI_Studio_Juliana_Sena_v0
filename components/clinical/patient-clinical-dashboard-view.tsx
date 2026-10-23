@@ -97,9 +97,9 @@ export function PatientClinicalDashboardView({
   return (
     <div className="space-y-5">
       {/* Barra de Seleção de Paciente com Autocomplete & Troca Rápida */}
-      <div className="p-4 sm:p-5 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 font-['Plus_Jakarta_Sans',sans-serif]">
+      <div className="w-full p-4 sm:p-5 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 font-['Plus_Jakarta_Sans',sans-serif]">
         {/* Seletor Dropdown */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 min-w-0">
           <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">
             Selecione o Prontuário do Paciente
           </label>

@@ -18,8 +18,8 @@ export function PatientDashboard() {
       {/* Top Header com navegação por abas */}
       <AppHeader currentTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* Main Content Area Padronizada (Desktop 1600px & Mobile Responsiva) */}
-      <main className="flex-1 min-w-0 p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-6 landscape:space-y-3 landscape:pt-2 landscape:pl-20 landscape:pr-5 box-border">
+      {/* Main Content Area Padronizada com Largura Total Fluida (Desktop w-full & Mobile Responsiva) */}
+      <main className="flex-1 min-w-0 w-full p-6 lg:p-8 space-y-6 landscape:space-y-3 landscape:pt-2 landscape:pl-20 landscape:pr-5 box-border">
         {/* MD4 Functional Highlights Banner */}
         <div className="w-full min-w-0 box-border bg-gradient-to-br from-teal-950 via-slate-900 to-slate-900 dark:from-slate-900 dark:via-teal-950/70 dark:to-slate-950 text-white p-6 sm:p-7 lg:p-8 landscape:py-3 landscape:px-4 rounded-3xl border border-teal-800/40 dark:border-teal-700/30 shadow-xs relative overflow-hidden transition-all duration-300">
           <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-teal-500/15 to-transparent pointer-events-none" />
@@ -103,7 +103,7 @@ export function PatientDashboard() {
 
       {/* Rodapé do Sistema */}
       <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pt-6 pb-24 sm:py-6 landscape:py-6 landscape:pl-20 landscape:pr-5 text-center text-xs text-slate-500 dark:text-slate-400">
-        <div className="max-w-[1600px] mx-auto px-6 lg:px-8 flex items-center justify-center">
+        <div className="w-full px-6 lg:px-8 flex items-center justify-center">
           <p>
             Dra. Juliana Sena • Gestão de Pacientes & Agendamentos • Next.js 15 & Supabase
           </p>

@@ -589,9 +589,9 @@ export function AppointmentTableView() {
       )}
 
       {/* A. Barra Superior de Controle e Busca MD4 */}
-      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 w-full">
         {/* Campo de Busca Amplo MD4 Search Pill */}
-        <div className="relative flex-1 max-w-lg">
+        <div className="relative flex-1 min-w-0">
           <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             id="appointment-search-input"
@@ -724,33 +724,33 @@ export function AppointmentTableView() {
       {/* C. Lista / Tabela de Agendamentos */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse table-auto">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 {!isPatient && (
-                  <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300 w-52 max-w-[210px]">
+                  <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
                     PACIENTE
                   </th>
                 )}
-                <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300">
+                <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
                   Data / Horário
                 </th>
-                <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300">
+                <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
                   PROCEDIMENTO
                 </th>
-                <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300">
+                <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
                   Contato
                 </th>
-                <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300">
+                <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
                   Google Agenda
                 </th>
-                <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300">
+                <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
                   Status
                 </th>
-                <th className="py-2.5 px-3 text-left font-bold text-slate-700 dark:text-slate-300">
+                <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
                   PAGAMENTO
                 </th>
-                <th className="py-2.5 px-3 text-right font-bold text-slate-700 dark:text-slate-300">
+                <th className="py-3 px-4 text-right font-bold text-slate-700 dark:text-slate-300">
                   Ações
                 </th>
               </tr>
@@ -810,9 +810,9 @@ export function AppointmentTableView() {
                       id={`appointment-row-${appointment.id}`}
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                     >
-                      {/* PACIENTE (Foto, Largura Reduzida e Nome Abreviado) */}
+                      {/* PACIENTE (Foto e Nome) */}
                       {!isPatient && (
-                        <td className="py-2.5 px-3 max-w-[210px]">
+                        <td className="py-3 px-4">
                           <div className="flex items-center gap-2.5">
                             {/* Foto de Perfil ou Inicial */}
                             {appointment.patientPhoto ? (
@@ -842,7 +842,7 @@ export function AppointmentTableView() {
                       )}
 
                       {/* DATA / HORÁRIO: Data + pílula destacando horário */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
+                      <td className="py-3 px-4 whitespace-nowrap">
                         <span className="text-xs font-medium text-slate-800 dark:text-slate-200 block">
                           {dateFormatted}
                         </span>
@@ -855,7 +855,7 @@ export function AppointmentTableView() {
                       </td>
 
                       {/* PROCEDIMENTO / ESPECIALIDADE */}
-                      <td className="py-2.5 px-3">
+                      <td className="py-3 px-4">
                         <span className="text-xs font-medium text-slate-800 dark:text-slate-200 block">
                           {appointment.procedimento}
                         </span>
@@ -867,7 +867,7 @@ export function AppointmentTableView() {
                       </td>
 
                       {/* CONTATO: Telefone e e-mail */}
-                      <td className="py-2.5 px-3">
+                      <td className="py-3 px-4">
                         <span className="text-xs text-slate-700 dark:text-slate-300 block">
                           {appointment.client_telefone}
                         </span>
@@ -877,7 +877,7 @@ export function AppointmentTableView() {
                       </td>
 
                       {/* GOOGLE AGENDA: Badge com ícone indicando status de sincronização */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
+                      <td className="py-3 px-4 whitespace-nowrap">
                         {appointment.synced_with_google ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70 shadow-2xs">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -892,7 +892,7 @@ export function AppointmentTableView() {
                       </td>
 
                       {/* STATUS: Pílulas coloridas */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
+                      <td className="py-3 px-4 whitespace-nowrap">
                         {appointment.status === "Confirmado" ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70 shadow-2xs">
                             Confirmado
@@ -913,7 +913,7 @@ export function AppointmentTableView() {
                       </td>
 
                       {/* PAGAMENTO */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
+                      <td className="py-3 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           {appointment.status_pagamento === "Pago" ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70 shadow-2xs">
@@ -1084,7 +1084,7 @@ export function AppointmentTableView() {
 
       {/* Card de Integração e Sincronização do Google Agenda (Posicionado abaixo da listagem/tabela) */}
       {!isPatient && (
-        <div className="mt-6 sm:mt-8 p-4 sm:p-5 rounded-3xl border transition-all text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 shadow-xs">
+        <div className="w-full min-w-0 box-border mt-6 sm:mt-8 p-4 sm:p-5 rounded-3xl border transition-all text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 shadow-xs">
           <div className="flex items-center gap-3">
             <div
               className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
