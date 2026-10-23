@@ -341,9 +341,9 @@ html, body, button, input, select, textarea {
     display: none !important;
   }
   .md4-main-content {
-    margin-left: 16rem !important; /* 256px para Drawer lateral w-64 */
-    padding-top: 1.5rem !important;
-    padding-bottom: 2.5rem !important;
+    margin-left: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
   }
   .md4-top-bar {
     display: none !important;

@@ -78,7 +78,7 @@ export function FormulaCatalogView({
   };
 
   return (
-    <div className="font-['Plus_Jakarta_Sans',sans-serif] min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col box-border w-full max-w-full min-w-0 overflow-x-hidden pb-16 landscape:pb-8">
+    <div className="font-['Plus_Jakarta_Sans',sans-serif] min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col box-border w-full max-w-full min-w-0 overflow-x-hidden pb-16 landscape:pb-8 lg:pl-64">
       
       {/* App Header */}
       <AppHeader
@@ -86,15 +86,15 @@ export function FormulaCatalogView({
         onTabChange={() => router.push("/dashboard")}
       />
 
-      {/* Main Container com Compensação da Barra Lateral no Landscape e Desktop */}
-      <main className="md4-main-content flex-1 max-w-7xl w-full max-w-full min-w-0 box-border overflow-x-hidden mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-12 sm:pt-6 space-y-5 sm:space-y-6 landscape:space-y-3 landscape:pt-2 landscape:pb-8 landscape:pl-20 landscape:pr-5">
+      {/* Main Container com Alinhamento e Largura Padronizada (Desktop 1600px & Mobile Responsiva) */}
+      <main className="flex-1 min-w-0 p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-6 landscape:space-y-3 landscape:pt-2 landscape:pl-20 landscape:pr-5 box-border">
         
         {/* Top Header / Hero Card */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#042f2e] to-[#091522] p-5 sm:p-6 landscape:py-3 landscape:px-4 text-white shadow-sm border border-emerald-900/30 font-['Plus_Jakarta_Sans',sans-serif] w-full min-w-0 box-border"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#042f2e] to-[#091522] p-6 sm:p-7 lg:p-8 landscape:py-3 landscape:px-4 text-white shadow-sm border border-emerald-900/30 font-['Plus_Jakarta_Sans',sans-serif] w-full min-w-0 box-border"
         >
           <div className="inline-flex items-center gap-1.5 px-3 py-1 landscape:py-0.5 landscape:px-2 landscape:text-[11px] landscape:mb-1 rounded-full bg-emerald-500/10 border border-emerald-400/20 text-emerald-300 text-[11px] sm:text-xs font-medium">
             <Sparkles className="w-3.5 h-3.5 landscape:w-3 landscape:h-3 text-emerald-400 shrink-0"/>
@@ -110,36 +110,36 @@ export function FormulaCatalogView({
           </p>
         </motion.div>
         
-        {/* KPI Cards (Idênticos a Pacientes Ativos e Consultas Hoje) */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 w-full max-w-full min-w-0 box-border landscape:mb-3 landscape:gap-2.5">
-          <div className="p-3.5 sm:p-5 landscape:p-2.5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
+        {/* KPI Cards Padronizados (Grid Equilibrado 2 Colunas no Desktop) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-6 landscape:grid-cols-2 landscape:gap-3 box-border min-w-0">
+          <div className="p-5 lg:p-6 landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
             <div className="flex items-center justify-between gap-1">
-              <span className="text-xs sm:text-sm landscape:text-xs font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
+              <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
                 Fórmulas Cadastradas
               </span>
-              <div className="p-1.5 sm:p-2.5 landscape:p-1.5 rounded-xl sm:rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1 flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 landscape:w-7 landscape:h-7">
-                <FlaskConical className="w-3.5 h-3.5 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
+              <div className="p-2 sm:p-2.5 landscape:p-1.5 rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 landscape:w-7 landscape:h-7">
+                <FlaskConical className="w-4 h-4 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
               </div>
             </div>
-            <div className="mt-2.5 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-2xl sm:text-3xl landscape:text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
+            <div className="mt-3 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-2xl sm:text-3xl lg:text-4xl landscape:text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
                 {formulas.length}
               </span>
               <span className="text-[10px] sm:text-[11px] landscape:text-[10px] text-slate-400 whitespace-nowrap">no catálogo</span>
             </div>
           </div>
 
-          <div className="p-3.5 sm:p-5 landscape:p-2.5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
+          <div className="p-5 lg:p-6 landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
             <div className="flex items-center justify-between gap-1">
-              <span className="text-xs sm:text-sm landscape:text-xs font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
+              <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
                 Componentes Ativos
               </span>
-              <div className="p-1.5 sm:p-2.5 landscape:p-1.5 rounded-xl sm:rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1 flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 landscape:w-7 landscape:h-7">
-                <Pill className="w-3.5 h-3.5 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
+              <div className="p-2 sm:p-2.5 landscape:p-1.5 rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 landscape:w-7 landscape:h-7">
+                <Pill className="w-4 h-4 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
               </div>
             </div>
-            <div className="mt-2.5 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-2xl sm:text-3xl landscape:text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
+            <div className="mt-3 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-2xl sm:text-3xl lg:text-4xl landscape:text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
                 {componentes.length}
               </span>
               <span className="text-[10px] sm:text-[11px] landscape:text-[10px] text-slate-400 whitespace-nowrap">insumos disponíveis</span>
@@ -148,7 +148,7 @@ export function FormulaCatalogView({
         </div>
 
         {/* Barra Superior de Controle, Busca MD4 e Ações */}
-        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 landscape:p-3 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 landscape:gap-2.5 w-full min-w-0 box-border">
+        <div className="bg-white dark:bg-slate-900 p-5 lg:p-6 landscape:p-3 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 landscape:gap-2.5 w-full min-w-0 box-border">
           
           {/* Campo de Busca Amplo MD4 Search Pill */}
           <div className="relative flex-1 min-w-0 w-full">
