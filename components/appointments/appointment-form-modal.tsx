@@ -1285,14 +1285,14 @@ function AppointmentFormModalContent({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
+            className="px-5 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex items-center gap-2 px-5 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 py-2.5 px-6 text-xs font-semibold text-white bg-teal-700 hover:bg-teal-800 dark:bg-teal-500 dark:hover:bg-teal-400 rounded-full shadow-xs hover:shadow transition-all disabled:opacity-50 cursor-pointer active:scale-[0.98] md-state-layer"
           >
             {isSubmitting ? (
               <>
@@ -1301,7 +1301,7 @@ function AppointmentFormModalContent({
               </>
             ) : (
               <>
-                <Check className="w-4 h-4" />
+                <Check className="w-4 h-4 shrink-0" />
                 <span>Confirmar Agendamento</span>
               </>
             )}
@@ -1577,11 +1577,11 @@ function AppointmentFormModalContent({
               </span>
             </label>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setShowPolicyModal(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                className="px-5 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 rounded-full transition-colors cursor-pointer"
               >
                 Voltar
               </button>
@@ -1592,7 +1592,7 @@ function AppointmentFormModalContent({
                   setShowPolicyModal(false);
                   await executeSubmit(); // Função que executa a chamada ao banco
                 }}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer inline-flex items-center gap-1.5"
+                className="inline-flex items-center justify-center gap-2 py-2.5 px-6 bg-teal-700 hover:bg-teal-800 dark:bg-teal-500 dark:hover:bg-teal-400 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-full transition-all shadow-xs hover:shadow cursor-pointer active:scale-[0.98] md-state-layer"
               >
                 {isSubmitting || isUploadingReceipt ? (
                   <>
