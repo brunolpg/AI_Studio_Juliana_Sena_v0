@@ -14,14 +14,14 @@ export function PatientDashboard() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("pacientes");
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col antialiased">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col box-border w-full max-w-full min-w-0 overflow-x-hidden antialiased">
       {/* Top Header com navegação por abas */}
       <AppHeader currentTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Main Content Area */}
-      <main className="md4-main-content flex-1 max-w-7xl w-full max-w-full min-w-0 overflow-x-hidden mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-8 sm:pt-6 sm:pb-8 lg:pt-6 lg:pb-10 space-y-6 landscape:pt-2 landscape:pr-4 sm:landscape:pr-6">
+      <main className="md4-main-content flex-1 max-w-7xl w-full max-w-full min-w-0 box-border overflow-x-hidden mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-8 sm:pt-6 sm:pb-8 lg:pt-6 lg:pb-10 space-y-6 landscape:space-y-3 landscape:pt-2 landscape:pl-20 landscape:pr-5">
         {/* MD4 Functional Highlights Banner */}
-        <div className="bg-gradient-to-br from-teal-950 via-slate-900 to-slate-900 dark:from-slate-900 dark:via-teal-950/70 dark:to-slate-950 text-white p-6 sm:p-7 rounded-3xl border border-teal-800/40 dark:border-teal-700/30 shadow-xs relative overflow-hidden transition-all duration-300">
+        <div className="w-full min-w-0 box-border bg-gradient-to-br from-teal-950 via-slate-900 to-slate-900 dark:from-slate-900 dark:via-teal-950/70 dark:to-slate-950 text-white p-5 sm:p-7 landscape:py-3 landscape:px-4 rounded-3xl border border-teal-800/40 dark:border-teal-700/30 shadow-xs relative overflow-hidden transition-all duration-300">
           <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-teal-500/15 to-transparent pointer-events-none" />
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30 mb-3.5 backdrop-blur-xs">
@@ -102,7 +102,7 @@ export function PatientDashboard() {
       </main>
 
       {/* Rodapé do Sistema */}
-      <footer className="md4-main-content border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pt-6 pb-24 sm:py-6 landscape:py-6 text-center text-xs text-slate-500 dark:text-slate-400">
+      <footer className="md4-main-content border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pt-6 pb-24 sm:py-6 landscape:py-6 landscape:pl-20 landscape:pr-5 text-center text-xs text-slate-500 dark:text-slate-400">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-center">
           <p>
             Dra. Juliana Sena • Gestão de Pacientes & Agendamentos • Next.js 15 & Supabase

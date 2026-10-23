@@ -87,42 +87,42 @@ export function FormulaCatalogView({
       />
 
       {/* Main Container com Compensação da Barra Lateral no Landscape e Desktop */}
-      <main className="md4-main-content box-border flex-1 min-w-0 w-auto max-w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pr-4 sm:pr-6 landscape:pr-4 sm:landscape:pr-6 landscape:pl-0 pt-4 pb-12 sm:pt-6 space-y-5 sm:space-y-6 landscape:space-y-2.5 landscape:pt-2 landscape:pb-8 overflow-x-hidden">
+      <main className="md4-main-content flex-1 max-w-7xl w-full max-w-full min-w-0 box-border overflow-x-hidden mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-12 sm:pt-6 space-y-5 sm:space-y-6 landscape:space-y-3 landscape:pt-2 landscape:pb-8 landscape:pl-20 landscape:pr-5">
         
         {/* Top Header / Hero Card */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#042f2e] to-[#091522] p-4 sm:p-6 landscape:py-2.5 landscape:px-4 text-white shadow-sm border border-emerald-900/30 font-['Plus_Jakarta_Sans',sans-serif] w-full max-w-full box-border"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#042f2e] to-[#091522] p-5 sm:p-6 landscape:py-3 landscape:px-4 text-white shadow-sm border border-emerald-900/30 font-['Plus_Jakarta_Sans',sans-serif] w-full min-w-0 box-border"
         >
           <div className="inline-flex items-center gap-1.5 px-3 py-1 landscape:py-0.5 landscape:px-2 landscape:text-[11px] landscape:mb-1 rounded-full bg-emerald-500/10 border border-emerald-400/20 text-emerald-300 text-[11px] sm:text-xs font-medium">
             <Sparkles className="w-3.5 h-3.5 landscape:w-3 landscape:h-3 text-emerald-400 shrink-0"/>
             <span>Prescrições & Fórmulas Magistrais</span>
           </div>
 
-          <h1 className="mt-2.5 sm:mt-3 landscape:mt-1 text-lg sm:text-2xl landscape:text-lg font-bold tracking-tight text-white leading-tight">
+          <h1 className="mt-2.5 sm:mt-3 landscape:mt-1 text-lg sm:text-2xl landscape:text-xl font-bold tracking-tight text-white leading-tight">
             Catálogo de Fórmulas
           </h1>
 
-          <p className="mt-1.5 sm:mt-2 landscape:mt-0.5 text-xs sm:text-sm landscape:text-xs landscape:line-clamp-1 text-emerald-100/75 leading-relaxed max-w-xl font-normal">
+          <p className="mt-1.5 sm:mt-2 landscape:mt-0.5 text-xs sm:text-sm landscape:text-xs landscape:line-clamp-1 text-emerald-100/75 leading-relaxed font-normal">
             Gerencie fórmulas magistrais, ativos e diretrizes de manipulação com agilidade e precisão clínica.
           </p>
         </motion.div>
         
         {/* KPI Cards (Idênticos a Pacientes Ativos e Consultas Hoje) */}
-        <div className="grid grid-cols-2 gap-3 w-full max-w-full box-border landscape:mt-2 landscape:gap-2.5">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 w-full max-w-full min-w-0 box-border landscape:mb-3 landscape:gap-2.5">
           <div className="p-3.5 sm:p-5 landscape:p-2.5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
             <div className="flex items-center justify-between gap-1">
               <span className="text-xs sm:text-sm landscape:text-xs font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
                 Fórmulas Cadastradas
               </span>
-              <div className="p-1.5 sm:p-2.5 landscape:p-1.5 rounded-xl sm:rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 landscape:w-7 landscape:h-7">
+              <div className="p-1.5 sm:p-2.5 landscape:p-1.5 rounded-xl sm:rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1 flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 landscape:w-7 landscape:h-7">
                 <FlaskConical className="w-3.5 h-3.5 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
               </div>
             </div>
-            <div className="mt-2 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-xl sm:text-3xl landscape:text-lg font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
+            <div className="mt-2.5 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-2xl sm:text-3xl landscape:text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
                 {formulas.length}
               </span>
               <span className="text-[10px] sm:text-[11px] landscape:text-[10px] text-slate-400 whitespace-nowrap">no catálogo</span>
@@ -134,12 +134,12 @@ export function FormulaCatalogView({
               <span className="text-xs sm:text-sm landscape:text-xs font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
                 Componentes Ativos
               </span>
-              <div className="p-1.5 sm:p-2.5 landscape:p-1.5 rounded-xl sm:rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 landscape:w-7 landscape:h-7">
+              <div className="p-1.5 sm:p-2.5 landscape:p-1.5 rounded-xl sm:rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1 flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 landscape:w-7 landscape:h-7">
                 <Pill className="w-3.5 h-3.5 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
               </div>
             </div>
-            <div className="mt-2 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-xl sm:text-3xl landscape:text-lg font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
+            <div className="mt-2.5 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-2xl sm:text-3xl landscape:text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
                 {componentes.length}
               </span>
               <span className="text-[10px] sm:text-[11px] landscape:text-[10px] text-slate-400 whitespace-nowrap">insumos disponíveis</span>
@@ -148,17 +148,17 @@ export function FormulaCatalogView({
         </div>
 
         {/* Barra Superior de Controle, Busca MD4 e Ações */}
-        <div className="bg-white dark:bg-slate-900 p-3 sm:p-5 landscape:p-2.5 rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 landscape:gap-2 w-full max-w-full box-border min-w-0">
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 landscape:p-3 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 landscape:gap-2.5 w-full min-w-0 box-border">
           
           {/* Campo de Busca Amplo MD4 Search Pill */}
-          <div className="relative flex-1 max-w-lg min-w-0 w-full">
+          <div className="relative flex-1 min-w-0 w-full">
             <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar por nome, descrição ou veículo..."
-              className="w-full pl-10 pr-16 py-2 text-xs sm:text-sm rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all shadow-2xs"
+              className="w-full pl-10 pr-16 py-2.5 text-xs sm:text-sm rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all shadow-2xs"
             />
             {searchTerm && (
               <button

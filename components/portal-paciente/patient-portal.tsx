@@ -231,7 +231,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
     null;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col antialiased">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col box-border w-full max-w-full min-w-0 overflow-x-hidden antialiased">
       {/* ====================================================================
           Navigation Rail Lateral Fixa para o Ambiente do Paciente (Landscape)
           Compacta (w-16 / w-20), visível apenas em orientação paisagem
@@ -441,7 +441,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
       </header>
 
       {/* Conteúdo Central */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 pb-28 md:pb-8 landscape:py-3 landscape:pl-20 landscape:pr-4 sm:landscape:pr-6 landscape:pb-6 min-w-0 overflow-x-hidden">
+      <main className="flex-1 max-w-7xl w-full max-w-full min-w-0 box-border overflow-x-hidden mx-auto p-4 sm:p-6 space-y-6 pb-28 md:pb-8 landscape:space-y-3 landscape:py-3 landscape:pl-20 landscape:pr-5 landscape:pb-6">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-8 h-8 border-3 border-teal-500/20 border-t-teal-600 rounded-full animate-spin" />

@@ -362,9 +362,14 @@ html, body, button, input, select, textarea {
     display: none !important;
   }
   .md4-main-content {
-    margin-left: 4rem !important; /* 64px para Navigation Rail w-16 */
+    margin-left: 0 !important;
+    padding-left: 5rem !important; /* 80px (pl-20) compensando Navigation Rail w-16 + respiro */
+    padding-right: 1.25rem !important; /* 20px (pr-5) respiro à direita */
     padding-top: 0.5rem !important; /* Alinhado ao topo sem espaço em branco inútil */
     padding-bottom: 1.5rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   .md4-top-bar {
     display: none !important;
