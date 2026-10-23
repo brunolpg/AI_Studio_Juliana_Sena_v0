@@ -86,69 +86,69 @@ export function FormulaCatalogView({
         onTabChange={() => router.push("/dashboard")}
       />
 
-      {/* Main Container com Alinhamento e Largura Total Fluida (Desktop w-full & Mobile Responsiva) */}
-      <main className="flex-1 min-w-0 w-full p-6 lg:p-8 space-y-6 landscape:space-y-3 landscape:pt-2 landscape:pl-20 landscape:pr-5 box-border">
+      {/* Main Container com Alinhamento e Largura Total Fluida e Simetria Perfeita */}
+      <main className="md4-main-content flex-1 min-w-0 w-full px-8 py-6 lg:px-10 lg:py-8 space-y-6 box-border overflow-x-hidden max-lg:landscape:space-y-3 max-lg:landscape:pt-2 max-lg:landscape:pl-20 max-lg:landscape:pr-5">
         
         {/* Top Header / Hero Card */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#042f2e] to-[#091522] p-6 sm:p-7 lg:p-8 landscape:py-3 landscape:px-4 text-white shadow-sm border border-emerald-900/30 font-['Plus_Jakarta_Sans',sans-serif] w-full min-w-0 box-border"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#042f2e] to-[#091522] p-6 sm:p-7 lg:p-8 max-lg:landscape:py-3 max-lg:landscape:px-4 text-white shadow-sm border border-emerald-900/30 font-['Plus_Jakarta_Sans',sans-serif] w-full min-w-0 box-border"
         >
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 landscape:py-0.5 landscape:px-2 landscape:text-[11px] landscape:mb-1 rounded-full bg-emerald-500/10 border border-emerald-400/20 text-emerald-300 text-[11px] sm:text-xs font-medium">
-            <Sparkles className="w-3.5 h-3.5 landscape:w-3 landscape:h-3 text-emerald-400 shrink-0"/>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 max-lg:landscape:py-0.5 max-lg:landscape:px-2 max-lg:landscape:text-[11px] max-lg:landscape:mb-1 rounded-full bg-emerald-500/10 border border-emerald-400/20 text-emerald-300 text-[11px] sm:text-xs font-medium">
+            <Sparkles className="w-3.5 h-3.5 max-lg:landscape:w-3 max-lg:landscape:h-3 text-emerald-400 shrink-0"/>
             <span>Prescrições & Fórmulas Magistrais</span>
           </div>
 
-          <h1 className="mt-2.5 sm:mt-3 landscape:mt-1 text-lg sm:text-2xl landscape:text-xl font-bold tracking-tight text-white leading-tight">
+          <h1 className="mt-2.5 sm:mt-3 max-lg:landscape:mt-1 text-lg sm:text-2xl max-lg:landscape:text-xl font-bold tracking-tight text-white leading-tight">
             Catálogo de Fórmulas
           </h1>
 
-          <p className="mt-1.5 sm:mt-2 landscape:mt-0.5 text-xs sm:text-sm landscape:text-xs landscape:line-clamp-1 text-emerald-100/75 leading-relaxed font-normal">
+          <p className="mt-1.5 sm:mt-2 max-lg:landscape:mt-0.5 text-xs sm:text-sm max-lg:landscape:text-xs max-lg:landscape:line-clamp-1 text-emerald-100/75 leading-relaxed font-normal">
             Gerencie fórmulas magistrais, ativos e diretrizes de manipulação com agilidade e precisão clínica.
           </p>
         </motion.div>
         
         {/* KPI Cards Padronizados (Grid Equilibrado 2 Colunas no Desktop) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-6 landscape:grid-cols-2 landscape:gap-3 box-border min-w-0">
-          <div className="p-5 lg:p-6 landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-6 max-lg:landscape:grid-cols-2 max-lg:landscape:gap-3 box-border min-w-0">
+          <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
             <div className="flex items-center justify-between gap-1">
               <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
                 Fórmulas Cadastradas
               </span>
-              <div className="p-2 sm:p-2.5 landscape:p-1.5 rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 landscape:w-7 landscape:h-7">
-                <FlaskConical className="w-4 h-4 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
+              <div className="p-2 sm:p-2.5 max-lg:landscape:p-1.5 rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 max-lg:landscape:w-7 max-lg:landscape:h-7">
+                <FlaskConical className="w-4 h-4 sm:w-5 sm:h-5 max-lg:landscape:w-3.5 max-lg:landscape:h-3.5" />
               </div>
             </div>
-            <div className="mt-3 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-2xl sm:text-3xl lg:text-4xl landscape:text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
+            <div className="mt-3 max-lg:landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-2xl sm:text-3xl lg:text-4xl max-lg:landscape:text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
                 {formulas.length}
               </span>
-              <span className="text-[10px] sm:text-[11px] landscape:text-[10px] text-slate-400 whitespace-nowrap">no catálogo</span>
+              <span className="text-[10px] sm:text-[11px] max-lg:landscape:text-[10px] text-slate-400 whitespace-nowrap">no catálogo</span>
             </div>
           </div>
 
-          <div className="p-5 lg:p-6 landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
+          <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
             <div className="flex items-center justify-between gap-1">
               <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
                 Componentes Ativos
               </span>
-              <div className="p-2 sm:p-2.5 landscape:p-1.5 rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 landscape:w-7 landscape:h-7">
-                <Pill className="w-4 h-4 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
+              <div className="p-2 sm:p-2.5 max-lg:landscape:p-1.5 rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 max-lg:landscape:w-7 max-lg:landscape:h-7">
+                <Pill className="w-4 h-4 sm:w-5 sm:h-5 max-lg:landscape:w-3.5 max-lg:landscape:h-3.5" />
               </div>
             </div>
-            <div className="mt-3 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
-              <span className="text-2xl sm:text-3xl lg:text-4xl landscape:text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
+            <div className="mt-3 max-lg:landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
+              <span className="text-2xl sm:text-3xl lg:text-4xl max-lg:landscape:text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
                 {componentes.length}
               </span>
-              <span className="text-[10px] sm:text-[11px] landscape:text-[10px] text-slate-400 whitespace-nowrap">insumos disponíveis</span>
+              <span className="text-[10px] sm:text-[11px] max-lg:landscape:text-[10px] text-slate-400 whitespace-nowrap">insumos disponíveis</span>
             </div>
           </div>
         </div>
 
         {/* Barra Superior de Controle, Busca MD4 e Ações */}
-        <div className="bg-white dark:bg-slate-900 p-5 lg:p-6 landscape:p-3 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 landscape:gap-2.5 w-full min-w-0 box-border">
+        <div className="bg-white dark:bg-slate-900 p-5 lg:p-6 max-lg:landscape:p-3 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 max-lg:landscape:gap-2.5 w-full min-w-0 box-border">
           
           {/* Campo de Busca Amplo MD4 Search Pill */}
           <div className="relative flex-1 min-w-0 w-full">

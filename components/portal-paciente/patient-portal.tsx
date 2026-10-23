@@ -238,7 +238,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
           ==================================================================== */}
       <aside
         aria-label="Barra Lateral de Navegação do Paciente"
-        className="hidden landscape:flex fixed top-0 bottom-0 left-0 w-16 sm:w-20 h-dvh max-h-screen z-50 bg-white/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 flex-col items-center justify-between py-2.5 shadow-sm select-none"
+        className="hidden max-lg:landscape:flex fixed top-0 bottom-0 left-0 w-16 sm:w-20 h-dvh max-h-screen z-50 bg-white/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 flex-col items-center justify-between py-2.5 shadow-sm select-none"
       >
         {/* Topo do Rail: Logo Sparkles com fundo verde */}
         <div className="w-10 h-10 rounded-2xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs shrink-0 mb-1 transition-transform hover:scale-105">
@@ -340,8 +340,8 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
         </div>
       </aside>
 
-      {/* Header Dedicado do Portal do Paciente (Oculto em Landscape e com abas pílula apenas no Desktop) */}
-      <header className="landscape:hidden w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-40 overflow-visible shadow-xs transition-colors duration-200">
+      {/* Header Dedicado do Portal do Paciente (Oculto em Mobile Landscape e visível no Desktop e Mobile Retrato) */}
+      <header className="max-lg:landscape:hidden w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-40 overflow-visible shadow-xs transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-2.5 overflow-visible">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 sm:gap-3 overflow-visible">
             
@@ -440,8 +440,8 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
         </div>
       </header>
 
-      {/* Conteúdo Central */}
-      <main className="flex-1 max-w-7xl w-full max-w-full min-w-0 box-border overflow-x-hidden mx-auto p-4 sm:p-6 space-y-6 pb-28 md:pb-8 landscape:space-y-3 landscape:py-3 landscape:pl-20 landscape:pr-5 landscape:pb-6">
+      {/* Conteúdo Central com Simetria Perfeita */}
+      <main className="md4-main-content flex-1 min-w-0 w-full px-8 py-6 lg:px-10 lg:py-8 space-y-6 box-border overflow-x-hidden pb-28 md:pb-8 max-lg:landscape:space-y-3 max-lg:landscape:py-3 max-lg:landscape:pl-20 max-lg:landscape:pr-5 max-lg:landscape:pb-6">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-8 h-8 border-3 border-teal-500/20 border-t-teal-600 rounded-full animate-spin" />
