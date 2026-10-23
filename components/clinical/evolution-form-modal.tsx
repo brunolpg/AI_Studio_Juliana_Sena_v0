@@ -788,7 +788,7 @@ export function EvolutionFormModal({
                       className="w-full sm:w-auto shrink-0 whitespace-nowrap px-3.5 py-2 inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold text-xs transition-all cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-500/30 shadow-2xs"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>+ Adicionar Prescrição</span>
+                      <span>Adicionar Prescrição</span>
                     </button>
                   </div>
 
@@ -899,7 +899,7 @@ export function EvolutionFormModal({
                       className="w-full sm:w-auto shrink-0 whitespace-nowrap px-3.5 py-2 inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold text-xs transition-all cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-500/30 shadow-2xs"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>+ Novo Home Care</span>
+                      <span>Novo Home Care</span>
                     </button>
                   </div>
 

@@ -370,25 +370,20 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
       <div className="sm:hidden landscape:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto my-2 shrink-0" />
 
       {/* Cabeçalho do Modal */}
-      <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
+      <div className="shrink-0 flex items-center justify-between px-6 py-3.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-2xl bg-teal-500/10 text-teal-700 dark:text-teal-400">
+          <div className="p-2.5 rounded-2xl bg-teal-500/10 text-teal-700 dark:text-teal-400 shrink-0 flex items-center justify-center">
             <UserCheck className="w-5 h-5" />
           </div>
-          <div>
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-base sm:text-lg leading-none">
-              {clientToEdit ? "Editar Dados do Paciente" : "Novo Cadastro de Paciente"}
-            </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-              Preencha todos os campos obrigatórios. A idade é calculada dinamicamente.
-            </p>
-          </div>
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-base sm:text-lg leading-tight">
+            {clientToEdit ? "Editar Dados do Paciente" : "Novo Cadastro de Paciente"}
+          </h3>
         </div>
         <button
           id="close-client-form-modal"
           type="button"
           onClick={onClose}
-          className="p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-200/70 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors md-state-layer cursor-pointer"
+          className="p-2 rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-200/70 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors md-state-layer cursor-pointer shrink-0"
         >
           <X className="w-5 h-5" />
         </button>
