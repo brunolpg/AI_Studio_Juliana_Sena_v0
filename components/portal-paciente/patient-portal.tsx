@@ -558,7 +558,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
       </header>
 
       {/* Conteúdo Central com Simetria Perfeita */}
-      <main className="md4-main-content flex-1 min-w-0 w-full px-8 py-6 lg:px-10 lg:py-8 space-y-6 box-border overflow-x-hidden pb-28 md:pb-8 max-lg:landscape:space-y-3 max-lg:landscape:py-3 max-lg:landscape:pl-20 max-lg:landscape:pr-5 max-lg:landscape:pb-6">
+      <main className="md4-main-content flex-1 min-w-0 w-full px-4 sm:px-8 py-4 sm:py-6 lg:px-10 lg:py-8 space-y-4 sm:space-y-6 box-border overflow-x-hidden pb-24 md:pb-8 max-lg:landscape:space-y-3 max-lg:landscape:py-3 max-lg:landscape:pl-20 max-lg:landscape:pr-5 max-lg:landscape:pb-6">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-8 h-8 border-3 border-teal-500/20 border-t-teal-600 rounded-full animate-spin" />
@@ -584,17 +584,17 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
           </div>
         ) : (
           <>
-            {/* Banner MD4 no Topo de Cada Aba (Desktop) */}
-            <div className="hidden lg:block w-full min-w-0 box-border rounded-3xl bg-gradient-to-r from-[#003830] via-[#004d40] to-[#022c22] text-white p-6 lg:p-8 shadow-sm">
-              <div className="flex items-center gap-3">
+            {/* Banner MD4 no Topo de Cada Aba (Mobile Retrato, Paisagem e Desktop) */}
+            <div className="w-full min-w-0 box-border rounded-2xl md:rounded-3xl bg-gradient-to-r from-[#003830] via-[#004d40] to-[#022c22] text-white p-4 sm:p-5 lg:p-8 landscape:max-md:py-3 landscape:max-md:px-4 shadow-sm">
+              <div className="flex items-center gap-2.5 sm:gap-3">
                 {activeTab === "prontuario" ? (
-                  <FileText className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
+                  <FileText className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-emerald-300 shrink-0" />
                 ) : activeTab === "agendamentos" ? (
-                  <Calendar className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
+                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-emerald-300 shrink-0" />
                 ) : (
-                  <UserIcon className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
+                  <UserIcon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-emerald-300 shrink-0" />
                 )}
-                <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
+                <h1 className="text-base sm:text-lg md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
                   {activeTab === "prontuario"
                     ? "Documentos & Prescrições Clínicas"
                     : activeTab === "agendamentos"
@@ -602,7 +602,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                     : "Meus Dados Cadastrais"}
                 </h1>
               </div>
-              <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
+              <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-1 leading-snug">
                 {activeTab === "prontuario"
                   ? "Receituários, fórmulas e orientações pós-procedimento ativas."
                   : activeTab === "agendamentos"
