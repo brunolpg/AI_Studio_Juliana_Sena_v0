@@ -24,49 +24,55 @@ export function PatientDashboard() {
         <div className="w-full min-w-0 box-border bg-gradient-to-br from-teal-950 via-slate-900 to-slate-900 dark:from-slate-900 dark:via-teal-950/70 dark:to-slate-950 text-white p-6 sm:p-7 lg:p-8 max-lg:landscape:py-3 max-lg:landscape:px-4 rounded-3xl border border-teal-800/40 dark:border-teal-700/30 shadow-xs relative overflow-hidden transition-all duration-300">
           <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-teal-500/15 to-transparent pointer-events-none" />
           <div className="relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30 mb-3.5 backdrop-blur-xs">
-              {activeTab === "prontuarios" ? (
-                <>
-                  <Stethoscope className="w-3.5 h-3.5 text-teal-400" />
-                  <span>Prontuário Eletrônico & Evoluções Clínicas Ativas</span>
-                </>
-              ) : activeTab === "agendamentos" ? (
-                <>
-                  <CalendarCheck2 className="w-3.5 h-3.5 text-teal-400" />
-                  <span>Google Calendar API & Grade de Horários Ativa</span>
-                </>
-              ) : activeTab === "deliverables" ? (
-                <>
-                  <FileCode2 className="w-3.5 h-3.5 text-teal-400" />
-                  <span>Documentação Técnica & Scripts DDL</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
-                  <span>Segurança JWT & Sessão Protegida Ativa</span>
-                </>
-              )}
-            </div>
-
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white leading-tight">
-              {activeTab === "prontuarios"
-                ? "Prontuário Médico, Anamnese & Evoluções"
-                : activeTab === "agendamentos"
-                ? "Agendamento de Consultas & Google Agenda"
-                : activeTab === "deliverables"
-                ? "Entregáveis Técnicos, Zod & Schemas SQL"
-                : "Sistema de Gestão & Cadastro de Pacientes"}
-            </h2>
-
-            <p className="text-xs sm:text-sm text-slate-300 max-w-3xl mt-2 leading-relaxed">
-              {activeTab === "prontuarios"
-                ? "Dra. Juliana Sena • Gestão de histórico clínico, alergias com alertas, anotações de evolução no padrão SOAP, sinais vitais e receituário integrado."
-                : activeTab === "agendamentos"
-                ? "Dra. Juliana Sena • Gestão de atendimentos com intervalos de 1 hora (08:00 às 17:00), detecção de horários ocupados e sincronização integrada ao Google Agenda."
-                : activeTab === "deliverables"
-                ? "Consulte os códigos do Schema Zod estrito, scripts DDL do Supabase PostgreSQL com RLS, índices otimizados e autenticação JWT."
-                : "Dra. Juliana Sena • Controle de acesso com autenticação JWT, sessões seguras em cookies HTTP-Only e proteção estrita nas mutações CRUD."}
-            </p>
+            {activeTab === "prontuarios" ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <Stethoscope className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
+                  <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                    Prontuário Médico, Anamnese & Evoluções
+                  </h1>
+                </div>
+                <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
+                  Prontuário Eletrônico & Evoluções Clínicas Ativas
+                </p>
+              </>
+            ) : activeTab === "agendamentos" ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
+                  <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                    Agendamento de Consultas & Google Agenda
+                  </h1>
+                </div>
+                <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
+                  Google Calendar API & Grade de Horários Ativa
+                </p>
+              </>
+            ) : activeTab === "deliverables" ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <FileCode2 className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
+                  <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                    Entregáveis Técnicos, Zod & Schemas SQL
+                  </h1>
+                </div>
+                <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
+                  Documentação Técnica & Scripts DDL
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  <Users className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
+                  <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                    Sistema de Gestão & Cadastro de Pacientes
+                  </h1>
+                </div>
+                <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
+                  Segurança JWT & Sessão Protegida Ativa
+                </p>
+              </>
+            )}
           </div>
         </div>
 

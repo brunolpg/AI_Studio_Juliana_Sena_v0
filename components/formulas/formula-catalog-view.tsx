@@ -96,17 +96,14 @@ export function FormulaCatalogView({
           transition={{ duration: 0.3 }}
           className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#042f2e] to-[#091522] p-6 sm:p-7 lg:p-8 max-lg:landscape:py-3 max-lg:landscape:px-4 text-white shadow-sm border border-emerald-900/30 font-['Plus_Jakarta_Sans',sans-serif] w-full min-w-0 box-border"
         >
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 max-lg:landscape:py-0.5 max-lg:landscape:px-2 max-lg:landscape:text-[11px] max-lg:landscape:mb-1 rounded-full bg-emerald-500/10 border border-emerald-400/20 text-emerald-300 text-[11px] sm:text-xs font-medium">
-            <Sparkles className="w-3.5 h-3.5 max-lg:landscape:w-3 max-lg:landscape:h-3 text-emerald-400 shrink-0"/>
-            <span>Prescrições & Fórmulas Magistrais</span>
+          <div className="flex items-center gap-3">
+            <FlaskConical className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+              Catálogo de Fórmulas
+            </h1>
           </div>
-
-          <h1 className="mt-2.5 sm:mt-3 max-lg:landscape:mt-1 text-lg sm:text-2xl max-lg:landscape:text-xl font-bold tracking-tight text-white leading-tight">
-            Catálogo de Fórmulas
-          </h1>
-
-          <p className="mt-1.5 sm:mt-2 max-lg:landscape:mt-0.5 text-xs sm:text-sm max-lg:landscape:text-xs max-lg:landscape:line-clamp-1 text-emerald-100/75 leading-relaxed font-normal">
-            Gerencie fórmulas magistrais, ativos e diretrizes de manipulação com agilidade e precisão clínica.
+          <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
+            Prescrições & Fórmulas Magistrais
           </p>
         </motion.div>
         
