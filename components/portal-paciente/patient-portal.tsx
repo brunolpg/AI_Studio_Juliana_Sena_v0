@@ -230,93 +230,106 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
     (user as any)?.user_metadata?.picture || 
     null;
 
-  const patientNavItems = [
-    {
-      id: "prontuario" as const,
-      label: "Documentos",
-      icon: ClipboardList,
-    },
-    {
-      id: "agendamentos" as const,
-      label: "Agendamentos",
-      icon: Calendar,
-    },
-    {
-      id: "ficha" as const,
-      label: "Minha Ficha",
-      icon: UserIcon,
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col box-border w-full max-w-full min-w-0 overflow-x-hidden antialiased lg:pl-64">
       {/* ====================================================================
-          1. DESKTOP (PC): MD4 Navigation Drawer (Sidebar Lateral Fixa à Esquerda)
-          Superfície: w-64, backdrop-blur-md, border-r, idêntica ao admin
+          1. DESKTOP (PC): MD4 Navigation Drawer (Sidebar Tonal Fixa)
+          Largura fixa (w-64), visível apenas em desktop (hidden lg:flex)
+          Superfície: bg-white/90 dark:bg-slate-950/90 backdrop-blur-md
           ==================================================================== */}
       <aside
         aria-label="Barra Lateral de Navegação do Paciente"
-        className="md4-patient-desktop-drawer hidden lg:flex flex-col fixed top-0 bottom-0 left-0 w-64 h-dvh max-h-screen z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 transition-colors duration-200 shadow-xs select-none"
+        className="hidden lg:flex flex-col fixed top-0 bottom-0 left-0 w-64 h-dvh max-h-screen z-40 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 text-slate-900 dark:text-slate-100 transition-colors duration-200 shadow-xs select-none"
       >
-        {/* Topo da Sidebar: Logo & Identidade Clínica */}
+        {/* Topo do Drawer: Logo & Identidade Institucional */}
         <div className="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-3 shrink-0">
           <div className="w-10 h-10 shrink-0 rounded-2xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs transition-transform duration-200 hover:scale-105">
             <Sparkles className="w-5 h-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">
-                Dra. Juliana Sena
-              </h1>
-              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 shrink-0">
-                Portal
-              </span>
-            </div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">
+              Dra. Juliana Sena
+            </h1>
             <p className="text-[11px] text-teal-700 dark:text-teal-400 font-semibold tracking-wide truncate mt-0.5">
               Portal do Paciente
             </p>
           </div>
         </div>
 
-        {/* Lista de Navegação Vertical no Formato Pílula */}
+        {/* Lista de Navegação Principal MD4 */}
         <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto overscroll-contain">
           <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            Navegação do Paciente
+            Menu Principal
           </div>
-          {patientNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
+          
+          <button
+            type="button"
+            onClick={() => setActiveTab("prontuario")}
+            className={`relative w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-xs font-semibold transition-all cursor-pointer group ${
+              activeTab === "prontuario"
+                ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900/60"
+            }`}
+          >
+            <FileText
+              className={`w-4.5 h-4.5 shrink-0 transition-transform group-hover:scale-105 ${
+                activeTab === "prontuario"
+                  ? "text-emerald-700 dark:text-emerald-400"
+                  : "text-slate-500 dark:text-slate-400"
+              }`}
+            />
+            <span className="truncate flex-1 text-left">Documentos</span>
+            {activeTab === "prontuario" && (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
+            )}
+          </button>
 
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveTab(item.id)}
-                className={`relative w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-xs font-semibold transition-all cursor-pointer group ${
-                  isActive
-                    ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"
-                }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="patient-desktop-drawer-indicator"
-                    className="absolute inset-0 rounded-full bg-emerald-50 dark:bg-emerald-950/60 -z-10"
-                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                  />
-                )}
-                <Icon
-                  className={`w-4.5 h-4.5 shrink-0 transition-transform group-hover:scale-105 ${
-                    isActive ? "text-emerald-700 dark:text-emerald-400" : "text-slate-500 dark:text-slate-400"
-                  }`}
-                />
-                <span className="truncate flex-1 text-left">{item.label}</span>
-              </button>
-            );
-          })}
+          <button
+            type="button"
+            onClick={() => setActiveTab("agendamentos")}
+            className={`relative w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-xs font-semibold transition-all cursor-pointer group ${
+              activeTab === "agendamentos"
+                ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900/60"
+            }`}
+          >
+            <Calendar
+              className={`w-4.5 h-4.5 shrink-0 transition-transform group-hover:scale-105 ${
+                activeTab === "agendamentos"
+                  ? "text-emerald-700 dark:text-emerald-400"
+                  : "text-slate-500 dark:text-slate-400"
+              }`}
+            />
+            <span className="truncate flex-1 text-left">Agendamentos</span>
+            {activeTab === "agendamentos" && (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("ficha")}
+            className={`relative w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-xs font-semibold transition-all cursor-pointer group ${
+              activeTab === "ficha"
+                ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900/60"
+            }`}
+          >
+            <UserIcon
+              className={`w-4.5 h-4.5 shrink-0 transition-transform group-hover:scale-105 ${
+                activeTab === "ficha"
+                  ? "text-emerald-700 dark:text-emerald-400"
+                  : "text-slate-500 dark:text-slate-400"
+              }`}
+            />
+            <span className="truncate flex-1 text-left">Minha Ficha</span>
+            {activeTab === "ficha" && (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
+            )}
+          </button>
         </nav>
 
-        {/* Rodapé da Barra Lateral: Avatar do Paciente, Nome, Perfil e Menu Dropdown */}
+        {/* Rodapé do Drawer: Avatar e Dados do Paciente */}
         <div className="p-3 border-t border-slate-200/60 dark:border-slate-800/60 relative shrink-0 overflow-visible">
           <UserMenu
             user={{
@@ -326,7 +339,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
               foto_perfil: userPhotoUrl,
               avatar: userPhotoUrl,
               avatar_url: userPhotoUrl,
-              roleLabel: "Paciente",
+              roleLabel: "Paciente"
             }}
             onLogout={onLogout ? async () => onLogout() : undefined}
             direction="up"
@@ -444,7 +457,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
         </div>
       </aside>
 
-      {/* Header Dedicado do Portal do Paciente (Oculto no Desktop e em Mobile Landscape) */}
+      {/* Header Dedicado do Portal do Paciente (Oculto no Desktop e em Mobile Landscape, visível no Mobile Retrato) */}
       <header className="lg:hidden max-lg:landscape:hidden w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-40 overflow-visible shadow-xs transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-2.5 overflow-visible">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 sm:gap-3 overflow-visible">
@@ -571,45 +584,31 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
           </div>
         ) : (
           <>
-            {/* Banner Hero Tonal MD4 Unificado para Todas as Visualizações */}
-            <div className="w-full min-w-0 box-border rounded-3xl bg-gradient-to-r from-[#003830] via-[#004d40] to-[#022c22] text-white p-6 lg:p-8 shadow-sm">
-              {activeTab === "prontuario" ? (
-                <>
-                  <div className="flex items-center gap-3">
-                    <ClipboardList className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
-                    <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
-                      Documentos & Prescrições
-                    </h1>
-                  </div>
-                  <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
-                    Receituários, fórmulas magistrais e orientações de home care ativas
-                  </p>
-                </>
-              ) : activeTab === "agendamentos" ? (
-                <>
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
-                    <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
-                      Meus Agendamentos & Consultas
-                    </h1>
-                  </div>
-                  <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
-                    Consulte suas consultas marcadas e histórico de atendimentos
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-3">
-                    <UserIcon className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
-                    <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
-                      Minha Ficha & Dados Cadastrais
-                    </h1>
-                  </div>
-                  <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
-                    Informações pessoais, foto de perfil e histórico médico cadastrado
-                  </p>
-                </>
-              )}
+            {/* Banner MD4 no Topo de Cada Aba (Desktop) */}
+            <div className="hidden lg:block w-full min-w-0 box-border rounded-3xl bg-gradient-to-r from-[#003830] via-[#004d40] to-[#022c22] text-white p-6 lg:p-8 shadow-sm">
+              <div className="flex items-center gap-3">
+                {activeTab === "prontuario" ? (
+                  <FileText className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
+                ) : activeTab === "agendamentos" ? (
+                  <Calendar className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
+                ) : (
+                  <UserIcon className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
+                )}
+                <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
+                  {activeTab === "prontuario"
+                    ? "Documentos & Prescrições Clínicas"
+                    : activeTab === "agendamentos"
+                    ? "Agendamentos & Consultas"
+                    : "Meus Dados Cadastrais"}
+                </h1>
+              </div>
+              <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
+                {activeTab === "prontuario"
+                  ? "Receituários, fórmulas e orientações pós-procedimento ativas."
+                  : activeTab === "agendamentos"
+                  ? "Histórico e marcação de atendimentos presenciais."
+                  : "Informações de cadastro e contato do paciente."}
+              </p>
             </div>
 
             {/* ABA: DOCUMENTOS (Receituário & Fórmulas Magistrais & Home Care) */}
