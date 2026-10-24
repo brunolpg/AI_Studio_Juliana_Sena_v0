@@ -13,6 +13,7 @@ import {
   Clock,
   User,
   ShieldAlert,
+  ShieldCheck,
   Heart,
   Scale,
   Thermometer,
@@ -950,6 +951,27 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                           </div>
                                         </div>
                                       )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Selo Visual de Autenticidade e Assinatura Digital (Conformidade Jurídica) */}
+                            {Boolean(evo.payload_hash && evo.assinado_em) && (() => {
+                              const assinadoDate = new Date(evo.assinado_em!);
+                              const dataHoraFormatada = !isNaN(assinadoDate.getTime())
+                                ? `${assinadoDate.toLocaleDateString("pt-BR")} às ${assinadoDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                                : evo.assinado_em;
+
+                              return (
+                                <div className="mt-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between gap-2 flex-wrap">
+                                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/70 text-[10px] sm:text-[11px] font-medium shadow-2xs">
+                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                    <span>Assinado Digitalmente • {dataHoraFormatada}</span>
+                                    <span className="text-emerald-400/60 dark:text-emerald-600/60">•</span>
+                                    <span className="font-mono text-[9px] sm:text-[10px] text-emerald-700 dark:text-emerald-400">
+                                      Hash: {evo.payload_hash!.slice(0, 8)}...
+                                    </span>
                                   </div>
                                 </div>
                               );

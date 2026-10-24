@@ -296,7 +296,7 @@ export async function addClinicalEvolutionAction(
     const signatureResult = assinarPayloadSOAP(rawPayloadToSign);
 
     const newEvolution: ClinicalEvolution = {
-      id: `evo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: "",
       client_id: clientId,
       data: rawPayloadToSign.data,
       horario: rawPayloadToSign.horario,
@@ -336,9 +336,9 @@ export async function addClinicalEvolutionAction(
 
     const supabase = getSupabaseAdminClient() || serverClient;
     if (supabase) {
-      let savedEvolutionId = newEvolution.id;
+      let savedEvolutionId = "";
 
-      // Grava na tabela evolucoes_clinicas com assinatura digital e vínculos
+      // Grava na tabela evolucoes_clinicas com assinatura digital e vínculos (UUID nativo gerado pelo PostgreSQL)
       try {
         const { data: insertedRecord, error: insertErr } = await supabase
           .from("evolucoes_clinicas")
@@ -367,12 +367,15 @@ export async function addClinicalEvolutionAction(
             algoritmo: signatureResult.algoritmo,
             assinado_em: signatureResult.assinadoEm,
           })
-          .select("id")
-          .maybeSingle();
+          .select()
+          .single();
 
         if (insertedRecord?.id) {
           savedEvolutionId = insertedRecord.id;
           newEvolution.id = insertedRecord.id;
+          if (insertedRecord.created_at) {
+            newEvolution.created_at = insertedRecord.created_at;
+          }
         } else if (insertErr) {
           console.error("Erro ao salvar evolução clínica na tabela evolucoes_clinicas:", insertErr.message);
           // Fallback de salvamento
@@ -398,12 +401,15 @@ export async function addClinicalEvolutionAction(
               prescricoes_ids: newEvolution.prescricoes_ids,
               home_care_ficha_id: newEvolution.home_care_ficha_id,
             })
-            .select("id")
-            .maybeSingle();
+            .select()
+            .single();
 
           if (fallbackRecord?.id) {
             savedEvolutionId = fallbackRecord.id;
             newEvolution.id = fallbackRecord.id;
+            if (fallbackRecord.created_at) {
+              newEvolution.created_at = fallbackRecord.created_at;
+            }
           }
 
           if (fallbackErr) {
@@ -493,6 +499,8 @@ export async function addClinicalEvolutionAction(
       }
     }
 
+    revalidatePath("/prontuario");
+    revalidatePath("/dashboard");
     revalidatePath("/");
 
     return {
