@@ -20,6 +20,9 @@ import {
   ShieldCheck,
   LogIn,
   Calendar,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { getClientsAction, restoreClientAction } from "@/actions/client-actions";
 import { ClientFormModal } from "./client-form-modal";
@@ -41,6 +44,8 @@ export function ClientTableView() {
   const [statusFilter, setStatusFilter] = useState<"todos" | "Ativo" | "Inativo" | "excluidos">("todos");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [sortBy, setSortBy] = useState<"nome" | "created_at" | "idade" | "cidade">("nome");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [paginatedData, setPaginatedData] = useState<PaginatedResult<Client>>({
     data: [],
     total: 0,
@@ -82,8 +87,8 @@ export function ClientTableView() {
           status: statusFilter,
           page: currentPage,
           pageSize,
-          sortBy: "created_at",
-          sortOrder: "desc",
+          sortBy,
+          sortOrder,
         };
 
         const res = await getClientsAction(filters);
@@ -105,11 +110,22 @@ export function ClientTableView() {
         });
       }
     });
-  }, [debouncedSearch, statusFilter, currentPage, pageSize, toast]);
+  }, [debouncedSearch, statusFilter, currentPage, pageSize, sortBy, sortOrder, toast]);
 
   useEffect(() => {
     loadClients();
   }, [loadClients]);
+
+  // Alternância de ordenação
+  const handleSort = (column: "nome" | "created_at" | "idade" | "cidade") => {
+    if (sortBy === column) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+    setCurrentPage(1);
+  };
 
   // Ações de linha protegidas por autenticação
   const handleOpenCreate = () => {
@@ -326,11 +342,58 @@ export function ClientTableView() {
           <table className="w-full text-left border-collapse table-auto">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                <th className="py-3.5 px-4">Paciente</th>
-                <th className="py-3.5 px-4">Data Nasc. / Idade</th>
+                <th
+                  className="py-3.5 px-4 cursor-pointer select-none hover:text-teal-700 dark:hover:text-teal-400 transition-colors"
+                  onClick={() => handleSort("nome")}
+                  title="Ordenar por Nome"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Paciente</span>
+                    {sortBy === "nome" ? (
+                      sortOrder === "asc" ? (
+                        <ArrowUp className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                      ) : (
+                        <ArrowDown className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 opacity-40" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="py-3.5 px-4 cursor-pointer select-none hover:text-teal-700 dark:hover:text-teal-400 transition-colors"
+                  onClick={() => handleSort("idade")}
+                  title="Ordenar por Idade"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Data Nasc. / Idade</span>
+                    {sortBy === "idade" ? (
+                      sortOrder === "asc" ? (
+                        <ArrowUp className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                      ) : (
+                        <ArrowDown className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                      )
+                    ) : null}
+                  </div>
+                </th>
                 <th className="py-3.5 px-4">CPF / Sexo</th>
                 <th className="py-3.5 px-4">Contato</th>
-                <th className="py-3.5 px-4">Localização</th>
+                <th
+                  className="py-3.5 px-4 cursor-pointer select-none hover:text-teal-700 dark:hover:text-teal-400 transition-colors"
+                  onClick={() => handleSort("cidade")}
+                  title="Ordenar por Cidade"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Localização</span>
+                    {sortBy === "cidade" ? (
+                      sortOrder === "asc" ? (
+                        <ArrowUp className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                      ) : (
+                        <ArrowDown className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                      )
+                    ) : null}
+                  </div>
+                </th>
                 <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4 text-right">Ações</th>
               </tr>
