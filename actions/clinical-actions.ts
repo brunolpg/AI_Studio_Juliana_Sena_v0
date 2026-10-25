@@ -740,7 +740,7 @@ function toTitleCase(str: string): string {
  */
 export async function getFormulasAction(): Promise<ActionResponse<any[]>> {
   try {
-    const supabase = await createClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
     if (!supabase) {
       return { success: true, data: [] };
     }
@@ -794,7 +794,7 @@ export async function getFormulasAction(): Promise<ActionResponse<any[]>> {
  */
 export async function getComponentesAction(): Promise<ActionResponse<any[]>> {
   try {
-    const supabase = await createClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
     if (!supabase) {
       return { success: true, data: [] };
     }
@@ -829,7 +829,7 @@ export async function getComponentesAction(): Promise<ActionResponse<any[]>> {
  */
 export async function getUnidadesAction(): Promise<ActionResponse<any[]>> {
   try {
-    const supabase = await createClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
     if (!supabase) {
       return { success: true, data: [] };
     }

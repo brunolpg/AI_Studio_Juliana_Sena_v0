@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { FormulaModal } from "./formula-modal";
 import { AppHeader } from "@/components/shared/app-header";
-import { deleteFormulaAction } from "@/actions/formula-actions";
+import { deleteFormulaAction, getFormulasAction } from "@/actions/formula-actions";
 import { useToast } from "@/components/ui/toast";
 import type { Formula, Componente, Unidade } from "@/types/formula";
 
@@ -41,6 +41,35 @@ export function FormulaCatalogView({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Sincroniza e busca no client caso o SSR retorne vazio inicialmente
+  React.useEffect(() => {
+    if (initialFormulas && initialFormulas.length > 0) {
+      setFormulas(initialFormulas);
+    } else {
+      getFormulasAction().then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          setFormulas(res.data);
+        }
+      });
+    }
+  }, [initialFormulas]);
+
+  // Cálculo preciso dos Componentes Ativos únicos em catálogo e disponíveis
+  const totalComponentes = useMemo(() => {
+    const ativosNasFormulas = new Set(
+      formulas.flatMap((f: any) =>
+        (f.componentes || f.formula_componentes || f.ativos || f.items || []).map(
+          (c: any) => c.nome || c.componentes?.nome || c.name
+        )
+      ).filter(Boolean)
+    );
+
+    if (componentes && componentes.length > 0) {
+      return Math.max(componentes.length, ativosNasFormulas.size);
+    }
+    return ativosNasFormulas.size;
+  }, [formulas, componentes]);
+
   const filteredFormulas = useMemo(() => {
     return formulas.filter((f) => {
       const matchSearch =
@@ -48,7 +77,8 @@ export function FormulaCatalogView({
         (f.descricao && f.descricao.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (f.veiculo && f.veiculo.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      const matchVia = viaFilter === "todos" ? true : f.via === viaFilter;
+      const fVia = f.via ? (f.via.toLowerCase().includes("oral") ? "oral" : "tópico") : "tópico";
+      const matchVia = viaFilter === "todos" ? true : fVia === viaFilter;
 
       return matchSearch && matchVia;
     });
@@ -74,7 +104,16 @@ export function FormulaCatalogView({
   };
 
   const handleRefresh = async () => {
-    window.location.reload();
+    try {
+      const res = await getFormulasAction();
+      if (res.success && res.data) {
+        setFormulas(res.data);
+      } else {
+        window.location.reload();
+      }
+    } catch {
+      window.location.reload();
+    }
   };
 
   return (
@@ -137,7 +176,7 @@ export function FormulaCatalogView({
             </div>
             <div className="mt-3 max-lg:landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
               <span className="text-2xl sm:text-3xl lg:text-4xl max-lg:landscape:text-xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
-                {componentes.length}
+                {totalComponentes}
               </span>
               <span className="text-[10px] sm:text-[11px] max-lg:landscape:text-[10px] text-slate-400 whitespace-nowrap">insumos disponíveis</span>
             </div>
@@ -248,7 +287,7 @@ export function FormulaCatalogView({
                         )}
                         <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex-wrap">
                           <span className="font-medium text-slate-600 dark:text-slate-300 shrink-0">
-                            (Uso {f.via === "oral" ? "Oral" : "Tópico"})
+                            (Uso {f.via?.toLowerCase() === "oral" ? "Oral" : "Tópico"})
                           </span>
                           {f.veiculo && (
                             <>
@@ -284,13 +323,16 @@ export function FormulaCatalogView({
                     </div>
 
                     {/* Bloco de Composição (Caixa Verde Suave) */}
-                    {f.formula_componentes && f.formula_componentes.length > 0 && (
+                    {(((f as any).componentes && (f as any).componentes.length > 0) || (f.formula_componentes && f.formula_componentes.length > 0)) && (
                       <div className="mt-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 p-3.5 text-xs sm:text-sm text-emerald-950 dark:text-emerald-200 font-semibold leading-relaxed space-y-1">
                         <strong className="block text-[11px] uppercase tracking-wider text-emerald-800 dark:text-emerald-300 mb-1">Composição:</strong>
-                        {f.formula_componentes.map((fc, idx) => {
-                          const compName = fc.componentes?.nome || "Ativo";
+                        {((f as any).componentes && (f as any).componentes.length > 0
+                          ? (f as any).componentes
+                          : f.formula_componentes || []
+                        ).map((fc: any, idx: number) => {
+                          const compName = fc.nome || fc.componentes?.nome || "Ativo";
                           const qtd = fc.quantidade;
-                          const unit = fc.componentes?.unidades?.unidade || "";
+                          const unit = fc.unidade_sigla || fc.componentes?.unidades?.unidade || fc.unidade || "";
                           return (
                             <div key={idx}>
                               {compName}: {qtd}{unit}

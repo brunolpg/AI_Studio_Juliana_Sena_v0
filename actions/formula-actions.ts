@@ -1,14 +1,19 @@
 "use server";
 
-import { getSupabaseClient } from "@/lib/supabase/client";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function getFormulasAction() {
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
     if (!supabase) return { success: false, data: [], error: "Supabase não configurado." };
 
-    const { data, error } = await supabase
+    let data: any[] | null = null;
+    let error: any = null;
+
+    // 1. Tenta consulta completa com formula_componentes, componentes e unidades
+    const res = await supabase
       .from("formulas")
       .select(`
         *,
@@ -29,12 +34,93 @@ export async function getFormulasAction() {
       `)
       .order("nome", { ascending: true });
 
+    data = res.data;
+    error = res.error;
+
+    // Fallback 1: Caso a relação aninhada com unidades falhe no PostgREST
+    if (error || !data) {
+      console.warn("Aviso ao consultar fórmulas com unidades, tentando fallback simplificado:", error?.message);
+      const fallbackRes = await supabase
+        .from("formulas")
+        .select(`
+          *,
+          formula_componentes (
+            id,
+            quantidade,
+            componente_id,
+            componentes (
+              id,
+              nome,
+              unidade_id
+            )
+          )
+        `)
+        .order("nome", { ascending: true });
+
+      if (fallbackRes.data) {
+        data = fallbackRes.data;
+        error = null;
+      }
+    }
+
+    // Fallback 2: Caso a relação formula_componentes falhe, consulta direto a tabela formulas
+    if (error || !data) {
+      console.warn("Tentando consulta simples na tabela formulas:", error?.message);
+      const simpleRes = await supabase
+        .from("formulas")
+        .select("*")
+        .order("nome", { ascending: true });
+
+      if (simpleRes.data) {
+        data = simpleRes.data;
+        error = null;
+      }
+    }
+
+    // Fallback 3: Caso formulas esteja vazio, verifica se os modelos estão em prescription_templates
+    if (!error && (!data || data.length === 0)) {
+      try {
+        const templatesRes = await supabase
+          .from("prescription_templates")
+          .select("*")
+          .order("nome", { ascending: true });
+        if (templatesRes.data && templatesRes.data.length > 0) {
+          data = templatesRes.data;
+        }
+      } catch {
+        // Tabela opcional, ignora se não existir
+      }
+    }
+
     if (error) {
-      console.error("Erro ao buscar fórmulas:", error);
+      console.error("Erro ao buscar fórmulas no Supabase:", error);
       return { success: false, data: [], error: error.message };
     }
 
-    return { success: true, data: data || [] };
+    // Mapeamento normalizado garantindo que componentes e formula_componentes estejam acessíveis
+    const mapped = (data || []).map((f: any) => {
+      const rawComps = f.formula_componentes || f.componentes || f.ativos || f.items || [];
+      const formattedComps = rawComps.map((fc: any) => ({
+        id: fc.componente_id || fc.id,
+        nome: fc.componentes?.nome || fc.nome || fc.name || "Ativo",
+        quantidade: fc.quantidade,
+        unidade_id: fc.componentes?.unidade_id || fc.unidade_id,
+        unidade_sigla:
+          fc.componentes?.unidades?.unidade ||
+          fc.unidade_sigla ||
+          fc.unidade ||
+          "%",
+      }));
+
+      return {
+        ...f,
+        via: f.via ? (f.via.toLowerCase().includes("oral") ? "oral" : "tópico") : "tópico",
+        componentes: formattedComps,
+        formula_componentes: f.formula_componentes || rawComps,
+      };
+    });
+
+    return { success: true, data: mapped };
   } catch (err: any) {
     console.error("Erro inesperado ao buscar fórmulas:", err);
     return { success: false, data: [], error: err.message || "Erro desconhecido" };
@@ -43,18 +129,34 @@ export async function getFormulasAction() {
 
 export async function getComponentesAndUnidadesAction() {
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
     if (!supabase) return { success: false, componentes: [], unidades: [], error: "Supabase não configurado." };
 
-    const [compRes, unRes] = await Promise.all([
-      supabase.from("componentes").select("id, nome, unidade_id, unidades(id, unidade)").order("nome", { ascending: true }),
-      supabase.from("unidades").select("id, unidade").order("unidade", { ascending: true }),
-    ]);
+    let componentesData: any[] = [];
+    let unidadesData: any[] = [];
+
+    const compRes = await supabase
+      .from("componentes")
+      .select("id, nome, unidade_id, unidades(id, unidade)")
+      .order("nome", { ascending: true });
+
+    if (compRes.error) {
+      const fallbackComp = await supabase
+        .from("componentes")
+        .select("id, nome, unidade_id")
+        .order("nome", { ascending: true });
+      componentesData = fallbackComp.data || [];
+    } else {
+      componentesData = compRes.data || [];
+    }
+
+    const unRes = await supabase.from("unidades").select("id, unidade").order("unidade", { ascending: true });
+    unidadesData = unRes.data || [];
 
     return {
       success: true,
-      componentes: compRes.data || [],
-      unidades: unRes.data || [],
+      componentes: componentesData,
+      unidades: unidadesData,
     };
   } catch (err: any) {
     console.error("Erro ao buscar componentes/unidades:", err);
@@ -75,7 +177,7 @@ export async function createFormulaAction(formData: {
   componentes: { componente_id: string; quantidade: number }[];
 }) {
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
     if (!supabase) return { success: false, error: "Supabase não configurado." };
 
     // 1. Inserir fórmula
@@ -115,13 +217,13 @@ export async function createFormulaAction(formData: {
 
       if (itemsError) {
         console.error("Erro ao inserir componentes da fórmula:", itemsError);
-        // Tenta limpar a fórmula criada caso falhe
         await supabase.from("formulas").delete().eq("id", formulaId);
         return { success: false, error: `Erro ao salvar componentes: ${itemsError.message}` };
       }
     }
 
     revalidatePath("/formulas");
+    revalidatePath("/dashboard/formulas");
     return { success: true, formulaId };
   } catch (err: any) {
     console.error("Erro inesperado ao criar fórmula:", err);
@@ -131,7 +233,7 @@ export async function createFormulaAction(formData: {
 
 export async function createUnidadeQuickAction(nomeUnidade: string) {
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
     if (!supabase) return { success: false, error: "Supabase não configurado." };
 
     const { data, error } = await supabase
@@ -142,6 +244,7 @@ export async function createUnidadeQuickAction(nomeUnidade: string) {
 
     if (error) return { success: false, error: error.message };
     revalidatePath("/formulas");
+    revalidatePath("/dashboard/formulas");
     return { success: true, unidade: data };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -150,7 +253,7 @@ export async function createUnidadeQuickAction(nomeUnidade: string) {
 
 export async function createComponenteQuickAction(nomeComponente: string, unidadeId: string) {
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
     if (!supabase) return { success: false, error: "Supabase não configurado." };
 
     const { data, error } = await supabase
@@ -161,6 +264,7 @@ export async function createComponenteQuickAction(nomeComponente: string, unidad
 
     if (error) return { success: false, error: error.message };
     revalidatePath("/formulas");
+    revalidatePath("/dashboard/formulas");
     return { success: true, componente: data };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -169,16 +273,16 @@ export async function createComponenteQuickAction(nomeComponente: string, unidad
 
 export async function deleteFormulaAction(formulaId: string) {
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseAdminClient() || (await createClient());
     if (!supabase) return { success: false, error: "Supabase não configurado." };
 
-    // Deleta os componentes associados primeiro (ou cascade se configurado)
     await supabase.from("formula_componentes").delete().eq("formula_id", formulaId);
     const { error } = await supabase.from("formulas").delete().eq("id", formulaId);
 
     if (error) return { success: false, error: error.message };
 
     revalidatePath("/formulas");
+    revalidatePath("/dashboard/formulas");
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
