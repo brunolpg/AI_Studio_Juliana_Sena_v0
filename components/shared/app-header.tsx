@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Users, Calendar, Stethoscope, Sparkles } from "lucide-react";
+import Image from "next/image";
+import { Users, Calendar, Stethoscope } from "lucide-react";
 import { UserMenu } from "@/components/shared/user-menu";
 import { motion } from "motion/react";
 
@@ -49,8 +50,15 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
       >
         {/* Topo do Drawer: Logo & Identidade Clínica */}
         <div className="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-3 shrink-0">
-          <div className="w-10 h-10 shrink-0 rounded-2xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs transition-transform duration-200 hover:scale-105">
-            <Sparkles className="w-5 h-5" />
+          <div className="relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-2xl bg-[#004d40] overflow-hidden p-1.5 shrink-0 shadow-sm transition-transform duration-200 hover:scale-105">
+            <Image
+              src="/logo-clinica.png"
+              alt="Logo Clínica Dra. Juliana Sena"
+              width={44}
+              height={44}
+              priority
+              className="w-full h-full object-contain"
+            />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -122,9 +130,16 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
         aria-label="Barra Lateral de Navegação Móvel"
         className="md4-nav-rail hidden fixed top-0 bottom-0 left-0 w-16 h-dvh max-h-screen z-40 bg-slate-100/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 flex-col items-center justify-between py-2 shadow-sm select-none"
       >
-        {/* Topo do Rail: Ícone Compacto */}
-        <div className="w-9 h-9 rounded-xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs shrink-0 mb-1">
-          <Sparkles className="w-4.5 h-4.5" />
+        {/* Topo do Rail: Logo Compacta */}
+        <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-[#004d40] overflow-hidden p-1.5 shrink-0 mb-1 shadow-sm transition-transform hover:scale-105">
+          <Image
+            src="/logo-clinica.png"
+            alt="Logo Clínica Dra. Juliana Sena"
+            width={40}
+            height={40}
+            priority
+            className="w-full h-full object-contain"
+          />
         </div>
 
         {/* Itens do Rail (Ícones com Indicador Pílula Vertical) */}
@@ -180,8 +195,15 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
           <div className="flex items-center justify-between gap-3 overflow-visible">
             {/* Lado Esquerdo: Identidade Visível no Mobile (no Desktop o Drawer já exibe) */}
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="lg:hidden w-8 h-8 rounded-xl bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 flex items-center justify-center shadow-xs shrink-0">
-                <Sparkles className="w-4 h-4" />
+              <div className="lg:hidden relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-[#004d40] overflow-hidden p-1 shrink-0 shadow-xs">
+                <Image
+                  src="/logo-clinica.png"
+                  alt="Logo Clínica Dra. Juliana Sena"
+                  width={36}
+                  height={36}
+                  priority
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div className="min-w-0">
                 <h1 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">

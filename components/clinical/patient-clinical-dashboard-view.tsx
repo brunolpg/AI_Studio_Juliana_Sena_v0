@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Users,
   Search,
@@ -35,6 +35,22 @@ export function PatientClinicalDashboardView({
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fecha dropdown ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   // Carrega pacientes ativos diretamente do Supabase
   useEffect(() => {
@@ -97,115 +113,132 @@ export function PatientClinicalDashboardView({
   return (
     <div className="space-y-5">
       {/* Barra de Seleção de Paciente com Autocomplete & Troca Rápida */}
-      <div className="w-full p-4 sm:p-5 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 font-['Plus_Jakarta_Sans',sans-serif]">
-        {/* Seletor Dropdown */}
-        <div className="relative flex-1 min-w-0">
-          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">
-            Selecione o Prontuário do Paciente
-          </label>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-800/60 text-left cursor-pointer hover:border-teal-500/80 dark:hover:border-teal-500 transition-colors md-state-layer shadow-2xs"
-            >
-              <div className="flex items-center gap-2.5 truncate">
-                <div className="w-8 h-8 rounded-full bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-                  {selectedPatient?.nome.charAt(0) || "P"}
-                </div>
-                <div className="truncate">
-                  <span className="font-bold text-xs text-slate-900 dark:text-white block truncate">
-                    {selectedPatient?.nome || "Selecione um paciente..."}
-                  </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
-                    CPF: {selectedPatient?.cpf} • {selectedPatient?.idade} anos
-                  </span>
-                </div>
-              </div>
-              <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
-            </button>
-
-            {isDropdownOpen && (
-              <div className="absolute z-30 top-full left-0 right-0 mt-1.5 max-h-64 overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800/80">
-                <div className="p-2.5 sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Buscar paciente por nome ou CPF..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-9 pr-3.5 py-2 text-xs rounded-full border border-slate-200/80 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
-                      autoFocus
-                    />
-                  </div>
-                </div>
-
-                {filteredClients.map((client) => (
-                  <button
-                    key={client.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedPatientId(client.id);
-                      setIsDropdownOpen(false);
-                      setSearchTerm("");
-                    }}
-                    className={`w-full text-left p-3 flex items-center justify-between transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer md-state-layer ${
-                      client.id === selectedPatient?.id
-                        ? "bg-teal-50/70 dark:bg-teal-950/40"
-                        : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <div className="w-7 h-7 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-300 font-bold text-xs flex items-center justify-center shrink-0">
-                        {client.nome.charAt(0)}
-                      </div>
-                      <div className="truncate">
-                        <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                          {client.nome}
-                        </div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                          {client.idade} anos • {client.cidade}/{client.estado}
-                        </div>
-                      </div>
-                    </div>
-                    {client.id === selectedPatient?.id && (
-                      <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-800">
-                        Ativo
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Informações Rápidas de Contato do Paciente Ativo */}
-        {selectedPatient && (
-          <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
-            <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 font-semibold shadow-2xs">
-              <Phone className="w-3.5 h-3.5 text-[#0d6e64] dark:text-teal-400 shrink-0" />
-              <span>{selectedPatient.telefone}</span>
-            </div>
-
-            <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 font-semibold shadow-2xs">
-              <Mail className="w-3.5 h-3.5 text-[#0d6e64] dark:text-teal-400 shrink-0" />
-              <span className="truncate max-w-[180px]">{selectedPatient.email}</span>
-            </div>
-
-            {onOpenAppointments && (
+      <div className="w-full p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="flex flex-col landscape:max-md:flex-row landscape:max-md:items-center landscape:max-md:flex-wrap md:flex-row md:items-center justify-between gap-3 w-full">
+          {/* Dropdown do Paciente */}
+          <div className="flex-1 min-w-[240px] w-full min-w-0">
+            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 block">
+              Selecione o Prontuário do Paciente
+            </label>
+            {/* Componente Select/Trigger com largura completa e flex-shrink-0 */}
+            <div className="w-full min-w-0 relative" ref={dropdownRef}>
               <button
                 type="button"
-                onClick={onOpenAppointments}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-[#0d6e64] dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/60 hover:bg-teal-100/90 dark:hover:bg-teal-900/60 border border-teal-700/30 dark:border-teal-500/40 transition-all cursor-pointer md-state-layer shadow-2xs active:scale-[0.98]"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full min-w-[200px] flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 text-left cursor-pointer hover:border-emerald-500/80 dark:hover:border-emerald-500 transition-colors md-state-layer shadow-2xs overflow-hidden"
               >
-                <Calendar className="w-3.5 h-3.5 text-[#0d6e64] dark:text-teal-400 shrink-0" />
-                <span>Ver Agenda de Consultas</span>
+                <div className="flex items-center gap-2.5 min-w-0 overflow-hidden flex-1">
+                  <div className="w-8 h-8 rounded-full bg-emerald-700 dark:bg-emerald-500 text-white dark:text-slate-950 font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                    {selectedPatient?.nome ? selectedPatient.nome.charAt(0).toUpperCase() : "P"}
+                  </div>
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <span className="font-bold text-xs text-slate-900 dark:text-slate-100 block truncate">
+                      {selectedPatient?.nome || "Selecione um paciente..."}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">
+                      CPF: {selectedPatient?.cpf || "---"} • {selectedPatient?.idade} anos
+                    </span>
+                  </div>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-slate-400 shrink-0 ml-2 transition-transform duration-200 ${
+                    isDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
               </button>
-            )}
+
+              {isDropdownOpen && (
+                <div className="absolute z-30 top-full left-0 right-0 mt-1.5 max-h-64 overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xl divide-y divide-slate-100 dark:divide-slate-800/80">
+                  <div className="p-2.5 sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 z-10">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Buscar paciente por nome ou CPF..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-9 pr-3.5 py-2 text-xs rounded-full border border-slate-200/80 dark:border-slate-700/80 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  {filteredClients.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400">
+                      Nenhum paciente encontrado.
+                    </div>
+                  ) : (
+                    filteredClients.map((client) => (
+                      <button
+                        key={client.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPatientId(client.id);
+                          setIsDropdownOpen(false);
+                          setSearchTerm("");
+                        }}
+                        className={`w-full text-left p-3 flex items-center justify-between transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer md-state-layer ${
+                          client.id === selectedPatient?.id
+                            ? "bg-emerald-50/70 dark:bg-emerald-950/40"
+                            : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0 overflow-hidden flex-1">
+                          <div className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center shrink-0">
+                            {client.nome ? client.nome.charAt(0).toUpperCase() : "P"}
+                          </div>
+                          <div className="min-w-0 flex-1 overflow-hidden">
+                            <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                              {client.nome}
+                            </div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                              CPF: {client.cpf} • {client.idade} anos • {client.cidade}/{client.estado}
+                            </div>
+                          </div>
+                        </div>
+                        {client.id === selectedPatient?.id && (
+                          <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-800 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 shrink-0 ml-2">
+                            Ativo
+                          </span>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        )}
+
+          {/* Chips de Contato e Atalho */}
+          {selectedPatient && (
+            <div className="flex items-center flex-wrap gap-2 shrink-0">
+              {selectedPatient.telefone && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/70 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 text-xs font-semibold shadow-2xs">
+                  <Phone className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                  <span>{selectedPatient.telefone}</span>
+                </div>
+              )}
+
+              {selectedPatient.email && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/70 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 text-xs font-semibold shadow-2xs">
+                  <Mail className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                  <span className="truncate max-w-[180px]">{selectedPatient.email}</span>
+                </div>
+              )}
+
+              {onOpenAppointments && (
+                <button
+                  type="button"
+                  onClick={onOpenAppointments}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-transparent hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700/70 transition-colors cursor-pointer md-state-layer shadow-2xs active:scale-[0.98]"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                  <span>Ver Agenda de Consultas</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Renderiza o Subcomponente de Abas do Prontuário */}
