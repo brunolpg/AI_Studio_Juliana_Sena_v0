@@ -71,25 +71,40 @@ export function PrintHomeCareModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[999999] flex items-center justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-xs animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Estilos dedicados para impressão A4 */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+      {/* Link de carregamento direto e à prova de falhas para a fonte Plus Jakarta Sans */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+      />
+
+      {/* Injeção à prova de falhas da fonte Plus Jakarta Sans */}
       <style dangerouslySetInnerHTML={{ __html: `
+        .metropolis-font,
+        .metropolis-font *,
+        #home-care-print-area,
+        #home-care-print-area * {
+          font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        }
+
         @media print {
           @page {
             size: A4 portrait;
-            margin: 12mm 15mm;
+            margin: 8mm;
           }
-
           body {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            background: white !important;
           }
 
+          /* Oculta tudo que não faz parte da folha de home care */
           body * {
             visibility: hidden !important;
           }
 
+          /* Desbloqueia rolagem e containers pais do modal */
           html, body, [data-radix-portal], [role='dialog'] {
             overflow: visible !important;
             height: auto !important;
@@ -98,29 +113,34 @@ export function PrintHomeCareModal({
             inset: auto !important;
           }
 
+          /* Torna visível exclusivamente o relatório de home care */
           #home-care-print-area,
           #home-care-print-area * {
             visibility: visible !important;
             font-family: 'Plus Jakarta Sans', sans-serif !important;
           }
 
+          /* Fixa a folha no topo da página A4 e restringe altura */
           #home-care-print-area {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
             min-height: 275mm !important;
+            overflow: visible !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 10mm !important;
             box-shadow: none !important;
             border: none !important;
             background: white !important;
-            color: #0f172a !important;
+            color: black !important;
           }
         }
       `}} />
 
-      <div className="relative w-[96vw] max-w-[1350px] h-[92vh] bg-slate-100 dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col lg:flex-row overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative w-[95vw] max-w-[1300px] h-[90vh] bg-slate-100 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col lg:flex-row overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Painel Lateral com Informações e Ações */}
         <div
@@ -205,14 +225,14 @@ export function PrintHomeCareModal({
           </div>
         </div>
 
-        {/* Visualizador da Folha A4 */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center bg-slate-200/60 dark:bg-slate-950/80 relative">
-          {/* Botão de Toggle do Painel Lateral */}
+        {/* Pré-visualização da Folha A4 */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 dark:bg-slate-950/40 flex justify-center items-start relative">
+          {/* Botão de Toggle para Ocultar / Mostrar Detalhes */}
           <button
             type="button"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="absolute top-4 left-4 z-10 p-2 rounded-xl bg-white dark:bg-slate-800 shadow-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 print:hidden cursor-pointer"
-            title={isSidebarOpen ? "Ocultar Painel" : "Mostrar Painel"}
+            className="absolute top-4 left-4 p-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-md cursor-pointer z-30 transition-all hover:scale-105 print:hidden"
+            title={isSidebarOpen ? "Ocultar Painel Lateral" : "Mostrar Painel Lateral"}
           >
             {isSidebarOpen ? (
               <div className="flex items-center gap-1.5 text-xs font-semibold">
@@ -231,33 +251,34 @@ export function PrintHomeCareModal({
           <div
             id="home-care-print-area"
             ref={printAreaRef}
-            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-6 print:p-6 shadow-xl border border-slate-200 flex flex-col justify-between"
+            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between metropolis-font"
             style={{
               boxSizing: "border-box",
+              aspectRatio: "1/1.414",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
             <div>
-              {/* 1. Cabeçalho do Relatório (Padrão Idêntico ao Relatório de Prescrições) */}
-              <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-700 mt-1 pb-3 mb-5 w-full">
+              {/* Cabeçalho do Relatório */}
+              <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-6 w-full">
                 {/* Lado Esquerdo: Logo + Coluna com Título, Nome e Especialidade */}
                 <div className="flex items-center gap-4">
-                  {/* Logo com linhas douradas */}
+                  {/* Logo da Clínica */}
                   <img
                     src="/logo-clinica.png"
-                    alt="Logo Clínica Dra. Juliana Sena"
+                    alt="Logo Clínica"
                     className="h-16 w-auto object-contain flex-shrink-0"
                     referrerPolicy="no-referrer"
                   />
 
                   {/* Coluna de Textos Alinhados à Esquerda */}
                   <div className="flex flex-col justify-center">
-                    {/* Linha superior em caixa alta */}
+                    {/* Título do Documento (Acima do nome) */}
                     <span className="text-xs sm:text-sm font-bold tracking-wider text-slate-800 uppercase whitespace-nowrap leading-tight mb-0.5">
                       PROTOCOLO DE CUIDADOS DOMICILIARES (HOME CARE)
                     </span>
 
-                    {/* Nome da profissional em destaque */}
+                    {/* Nome da Profissional (Alinhado logo abaixo do título) */}
                     <span className="text-base font-bold text-slate-900 whitespace-nowrap leading-tight">
                       Juliana Sena de Souza Vieira
                     </span>
@@ -269,7 +290,7 @@ export function PrintHomeCareModal({
                   </div>
                 </div>
 
-                {/* Registro profissional alinhado à extrema direita */}
+                {/* Lado Direito: Apenas o Registro Profissional */}
                 <div className="text-right flex-shrink-0">
                   <span className="text-[10px] sm:text-xs font-medium text-slate-500 whitespace-nowrap">
                     COREN-BA 366.344
@@ -277,20 +298,20 @@ export function PrintHomeCareModal({
                 </div>
               </div>
 
-              {/* 2. Bloco: DADOS DO PACIENTE */}
-              <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/80 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              {/* Identificação do Paciente */}
+              <div className="border border-slate-300 rounded-lg p-4 bg-slate-50 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs w-full">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Paciente</span>
+                  <span className="text-[10px] font-bold text-slate-500 block uppercase">Paciente</span>
                   <span className="font-bold text-slate-900 text-sm">{pacienteNome}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Data de Nascimento / CPF</span>
+                  <span className="text-[10px] font-bold text-slate-500 block uppercase">Data de Nascimento / CPF</span>
                   <span className="font-semibold text-slate-800">
                     {pacienteNasc ? formatDateBR(pacienteNasc) : "—"} {pacienteCpf ? `• ${formatCPF(pacienteCpf)}` : ""}
                   </span>
                 </div>
                 <div className="sm:text-right">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Protocolo / Data</span>
+                  <span className="text-[10px] font-bold text-slate-500 block uppercase">Protocolo / Data</span>
                   <span className="font-bold text-teal-800 text-xs block">
                     {ficha.titulo_protocolo}
                   </span>
