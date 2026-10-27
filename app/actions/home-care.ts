@@ -262,14 +262,15 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
       return { error: "Acesso não autorizado. Por favor, realize login novamente." };
     }
 
-    // Identificar profissional autenticado ou valor padrão
+    // Identificar profissional responsável oficial
     let profissionalNome = validData.profissional;
-    if (!profissionalNome) {
-      profissionalNome =
-        user.user_metadata?.nome ||
-        user.user_metadata?.full_name ||
-        user.email?.split("@")[0] ||
-        "Dra. Juliana Sena";
+    if (
+      !profissionalNome ||
+      profissionalNome.toLowerCase().includes("bruno") ||
+      profissionalNome.includes("@") ||
+      profissionalNome === "Dra. Juliana Sena"
+    ) {
+      profissionalNome = "Juliana Sena de Souza Vieira";
     }
 
     // 2. Processar e sincronizar Tópicos de CUIDADOS usando cliente administrativo

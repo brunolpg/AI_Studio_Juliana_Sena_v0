@@ -77,7 +77,7 @@ export function PrintHomeCareModal({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 10mm 12mm;
+            margin: 12mm 15mm;
           }
 
           body {
@@ -111,7 +111,7 @@ export function PrintHomeCareModal({
             width: 100% !important;
             min-height: 275mm !important;
             margin: 0 !important;
-            padding: 8mm 10mm !important;
+            padding: 0 !important;
             box-shadow: none !important;
             border: none !important;
             background: white !important;
@@ -150,6 +150,12 @@ export function PrintHomeCareModal({
                 <span className="text-[10px] font-bold text-slate-400 block uppercase">Protocolo Clínico</span>
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block mt-0.5">
                   {ficha.titulo_protocolo}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 block uppercase">Profissional Responsável</span>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mt-0.5">
+                  Juliana Sena de Souza Vieira • COREN-BA 366.344
                 </span>
               </div>
               <div>
@@ -225,49 +231,54 @@ export function PrintHomeCareModal({
           <div
             id="home-care-print-area"
             ref={printAreaRef}
-            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[16mm] sm:p-[20mm] shadow-xl border border-slate-200 flex flex-col justify-between"
+            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-6 print:p-6 shadow-xl border border-slate-200 flex flex-col justify-between"
             style={{
               boxSizing: "border-box",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
             <div>
-              {/* 1. Cabeçalho Institucional Escuro / Dourado */}
-              <div className="rounded-2xl bg-gradient-to-r from-[#042f2e] via-[#064e3b] to-[#091522] text-white p-5 sm:p-6 mb-5 border border-emerald-900/40 relative overflow-hidden shadow-sm">
-                <div className="flex items-center justify-between relative z-10">
-                  <div className="flex items-center gap-4">
-                    <img
-                      src="/logo-clinica.png"
-                      alt="Dra. Juliana Sena"
-                      className="h-16 w-auto object-contain flex-shrink-0"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div>
-                      <span className="text-[10px] tracking-widest text-amber-300 font-bold uppercase block mb-0.5">
-                        CLÍNICA DE ESTÉTICA AVANÇADA & REGENERATIVA
-                      </span>
-                      <h2 className="text-lg font-bold text-white tracking-tight leading-tight">
-                        Dra. Juliana Sena
-                      </h2>
-                      <p className="text-xs text-emerald-200/90 font-medium">
-                        Enfermeira Esteta • Laserterapia e Harmonização Integrativa • COREN-BA 366.344
-                      </p>
-                    </div>
-                  </div>
+              {/* 1. Cabeçalho do Relatório (Padrão Idêntico ao Relatório de Prescrições) */}
+              <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-700 mt-1 pb-3 mb-5 w-full">
+                {/* Lado Esquerdo: Logo + Coluna com Título, Nome e Especialidade */}
+                <div className="flex items-center gap-4">
+                  {/* Logo com linhas douradas */}
+                  <img
+                    src="/logo-clinica.png"
+                    alt="Logo Clínica Dra. Juliana Sena"
+                    className="h-16 w-auto object-contain flex-shrink-0"
+                    referrerPolicy="no-referrer"
+                  />
 
-                  <div className="text-right">
-                    <span className="inline-block px-3 py-1 rounded-xl bg-white/10 backdrop-blur-xs border border-white/20 text-xs font-bold text-white uppercase tracking-wider">
-                      ORIENTAÇÕES HOME CARE
+                  {/* Coluna de Textos Alinhados à Esquerda */}
+                  <div className="flex flex-col justify-center">
+                    {/* Linha superior em caixa alta */}
+                    <span className="text-xs sm:text-sm font-bold tracking-wider text-slate-800 uppercase whitespace-nowrap leading-tight mb-0.5">
+                      PROTOCOLO DE CUIDADOS DOMICILIARES (HOME CARE)
                     </span>
-                    <p className="text-[10px] text-emerald-300/80 mt-1">
-                      {ficha.titulo_protocolo}
-                    </p>
+
+                    {/* Nome da profissional em destaque */}
+                    <span className="text-base font-bold text-slate-900 whitespace-nowrap leading-tight">
+                      Juliana Sena de Souza Vieira
+                    </span>
+
+                    {/* Especialidade */}
+                    <span className="text-xs text-slate-500 font-medium leading-tight">
+                      Enfermeira Esteta
+                    </span>
                   </div>
+                </div>
+
+                {/* Registro profissional alinhado à extrema direita */}
+                <div className="text-right flex-shrink-0">
+                  <span className="text-[10px] sm:text-xs font-medium text-slate-500 whitespace-nowrap">
+                    COREN-BA 366.344
+                  </span>
                 </div>
               </div>
 
               {/* 2. Bloco: DADOS DO PACIENTE */}
-              <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/80 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/80 mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 block uppercase">Paciente</span>
                   <span className="font-bold text-slate-900 text-sm">{pacienteNome}</span>
@@ -279,8 +290,11 @@ export function PrintHomeCareModal({
                   </span>
                 </div>
                 <div className="sm:text-right">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Data do Atendimento</span>
-                  <span className="font-bold text-teal-800 text-sm">
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Protocolo / Data</span>
+                  <span className="font-bold text-teal-800 text-xs block">
+                    {ficha.titulo_protocolo}
+                  </span>
+                  <span className="text-[11px] text-slate-500">
                     {formatDateBR(ficha.data_home_care)}
                   </span>
                 </div>
@@ -418,7 +432,7 @@ export function PrintHomeCareModal({
               <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
                 <span className="font-medium">{formatDateToPortuguese(ficha.data_home_care)}</span>
                 <span className="text-[11px] font-semibold text-slate-700">
-                  {ficha.profissional || "Juliana Sena de Souza Vieira"} • COREN-BA 366.344
+                  Juliana Sena de Souza Vieira • COREN-BA 366.344
                 </span>
               </div>
 
