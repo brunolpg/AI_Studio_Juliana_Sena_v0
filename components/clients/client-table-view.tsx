@@ -17,7 +17,6 @@ import {
   Archive,
   RefreshCw,
   Lock,
-  ShieldCheck,
   LogIn,
   Calendar,
   ArrowUpDown,
@@ -193,8 +192,8 @@ export function ClientTableView() {
 
   return (
     <div className="space-y-4">
-      {/* Banner de Status de Autenticação & Autorização */}
-      {!user ? (
+      {/* Banner de Modo Somente Leitura (apenas se não autenticado) */}
+      {!user && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 px-4 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 rounded-2xl text-xs text-amber-900 dark:text-amber-200">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 bg-amber-100 dark:bg-amber-900/60 rounded-lg text-amber-700 dark:text-amber-300">
@@ -214,17 +213,6 @@ export function ClientTableView() {
             <LogIn className="w-3.5 h-3.5" />
             <span>Fazer Login</span>
           </button>
-        </div>
-      ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 px-4 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl text-xs text-emerald-900 dark:text-emerald-200">
-          <div className="flex items-center gap-2">
-            <div className="p-1 bg-emerald-100 dark:bg-emerald-900/60 rounded-lg text-emerald-700 dark:text-emerald-300">
-              <ShieldCheck className="w-3.5 h-3.5" />
-            </div>
-            <span>
-              <strong>Usuário Autenticado:</strong> {user.name} ({user.roleLabel}) • Acesso autorizado
-            </span>
-          </div>
         </div>
       )}
 
