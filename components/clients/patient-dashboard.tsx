@@ -19,56 +19,55 @@ export function PatientDashboard() {
       <AppHeader currentTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Main Content Area Padronizada com Largura Total Fluida e Simetria Perfeita */}
-      <main className="md4-main-content flex-1 min-w-0 w-full px-8 py-6 lg:px-10 lg:py-8 space-y-6 box-border overflow-x-hidden max-lg:landscape:space-y-3 max-lg:landscape:pt-2 max-lg:landscape:pl-20 max-lg:landscape:pr-5">
+      <main className="md4-main-content flex-1 min-w-0 w-full px-4 sm:px-8 py-4 sm:py-6 lg:px-10 lg:py-8 space-y-4 sm:space-y-6 box-border overflow-x-hidden pb-24 md:pb-8 max-lg:landscape:space-y-3 max-lg:landscape:pt-2 max-lg:landscape:pl-20 max-lg:landscape:pr-5">
         {/* MD4 Functional Highlights Banner */}
-        <div className="w-full min-w-0 box-border bg-gradient-to-br from-teal-950 via-slate-900 to-slate-900 dark:from-slate-900 dark:via-teal-950/70 dark:to-slate-950 text-white p-6 sm:p-7 lg:p-8 max-lg:landscape:py-3 max-lg:landscape:px-4 rounded-3xl border border-teal-800/40 dark:border-teal-700/30 shadow-xs relative overflow-hidden transition-all duration-300">
-          <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial from-teal-500/15 to-transparent pointer-events-none" />
+        <div className="w-full min-w-0 box-border rounded-2xl md:rounded-3xl bg-gradient-to-r from-[#003830] via-[#004d40] to-[#022c22] text-white p-4 sm:p-5 lg:p-8 landscape:max-md:py-3 landscape:max-md:px-4 shadow-sm dark:border dark:border-emerald-900/40 relative overflow-hidden transition-all duration-300">
           <div className="relative z-10">
             {activeTab === "prontuarios" ? (
               <>
-                <div className="flex items-center gap-3">
-                  <Stethoscope className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
-                  <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-emerald-300 shrink-0" />
+                  <h1 className="text-base sm:text-lg md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
                     Prontuário Médico, Anamnese & Evoluções
                   </h1>
                 </div>
-                <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
+                <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-0.5 sm:mt-1 leading-snug">
                   Prontuário Eletrônico & Evoluções Clínicas Ativas
                 </p>
               </>
             ) : activeTab === "agendamentos" ? (
               <>
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
-                  <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-emerald-300 shrink-0" />
+                  <h1 className="text-base sm:text-lg md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
                     Agendamento de Consultas & Google Agenda
                   </h1>
                 </div>
-                <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
+                <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-0.5 sm:mt-1 leading-snug">
                   Google Calendar API & Grade de Horários Ativa
                 </p>
               </>
             ) : activeTab === "deliverables" ? (
               <>
-                <div className="flex items-center gap-3">
-                  <FileCode2 className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
-                  <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <FileCode2 className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-emerald-300 shrink-0" />
+                  <h1 className="text-base sm:text-lg md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
                     Entregáveis Técnicos, Zod & Schemas SQL
                   </h1>
                 </div>
-                <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
+                <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-0.5 sm:mt-1 leading-snug">
                   Documentação Técnica & Scripts DDL
                 </p>
               </>
             ) : (
               <>
-                <div className="flex items-center gap-3">
-                  <Users className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
-                  <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-emerald-300 shrink-0" />
+                  <h1 className="text-base sm:text-lg md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
                     Sistema de Gestão & Cadastro de Pacientes
                   </h1>
                 </div>
-                <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
+                <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-0.5 sm:mt-1 leading-snug">
                   Segurança JWT & Sessão Protegida Ativa
                 </p>
               </>

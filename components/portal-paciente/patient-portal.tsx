@@ -585,7 +585,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
         ) : (
           <>
             {/* Banner MD4 no Topo de Cada Aba (Mobile Retrato, Paisagem e Desktop) */}
-            <div className="w-full min-w-0 box-border rounded-2xl md:rounded-3xl bg-gradient-to-r from-[#003830] via-[#004d40] to-[#022c22] text-white p-4 sm:p-5 lg:p-8 landscape:max-md:py-3 landscape:max-md:px-4 shadow-sm">
+            <div className="w-full min-w-0 box-border rounded-2xl md:rounded-3xl bg-gradient-to-r from-[#003830] via-[#004d40] to-[#022c22] text-white p-4 sm:p-5 lg:p-8 landscape:max-md:py-3 landscape:max-md:px-4 shadow-sm dark:border dark:border-emerald-900/40">
               <div className="flex items-center gap-2.5 sm:gap-3">
                 {activeTab === "prontuario" ? (
                   <FileText className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-emerald-300 shrink-0" />
@@ -602,7 +602,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                     : "Meus Dados Cadastrais"}
                 </h1>
               </div>
-              <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-1 leading-snug">
+              <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-0.5 sm:mt-1 leading-snug">
                 {activeTab === "prontuario"
                   ? "Receituários, fórmulas e orientações pós-procedimento ativas."
                   : activeTab === "agendamentos"

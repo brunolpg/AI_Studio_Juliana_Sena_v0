@@ -126,22 +126,22 @@ export function FormulaCatalogView({
       />
 
       {/* Main Container com Alinhamento e Largura Total Fluida e Simetria Perfeita */}
-      <main className="md4-main-content flex-1 min-w-0 w-full px-8 py-6 lg:px-10 lg:py-8 space-y-6 box-border overflow-x-hidden max-lg:landscape:space-y-3 max-lg:landscape:pt-2 max-lg:landscape:pl-20 max-lg:landscape:pr-5">
+      <main className="md4-main-content flex-1 min-w-0 w-full px-4 sm:px-8 py-4 sm:py-6 lg:px-10 lg:py-8 space-y-4 sm:space-y-6 box-border overflow-x-hidden max-lg:landscape:space-y-3 max-lg:landscape:pt-2 max-lg:landscape:pl-20 max-lg:landscape:pr-5">
         
         {/* Top Header / Hero Card */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#064e3b] via-[#042f2e] to-[#091522] p-6 sm:p-7 lg:p-8 max-lg:landscape:py-3 max-lg:landscape:px-4 text-white shadow-sm border border-emerald-900/30 font-['Plus_Jakarta_Sans',sans-serif] w-full min-w-0 box-border"
+          className="relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-r from-[#003830] via-[#004d40] to-[#022c22] text-white p-4 sm:p-5 lg:p-8 landscape:max-md:py-3 landscape:max-md:px-4 shadow-sm dark:border dark:border-emerald-900/40 w-full min-w-0 box-border font-['Plus_Jakarta_Sans',sans-serif]"
         >
-          <div className="flex items-center gap-3">
-            <FlaskConical className="w-7 h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <FlaskConical className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-emerald-300 shrink-0" />
+            <h1 className="text-base sm:text-lg md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
               Catálogo de Fórmulas
             </h1>
           </div>
-          <p className="text-xs md:text-sm text-emerald-200/85 font-medium mt-1">
+          <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-0.5 sm:mt-1 leading-snug">
             Prescrições & Fórmulas Magistrais
           </p>
         </motion.div>
