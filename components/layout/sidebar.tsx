@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
-import { Users, Calendar, Stethoscope } from "lucide-react";
+import { Users, Calendar, Stethoscope, Sparkles } from "lucide-react";
 import { UserMenu } from "@/components/shared/user-menu";
 import { motion } from "motion/react";
 import type { DashboardTab } from "@/components/shared/app-header";
@@ -45,15 +44,8 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
     >
       {/* Topo da Sidebar: Logo & Identidade Clínica */}
       <div className="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-3 shrink-0">
-        <div className="relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-2xl bg-[#004d40] overflow-hidden p-1.5 shrink-0 shadow-sm transition-transform duration-200 hover:scale-105">
-          <Image
-            src="/logo-clinica.png"
-            alt="Logo Clínica Dra. Juliana Sena"
-            width={44}
-            height={44}
-            priority
-            className="w-full h-full object-contain"
-          />
+        <div className="flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-2xl bg-[#004d40] dark:bg-emerald-950 dark:border dark:border-emerald-800/50 text-white shrink-0 shadow-sm transition-transform duration-200 hover:scale-105">
+          <Sparkles className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">

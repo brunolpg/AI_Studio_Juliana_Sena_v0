@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import { motion } from "motion/react";
 import {
   Calendar,
@@ -244,15 +243,8 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
       >
         {/* Topo do Drawer: Logo & Identidade Institucional */}
         <div className="p-5 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center gap-3 shrink-0">
-          <div className="relative flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-2xl bg-[#004d40] overflow-hidden p-1.5 shrink-0 shadow-sm transition-transform duration-200 hover:scale-105">
-            <Image
-              src="/logo-clinica.png"
-              alt="Logo Clínica Dra. Juliana Sena"
-              width={44}
-              height={44}
-              priority
-              className="w-full h-full object-contain"
-            />
+          <div className="flex items-center justify-center w-10 h-10 md:w-11 md:h-11 rounded-2xl bg-[#004d40] dark:bg-emerald-950 dark:border dark:border-emerald-800/50 text-white shrink-0 shadow-sm transition-transform duration-200 hover:scale-105">
+            <Sparkles className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white" />
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">
@@ -366,15 +358,8 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
         className="hidden max-lg:landscape:flex fixed top-0 bottom-0 left-0 w-16 sm:w-20 h-dvh max-h-screen z-50 bg-white/95 dark:bg-[#0f1929]/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 flex-col items-center justify-between py-2.5 shadow-sm select-none"
       >
         {/* Topo do Rail: Logo da Clínica com fundo verde */}
-        <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-[#004d40] overflow-hidden p-1.5 shrink-0 mb-1 shadow-sm transition-transform hover:scale-105">
-          <Image
-            src="/logo-clinica.png"
-            alt="Logo Clínica Dra. Juliana Sena"
-            width={40}
-            height={40}
-            priority
-            className="w-full h-full object-contain"
-          />
+        <div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-[#004d40] dark:bg-emerald-950 dark:border dark:border-emerald-800/50 text-white shrink-0 mb-1 shadow-sm transition-transform hover:scale-105">
+          <Sparkles className="w-5 h-5 text-white" />
         </div>
 
         {/* Itens do Rail (Ícones com Indicador Pílula Vertical) */}
@@ -480,15 +465,8 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
             {/* Linha 1 no Mobile / Lado Esquerdo no Desktop: Identidade + Perfil Mobile */}
             <div className="flex items-center justify-between w-full md:w-auto gap-2 overflow-visible">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#004d40] overflow-hidden p-1 shrink-0 shadow-xs transition-transform hover:scale-105">
-                  <Image
-                    src="/logo-clinica.png"
-                    alt="Logo Clínica Dra. Juliana Sena"
-                    width={40}
-                    height={40}
-                    priority
-                    className="w-full h-full object-contain"
-                  />
+                <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#004d40] dark:bg-emerald-950 dark:border dark:border-emerald-800/50 text-white shrink-0 shadow-sm transition-transform hover:scale-105">
+                  <Sparkles className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white" />
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate leading-tight">
