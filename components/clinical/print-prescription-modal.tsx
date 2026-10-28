@@ -328,14 +328,22 @@ export function PrintPrescriptionModal({
               </div>
 
               {/* Identificação do Paciente */}
-              <div className="mt-6 border border-slate-300 rounded-lg p-4 bg-slate-50 flex justify-between items-center text-xs">
+              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 block uppercase">Paciente</span>
-                  <span className="font-bold text-slate-900 text-sm">{client.nome}</span>
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                    PACIENTE
+                  </span>
+                  <span className="text-base font-bold text-slate-900">
+                    {client.nome}
+                  </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] font-bold text-slate-500 block uppercase">CPF</span>
-                  <span className="font-bold text-slate-800">{formatCPF(client.cpf)}</span>
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                    CPF
+                  </span>
+                  <span className="text-base font-bold text-slate-900">
+                    {formatCPF(client.cpf)}
+                  </span>
                 </div>
               </div>
 

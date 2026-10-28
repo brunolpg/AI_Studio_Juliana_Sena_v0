@@ -299,24 +299,21 @@ export function PrintHomeCareModal({
               </div>
 
               {/* Identificação do Paciente */}
-              <div className="border border-slate-300 rounded-lg p-4 bg-slate-50 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs w-full">
+              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 block uppercase">Paciente</span>
-                  <span className="font-bold text-slate-900 text-sm">{pacienteNome}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 block uppercase">Data de Nascimento / CPF</span>
-                  <span className="font-semibold text-slate-800">
-                    {pacienteNasc ? formatDateBR(pacienteNasc) : "—"} {pacienteCpf ? `• ${formatCPF(pacienteCpf)}` : ""}
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                    PACIENTE
+                  </span>
+                  <span className="text-base font-bold text-slate-900">
+                    {pacienteNome}
                   </span>
                 </div>
-                <div className="sm:text-right">
-                  <span className="text-[10px] font-bold text-slate-500 block uppercase">Protocolo / Data</span>
-                  <span className="font-bold text-teal-800 text-xs block">
-                    {ficha.titulo_protocolo}
+                <div className="text-right">
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                    CPF
                   </span>
-                  <span className="text-[11px] text-slate-500">
-                    {formatDateBR(ficha.data_home_care)}
+                  <span className="text-base font-bold text-slate-900">
+                    {formatCPF(pacienteCpf)}
                   </span>
                 </div>
               </div>
