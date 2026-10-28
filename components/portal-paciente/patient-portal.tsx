@@ -9,6 +9,7 @@ import {
   LogOut,
   Sparkles,
   AlertCircle,
+  Info,
   Clock,
   FileHeart,
   ShieldAlert,
@@ -627,16 +628,15 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
               <div className="space-y-6">
                 {/* 1. DADOS CADASTRAIS DO PACIENTE */}
                 <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xs space-y-6">
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-                    <div>
-                      <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                        Dados Cadastrais do Paciente
-                      </h2>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Visualização protegida em modo estrito de leitura. Alterações devem ser solicitadas à administração.
+                  {/* Card Informativo Padronizado (Espelhando o Card de Aviso da Agenda) */}
+                  <div className="flex items-center justify-between gap-3 p-4 rounded-2xl md:rounded-3xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 w-full shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <Info className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <p className="text-xs sm:text-sm text-emerald-900 dark:text-emerald-200 font-medium leading-relaxed">
+                        Alterações devem ser solicitadas à administração.
                       </p>
                     </div>
-                    <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60">
+                    <span className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/60">
                       {patientData.status || "Ativo"}
                     </span>
                   </div>
