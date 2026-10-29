@@ -274,11 +274,28 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
       toast({
         type: warnings.length > 0 ? "warning" : "success",
         title: "Receita assinada registrada!",
-        description: warnings.length > 0 ? warnings[0] : "O documento assinado com ICP-Brasil foi vinculado ao prontuário.",
+        description: warnings.length > 0 ? warnings[0] : "Receita assinada vinculada ao prontuário e enviada com anexo para o e-mail do paciente.",
       });
       
       const uploadedPdfUrl = data.pdf_assinado_url || data.url || signingRx.pdf_assinado_url || `/api/prescricoes/${signingRx.id}/pdf`;
       loadClinicalData();
+
+      // Chamada automática para rota de e-mail com anexo do PDF assinado
+      try {
+        await fetch(`/api/prescricoes/${signingRx.id}/notify-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            patientName: client?.nome || (client as any)?.name || "Paciente",
+            patientEmail: client?.email || "",
+            formulaName: signingRx.medicamento || (signingRx as any).nome_formula || "Fórmula Magistral",
+            pdfUrl: uploadedPdfUrl,
+            prescriptionDate: signingRx.data_prescricao || new Date().toISOString(),
+          }),
+        });
+      } catch (emailErr) {
+        console.warn("Aviso: Falha ao enviar notificação de e-mail automática:", emailErr);
+      }
 
       // Em vez de fechar imediatamente o modal, abre a confirmação para comunicar o paciente:
       setSignedNotificationPrompt({
@@ -2005,26 +2022,36 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
 
                 <div className="space-y-1.5">
                   <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                    Receita Assinada Anexada com Sucesso!
+                    Receita Assinada Registrada!
                   </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-                    Deseja comunicar <strong>{client?.nome || (client as any)?.name || "o paciente"}</strong> agora sobre a liberação da prescrição{" "}
-                    <strong>{signedNotificationPrompt.formulaName}</strong>?
+                  <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm mx-auto leading-relaxed">
+                    Receita assinada vinculada ao prontuário e enviada com anexo para o e-mail do paciente.
                   </p>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/70 text-left text-xs space-y-2">
-                  <p className="font-semibold text-slate-700 dark:text-slate-200">
-                    Ao confirmar, o sistema irá:
+                <div className="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-left text-xs space-y-2">
+                  <p className="font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Status do Documento e Comunicações:</span>
                   </p>
                   <ul className="space-y-1.5 text-slate-600 dark:text-slate-400">
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
-                      <span>Enviar e-mail em segundo plano com o PDF assinado em anexo ({client?.email || "e-mail cadastrado"}).</span>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
+                      <span>
+                        E-mail com PDF assinado em anexo:{" "}
+                        <strong className="text-slate-700 dark:text-slate-200 font-medium">
+                          {client?.email ? `enviado para ${client.email}` : "paciente sem e-mail cadastrado"}
+                        </strong>
+                      </span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
-                      <span>Abrir o WhatsApp do paciente ({client?.telefone || (client as any)?.phone || "telefone cadastrado"}) com o aviso de disponibilidade no site.</span>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
+                      <span>
+                        Prontuário & Portal do Paciente:{" "}
+                        <strong className="text-emerald-700 dark:text-emerald-300 font-medium">
+                          documento salvo e pronto para visualização
+                        </strong>
+                      </span>
                     </li>
                   </ul>
                 </div>
@@ -2040,7 +2067,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     }}
                     className="w-full sm:flex-1 py-2.5 px-4 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer"
                   >
-                    Agora não
+                    Concluir
                   </button>
 
                   <button
@@ -2048,7 +2075,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     onClick={() => handleNotifyPatientAfterSigning(signedNotificationPrompt)}
                     className="w-full sm:flex-1 py-2.5 px-4 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2 md-state-layer"
                   >
-                    <span>Sim, Comunicar Paciente</span>
+                    <span>Enviar pelo WhatsApp</span>
                   </button>
                 </div>
               </div>

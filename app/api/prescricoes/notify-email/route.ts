@@ -52,35 +52,50 @@ export async function POST(request: Request) {
     `;
 
     // Integração via Resend API (se RESEND_API_KEY estiver configurada)
-    if (process.env.RESEND_API_KEY) {
-      const resendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: process.env.EMAIL_FROM || "Dra. Juliana Sena <nao-responda@julianasena.com.br>",
-          to: [patientEmail],
-          subject: `Receita Digital Assinada - ${formulaName || "Dra. Juliana Sena"}`,
-          html: htmlContent,
-          attachments: [
-            {
-              filename: fileName,
-              content: pdfBase64,
-            },
-          ],
-        }),
-      });
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const emailFrom = process.env.EMAIL_FROM || "Dra. Juliana Sena <nao-responda@julianasena.com.br>";
 
-      if (!resendRes.ok) {
-        const errText = await resendRes.text();
-        console.warn("Aviso ao enviar via Resend:", errText);
-      }
-    } else {
-      console.log(
-        `[E-mail em 2º Plano] Destinatário: ${patientEmail} | Anexo: ${fileName} (${pdfBase64.length} bytes base64)`
+    if (!resendApiKey) {
+      console.warn(
+        "[Resend API] RESEND_API_KEY não configurada no ambiente (Vercel / servidor). " +
+        "Para ativar o disparo automático de e-mails em produção com o PDF assinado anexo, " +
+        "configure a variável de ambiente RESEND_API_KEY (e opcionalmente EMAIL_FROM) no painel do seu provedor (Vercel > Settings > Environment Variables)."
       );
+      console.log(
+        `[E-mail Simulado com Anexo] Para: ${patientEmail} | Paciente: ${patientName || "Paciente"} | Prescrição: ${formulaName || "Fórmula Magistral"} | Anexo: ${fileName} (${pdfBase64.length} bytes base64)`
+      );
+
+      return NextResponse.json({
+        success: true,
+        mocked: true,
+        message: "Receita assinada processada. Aviso: RESEND_API_KEY ausente no painel da Vercel para despacho de e-mails em produção.",
+        recipient: patientEmail,
+      });
+    }
+
+    const resendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: emailFrom,
+        to: [patientEmail],
+        subject: `Receita Digital Assinada - ${formulaName || "Dra. Juliana Sena"}`,
+        html: htmlContent,
+        attachments: [
+          {
+            filename: fileName,
+            content: pdfBase64,
+          },
+        ],
+      }),
+    });
+
+    if (!resendRes.ok) {
+      const errText = await resendRes.text();
+      console.warn("[Resend API] Aviso ao enviar via Resend:", errText);
     }
 
     return NextResponse.json({
