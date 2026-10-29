@@ -32,6 +32,7 @@ import {
   ExternalLink,
   UploadCloud,
   Download,
+  Mail,
 } from "lucide-react";
 import {
   getPatientClinicalRecordAction,
@@ -110,12 +111,16 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
     formulaName: string;
     pdfUrl: string;
   } | null>(null);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const openSigningModal = (rx: PrescriptionItem) => {
     setSignError(null);
     setPdfDownloaded(false);
     setIsDraggingSigned(false);
     setSignedNotificationPrompt(null);
+    setIsSendingEmail(false);
+    setEmailSent(false);
     setSigningRx(rx);
   };
 
@@ -126,10 +131,59 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
     setPdfDownloaded(false);
     setIsDraggingSigned(false);
     setSignedNotificationPrompt(null);
+    setIsSendingEmail(false);
+    setEmailSent(false);
   };
 
-  // Dispara e-mail em 2º plano e abre o WhatsApp do paciente
-  const handleNotifyPatientAfterSigning = (promptData: {
+  // Disparo manual de e-mail com a prescrição assinada em anexo
+  const handleSendEmail = async () => {
+    if (!signedNotificationPrompt) return;
+    const patientEmail = client?.email;
+    if (!patientEmail) {
+      toast({
+        type: "warning",
+        title: "Paciente sem e-mail",
+        description: "Não foi possível enviar o e-mail pois o paciente não possui endereço cadastrado.",
+      });
+      return;
+    }
+
+    try {
+      setIsSendingEmail(true);
+      const res = await fetch(`/api/prescricoes/${signedNotificationPrompt.rxId}/notify-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patientName: client?.nome || (client as any)?.name || "Paciente",
+          patientEmail,
+          formulaName: signedNotificationPrompt.formulaName || "Fórmula Magistral",
+          pdfUrl: signedNotificationPrompt.pdfUrl,
+          prescriptionDate: signingRx?.data_prescricao || new Date().toISOString(),
+        }),
+      });
+
+      if (!res.ok) throw new Error("Erro ao disparar e-mail");
+
+      setEmailSent(true);
+      toast({
+        type: "success",
+        title: "E-mail enviado com sucesso!",
+        description: `Receita com PDF assinado enviada para ${patientEmail}.`,
+      });
+    } catch (err) {
+      console.error("Erro ao enviar e-mail:", err);
+      toast({
+        type: "error",
+        title: "Falha no envio do e-mail",
+        description: "Não foi possível realizar o envio por e-mail neste momento. Tente novamente.",
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  // Abre o WhatsApp do paciente com o aviso de disponibilidade
+  const handleShareWhatsApp = (promptData: {
     rxId: string;
     formulaName: string;
     pdfUrl: string;
@@ -139,39 +193,6 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
     const patientEmail = selectedPatient?.email || "";
     const rawPhone = (selectedPatient?.telefone || (selectedPatient as any)?.phone || "").replace(/\D/g, "");
 
-    // 1. Dispara o e-mail com o PDF assinado em segundo plano (sem bloquear a UI)
-    if (patientEmail) {
-      fetch("/api/prescricoes/notify-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patientName,
-          patientEmail,
-          formulaName: promptData.formulaName,
-          pdfUrl: promptData.pdfUrl,
-        }),
-      })
-        .then((res) => {
-          if (res.ok) {
-            toast({
-              type: "success",
-              title: "E-mail enviado",
-              description: `O PDF assinado foi enviado em segundo plano para ${patientEmail}.`,
-            });
-          }
-        })
-        .catch((err) => {
-          console.warn("Falha no envio de e-mail em segundo plano:", err);
-        });
-    } else {
-      toast({
-        type: "warning",
-        title: "Paciente sem e-mail",
-        description: "Não foi possível enviar o e-mail pois o paciente não possui endereço cadastrado.",
-      });
-    }
-
-    // 2. Abre o WhatsApp do Paciente com a mensagem de disponibilidade no site
     if (rawPhone) {
       const phoneWithDdi = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
       const portalUrl = typeof window !== "undefined" ? window.location.origin : "";
@@ -184,7 +205,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
         `🔗 ${portalUrl}`,
         ``,
         patientEmail
-          ? `📩 Também enviamos uma cópia da receita em PDF diretamente para o seu e-mail (${patientEmail}).`
+          ? `📩 Você também pode solicitar o envio da receita em PDF diretamente para o seu e-mail (${patientEmail}).`
           : ``,
         ``,
         `Qualquer dúvida, estamos à disposição!`,
@@ -201,13 +222,9 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
         description: "O paciente não possui telefone válido para abertura do WhatsApp.",
       });
     }
-
-    // Fecha os modais
-    setSignedNotificationPrompt(null);
-    setSigningRx(null);
-    setPdfDownloaded(false);
-    setIsDraggingSigned(false);
   };
+
+  const handleNotifyPatientAfterSigning = handleShareWhatsApp;
 
   // Baixa o PDF gerado no servidor (o mesmo arquivo que será assinado e conferido no envio)
   const handleDownloadPrescriptionPdf = async (rx: PrescriptionItem) => {
@@ -274,28 +291,14 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
       toast({
         type: warnings.length > 0 ? "warning" : "success",
         title: "Receita assinada registrada!",
-        description: warnings.length > 0 ? warnings[0] : "Receita assinada vinculada ao prontuário e enviada com anexo para o e-mail do paciente.",
+        description: warnings.length > 0 ? warnings[0] : "O documento assinado com ICP-Brasil foi vinculado ao prontuário.",
       });
       
       const uploadedPdfUrl = data.pdf_assinado_url || data.url || signingRx.pdf_assinado_url || `/api/prescricoes/${signingRx.id}/pdf`;
       loadClinicalData();
 
-      // Chamada automática para rota de e-mail com anexo do PDF assinado
-      try {
-        await fetch(`/api/prescricoes/${signingRx.id}/notify-email`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            patientName: client?.nome || (client as any)?.name || "Paciente",
-            patientEmail: client?.email || "",
-            formulaName: signingRx.medicamento || (signingRx as any).nome_formula || "Fórmula Magistral",
-            pdfUrl: uploadedPdfUrl,
-            prescriptionDate: signingRx.data_prescricao || new Date().toISOString(),
-          }),
-        });
-      } catch (emailErr) {
-        console.warn("Aviso: Falha ao enviar notificação de e-mail automática:", emailErr);
-      }
+      setEmailSent(false);
+      setIsSendingEmail(false);
 
       // Em vez de fechar imediatamente o modal, abre a confirmação para comunicar o paciente:
       setSignedNotificationPrompt({
@@ -2015,7 +2018,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             </div>
 
             {signedNotificationPrompt?.isOpen ? (
-              <div className="py-4 space-y-5 text-center animate-in fade-in zoom-in-95 duration-200 flex-1">
+              <div className="py-4 space-y-4 text-center animate-in fade-in zoom-in-95 duration-200 flex-1">
                 <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-xs">
                   <FileCheck className="w-7 h-7"/>
                 </div>
@@ -2025,7 +2028,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     Receita Assinada Registrada!
                   </h4>
                   <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm mx-auto leading-relaxed">
-                    Receita assinada vinculada ao prontuário e enviada com anexo para o e-mail do paciente.
+                    O documento assinado com certificado ICP-Brasil foi vinculado com sucesso ao prontuário do paciente.
                   </p>
                 </div>
 
@@ -2038,25 +2041,55 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     <li className="flex items-start gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
                       <span>
-                        E-mail com PDF assinado em anexo:{" "}
-                        <strong className="text-slate-700 dark:text-slate-200 font-medium">
-                          {client?.email ? `enviado para ${client.email}` : "paciente sem e-mail cadastrado"}
-                        </strong>
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
-                      <span>
                         Prontuário & Portal do Paciente:{" "}
                         <strong className="text-emerald-700 dark:text-emerald-300 font-medium">
                           documento salvo e pronto para visualização
                         </strong>
                       </span>
                     </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
+                      <span>
+                        E-mail ({client?.email || "não cadastrado"}):{" "}
+                        <strong className="text-slate-700 dark:text-slate-200 font-medium">
+                          {emailSent ? "enviado com sucesso!" : "disponível para envio manual abaixo"}
+                        </strong>
+                      </span>
+                    </li>
                   </ul>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
+                {/* Ações de Comunicação */}
+                <div className="flex flex-col gap-2.5 w-full pt-1">
+                  {/* Botão Enviar por WhatsApp existente */}
+                  <button
+                    type="button"
+                    onClick={() => handleShareWhatsApp(signedNotificationPrompt)}
+                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-full font-semibold text-sm transition-all duration-200 bg-teal-600 hover:bg-teal-700 text-white shadow-sm cursor-pointer md-state-layer"
+                  >
+                    <span>Enviar por WhatsApp</span>
+                  </button>
+
+                  {/* Novo Botão Enviar por E-mail */}
+                  <button
+                    type="button"
+                    onClick={handleSendEmail}
+                    disabled={isSendingEmail || emailSent || !client?.email}
+                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-full font-semibold text-sm transition-all duration-200 border border-emerald-300 dark:border-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 disabled:opacity-60 disabled:cursor-not-allowed shadow-xs cursor-pointer md-state-layer"
+                  >
+                    <Mail className="w-4 h-4 shrink-0"/>
+                    <span>
+                      {isSendingEmail
+                        ? "Enviando e-mail..."
+                        : emailSent
+                        ? "E-mail Enviado com Sucesso!"
+                        : client?.email
+                        ? `Enviar para ${client.email}`
+                        : "Paciente sem e-mail cadastrado"}
+                    </span>
+                  </button>
+
+                  {/* Botão Concluir / Fechar */}
                   <button
                     type="button"
                     onClick={() => {
@@ -2064,18 +2097,12 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                       setSigningRx(null);
                       setPdfDownloaded(false);
                       setIsDraggingSigned(false);
+                      setEmailSent(false);
+                      setIsSendingEmail(false);
                     }}
-                    className="w-full sm:flex-1 py-2.5 px-4 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer"
+                    className="w-full py-2 px-4 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer mt-0.5"
                   >
                     Concluir
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleNotifyPatientAfterSigning(signedNotificationPrompt)}
-                    className="w-full sm:flex-1 py-2.5 px-4 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2 md-state-layer"
-                  >
-                    <span>Enviar pelo WhatsApp</span>
                   </button>
                 </div>
               </div>
