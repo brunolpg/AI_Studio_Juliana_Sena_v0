@@ -11,6 +11,7 @@ import type {
 } from "@/types/clinical-record";
 import type { ActionResponse } from "@/types/client";
 import { assinarPayloadSOAP } from "@/lib/crypto-payload";
+import { toSentenceCase } from "@/lib/utils";
 
 /**
  * Consulta Prontuário e Histórico Clínico do Paciente
@@ -120,7 +121,7 @@ export async function getPatientClinicalRecordAction(
         for (const item of items) {
           const snap = (item.componentes_snapshot as any[]) || [];
           const listAtivos = snap
-            .map((c: any) => `${c.nome}: ${c.quantidade}${c.unidade || "%"}`)
+            .map((c: any) => `${toSentenceCase(c.nome)}: ${c.quantidade}${c.unidade || "%"}`)
             .join(" + ");
 
           const sanitizedTipoVeiculo = item.tipo_veiculo;
@@ -770,7 +771,7 @@ export async function getFormulasAction(): Promise<ActionResponse<any[]>> {
     const mappedFormulas = (data || []).map((f: any) => {
       const componentesFormatados = (f.formula_componentes || []).map((rel: any) => ({
         id: rel.componente_id,
-        nome: rel.componentes?.nome || "Ativo",
+        nome: toSentenceCase(rel.componentes?.nome || "Ativo"),
         quantidade: rel.quantidade,
         unidade_id: rel.componentes?.unidade_id,
       }));
@@ -817,7 +818,12 @@ export async function getComponentesAction(): Promise<ActionResponse<any[]>> {
       return { success: true, data: [] };
     }
 
-    return { success: true, data: data || [] };
+    const mappedComponentes = (data || []).map((c: any) => ({
+      ...c,
+      nome: toSentenceCase(c.nome),
+    }));
+
+    return { success: true, data: mappedComponentes };
   } catch (err) {
     console.error("Exceção em getComponentesAction:", err);
     return { success: true, data: [] };
@@ -960,7 +966,7 @@ export async function addStructuredPrescriptionAction(
     for (const comp of input.componentes) {
       if (!comp.nome || !comp.nome.trim()) continue;
 
-      const titleCaseName = toTitleCase(comp.nome);
+      const sentenceCaseName = toSentenceCase(comp.nome);
       let matchedUnidadeId = null;
       let sigla = comp.unidade_sigla || "%";
 
@@ -1006,13 +1012,13 @@ export async function addStructuredPrescriptionAction(
       const { data: existingComp, error: findCompErr } = await supabase
         .from("componentes")
         .select("id")
-        .ilike("nome", titleCaseName)
+        .ilike("nome", sentenceCaseName)
         .maybeSingle();
 
       if (findCompErr) {
         return {
           success: false,
-          message: `Erro ao buscar componente [${titleCaseName}]: ${findCompErr.message}`,
+          message: `Erro ao buscar componente [${sentenceCaseName}]: ${findCompErr.message}`,
         };
       }
 
@@ -1022,7 +1028,7 @@ export async function addStructuredPrescriptionAction(
         const { data: newComp, error: insertErr } = await supabase
           .from("componentes")
           .insert({
-            nome: titleCaseName,
+            nome: sentenceCaseName,
             unidade_id: matchedUnidadeId,
           })
           .select("id")
@@ -1031,7 +1037,7 @@ export async function addStructuredPrescriptionAction(
         if (insertErr) {
           return {
             success: false,
-            message: `Erro ao criar componente [${titleCaseName}]: ${insertErr.message}`,
+            message: `Erro ao criar componente [${sentenceCaseName}]: ${insertErr.message}`,
           };
         }
         if (newComp) {
@@ -1042,7 +1048,7 @@ export async function addStructuredPrescriptionAction(
       if (compId) {
         processedComponentes.push({
           componente_id: compId,
-          nome: titleCaseName,
+          nome: sentenceCaseName,
           quantidade: parseNum(comp.quantidade) || 0,
           unidade_sigla: sigla,
         });
@@ -1086,7 +1092,7 @@ export async function addStructuredPrescriptionAction(
 
     // 5. Salvar Item da Prescrição
     const componentsSnapshot = processedComponentes.map((r) => ({
-      nome: r.nome,
+      nome: toSentenceCase(r.nome),
       quantidade: r.quantidade,
       unidade: r.unidade_sigla,
     }));
@@ -1119,7 +1125,7 @@ export async function addStructuredPrescriptionAction(
     // 6. Preparar apresentação para a UI e revalidar
     const listAtivos = (input.componentes || [])
       .filter((c) => c.nome?.trim())
-      .map((c) => `${toTitleCase(c.nome)}: ${c.quantidade}${c.unidade_sigla || "%"}`)
+      .map((c) => `${toSentenceCase(c.nome)}: ${c.quantidade}${c.unidade_sigla || "%"}`)
       .join(" + ");
 
     const formattedDosagem =

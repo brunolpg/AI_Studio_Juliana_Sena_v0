@@ -10,6 +10,7 @@ import {
 } from "@/actions/clinical-actions";
 import { useToast } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { toSentenceCase } from "@/lib/utils";
 import type { Client } from "@/types/client";
 
 interface PrescriptionModalProps {
@@ -107,7 +108,10 @@ export function PrescriptionModal({
           setFormulas(formulasRes.data);
         }
         if (compRes.success && compRes.data) {
-          setDbComponentes(compRes.data);
+          setDbComponentes(compRes.data.map((c: any) => ({
+            ...c,
+            nome: toSentenceCase(c.nome),
+          })));
         }
         if (uniRes.success && uniRes.data) {
           setDbUnidades(uniRes.data);
@@ -175,7 +179,7 @@ export function PrescriptionModal({
         return {
           key: `f_${selected.id}_${index}_${Date.now()}`,
           componente_id: c.id || "",
-          nome: c.nome,
+          nome: toSentenceCase(c.nome),
           quantidade: formatNumberToBr(c.quantidade),
           unidade_id: c.unidade_id || "",
           unidade_sigla: unit ? unit.sigla : "%",
@@ -291,7 +295,7 @@ export function PrescriptionModal({
     // Mapeamento e associação flexível de unidade
     const componentesPayload = ativosValidos.map((c) => ({
       componente_id: c.componente_id || undefined,
-      nome: c.nome.trim(),
+      nome: toSentenceCase(c.nome),
       quantidade: parseBrNumberToFloat(c.quantidade),
       unidade_sigla: c.unidade_sigla || (c as any).unidade || '%',
       unidade_id: c.unidade_id || (dbUnidades.find(u => u.unidade === (c.unidade_sigla || '%'))?.id) || (dbUnidades[0]?.id) || ''
@@ -500,7 +504,7 @@ export function PrescriptionModal({
                     />
                     <datalist id={`comp-suggestions-${row.key}`}>
                       {dbComponentes.map((c) => (
-                        <option key={c.id} value={c.nome} />
+                        <option key={c.id} value={toSentenceCase(c.nome)} />
                       ))}
                     </datalist>
                   </div>

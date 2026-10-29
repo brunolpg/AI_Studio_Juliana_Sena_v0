@@ -3,6 +3,7 @@
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { toSentenceCase } from "@/lib/utils";
 
 export async function getFormulasAction() {
   try {
@@ -102,7 +103,7 @@ export async function getFormulasAction() {
       const rawComps = f.formula_componentes || f.componentes || f.ativos || f.items || [];
       const formattedComps = rawComps.map((fc: any) => ({
         id: fc.componente_id || fc.id,
-        nome: fc.componentes?.nome || fc.nome || fc.name || "Ativo",
+        nome: toSentenceCase(fc.componentes?.nome || fc.nome || fc.name || "Ativo"),
         quantidade: fc.quantidade,
         unidade_id: fc.componentes?.unidade_id || fc.unidade_id,
         unidade_sigla:
@@ -153,9 +154,14 @@ export async function getComponentesAndUnidadesAction() {
     const unRes = await supabase.from("unidades").select("id, unidade").order("unidade", { ascending: true });
     unidadesData = unRes.data || [];
 
+    const mappedComps = componentesData.map((c: any) => ({
+      ...c,
+      nome: toSentenceCase(c.nome),
+    }));
+
     return {
       success: true,
-      componentes: componentesData,
+      componentes: mappedComps,
       unidades: unidadesData,
     };
   } catch (err: any) {
@@ -256,16 +262,18 @@ export async function createComponenteQuickAction(nomeComponente: string, unidad
     const supabase = getSupabaseAdminClient() || (await createClient());
     if (!supabase) return { success: false, error: "Supabase não configurado." };
 
+    const formattedNome = toSentenceCase(nomeComponente);
+
     const { data, error } = await supabase
       .from("componentes")
-      .insert({ nome: nomeComponente.trim(), unidade_id: unidadeId })
+      .insert({ nome: formattedNome, unidade_id: unidadeId })
       .select("id, nome, unidade_id, unidades(id, unidade)")
       .single();
 
     if (error) return { success: false, error: error.message };
     revalidatePath("/formulas");
     revalidatePath("/dashboard/formulas");
-    return { success: true, componente: data };
+    return { success: true, componente: { ...data, nome: toSentenceCase(data.nome) } };
   } catch (err: any) {
     return { success: false, error: err.message };
   }

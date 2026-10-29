@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 import { X, Printer, FileText, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { PrescriptionItem } from "@/types/clinical-record";
 import type { Client } from "@/types/client";
+import { toSentenceCase } from "@/lib/utils";
 
 interface PrintPrescriptionModalProps {
   isOpen: boolean;
@@ -59,11 +60,11 @@ export function PrintPrescriptionModal({
           const colonIdx = a.indexOf(": ");
           if (colonIdx !== -1) {
             return {
-              nome: a.substring(0, colonIdx).trim(),
+              nome: toSentenceCase(a.substring(0, colonIdx).trim()),
               qtd: a.substring(colonIdx + 2).trim()
             };
           }
-          return { nome: a.trim(), qtd: "" };
+          return { nome: toSentenceCase(a.trim()), qtd: "" };
         });
         
         const remaining = dosagemStr.substring(emIndex + 4);
@@ -374,7 +375,7 @@ export function PrintPrescriptionModal({
                         <tbody className="divide-y divide-slate-100 bg-white">
                           {rxDetails.componentes.map((comp, idx) => (
                             <tr key={idx}>
-                              <td className="px-4 py-2 font-medium text-slate-800">{comp.nome}</td>
+                              <td className="px-4 py-2 font-medium text-slate-800">{toSentenceCase(comp.nome)}</td>
                               <td className="px-4 py-2 text-right font-bold text-slate-700">{comp.qtd}</td>
                             </tr>
                           ))}

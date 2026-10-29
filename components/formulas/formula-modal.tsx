@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { X, Plus, Trash2, FlaskConical, AlertCircle, Check, Loader2 } from "lucide-react";
 import { createFormulaAction, createUnidadeQuickAction, createComponenteQuickAction } from "@/actions/formula-actions";
 import { useToast } from "@/components/ui/toast";
+import { toSentenceCase } from "@/lib/utils";
 import type { Componente, Unidade } from "@/types/formula";
 
 interface FormulaModalProps {
@@ -148,10 +149,11 @@ export function FormulaModal({
         unidadeId = uRes.unidade.id;
       }
 
-      const cRes = await createComponenteQuickAction(newCompNome, unidadeId);
+      const formattedCompNome = toSentenceCase(newCompNome);
+      const cRes = await createComponenteQuickAction(formattedCompNome, unidadeId);
       if (cRes.success && cRes.componente) {
         setComponentesList((prev) => [...prev, cRes.componente!]);
-        toast({ type: "success", title: "Componente criado!", description: `${newCompNome} adicionado com sucesso.` });
+        toast({ type: "success", title: "Componente criado!", description: `${formattedCompNome} adicionado com sucesso.` });
         setShowNewCompModal(false);
         setNewCompNome("");
         setNewUnidadeNome("");
@@ -322,7 +324,7 @@ export function FormulaModal({
                         <option value="">Selecione o componente...</option>
                         {componentesList.map((c) => (
                           <option key={c.id} value={c.id}>
-                            {c.nome} ({(c as any).unidades?.unidade || "un"})
+                            {toSentenceCase(c.nome)} ({(c as any).unidades?.unidade || "un"})
                           </option>
                         ))}
                       </select>
