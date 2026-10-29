@@ -91,3 +91,37 @@ BEGIN
     RETURN FOUND;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 7. STORAGE: BUCKET DE PRESCRIÇÕES E RECEITAS ASSINADAS
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+    'prescricoes',
+    'prescricoes',
+    true,
+    5242880,
+    ARRAY['application/pdf']::text[]
+)
+ON CONFLICT (id) DO UPDATE SET
+    public = true,
+    file_size_limit = EXCLUDED.file_size_limit,
+    allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+-- Políticas de acesso para o bucket prescricoes
+DROP POLICY IF EXISTS "Permitir leitura pública ou para autenticados" ON storage.objects;
+DROP POLICY IF EXISTS "Permitir upload para autenticados" ON storage.objects;
+DROP POLICY IF EXISTS "Permitir update para autenticados" ON storage.objects;
+
+CREATE POLICY "Permitir leitura pública ou para autenticados" 
+ON storage.objects
+FOR SELECT 
+USING (bucket_id = 'prescricoes');
+
+CREATE POLICY "Permitir upload para autenticados" 
+ON storage.objects
+FOR INSERT 
+WITH CHECK (bucket_id = 'prescricoes');
+
+CREATE POLICY "Permitir update para autenticados" 
+ON storage.objects
+FOR UPDATE 
+USING (bucket_id = 'prescricoes');

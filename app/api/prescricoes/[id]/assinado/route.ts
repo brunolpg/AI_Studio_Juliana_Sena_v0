@@ -40,7 +40,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       );
     }
     return NextResponse.json(
-      { success: true, url: result.url, warnings: result.warnings },
+      { success: true, url: result.url, pdf_assinado_url: result.url, warnings: result.warnings },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (err) {
