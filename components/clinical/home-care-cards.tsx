@@ -103,8 +103,8 @@ export function HomeCareCards({
               >
                 <div className="min-w-0 w-full">
                   {/* Cabeçalho do Card */}
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70 min-w-0 w-full">
-                    <div className="min-w-0 flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 w-full flex-wrap mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70">
+                    <div className="flex-1 min-w-[200px]">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60 uppercase tracking-wider">
                           HOME CARE
@@ -115,7 +115,7 @@ export function HomeCareCards({
                         </span>
                       </div>
 
-                      <h4 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 mt-1 break-words leading-snug">
+                      <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 mt-1 leading-snug">
                         {ficha.titulo_protocolo}
                       </h4>
 
@@ -137,7 +137,7 @@ export function HomeCareCards({
                     </div>
 
                     {/* Ações e Badges MD4 */}
-                    <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                    <div className="flex items-center flex-wrap gap-2 shrink-0 self-start">
                       <button
                         type="button"
                         onClick={() => setSelectedFichaForPrint(ficha)}

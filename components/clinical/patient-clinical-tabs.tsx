@@ -1477,7 +1477,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     )}
                   </div>
                 ) : (
-                  <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 items-start min-w-0">
+                  <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-6 items-start min-w-0">
                     {/* COLUNA 1: RECEITUÁRIO */}
                     <div className="w-full min-w-0 flex flex-col gap-4">
                       <div className="flex items-center justify-between">
@@ -1510,18 +1510,18 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                           className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between min-w-0 w-full"
                         >
                           <div className="min-w-0 w-full">
-                            {/* Cabeçalho do Card: Empilha no mobile estreito e alinha em sm: */}
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70 min-w-0 w-full">
+                            {/* Cabeçalho do Card: Empilha ou quebra fluidamente com min-w-[200px] */}
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 w-full flex-wrap mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70">
                               
                               {/* Título Principal, Subtítulo (Nome da Fórmula) e Metadados */}
-                              <div className="min-w-0 flex-1">
-                                <h4 className="text-base font-bold text-slate-800 dark:text-slate-100 break-words leading-snug">
+                              <div className="flex-1 min-w-[200px]">
+                                <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-snug">
                                   Fórmula Magistral
                                 </h4>
 
                                 {/* Subtítulo em Destaque Sutil: Nome da Fórmula */}
                                 {formulaName && (
-                                  <p className="text-xs sm:text-sm font-medium text-slate-700/80 dark:text-slate-300/80 mt-0.5 break-words leading-snug">
+                                  <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-snug">
                                     {formulaName}
                                   </p>
                                 )}
@@ -1543,7 +1543,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                               </div>
 
                               {/* Ações e Badges (Container Flexível com flex-wrap) */}
-                              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                              <div className="flex items-center flex-wrap gap-2 shrink-0 self-start">
                                 {!isPatientView && (
                                   <>
                                     <button
