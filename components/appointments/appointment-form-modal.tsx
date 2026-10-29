@@ -1144,18 +1144,23 @@ function AppointmentFormModalContent({
                         key={p.id}
                         type="button"
                         onClick={() => setProcedimento(p.procedimento)}
-                        className={`text-left p-3 rounded-2xl border transition-all flex flex-col justify-between cursor-pointer md-state-layer shadow-2xs ${
+                        className={`w-full text-left p-3 sm:p-3.5 rounded-2xl transition-all duration-200 border flex flex-col justify-between cursor-pointer md-state-layer ${
                           isSelected
-                            ? "bg-teal-50 dark:bg-teal-950/40 border-teal-500 text-teal-950 dark:text-teal-200 font-semibold ring-1 ring-teal-500"
-                            : "bg-white dark:bg-slate-850 border-slate-200/90 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            ? "border-emerald-600 dark:border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40 ring-2 ring-emerald-500/20 dark:ring-emerald-400/20 shadow-sm"
+                            : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700"
                         }`}
                       >
-                        <div className="text-xs font-semibold truncate w-full text-slate-900 dark:text-slate-100">
+                        <div className="text-xs font-semibold truncate w-full text-slate-900 dark:text-slate-100 leading-snug">
                           {p.procedimento}
                         </div>
                         <div className="flex items-center justify-between mt-1 text-[10px] text-slate-500 dark:text-slate-400 w-full">
-                          <span>Duração: <strong className="font-semibold text-slate-700 dark:text-slate-200">{p.duracao}h</strong></span>
-                          <span className="font-bold text-teal-600 dark:text-teal-400">
+                          <span>
+                            Duração:{" "}
+                            <strong className="font-semibold text-slate-700 dark:text-slate-200">
+                              {p.duracao}h
+                            </strong>
+                          </span>
+                          <span className="font-bold text-emerald-700 dark:text-emerald-400 shrink-0">
                             R$ {Number(p.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </span>
                         </div>
@@ -1172,7 +1177,7 @@ function AppointmentFormModalContent({
                   const matched = procedimentosList.find((p) => p.procedimento === procedimento);
                   if (matched) {
                     return (
-                      <div className="p-3.5 rounded-2xl border border-teal-500/40 bg-teal-50/60 dark:bg-teal-950/30 flex items-center justify-between gap-3 shadow-2xs">
+                      <div className="p-3.5 rounded-2xl border border-emerald-600/30 dark:border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-950/30 flex items-center justify-between gap-3 shadow-2xs">
                         <div className="truncate">
                           <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                             {matched.procedimento}
@@ -1182,7 +1187,7 @@ function AppointmentFormModalContent({
                           </p>
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="text-xs font-black text-teal-600 dark:text-teal-400">
+                          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
                             R$ {Number(matched.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </span>
                         </div>

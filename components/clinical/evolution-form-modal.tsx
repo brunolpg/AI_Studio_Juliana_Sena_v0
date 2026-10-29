@@ -785,7 +785,7 @@ export function EvolutionFormModal({
                     <button
                       type="button"
                       onClick={() => setIsNewPrescriptionModalOpen(true)}
-                      className="w-full sm:w-auto shrink-0 whitespace-nowrap px-3.5 py-2 inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold text-xs transition-all cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-500/30 shadow-2xs"
+                      className="w-full sm:w-auto shrink-0 whitespace-nowrap h-9 px-4 inline-flex items-center justify-center gap-1.5 rounded-full font-semibold text-xs text-white transition-all cursor-pointer bg-[#004d40] hover:bg-[#003830] active:scale-[0.98] dark:bg-emerald-800 dark:hover:bg-emerald-700 shadow-sm"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Adicionar Prescrição</span>
@@ -896,7 +896,7 @@ export function EvolutionFormModal({
                     <button
                       type="button"
                       onClick={() => setIsNewHomeCareModalOpen(true)}
-                      className="w-full sm:w-auto shrink-0 whitespace-nowrap px-3.5 py-2 inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold text-xs transition-all cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-500/30 shadow-2xs"
+                      className="w-full sm:w-auto shrink-0 whitespace-nowrap h-9 px-4 inline-flex items-center justify-center gap-1.5 rounded-full font-semibold text-xs text-white transition-all cursor-pointer bg-[#004d40] hover:bg-[#003830] active:scale-[0.98] dark:bg-emerald-800 dark:hover:bg-emerald-700 shadow-sm"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>Novo Home Care</span>
@@ -1136,7 +1136,7 @@ export function EvolutionFormModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-6 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-full shadow-xs transition-all disabled:opacity-50 cursor-pointer md-state-layer"
+              className="flex items-center gap-2 px-6 py-2 text-xs font-semibold text-white bg-[#004d40] hover:bg-[#003830] active:scale-[0.98] dark:bg-emerald-800 dark:hover:bg-emerald-700 rounded-full shadow-xs transition-all disabled:opacity-50 cursor-pointer md-state-layer"
             >
               {isSubmitting ? (
                 <>
