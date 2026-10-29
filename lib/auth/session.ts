@@ -3,12 +3,14 @@ import type { User, UserRole } from "@/types/auth";
 
 export const SESSION_COOKIE_NAME = "sb-auth-token";
 
-function getRoleLabel(role: UserRole): string {
-  switch (role) {
+function getRoleLabel(role: UserRole | string): string {
+  const normalized = String(role || "").toLowerCase().trim();
+  switch (normalized) {
     case "administrador":
+    case "admin":
       return "Administrador(a)";
     case "profissional":
-      return "Profissional / Médico(a)";
+      return "Profissional";
     case "paciente":
     default:
       return "Paciente";
@@ -36,15 +38,23 @@ export async function getSession(): Promise<User | null> {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("nome, role, avatar_url")
+      .select("id, nome, role, avatar_url")
       .eq("id", authUser.id)
       .maybeSingle();
 
     // Obtém o perfil da base de dados ou aplica a regra de contingência para a conta de administração
-    let role: UserRole = profile?.role as UserRole;
-    if (!role) {
+    let rawRole = profile?.role;
+    let role: UserRole;
+    if (rawRole) {
+      const normalized = String(rawRole).toLowerCase().trim();
+      role = normalized === "profissional"
+        ? "profissional"
+        : normalized === "admin" || normalized === "administrador"
+        ? "administrador"
+        : "paciente";
+    } else {
       role =
-        authUser.email?.toLowerCase() === "brunolpg@gmail.com"
+        (authUser.email?.toLowerCase() === "brunolpg@gmail.com" || authUser.email?.toLowerCase().includes("admin"))
           ? "administrador"
           : "paciente";
     }
@@ -64,6 +74,12 @@ export async function getSession(): Promise<User | null> {
       roleLabel: getRoleLabel(role),
       avatar: profile?.avatar_url || authUser.user_metadata?.avatar_url,
       created_at: authUser.created_at,
+      profile: profile || {
+        id: authUser.id,
+        nome: name,
+        role,
+        avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url,
+      },
     };
   } catch {
     return null;

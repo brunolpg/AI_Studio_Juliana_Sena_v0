@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, LogOut, Sun, Moon, Monitor, ShieldCheck, FlaskConical, KeyRound } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { ChangePasswordModal } from "@/components/ChangePasswordModal";
+import { useAuth } from "@/components/auth/auth-context";
 
 function getFirstAndLastName(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
@@ -21,6 +22,12 @@ export interface UserMenuProps {
     avatar?: string | null;
     avatar_url?: string | null;
     roleLabel?: string;
+    profile?: {
+      id?: string;
+      nome?: string;
+      role?: string;
+      avatar_url?: string;
+    } | null;
   } | null;
   onLogout?: () => Promise<void> | void;
   direction?: "down" | "up" | "auto";
@@ -42,8 +49,8 @@ export function UserMenu({
   const [themeMode, setThemeMode] = useState<"system" | "light" | "dark">("system");
   const [userName, setUserName] = useState("Bruno Gonçalves");
   const [userEmail, setUserEmail] = useState("brunolpgbackup@gmail.com");
-  const [userRole, setUserRole] = useState("Administrador(a)");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [profileData, setProfileData] = useState<{ id?: string; nome?: string; role?: string; avatar_url?: string } | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<any>(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
@@ -107,17 +114,10 @@ export function UserMenu({
     if (propUser) {
       if (propUser.nome || propUser.name) setUserName(propUser.nome || propUser.name || "Bruno Gonçalves");
       if (propUser.email) setUserEmail(propUser.email);
-      if (propUser.roleLabel) {
-        setUserRole(propUser.roleLabel);
+      if (propUser.profile) {
+        setProfileData(propUser.profile);
       } else if (propUser.role) {
-        const r = String(propUser.role).toLowerCase();
-        if (r === "admin" || r === "administrador" || r === "administrador(a)") {
-          setUserRole("Administrador(a)");
-        } else if (r === "paciente") {
-          setUserRole("Paciente");
-        } else {
-          setUserRole(propUser.role);
-        }
+        setProfileData({ role: propUser.role });
       }
       if (propUser.avatar_url || propUser.foto_perfil || propUser.avatar) {
         setAvatarUrl(propUser.avatar_url || propUser.foto_perfil || propUser.avatar || null);
@@ -128,25 +128,44 @@ export function UserMenu({
       try {
         const supabase = getSupabaseClient();
         if (!supabase) return;
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setSupabaseUser(user);
-          if (user.email && !propUser?.email) setUserEmail(user.email);
-          const meta = user.user_metadata;
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          setSupabaseUser(authUser);
+          if (authUser.email && !propUser?.email) setUserEmail(authUser.email);
+          const meta = authUser.user_metadata;
           if ((meta?.nome || meta?.full_name) && !propUser?.nome && !propUser?.name) {
             setUserName(meta.nome || meta.full_name);
           }
           if ((meta?.avatar_url || meta?.picture) && !propUser?.avatar_url && !propUser?.foto_perfil) {
             setAvatarUrl(meta.avatar_url || meta.picture);
           }
-          if (meta?.role && !propUser?.role && !propUser?.roleLabel) {
-            const r = String(meta.role).toLowerCase();
-            if (r === "admin" || r === "administrador" || r === "administrador(a)") {
-              setUserRole("Administrador(a)");
-            } else if (r === "paciente") {
-              setUserRole("Paciente");
-            } else {
-              setUserRole(meta.role);
+
+          // Busca perfil dinâmico diretamente de public.profiles
+          const { data: pData } = await supabase
+            .from("profiles")
+            .select("id, nome, role, avatar_url")
+            .eq("id", authUser.id)
+            .maybeSingle();
+
+          if (pData) {
+            setProfileData(pData);
+            if (pData.nome && !propUser?.nome && !propUser?.name) {
+              setUserName(pData.nome);
+            }
+            if (pData.avatar_url && !propUser?.avatar_url && !propUser?.foto_perfil) {
+              setAvatarUrl(pData.avatar_url);
+            }
+          } else {
+            const isEmailAdmin =
+              authUser.email?.toLowerCase() === "brunolpg@gmail.com" ||
+              authUser.email?.toLowerCase().includes("admin");
+            if (isEmailAdmin) {
+              setProfileData({
+                id: authUser.id,
+                nome: meta?.nome || meta?.full_name || "Bruno Gonçalves",
+                role: "admin",
+                avatar_url: meta?.avatar_url || meta?.picture || null,
+              });
             }
           }
         }
@@ -155,6 +174,28 @@ export function UserMenu({
       }
     }
     loadUserData();
+
+    const supabase = getSupabaseClient();
+    const authSub = supabase?.auth.onAuthStateChange(async (event) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        await loadUserData();
+      }
+    });
+
+    const profilesChannel = supabase?.channel("user-menu-profile-sync").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "profiles" },
+      async () => {
+        await loadUserData();
+      }
+    ).subscribe();
+
+    return () => {
+      authSub?.data?.subscription?.unsubscribe();
+      if (profilesChannel && supabase) {
+        supabase.removeChannel(profilesChannel);
+      }
+    };
   }, [propUser]);
 
   const handleToggle = (e: React.MouseEvent) => {
@@ -212,7 +253,63 @@ export function UserMenu({
     }
   };
 
-  const displayName = getFirstAndLastName(userName);
+  // Contexto de autenticação global do sistema
+  let authContext: any = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    authContext = useAuth();
+  } catch {
+    authContext = null;
+  }
+
+  // Objeto unificado do usuário
+  const user = {
+    nome: propUser?.nome || propUser?.name || profileData?.nome || authContext?.user?.name || userName,
+    email: propUser?.email || profileData?.email || authContext?.user?.email || userEmail,
+  };
+
+  const displayName = getFirstAndLastName(user.nome);
+
+  // Perfil dinâmico sincronizado com public.profiles
+  const activeProfileData = profileData || propUser?.profile || authContext?.user?.profile || null;
+  const rawRoleStr = String(activeProfileData?.role || propUser?.role || authContext?.user?.role || "").toLowerCase().trim();
+
+  const isEmailAdmin =
+    (user.email && user.email.toLowerCase() === "brunolpg@gmail.com") ||
+    (user.email && user.email.toLowerCase().includes("admin"));
+
+  const isAdminOrProf =
+    rawRoleStr === "admin" ||
+    rawRoleStr === "administrador" ||
+    rawRoleStr === "profissional" ||
+    isEmailAdmin;
+
+  const profile = {
+    ...activeProfileData,
+    role: rawRoleStr === "profissional"
+      ? "profissional"
+      : (rawRoleStr === "admin" || rawRoleStr === "administrador" || isEmailAdmin)
+      ? "admin"
+      : "paciente",
+  };
+
+  // Rótulo dinâmico para o botão recolhido (Rodapé da Sidebar, Rail e Header):
+  // Se role === 'profissional' ou role === 'admin': Exiba Administrador(a) ou Profissional.
+  // Evite rótulos estáticos de fallback ("Paciente") quando o usuário autenticado for um administrador/profissional.
+  const userRole = profile.role === "profissional"
+    ? "Profissional"
+    : profile.role === "admin"
+    ? "Administrador(a)"
+    : "Paciente";
+
+  const resolvedAvatar =
+    propUser?.avatar_url ||
+    propUser?.foto_perfil ||
+    propUser?.avatar ||
+    profileData?.avatar_url ||
+    authContext?.user?.avatar ||
+    avatarUrl;
+
   const providers = supabaseUser?.app_metadata?.providers || (supabaseUser?.app_metadata?.provider ? [supabaseUser.app_metadata.provider] : []);
   const isGoogleOnly = providers.includes("google") && !providers.includes("email");
 
@@ -246,8 +343,8 @@ export function UserMenu({
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600 flex items-center justify-center shadow-2xs">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                {resolvedAvatar ? (
+                  <img src={resolvedAvatar} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
                   <div className="font-bold text-xs text-slate-700 dark:text-slate-200">
                     {displayName.charAt(0).toUpperCase()}
@@ -282,8 +379,8 @@ export function UserMenu({
             title={`${displayName} (${userRole})`}
           >
             <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden border border-slate-300 dark:border-slate-600 flex items-center justify-center">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+              {resolvedAvatar ? (
+                <img src={resolvedAvatar} alt={displayName} className="w-full h-full object-cover" />
               ) : (
                 <span className="font-bold text-[10px] text-slate-700 dark:text-slate-200">
                   {displayName.charAt(0).toUpperCase()}
@@ -305,8 +402,8 @@ export function UserMenu({
             aria-haspopup="true"
           >
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 border border-slate-300 dark:border-slate-600 flex items-center justify-center">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+              {resolvedAvatar ? (
+                <img src={resolvedAvatar} alt={displayName} className="w-full h-full object-cover" />
               ) : (
                 <div className="font-bold text-xs text-slate-700 dark:text-slate-200">
                   {displayName.charAt(0).toUpperCase()}
@@ -347,24 +444,27 @@ export function UserMenu({
               </span>
             </div>
 
-            {/* Informações do Usuário com avatar */}
-            <div className="pt-3 pb-2 flex items-center gap-3 shrink-0">
-              <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="font-bold text-xs text-slate-700 dark:text-slate-200">
-                    {displayName.charAt(0).toUpperCase()}
+            {/* Detalhamento no Menu Dropdown Aberto com Identificação Visual do Perfil */}
+            <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
+                  {resolvedAvatar ? (
+                    <img src={resolvedAvatar} alt={displayName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="font-bold text-xs text-slate-700 dark:text-slate-200">
+                      {displayName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{user.nome}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
+                  <span className="inline-block mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 rounded-full px-2 py-0.5 capitalize">
+                    {profile?.role === 'profissional' || profile?.role === 'admin'
+                      ? 'Administrador(a)'
+                      : 'Paciente'}
                   </span>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                  {userName}
-                </p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                  {userEmail}
-                </p>
+                </div>
               </div>
             </div>
 

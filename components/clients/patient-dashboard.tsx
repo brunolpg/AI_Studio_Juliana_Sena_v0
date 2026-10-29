@@ -10,8 +10,8 @@ import { PatientClinicalDashboardView } from "@/components/clinical/patient-clin
 import { DeliverablesView } from "@/components/clients/deliverables-view";
 import { ShieldCheck, CalendarCheck2, FileCode2, Calendar, Stethoscope, Users } from "lucide-react";
 
-export function PatientDashboard() {
-  const [activeTab, setActiveTab] = useState<DashboardTab>("pacientes");
+export function PatientDashboard({ initialTab = "pacientes" }: { initialTab?: DashboardTab } = {}) {
+  const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col box-border w-full max-w-full min-w-0 overflow-x-hidden antialiased lg:pl-64">

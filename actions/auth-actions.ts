@@ -6,12 +6,14 @@ import { createClient } from "@/lib/supabase/server";
 import { loginSchema, registerSchema } from "@/lib/validations/auth-schema";
 import type { User, AuthResponse, UserRole } from "@/types/auth";
 
-function getRoleLabel(role: UserRole): string {
-  switch (role) {
+function getRoleLabel(role: UserRole | string): string {
+  const normalized = String(role || "").toLowerCase().trim();
+  switch (normalized) {
     case "administrador":
+    case "admin":
       return "Administrador(a)";
     case "profissional":
-      return "Profissional / Especialista";
+      return "Profissional";
     case "paciente":
     default:
       return "Paciente";
@@ -50,12 +52,25 @@ export async function loginAction(rawInput: unknown): Promise<AuthResponse> {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("nome, role, avatar_url")
+      .select("id, nome, role, avatar_url")
       .eq("id", data.user.id)
       .maybeSingle();
 
-    // const role: UserRole = (profile?.role as UserRole) || (email.includes("admin") ? "administrador" : "paciente");
-    const role: UserRole = (profile?.role as UserRole) ?? "paciente";
+    let rawRole = profile?.role;
+    let role: UserRole;
+    if (rawRole) {
+      const normalized = String(rawRole).toLowerCase().trim();
+      role = normalized === "profissional"
+        ? "profissional"
+        : normalized === "admin" || normalized === "administrador"
+        ? "administrador"
+        : "paciente";
+    } else {
+      role = (email.toLowerCase() === "brunolpg@gmail.com" || email.toLowerCase().includes("admin"))
+        ? "administrador"
+        : "paciente";
+    }
+
     const name = profile?.nome || data.user.user_metadata?.full_name || email.split("@")[0];
 
     const user: User = {
@@ -66,9 +81,20 @@ export async function loginAction(rawInput: unknown): Promise<AuthResponse> {
       roleLabel: getRoleLabel(role),
       avatar: profile?.avatar_url || data.user.user_metadata?.avatar_url,
       created_at: data.user.created_at,
+      profile: profile || {
+        id: data.user.id,
+        nome: name,
+        role,
+        avatar_url: profile?.avatar_url || data.user.user_metadata?.avatar_url,
+      },
     };
 
     revalidatePath("/");
+    revalidatePath("/dashboard");
+    revalidatePath("/clinical");
+    revalidatePath("/patients");
+    revalidatePath("/appointments");
+    revalidatePath("/formulas");
     return {
       success: true,
       message: `Bem-vindo(a), ${name}!`,
@@ -198,14 +224,22 @@ export async function getCurrentUserAction(): Promise<User | null> {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("nome, role, avatar_url")
+      .select("id, nome, role, avatar_url")
       .eq("id", authUser.id)
       .maybeSingle();
 
     // Prioriza o perfil da base de dados; se vier nulo ou pendente, confere o e-mail administrativo
-    let role: UserRole = (profile?.role as UserRole);
-    if (!role) {
-      role = authUser.email?.toLowerCase() === "brunolpg@gmail.com" 
+    let rawRole = profile?.role;
+    let role: UserRole;
+    if (rawRole) {
+      const normalized = String(rawRole).toLowerCase().trim();
+      role = normalized === "profissional"
+        ? "profissional"
+        : normalized === "admin" || normalized === "administrador"
+        ? "administrador"
+        : "paciente";
+    } else {
+      role = (authUser.email?.toLowerCase() === "brunolpg@gmail.com" || authUser.email?.toLowerCase().includes("admin"))
         ? "administrador" 
         : "paciente";
     }
@@ -220,8 +254,24 @@ export async function getCurrentUserAction(): Promise<User | null> {
       roleLabel: getRoleLabel(role),
       avatar: profile?.avatar_url || authUser.user_metadata?.avatar_url,
       created_at: authUser.created_at,
+      profile: profile || {
+        id: authUser.id,
+        nome: name,
+        role,
+        avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url,
+      },
     };
   } catch {
     return null;
   }
+}
+
+export async function refreshCurrentUserAction(): Promise<User | null> {
+  revalidatePath("/");
+  revalidatePath("/dashboard");
+  revalidatePath("/clinical");
+  revalidatePath("/patients");
+  revalidatePath("/appointments");
+  revalidatePath("/formulas");
+  return getCurrentUserAction();
 }

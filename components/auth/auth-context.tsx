@@ -8,6 +8,7 @@ import {
   registerAction,
   logoutAction,
   getCurrentUserAction,
+  refreshCurrentUserAction,
 } from "@/actions/auth-actions";
 import { useToast } from "@/components/ui/toast";
 
@@ -22,6 +23,7 @@ interface AuthContextType {
   register: (data: RegisterInput) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   requireAuth: (callback: () => void, modalMode?: "login" | "register") => boolean;
+  refreshUser: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,6 +34,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"login" | "register">("login");
   const { toast } = useToast();
+
+  const refreshUser = useCallback(async (): Promise<User | null> => {
+    try {
+      const updatedUser = await refreshCurrentUserAction();
+      setUser(updatedUser);
+      return updatedUser;
+    } catch (err) {
+      console.warn("Aviso ao atualizar sessão de usuário:", err);
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -60,10 +73,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { getSupabaseClient } = require("@/lib/supabase/client");
     const supabase = getSupabaseClient();
     let authListener: any = null;
+    let profilesChannel: any = null;
 
     if (supabase) {
       const { data } = supabase.auth.onAuthStateChange(async (event: string) => {
-        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
           const currentUser = await getCurrentUserAction();
           if (isMounted) {
             setUser(currentUser);
@@ -75,12 +89,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
       authListener = data?.subscription;
+
+      try {
+        profilesChannel = supabase
+          .channel("realtime-profiles-sync")
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "profiles" },
+            async () => {
+              const currentUser = await getCurrentUserAction();
+              if (isMounted) {
+                setUser(currentUser);
+              }
+            }
+          )
+          .subscribe();
+      } catch (subErr) {
+        console.warn("Aviso ao assinar canal de profiles:", subErr);
+      }
     }
 
     return () => {
       isMounted = false;
       if (authListener) {
         authListener.unsubscribe();
+      }
+      if (profilesChannel) {
+        supabase?.removeChannel(profilesChannel);
       }
     };
   }, []);
@@ -223,6 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         logout,
         requireAuth,
+        refreshUser,
       }}
     >
       {children}

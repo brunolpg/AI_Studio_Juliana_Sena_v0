@@ -11,8 +11,15 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/");
+    if (!isLoading) {
+      if (!user) {
+        router.push("/");
+      } else {
+        const rawRole = String(user.role || (user as any).profile?.role || "").toLowerCase();
+        if (rawRole === "paciente") {
+          router.push("/");
+        }
+      }
     }
   }, [user, isLoading, router]);
 

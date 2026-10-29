@@ -8,6 +8,12 @@ export interface User {
   roleLabel: string;
   avatar?: string;
   created_at: string;
+  profile?: {
+    id?: string;
+    nome?: string;
+    role?: string;
+    avatar_url?: string;
+  } | null;
 }
 
 export interface UserCredentials {
