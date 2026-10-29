@@ -58,6 +58,15 @@ export function UserMenu({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Contexto de autenticação global do sistema
+  let authContext: any = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    authContext = useAuth();
+  } catch {
+    authContext = null;
+  }
+
   const applyTheme = (mode: "system" | "light" | "dark") => {
     if (typeof window === "undefined") return;
     const root = document.documentElement;
@@ -176,27 +185,90 @@ export function UserMenu({
     loadUserData();
 
     const supabase = getSupabaseClient();
-    const authSub = supabase?.auth.onAuthStateChange(async (event) => {
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
-        await loadUserData();
+    let authSub: any = null;
+    if (supabase) {
+      try {
+        const { data } = supabase.auth.onAuthStateChange(async (event) => {
+          if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+            await loadUserData();
+          }
+        });
+        authSub = data?.subscription;
+      } catch (authErr) {
+        console.warn("Aviso ao registrar listener de autenticação no UserMenu:", authErr);
       }
-    });
-
-    const profilesChannel = supabase?.channel("user-menu-profile-sync").on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "profiles" },
-      async () => {
-        await loadUserData();
-      }
-    ).subscribe();
+    }
 
     return () => {
-      authSub?.data?.subscription?.unsubscribe();
-      if (profilesChannel && supabase) {
-        supabase.removeChannel(profilesChannel);
-      }
+      try {
+        authSub?.unsubscribe();
+      } catch {}
     };
   }, [propUser]);
+
+  // Sincronização em tempo real do perfil do usuário via Supabase Realtime
+  useEffect(() => {
+    const activeUserId =
+      propUser?.id ||
+      (propUser as any)?.user_id ||
+      supabaseUser?.id ||
+      authContext?.user?.id;
+
+    if (!activeUserId) return;
+
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    let channel: any = null;
+
+    try {
+      // 1. Criação do canal com listener definido estritamente ANTES do subscribe
+      // Inclui identificador único para prevenir colisão entre múltiplas instâncias no DOM (Sidebar, Rail, Header)
+      const channelId = `user-menu-profile-sync-${activeUserId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      channel = supabase
+        .channel(channelId)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "profiles",
+            filter: `id=eq.${activeUserId}`,
+          },
+          (payload: any) => {
+            // Atualiza o estado local do perfil
+            if (payload?.new) {
+              setProfileData((prev: any) => ({ ...prev, ...payload.new }));
+              if (payload.new.nome && !propUser?.nome && !propUser?.name) {
+                setUserName(payload.new.nome);
+              }
+              if (payload.new.avatar_url && !propUser?.avatar_url && !propUser?.foto_perfil) {
+                setAvatarUrl(payload.new.avatar_url);
+              }
+            }
+          }
+        )
+        .subscribe((status: string) => {
+          if (status === "CHANNEL_ERROR") {
+            console.warn(`Aviso no canal Realtime ${channelId} (recuperação automática).`);
+          }
+        });
+    } catch (err) {
+      // 2. Prevenção de falhas críticas (Tratamento com Fallback): erros no Realtime nunca quebram o componente
+      console.warn("Aviso ao conectar canal Realtime no UserMenu (resiliente):", err);
+    }
+
+    // 2. Cleanup essencial para desmontagem ou re-render
+    return () => {
+      if (channel && supabase) {
+        try {
+          supabase.removeChannel(channel);
+        } catch (cleanupErr) {
+          console.warn("Aviso ao remover canal Realtime no UserMenu:", cleanupErr);
+        }
+      }
+    };
+  }, [propUser?.id, (propUser as any)?.user_id, supabaseUser?.id, authContext?.user?.id]);
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -253,14 +325,6 @@ export function UserMenu({
     }
   };
 
-  // Contexto de autenticação global do sistema
-  let authContext: any = null;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    authContext = useAuth();
-  } catch {
-    authContext = null;
-  }
 
   // Objeto unificado do usuário
   const user = {

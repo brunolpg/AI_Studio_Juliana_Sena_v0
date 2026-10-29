@@ -91,8 +91,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       authListener = data?.subscription;
 
       try {
+        const channelId = `realtime-profiles-sync-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         profilesChannel = supabase
-          .channel("realtime-profiles-sync")
+          .channel(channelId)
           .on(
             "postgres_changes",
             { event: "*", schema: "public", table: "profiles" },
@@ -103,20 +104,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
             }
           )
-          .subscribe();
+          .subscribe((status: string) => {
+            if (status === "CHANNEL_ERROR") {
+              console.warn(`Aviso no canal Realtime global ${channelId} (recuperação automática).`);
+            }
+          });
       } catch (subErr) {
-        console.warn("Aviso ao assinar canal de profiles:", subErr);
+        console.warn("Aviso ao assinar canal de profiles no AuthProvider (resiliente):", subErr);
       }
     }
 
     return () => {
       isMounted = false;
-      if (authListener) {
-        authListener.unsubscribe();
-      }
-      if (profilesChannel) {
-        supabase?.removeChannel(profilesChannel);
-      }
+      try {
+        if (authListener) {
+          authListener.unsubscribe();
+        }
+      } catch {}
+      try {
+        if (profilesChannel && supabase) {
+          supabase.removeChannel(profilesChannel);
+        }
+      } catch {}
     };
   }, []);
 
