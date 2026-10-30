@@ -211,9 +211,10 @@ export function EvolutionFormModal({
           (apt.procedimento && p.procedimento === apt.procedimento)
         );
         
+        const isProcUuid = proc?.id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(proc.id) : false;
         if (proc) {
           setTipo(proc.procedimento);
-          setProcedimentoId(proc.id);
+          setProcedimentoId(isProcUuid ? proc.id : "");
         } else {
           setTipo(apt.procedimento || "");
           setProcedimentoId("");
@@ -393,14 +394,39 @@ export function EvolutionFormModal({
         fotosUrls.push(url);
       }
 
+      // 3. Sanitização e Resolução de UUID para procedimento_id (evita erro com IDs de mock como "p8")
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      let validProcedimentoId: string | null = null;
+
+      if (procedimentoId && uuidRegex.test(procedimentoId)) {
+        validProcedimentoId = procedimentoId;
+      } else {
+        try {
+          const supabase = getSupabaseClient();
+          if (supabase && tipo) {
+            const { data: procDb } = await supabase
+              .from("procedimentos")
+              .select("id")
+              .ilike("procedimento", tipo.trim())
+              .maybeSingle();
+
+            if (procDb?.id && uuidRegex.test(procDb.id)) {
+              validProcedimentoId = procDb.id;
+            }
+          }
+        } catch (procErr) {
+          console.warn("Aviso ao resolver UUID do procedimento no Supabase:", procErr);
+        }
+      }
+
       const res = await addClinicalEvolutionAction(client.id, {
         client_id: client.id,
         data,
         horario,
         tipo,
         tipo_atendimento: tipo,
-        procedimento_id: procedimentoId || undefined,
-        appointment_id: selectedAppointmentId || null,
+        procedimento_id: validProcedimentoId || undefined,
+        appointment_id: selectedAppointmentId && uuidRegex.test(selectedAppointmentId) ? selectedAppointmentId : null,
         exames_anexos: examesUrls,
         fotos_paciente: fotosUrls,
         profissional,
@@ -524,7 +550,8 @@ export function EvolutionFormModal({
                   const val = e.target.value;
                   setTipo(val);
                   const found = procedimentos.find((p) => p.procedimento === val);
-                  setProcedimentoId(found?.id || "");
+                  const isUuid = found?.id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(found.id) : false;
+                  setProcedimentoId(isUuid ? found!.id : "");
                 }}
                 required
                 disabled={Boolean(selectedAppointmentId)}

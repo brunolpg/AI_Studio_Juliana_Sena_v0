@@ -263,13 +263,54 @@ export async function addClinicalEvolutionAction(
       calculatedImc = Number((input.sinaisVitais.peso / (alturaMetros * alturaMetros)).toFixed(1));
     }
 
+    // Validação de autenticação via server client e escrita via admin client
+    const serverClient = await createClient();
+    if (!serverClient) {
+      return { success: false, message: "Banco de dados não disponível." };
+    }
+
+    const { data: { user }, error: authErr } = await serverClient.auth.getUser();
+    if (authErr || !user) {
+      return { success: false, message: "Acesso não autorizado. Por favor, realize login novamente." };
+    }
+
+    const supabase = getSupabaseAdminClient() || serverClient;
+
+    // Sanitiza o procedimento_id: aceita apenas se for UUID legítimo, caso contrário grava null
+    let sanitizedProcedimentoId: string | null = null;
+    if (input.procedimento_id && uuidRegex.test(input.procedimento_id)) {
+      sanitizedProcedimentoId = input.procedimento_id;
+    } else if (input.tipo && supabase) {
+      // Busca opcional do UUID real no Supabase caso venha pelo nome do procedimento
+      try {
+        const { data: procDb } = await supabase
+          .from("procedimentos")
+          .select("id")
+          .ilike("procedimento", input.tipo.trim())
+          .maybeSingle();
+
+        if (procDb?.id && uuidRegex.test(procDb.id)) {
+          sanitizedProcedimentoId = procDb.id;
+        }
+      } catch (procErr) {
+        console.warn("Aviso ao buscar procedimento por nome no Supabase:", procErr);
+      }
+    }
+
+    // Sanitiza appointment_id: aceita apenas se for UUID legítimo, caso contrário grava null
+    let sanitizedAppointmentId: string | null = null;
+    if (input.appointment_id && uuidRegex.test(input.appointment_id)) {
+      sanitizedAppointmentId = input.appointment_id;
+    }
+
     const assinadoEmServer = new Date().toISOString();
     const prescricoesIds = input.prescricoes_ids || [];
     const homeCareFichaId = input.home_care_ficha_id || null;
 
     const rawPayloadToSign = {
       paciente_id: clientId,
-      appointment_id: input.appointment_id || null,
+      procedimento_id: sanitizedProcedimentoId,
+      appointment_id: sanitizedAppointmentId,
       data: input.data || new Date().toISOString().split("T")[0],
       horario:
         input.horario ||
@@ -302,8 +343,8 @@ export async function addClinicalEvolutionAction(
       horario: rawPayloadToSign.horario,
       tipo: input.tipo || "Consulta",
       tipo_atendimento: input.tipo_atendimento || input.tipo,
-      procedimento_id: input.procedimento_id,
-      appointment_id: input.appointment_id || null,
+      procedimento_id: sanitizedProcedimentoId || undefined,
+      appointment_id: sanitizedAppointmentId,
       exames_anexos: rawPayloadToSign.exames_anexos,
       fotos_paciente: rawPayloadToSign.fotos_paciente,
       profissional: rawPayloadToSign.profissional,
@@ -323,18 +364,6 @@ export async function addClinicalEvolutionAction(
       created_at: new Date().toISOString(),
     };
 
-    // Validação de autenticação via server client e escrita via admin client
-    const serverClient = await createClient();
-    if (!serverClient) {
-      return { success: false, message: "Banco de dados não disponível." };
-    }
-
-    const { data: { user }, error: authErr } = await serverClient.auth.getUser();
-    if (authErr || !user) {
-      return { success: false, message: "Acesso não autorizado. Por favor, realize login novamente." };
-    }
-
-    const supabase = getSupabaseAdminClient() || serverClient;
     if (supabase) {
       let savedEvolutionId = "";
 
@@ -348,8 +377,8 @@ export async function addClinicalEvolutionAction(
             horario: newEvolution.horario,
             tipo: newEvolution.tipo,
             tipo_atendimento: newEvolution.tipo_atendimento,
-            procedimento_id: newEvolution.procedimento_id,
-            appointment_id: newEvolution.appointment_id,
+            procedimento_id: sanitizedProcedimentoId,
+            appointment_id: sanitizedAppointmentId,
             exames_anexos: newEvolution.exames_anexos,
             fotos_paciente: newEvolution.fotos_paciente,
             profissional: newEvolution.profissional,
@@ -387,8 +416,8 @@ export async function addClinicalEvolutionAction(
               horario: newEvolution.horario,
               tipo: newEvolution.tipo,
               tipo_atendimento: newEvolution.tipo_atendimento,
-              procedimento_id: newEvolution.procedimento_id,
-              appointment_id: newEvolution.appointment_id,
+              procedimento_id: sanitizedProcedimentoId,
+              appointment_id: sanitizedAppointmentId,
               exames_anexos: newEvolution.exames_anexos,
               fotos_paciente: newEvolution.fotos_paciente,
               profissional: newEvolution.profissional,
@@ -446,8 +475,8 @@ export async function addClinicalEvolutionAction(
       }
 
       // 2. Vínculo automático ao Atendimento selecionado (appointment_id)
-      if (input.appointment_id) {
-        const aptId = input.appointment_id;
+      if (sanitizedAppointmentId) {
+        const aptId = sanitizedAppointmentId;
 
         // Atualiza appointment_id nas prescrições selecionadas que ainda não tenham esse vínculo
         if (prescricoesIds.length > 0) {
