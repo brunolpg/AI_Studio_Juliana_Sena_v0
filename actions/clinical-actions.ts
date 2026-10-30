@@ -1216,8 +1216,10 @@ export async function getPatientPrescriptionsWithItemsAction(
 
 export async function getAestheticEvaluationAction(patientId: string): Promise<ActionResponse<{ facial: any; corporal: any }>> {
   try {
+    const cleanId = String(patientId || "").trim();
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!patientId || !uuidRegex.test(patientId)) {
+    if (!cleanId || !uuidRegex.test(cleanId)) {
+      console.error("ID inválido recebido em getAestheticEvaluationAction:", patientId);
       return { success: false, message: 'ID do paciente inválido.' };
     }
 
@@ -1227,7 +1229,7 @@ export async function getAestheticEvaluationAction(patientId: string): Promise<A
     const { data: facialData, error: facialErr } = await supabase
       .from('avaliacoes_faciais')
       .select('*')
-      .eq('paciente_id', patientId)
+      .eq('paciente_id', cleanId)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -1239,7 +1241,7 @@ export async function getAestheticEvaluationAction(patientId: string): Promise<A
     const { data: corporalData, error: corporalErr } = await supabase
       .from('avaliacoes_corporais')
       .select('*')
-      .eq('paciente_id', patientId)
+      .eq('paciente_id', cleanId)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -1265,8 +1267,10 @@ export async function saveAestheticEvaluationAction(
   payload: { facial: any; corporal: any }
 ): Promise<ActionResponse<boolean>> {
   try {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!patientId || !uuidRegex.test(patientId)) {
+    const cleanId = String(patientId || "").trim();
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!cleanId || !uuidRegex.test(cleanId)) {
+      console.error("ID inválido recebido em saveAestheticEvaluationAction:", patientId);
       return { success: false, message: 'ID do paciente inválido.' };
     }
 
@@ -1278,11 +1282,11 @@ export async function saveAestheticEvaluationAction(
       const { data: existingFacial } = await supabase
         .from('avaliacoes_faciais')
         .select('id')
-        .eq('paciente_id', patientId)
+        .eq('paciente_id', cleanId)
         .maybeSingle();
 
       const facialRecord = {
-        paciente_id: patientId,
+        paciente_id: cleanId,
         tipo_pele: payload.facial.tipo_pele || null,
         textura: payload.facial.textura || null,
         fototipo: payload.facial.fototipo || null,
@@ -1318,11 +1322,11 @@ export async function saveAestheticEvaluationAction(
       const { data: existingCorporal } = await supabase
         .from('avaliacoes_corporais')
         .select('id')
-        .eq('paciente_id', patientId)
+        .eq('paciente_id', cleanId)
         .maybeSingle();
 
       const corporalRecord = {
-        paciente_id: patientId,
+        paciente_id: cleanId,
         fototipo: payload.corporal.fototipo || null,
         hidratacao_pele: payload.corporal.hidratacao_pele || null,
         estrias_localizacao: Array.isArray(payload.corporal.estrias_localizacao) ? payload.corporal.estrias_localizacao : [],

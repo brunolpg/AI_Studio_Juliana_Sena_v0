@@ -132,6 +132,13 @@ export function AestheticEvaluationModal({
     setIsSubmitting(true);
     setErrorMsg("");
 
+    const cleanPatientId = String(patientId || "").trim();
+    if (!cleanPatientId) {
+      setErrorMsg("Não foi possível identificar o prontuário do paciente selecionado.");
+      setIsSubmitting(false);
+      return;
+    }
+
     const parseNum = (val: string): number | null => {
       if (!val || val.trim() === "") return null;
       const num = parseFloat(val.replace(",", "."));
@@ -168,7 +175,7 @@ export function AestheticEvaluationModal({
     };
 
     try {
-      const res = await saveAestheticEvaluationAction(patientId, payload);
+      const res = await saveAestheticEvaluationAction(cleanPatientId, payload);
       if (res.success) {
         toast({
           type: "success",

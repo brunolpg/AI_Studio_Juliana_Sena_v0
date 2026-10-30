@@ -2231,7 +2231,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
       <AestheticEvaluationModal
         isOpen={isAestheticModalOpen}
         onClose={() => setIsAestheticModalOpen(false)}
-        patientId={client.id}
+        patientId={client?.id || (client as any)?.paciente_id || (client as any)?.client_id}
         initialFacial={aestheticData?.facial}
         initialCorporal={aestheticData?.corporal}
         onSuccess={() => {
