@@ -67,7 +67,102 @@ export function PrintHomeCareModal({
   const pacienteCpf = client?.cpf || ficha.paciente?.cpf;
 
   const handlePrint = () => {
-    window.print();
+    const printContent = printAreaRef.current;
+    if (!printContent) return;
+
+    // Cria um iframe invisível no DOM
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.zIndex = "-9999";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    // Clona folhas de estilos e fontes da página principal
+    const styles = Array.from(document.querySelectorAll("link[rel='stylesheet'], style"))
+      .map((style) => style.outerHTML)
+      .join("\n");
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8" />
+          <title></title>
+          ${styles}
+          <style>
+            /* Remove cabeçalho (título/data) e rodapé (URL/páginas) automáticos do navegador */
+            @page {
+              size: A4 portrait;
+              margin: 0;
+            }
+            *, *::before, *::after {
+              box-sizing: border-box;
+            }
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              color: #0f172a !important;
+              font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              width: 100% !important;
+              height: auto !important;
+              overflow: visible !important;
+            }
+            /* Aplica a margem limpa da folha no container interno */
+            .print-wrapper {
+              width: 100% !important;
+              max-width: 100% !important;
+              padding: 14mm 12mm !important;
+              margin: 0 !important;
+              background: #ffffff !important;
+            }
+            .print-avoid-break {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            table, tr, td, th {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+            thead {
+              display: table-header-group !important;
+            }
+            .print-footer {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              margin-top: 24px !important;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-wrapper">
+            ${printContent.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    // Dispara a impressão a partir do iframe após o carregamento dos recursos
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 1200);
+    }, 400);
   };
 
   return (
@@ -83,96 +178,8 @@ export function PrintHomeCareModal({
       {/* Injeção à prova de falhas da fonte Plus Jakarta Sans */}
       <style dangerouslySetInnerHTML={{ __html: `
         .metropolis-font,
-        .metropolis-font *,
-        #home-care-print-area,
-        #home-care-print-area * {
+        .metropolis-font * {
           font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-        }
-
-        @media print {
-          @page {
-            size: A4 portrait;
-            margin: 12mm 10mm;
-          }
-
-          /* 1. Oculta tudo que pertence à aplicação e aos overlays do modal */
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-            overflow: visible !important;
-            height: auto !important;
-            min-height: auto !important;
-            position: static !important;
-          }
-
-          body * {
-            visibility: hidden !important;
-          }
-
-          [data-radix-portal],
-          [role='dialog'],
-          .fixed,
-          .overflow-y-auto {
-            position: static !important;
-            overflow: visible !important;
-            height: auto !important;
-            max-height: none !important;
-            width: 100% !important;
-          }
-
-          /* 2. Isola e torna visível unicamente a folha de relatório */
-          #evolution-print-area,
-          #evolution-print-area *,
-          #home-care-print-area,
-          #home-care-print-area *,
-          #prescription-print-area,
-          #prescription-print-area * {
-            visibility: visible !important;
-          }
-
-          #evolution-print-area,
-          #home-care-print-area,
-          #prescription-print-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            display: block !important;
-            box-shadow: none !important;
-            border: none !important;
-            overflow: visible !important;
-            height: auto !important;
-            min-height: auto !important;
-          }
-
-          /* 3. Regras de quebra de página anti-fatiamento */
-          .print-avoid-break {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-
-          /* Evita quebras no meio de linhas de tabelas */
-          tr, td, th {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-
-          /* Força cabeçalho da tabela a se repetir em novas páginas se necessário */
-          thead {
-            display: table-header-group !important;
-          }
-
-          /* Rodapé e assinatura */
-          .print-footer {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            margin-top: 24px !important;
-          }
         }
       `}} />
 
@@ -287,7 +294,7 @@ export function PrintHomeCareModal({
           <div
             id="home-care-print-area"
             ref={printAreaRef}
-            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[15mm] sm:p-[20mm] shadow-lg border border-slate-200 flex flex-col space-y-6 mx-auto metropolis-font"
+            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[15mm] sm:p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between space-y-6 mx-auto metropolis-font"
             style={{
               boxSizing: "border-box",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
