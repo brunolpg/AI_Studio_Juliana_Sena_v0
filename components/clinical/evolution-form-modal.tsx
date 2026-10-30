@@ -553,6 +553,17 @@ export function EvolutionFormModal({
                   const isUuid = found?.id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(found.id) : false;
                   setProcedimentoId(isUuid ? found!.id : "");
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (!tipo && procedimentos.length > 0) {
+                      const first = procedimentos[0];
+                      setTipo(first.procedimento);
+                      const isUuid = first?.id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(first.id) : false;
+                      setProcedimentoId(isUuid ? first.id : "");
+                    }
+                  }
+                }}
                 required
                 disabled={Boolean(selectedAppointmentId)}
                 className={`w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none ${
@@ -791,6 +802,17 @@ export function EvolutionFormModal({
                           setSelectedPrescricoesIds((prev) => [...prev, val]);
                         }
                       }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const available = prescricoesDisponiveis.filter(
+                            (rx) => !selectedPrescricoesIds.includes(rx.id)
+                          );
+                          if (available.length > 0) {
+                            setSelectedPrescricoesIds((prev) => [...prev, available[0].id]);
+                          }
+                        }
+                      }}
                       className="w-full sm:flex-1 min-w-0 px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-emerald-500/30 text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
                     >
                       <option value="">Selecione uma prescrição para vincular...</option>
@@ -906,6 +928,14 @@ export function EvolutionFormModal({
                     <select
                       value={selectedHomeCareFichaId}
                       onChange={(e) => setSelectedHomeCareFichaId(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (homeCareFichasDisponiveis.length > 0 && !selectedHomeCareFichaId) {
+                            setSelectedHomeCareFichaId(homeCareFichasDisponiveis[0].id);
+                          }
+                        }
+                      }}
                       className="w-full sm:flex-1 min-w-0 px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-emerald-500/30 text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all cursor-pointer"
                     >
                       <option value="">Sem ficha de Home Care vinculada</option>

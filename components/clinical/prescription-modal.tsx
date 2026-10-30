@@ -424,6 +424,18 @@ export function PrescriptionModal({
                 placeholder="Ex: Fórmula Clareadora Facial, Composto Antioxidante..."
                 value={nomeFormula}
                 onChange={(e) => setNomeFormula(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const q = nomeFormula.toLowerCase().trim();
+                    const matches = formulas.filter((f) =>
+                      f.nome.toLowerCase().includes(q)
+                    );
+                    if (matches.length > 0) {
+                      handleSelectFormula(matches[0].id);
+                    }
+                  }
+                }}
                 required
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
               />
@@ -496,6 +508,18 @@ export function PrescriptionModal({
                       placeholder="Nome do Ativo"
                       value={row.nome}
                       onChange={(e) => handleRowChange(row.key, "nome", e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const q = row.nome.toLowerCase().trim();
+                          const matches = dbComponentes.filter((c) =>
+                            c.nome.toLowerCase().includes(q)
+                          );
+                          if (matches.length > 0) {
+                            handleRowChange(row.key, "nome", matches[0].nome);
+                          }
+                        }
+                      }}
                       className="w-full px-2.5 py-1.5 text-xs border-0 border-b border-slate-200 dark:border-slate-700/80 focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                     <datalist id={`comp-suggestions-${row.key}`}>

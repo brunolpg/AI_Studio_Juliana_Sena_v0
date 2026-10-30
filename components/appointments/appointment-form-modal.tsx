@@ -938,6 +938,16 @@ function AppointmentFormModalContent({
                         setIsPatientDropdownOpen(true);
                       }}
                       onFocus={() => setIsPatientDropdownOpen(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (filteredPatients.length > 0) {
+                            setSelectedPatient(filteredPatients[0]);
+                            setIsPatientDropdownOpen(false);
+                            setPatientSearch("");
+                          }
+                        }
+                      }}
                       className="w-full pl-9 pr-9 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all shadow-2xs"
                     />
                     {patientSearch && (
@@ -1089,6 +1099,20 @@ function AppointmentFormModalContent({
                   placeholder="Pesquise o procedimento desejado..."
                   value={procedimentoSearch}
                   onChange={(e) => setProcedimentoSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const query = procedimentoSearch.toLowerCase().trim();
+                      const filteredList = procedimentosList.filter((p) => {
+                        const matchesSearch = p.procedimento.toLowerCase().includes(query) || p.categoria.toLowerCase().includes(query);
+                        const matchesCategory = p.categoria === selectedCategoria;
+                        return query ? matchesSearch : matchesCategory;
+                      });
+                      if (filteredList.length > 0) {
+                        setProcedimento(filteredList[0].procedimento);
+                      }
+                    }
+                  }}
                   className="w-full pl-9 pr-4 py-2 text-xs rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all shadow-2xs"
                 />
               </div>
