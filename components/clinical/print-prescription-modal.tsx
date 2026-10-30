@@ -151,14 +151,16 @@ export function PrintPrescriptionModal({
           <title></title>
           ${styles}
           <style>
-            /* Remove cabeçalho (título/data) e rodapé (URL/páginas) automáticos do navegador */
+            /* Margens físicas oficiais aplicadas de forma uniforme em TODAS as páginas */
             @page {
               size: A4 portrait;
-              margin: 0;
+              margin: 16mm 14mm 16mm 14mm;
             }
+
             *, *::before, *::after {
               box-sizing: border-box;
             }
+
             html, body {
               margin: 0 !important;
               padding: 0 !important;
@@ -171,29 +173,42 @@ export function PrintPrescriptionModal({
               height: auto !important;
               overflow: visible !important;
             }
-            /* Aplica a margem limpa da folha no container interno */
+
+            /* O container interno não deve ter padding extra para não somar com o @page */
             .print-wrapper {
               width: 100% !important;
               max-width: 100% !important;
-              padding: 14mm 12mm !important;
+              padding: 0 !important;
               margin: 0 !important;
               background: #ffffff !important;
             }
+
+            /* Evita corte no meio de cards, linhas de tabelas e tópicos */
             .print-avoid-break {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
+
             table, tr, td, th {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
+
             thead {
               display: table-header-group !important;
             }
+
+            /* Margem de segurança acima de seções na quebra de página */
+            h3, .section-title {
+              break-after: avoid !important;
+              page-break-after: avoid !important;
+            }
+
+            /* Bloco de assinatura e data */
             .print-footer {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              margin-top: 24px !important;
+              margin-top: 28px !important;
             }
           </style>
         </head>
@@ -322,7 +337,7 @@ export function PrintPrescriptionModal({
           <div
             id="receituario-print-area"
             ref={printAreaRef}
-            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[15mm] sm:p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between space-y-6 mx-auto metropolis-font"
+            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[16mm] sm:p-[16mm] shadow-lg border border-slate-200 flex flex-col justify-between space-y-6 mx-auto metropolis-font"
             style={{
               boxSizing: "border-box",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
