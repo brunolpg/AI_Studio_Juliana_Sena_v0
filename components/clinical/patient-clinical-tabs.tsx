@@ -45,6 +45,7 @@ import { EvolutionFormModal } from "./evolution-form-modal";
 import { MedicalHistoryModal } from "./medical-history-modal";
 import { PrescriptionModal } from "./prescription-modal";
 import { PrintPrescriptionModal } from "./print-prescription-modal";
+import { PrintEvolutionModal } from "./print-evolution-modal";
 import { AestheticEvaluationModal } from "./aesthetic-evaluation-modal";
 import { HomeCareCards } from "./home-care-cards";
 import { HomeCareModal } from "./home-care-modal";
@@ -82,6 +83,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [selectedRxForPrint, setSelectedRxForPrint] = useState<PrescriptionItem | null>(null);
+  const [selectedEvolutionForPrint, setSelectedEvolutionForPrint] = useState<ClinicalEvolution | null>(null);
   const [signingRx, setSigningRx] = useState<PrescriptionItem | null>(null);
   const [isUploadingSignedPdf, setIsUploadingSignedPdf] = useState(false);
 
@@ -773,11 +775,23 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                               </span>
                             </div>
 
-                            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                              <User className="w-3.5 h-3.5 text-teal-600" />
-                              <span className="font-medium">{evo.profissional}</span>
-                              <span>•</span>
-                              <span>{evo.especialidade}</span>
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                <User className="w-3.5 h-3.5 text-teal-600" />
+                                <span className="font-medium">{evo.profissional}</span>
+                                <span>•</span>
+                                <span>{evo.especialidade}</span>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => setSelectedEvolutionForPrint(evo)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border border-teal-300 dark:border-teal-700 bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/50 transition-colors shadow-xs cursor-pointer"
+                                title="Gerar Relatório de Evolução Clínica em PDF / Impressão"
+                              >
+                                <Printer className="w-3.5 h-3.5" />
+                                <span>Gerar Relatório</span>
+                              </button>
                             </div>
                           </div>
 
@@ -1913,6 +1927,21 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
           onClose={() => setSelectedRxForPrint(null)}
           prescription={selectedRxForPrint}
           client={client}
+        />
+      )}
+
+      {selectedEvolutionForPrint && (
+        <PrintEvolutionModal
+          isOpen={true}
+          onClose={() => setSelectedEvolutionForPrint(null)}
+          evolution={selectedEvolutionForPrint}
+          client={client}
+          linkedPrescriptions={prescriptions.filter((p) =>
+            selectedEvolutionForPrint.prescricoes_ids?.includes(p.id)
+          )}
+          linkedHomeCareFicha={
+            homeCareFichas.find((f) => f.id === selectedEvolutionForPrint.home_care_ficha_id) || null
+          }
         />
       )}
 

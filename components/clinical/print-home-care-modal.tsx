@@ -92,50 +92,62 @@ export function PrintHomeCareModal({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 8mm;
+            margin: 12mm 10mm;
           }
+
           body {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            background: white !important;
+            color: black !important;
           }
 
-          /* Oculta tudo que não faz parte da folha de home care */
+          /* Oculta tudo que não faz parte da folha */
           body * {
             visibility: hidden !important;
           }
 
-          /* Desbloqueia rolagem e containers pais do modal */
+          /* Remove amarras de rolagem e posicionamento absoluto do modal */
           html, body, [data-radix-portal], [role='dialog'] {
             overflow: visible !important;
             height: auto !important;
-            background: white !important;
             position: static !important;
-            inset: auto !important;
+            background: white !important;
           }
 
-          /* Torna visível exclusivamente o relatório de home care */
+          /* Exibe o documento mantendo o fluxo natural de blocos (NÃO usar position: absolute) */
           #home-care-print-area,
           #home-care-print-area * {
             visibility: visible !important;
-            font-family: 'Plus Jakarta Sans', sans-serif !important;
           }
 
-          /* Fixa a folha no topo da página A4 e restringe altura */
           #home-care-print-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
+            position: static !important;
+            display: block !important;
             width: 100% !important;
-            min-height: 275mm !important;
-            overflow: visible !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
+            max-width: 100% !important;
+            min-height: auto !important;
+            height: auto !important;
             margin: 0 !important;
-            padding: 10mm !important;
+            padding: 0 !important;
             box-shadow: none !important;
             border: none !important;
-            background: white !important;
-            color: black !important;
+            overflow: visible !important;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+          }
+
+          /* Evita que tópicos individuais, cronograma ou cards sejam fatiados ao meio */
+          .print-avoid-break {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+
+          /* Garante espaçamento e quebra limpa antes do rodapé caso mude de página */
+          .print-footer {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-top: 24px !important;
           }
         }
       `}} />
@@ -251,10 +263,9 @@ export function PrintHomeCareModal({
           <div
             id="home-care-print-area"
             ref={printAreaRef}
-            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between metropolis-font"
+            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[15mm] sm:p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between space-y-6 metropolis-font"
             style={{
               boxSizing: "border-box",
-              aspectRatio: "1/1.414",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
@@ -299,7 +310,7 @@ export function PrintHomeCareModal({
               </div>
 
               {/* Identificação do Paciente */}
-              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6">
+              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6 print-avoid-break">
                 <div>
                   <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
                     PACIENTE
@@ -320,7 +331,7 @@ export function PrintHomeCareModal({
 
               {/* 3. Caixa de Alerta: ATENÇÃO CRÍTICA (Configurável) */}
               {ficha.incluir_atencao_critica !== false && Boolean(ficha.atencao_critica_texto?.trim()) && (
-                <div className="rounded-2xl bg-amber-50 border border-amber-200/80 p-3.5 mb-5 flex items-start gap-3">
+                <div className="rounded-2xl bg-amber-50 border border-amber-200/80 p-3.5 mb-5 flex items-start gap-3 print-avoid-break">
                   <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                   <div className="text-xs text-amber-900 leading-relaxed">
                     <span className="font-bold uppercase tracking-wider block mb-0.5 text-amber-800">
@@ -345,7 +356,7 @@ export function PrintHomeCareModal({
 
                 <div className="space-y-3 pt-1">
                   {ficha.cuidados.map((cuidado, idx) => (
-                    <div key={idx} className="flex items-start gap-3 text-xs">
+                    <div key={idx} className="flex items-start gap-3 text-xs print-avoid-break">
                       <div className="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 font-bold flex items-center justify-center shrink-0 mt-0.5 text-[11px]">
                         {idx + 1}
                       </div>
@@ -374,8 +385,8 @@ export function PrintHomeCareModal({
                   </span>
                 </div>
 
-                <div className="overflow-hidden rounded-xl border border-slate-200">
-                  <table className="w-full text-left border-collapse text-xs">
+                <div className="overflow-hidden rounded-xl border border-slate-200 print-avoid-break">
+                  <table className="w-full text-left border-collapse text-xs print-avoid-break">
                     <thead>
                       <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 font-bold uppercase text-[10px]">
                         <th className="py-2.5 px-3 w-[22%]">Período</th>
@@ -426,7 +437,7 @@ export function PrintHomeCareModal({
 
                   <div className="space-y-2.5 pt-1">
                     {ficha.recomendacoes.map((rec, idx) => (
-                      <div key={idx} className="flex items-start gap-3 text-xs bg-amber-50/40 p-2.5 rounded-xl border border-amber-200/50">
+                      <div key={idx} className="flex items-start gap-3 text-xs bg-amber-50/40 p-2.5 rounded-xl border border-amber-200/50 print-avoid-break">
                         <div className="w-5 h-5 rounded-md bg-amber-200 text-amber-900 font-bold flex items-center justify-center shrink-0 mt-0.5 text-[10px]">
                           {idx + 1}
                         </div>
@@ -446,7 +457,7 @@ export function PrintHomeCareModal({
             </div>
 
             {/* 7. Rodapé Institucional com Chancela Criptográfica */}
-            <div className="mt-8 pt-4 border-t border-slate-200 space-y-3">
+            <div className="mt-8 pt-4 border-t border-slate-200 space-y-3 print-footer">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
                 <span className="font-medium">{formatDateToPortuguese(ficha.data_home_care)}</span>
                 <span className="text-[11px] font-semibold text-slate-700">

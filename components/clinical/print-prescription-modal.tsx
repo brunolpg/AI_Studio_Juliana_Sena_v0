@@ -145,51 +145,62 @@ export function PrintPrescriptionModal({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 8mm;
+            margin: 12mm 10mm;
           }
+
           body {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            background: white !important;
+            color: black !important;
           }
 
-          /* Oculta tudo que não faz parte da folha de receita */
+          /* Oculta tudo que não faz parte da folha de prescrição */
           body * {
             visibility: hidden !important;
           }
 
-          /* Desbloqueia rolagem e containers pais do modal */
+          /* Destrava scroll, altura fixa e posições absolutas da árvore do modal */
           html, body, [data-radix-portal], [role='dialog'] {
             overflow: visible !important;
             height: auto !important;
-            background: white !important;
             position: static !important;
-            inset: auto !important;
+            background: white !important;
           }
 
-          /* Torna visível exclusivamente o receituário */
+          /* Exibe a folha de prescrição no fluxo normal do documento */
           #receituario-print-area,
           #receituario-print-area * {
             visibility: visible !important;
-            font-family: 'Plus Jakarta Sans', sans-serif !important;
           }
 
-          /* Fixa a folha no topo da página A4 e restringe altura para 1 única página */
           #receituario-print-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
+            position: static !important;
+            display: block !important;
             width: 100% !important;
-            height: 275mm !important;
-            max-height: 275mm !important;
-            overflow: hidden !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
+            max-width: 100% !important;
+            min-height: auto !important;
+            height: auto !important;
             margin: 0 !important;
-            padding: 10mm !important;
+            padding: 0 !important;
             box-shadow: none !important;
             border: none !important;
-            background: white !important;
-            color: black !important;
+            overflow: visible !important;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+          }
+
+          /* Evita que blocos específicos sejam cortados no meio entre páginas */
+          .print-avoid-break {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+
+          /* Bloco de assinatura e data no rodapé */
+          .print-footer {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-top: 24px !important;
           }
         }
       `}} />
@@ -280,10 +291,9 @@ export function PrintPrescriptionModal({
           <div
             id="receituario-print-area"
             ref={printAreaRef}
-            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between metropolis-font"
+            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[15mm] sm:p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between space-y-6 metropolis-font"
             style={{
               boxSizing: "border-box",
-              aspectRatio: "1/1.414",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
@@ -328,7 +338,7 @@ export function PrintPrescriptionModal({
               </div>
 
               {/* Identificação do Paciente */}
-              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6">
+              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6 print-avoid-break">
                 <div>
                   <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
                     PACIENTE
@@ -361,7 +371,7 @@ export function PrintPrescriptionModal({
 
                 {/* Composição / Componentes */}
                 {rxDetails.componentes && rxDetails.componentes.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 print-avoid-break">
                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fórmula Ativa</h4>
                     <div className="border border-slate-200 rounded-lg overflow-hidden">
                       <table className="w-full text-xs text-left">
@@ -386,7 +396,7 @@ export function PrintPrescriptionModal({
 
                 {/* Veículo & Apresentação */}
                 {rxDetails.veiculo && (
-                  <div className="grid grid-cols-2 gap-4 border border-slate-200 rounded-lg p-3 bg-white text-xs">
+                  <div className="grid grid-cols-2 gap-4 border border-slate-200 rounded-lg p-3 bg-white text-xs print-avoid-break">
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 block uppercase">Veículo Base</span>
                       <span className="font-semibold text-slate-800">{rxDetails.veiculo}</span>
@@ -414,7 +424,7 @@ export function PrintPrescriptionModal({
                 )}
 
                 {/* Posologia */}
-                <div className="border-l-4 border-slate-800 bg-slate-50 p-4 rounded-r-xl">
+                <div className="border-l-4 border-slate-800 bg-slate-50 p-4 rounded-r-xl print-avoid-break">
                   <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1.5">
                     POSOLOGIA (Frequência & Horários)
                   </h4>
@@ -425,7 +435,7 @@ export function PrintPrescriptionModal({
 
                 {/* Orientações ao Paciente */}
                 {rxDetails.orientPaciente && (
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 print-avoid-break">
                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       Orientações ao Paciente / Instruções Especiais
                     </h4>
@@ -437,7 +447,7 @@ export function PrintPrescriptionModal({
 
                 {/* Observações à Farmácia */}
                 {rxDetails.orientFarmacia && (
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 print-avoid-break">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                       Observações Técnicas à Farmácia Magistral
                     </span>
@@ -450,7 +460,7 @@ export function PrintPrescriptionModal({
             </div>
 
             {/* Rodapé e Bloco de Assinatura */}
-            <div className="mt-12 space-y-10">
+            <div className="mt-12 space-y-10 print-footer">
               <div className="text-center text-xs text-slate-700">
                 <span>{formatDateToPortuguese(prescription.data)}</span>
               </div>
