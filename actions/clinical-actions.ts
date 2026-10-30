@@ -725,16 +725,6 @@ export async function togglePrescriptionStatusAction(
 // INTEGRAÇÃO DE FÓRMULAS, COMPONENTES E UNIDADES (SUPABASE COM RESILIÊNCIA)
 // =========================================================================
 
-function toTitleCase(str: string): string {
-  if (!str) return "";
-  return str
-    .toLowerCase()
-    .trim()
-    .split(/\s+/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
 /**
  * Consulta de Fórmulas com Componentes e Unidades no Supabase
  */
@@ -900,8 +890,8 @@ export async function addStructuredPrescriptionAction(
       return isNaN(n) ? null : n;
     };
 
-    const titleCaseFormulaName = toTitleCase(input.nome_formula);
-    const titleCaseVeiculo = toTitleCase(input.veiculo);
+    const cleanFormulaName = input.nome_formula.trim();
+    const cleanVeiculo = input.veiculo ? input.veiculo.trim() : "";
     const normalizedVia = (input.via?.toLowerCase() === "oral" ? "oral" : "tópico") as "oral" | "tópico";
 
     const validTiposVeiculo = ["dose(s)", "sachê(s)", "comprimido(s)"];
@@ -914,7 +904,7 @@ export async function addStructuredPrescriptionAction(
     const { data: existingFormula, error: findFormulaErr } = await supabase
       .from("formulas")
       .select("id")
-      .ilike("nome", titleCaseFormulaName)
+      .ilike("nome", cleanFormulaName)
       .eq("via", normalizedVia)
       .maybeSingle();
 
@@ -928,10 +918,10 @@ export async function addStructuredPrescriptionAction(
       const { data: newFormula, error: formulaErr } = await supabase
         .from("formulas")
         .insert({
-          nome: titleCaseFormulaName,
+          nome: cleanFormulaName,
           descricao: input.descricao || null,
           via: normalizedVia,
-          veiculo: titleCaseVeiculo || null,
+          veiculo: cleanVeiculo || null,
           dosagem: numDosagem,
           tipo_veiculo: sanitizedTipoVeiculo,
           posologia: input.posologia?.trim() || null,
@@ -1008,9 +998,10 @@ export async function addStructuredPrescriptionAction(
       }
 
       let compId = null;
+      let compNome = rawComponentName;
       const { data: existingComp, error: findCompErr } = await supabase
         .from("componentes")
-        .select("id")
+        .select("id, nome")
         .ilike("nome", rawComponentName)
         .maybeSingle();
 
@@ -1023,6 +1014,7 @@ export async function addStructuredPrescriptionAction(
 
       if (existingComp) {
         compId = existingComp.id;
+        compNome = existingComp.nome || rawComponentName;
       } else {
         const { data: newComp, error: insertErr } = await supabase
           .from("componentes")
@@ -1030,7 +1022,7 @@ export async function addStructuredPrescriptionAction(
             nome: rawComponentName,
             unidade_id: matchedUnidadeId,
           })
-          .select("id")
+          .select("id, nome")
           .single();
 
         if (insertErr) {
@@ -1041,13 +1033,14 @@ export async function addStructuredPrescriptionAction(
         }
         if (newComp) {
           compId = newComp.id;
+          compNome = newComp.nome || rawComponentName;
         }
       }
 
       if (compId) {
         processedComponentes.push({
           componente_id: compId,
-          nome: rawComponentName,
+          nome: compNome,
           quantidade: parseNum(comp.quantidade) || 0,
           unidade_sigla: sigla,
         });
@@ -1103,9 +1096,9 @@ export async function addStructuredPrescriptionAction(
       .insert({
         prescricao_id: prescricao.id,
         formula_id: formulaId,
-        nome_formula: titleCaseFormulaName,
+        nome_formula: cleanFormulaName,
         via: normalizedVia,
-        veiculo: titleCaseVeiculo || null,
+        veiculo: cleanVeiculo || null,
         dosagem: numDosagem,
         tipo_veiculo: sanitizedTipoVeiculo,
         posologia: input.posologia.trim(),
@@ -1129,8 +1122,8 @@ export async function addStructuredPrescriptionAction(
 
     const formattedDosagem =
       normalizedVia === "oral"
-        ? `${listAtivos} em ${titleCaseVeiculo} (Dose: ${input.dosagem_valor} | Total: ${input.total_veiculo} ${sanitizedTipoVeiculo || "un"})`
-        : `${listAtivos} em ${titleCaseVeiculo} q.s.p. ${input.dosagem_valor}${input.dosagem_unidade || "g"} (Total: ${input.total_veiculo} un)`;
+        ? `${listAtivos} em ${cleanVeiculo} (Dose: ${input.dosagem_valor} | Total: ${input.total_veiculo} ${sanitizedTipoVeiculo || "un"})`
+        : `${listAtivos} em ${cleanVeiculo} q.s.p. ${input.dosagem_valor}${input.dosagem_unidade || "g"} (Total: ${input.total_veiculo} un)`;
 
     const combinedInstrucoes = [
       input.orient_paciente ? `[Orientações ao Paciente]\n${input.orient_paciente}` : "",
@@ -1143,7 +1136,7 @@ export async function addStructuredPrescriptionAction(
       id: newItem.id, // ID real inserido no banco
       client_id: clientId,
       data: new Date().toISOString().split("T")[0],
-      medicamento: titleCaseFormulaName,
+      medicamento: cleanFormulaName,
       dosagem: formattedDosagem,
       via: normalizedVia === "oral" ? "Oral" : "Tópico",
       posologia: input.posologia.trim(),
