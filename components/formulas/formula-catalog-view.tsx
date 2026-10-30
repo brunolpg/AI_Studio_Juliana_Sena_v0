@@ -20,7 +20,6 @@ import { FormulaModal } from "./formula-modal";
 import { AppHeader } from "@/components/shared/app-header";
 import { deleteFormulaAction, getFormulasAction } from "@/actions/formula-actions";
 import { useToast } from "@/components/ui/toast";
-import { toSentenceCase } from "@/lib/utils";
 import type { Formula, Componente, Unidade } from "@/types/formula";
 
 interface FormulaCatalogViewProps {
@@ -331,7 +330,7 @@ export function FormulaCatalogView({
                           ? (f as any).componentes
                           : f.formula_componentes || []
                         ).map((fc: any, idx: number) => {
-                          const compName = toSentenceCase(fc.nome || fc.componentes?.nome || "Ativo");
+                          const compName = fc.nome || fc.componentes?.nome || "Ativo";
                           const qtd = fc.quantidade;
                           const unit = fc.unidade_sigla || fc.componentes?.unidades?.unidade || fc.unidade || "";
                           return (

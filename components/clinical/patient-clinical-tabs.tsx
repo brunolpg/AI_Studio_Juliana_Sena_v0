@@ -41,7 +41,6 @@ import {
 } from "@/actions/clinical-actions";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { validateFileSize } from "@/lib/validations/file-upload";
-import { toSentenceCase } from "@/lib/utils";
 import { EvolutionFormModal } from "./evolution-form-modal";
 import { MedicalHistoryModal } from "./medical-history-modal";
 import { PrescriptionModal } from "./prescription-modal";
@@ -1686,7 +1685,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                               {rx.componentes && rx.componentes.length > 0 && (
                                 <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 font-medium">
                                   <strong className="text-slate-900 dark:text-white block mb-1">Composição:</strong>
-                                  {rx.componentes.map((c: any) => `${toSentenceCase(c.nome)}: ${c.quantidade}${c.unidade || ""}`).join(" | ")}
+                                  {rx.componentes.map((c: any) => `${c.nome}: ${c.quantidade}${c.unidade || ""}`).join(" | ")}
                                 </div>
                               )}
 

@@ -3,7 +3,6 @@
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { toSentenceCase } from "@/lib/utils";
 
 export async function getFormulasAction() {
   try {
@@ -103,7 +102,7 @@ export async function getFormulasAction() {
       const rawComps = f.formula_componentes || f.componentes || f.ativos || f.items || [];
       const formattedComps = rawComps.map((fc: any) => ({
         id: fc.componente_id || fc.id,
-        nome: toSentenceCase(fc.componentes?.nome || fc.nome || fc.name || "Ativo"),
+        nome: fc.componentes?.nome || fc.nome || fc.name || "Ativo",
         quantidade: fc.quantidade,
         unidade_id: fc.componentes?.unidade_id || fc.unidade_id,
         unidade_sigla:
@@ -156,7 +155,7 @@ export async function getComponentesAndUnidadesAction() {
 
     const mappedComps = componentesData.map((c: any) => ({
       ...c,
-      nome: toSentenceCase(c.nome),
+      nome: c.nome,
     }));
 
     return {
@@ -262,7 +261,7 @@ export async function createComponenteQuickAction(nomeComponente: string, unidad
     const supabase = getSupabaseAdminClient() || (await createClient());
     if (!supabase) return { success: false, error: "Supabase não configurado." };
 
-    const formattedNome = toSentenceCase(nomeComponente);
+    const formattedNome = nomeComponente.trim();
 
     const { data, error } = await supabase
       .from("componentes")
@@ -273,7 +272,7 @@ export async function createComponenteQuickAction(nomeComponente: string, unidad
     if (error) return { success: false, error: error.message };
     revalidatePath("/formulas");
     revalidatePath("/dashboard/formulas");
-    return { success: true, componente: { ...data, nome: toSentenceCase(data.nome) } };
+    return { success: true, componente: data };
   } catch (err: any) {
     return { success: false, error: err.message };
   }

@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { X, Plus, Trash2, FlaskConical, AlertCircle, Check, Loader2 } from "lucide-react";
 import { createFormulaAction, createUnidadeQuickAction, createComponenteQuickAction } from "@/actions/formula-actions";
 import { useToast } from "@/components/ui/toast";
-import { toSentenceCase } from "@/lib/utils";
 import type { Componente, Unidade } from "@/types/formula";
 
 interface FormulaModalProps {
@@ -149,7 +148,7 @@ export function FormulaModal({
         unidadeId = uRes.unidade.id;
       }
 
-      const formattedCompNome = toSentenceCase(newCompNome);
+      const formattedCompNome = newCompNome.trim();
       const cRes = await createComponenteQuickAction(formattedCompNome, unidadeId);
       if (cRes.success && cRes.componente) {
         setComponentesList((prev) => [...prev, cRes.componente!]);
@@ -324,7 +323,7 @@ export function FormulaModal({
                         <option value="">Selecione o componente...</option>
                         {componentesList.map((c) => (
                           <option key={c.id} value={c.id}>
-                            {toSentenceCase(c.nome)} ({(c as any).unidades?.unidade || "un"})
+                            {c.nome} ({(c as any).unidades?.unidade || "un"})
                           </option>
                         ))}
                       </select>
