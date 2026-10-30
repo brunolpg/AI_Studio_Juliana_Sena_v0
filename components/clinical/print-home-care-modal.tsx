@@ -95,55 +95,79 @@ export function PrintHomeCareModal({
             margin: 12mm 10mm;
           }
 
-          body {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            background: white !important;
-            color: black !important;
+          /* 1. Oculta tudo que pertence à aplicação e aos overlays do modal */
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            overflow: visible !important;
+            height: auto !important;
+            min-height: auto !important;
+            position: static !important;
           }
 
-          /* Oculta tudo que não faz parte da folha */
           body * {
             visibility: hidden !important;
           }
 
-          /* Remove amarras de rolagem e posicionamento absoluto do modal */
-          html, body, [data-radix-portal], [role='dialog'] {
+          [data-radix-portal],
+          [role='dialog'],
+          .fixed,
+          .overflow-y-auto {
+            position: static !important;
             overflow: visible !important;
             height: auto !important;
-            position: static !important;
-            background: white !important;
+            max-height: none !important;
+            width: 100% !important;
           }
 
-          /* Exibe o documento mantendo o fluxo natural de blocos (NÃO usar position: absolute) */
+          /* 2. Isola e torna visível unicamente a folha de relatório */
+          #evolution-print-area,
+          #evolution-print-area *,
           #home-care-print-area,
-          #home-care-print-area * {
+          #home-care-print-area *,
+          #prescription-print-area,
+          #prescription-print-area * {
             visibility: visible !important;
           }
 
-          #home-care-print-area {
-            position: static !important;
-            display: block !important;
+          #evolution-print-area,
+          #home-care-print-area,
+          #prescription-print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
             width: 100% !important;
             max-width: 100% !important;
-            min-height: auto !important;
-            height: auto !important;
             margin: 0 !important;
             padding: 0 !important;
+            display: block !important;
             box-shadow: none !important;
             border: none !important;
             overflow: visible !important;
-            page-break-inside: auto !important;
-            break-inside: auto !important;
+            height: auto !important;
+            min-height: auto !important;
           }
 
-          /* Evita que tópicos individuais, cronograma ou cards sejam fatiados ao meio */
+          /* 3. Regras de quebra de página anti-fatiamento */
           .print-avoid-break {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
 
-          /* Garante espaçamento e quebra limpa antes do rodapé caso mude de página */
+          /* Evita quebras no meio de linhas de tabelas */
+          tr, td, th {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+
+          /* Força cabeçalho da tabela a se repetir em novas páginas se necessário */
+          thead {
+            display: table-header-group !important;
+          }
+
+          /* Rodapé e assinatura */
           .print-footer {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
@@ -263,7 +287,7 @@ export function PrintHomeCareModal({
           <div
             id="home-care-print-area"
             ref={printAreaRef}
-            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[15mm] sm:p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between space-y-6 metropolis-font"
+            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[15mm] sm:p-[20mm] shadow-lg border border-slate-200 flex flex-col space-y-6 mx-auto metropolis-font"
             style={{
               boxSizing: "border-box",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -457,7 +481,7 @@ export function PrintHomeCareModal({
             </div>
 
             {/* 7. Rodapé Institucional com Chancela Criptográfica */}
-            <div className="mt-8 pt-4 border-t border-slate-200 space-y-3 print-footer">
+            <div className="mt-auto pt-6 border-t border-slate-200 space-y-3 print-footer">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
                 <span className="font-medium">{formatDateToPortuguese(ficha.data_home_care)}</span>
                 <span className="text-[11px] font-semibold text-slate-700">

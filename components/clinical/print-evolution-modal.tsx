@@ -139,50 +139,86 @@ export function PrintEvolutionModal({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 8mm;
-          }
-          body {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+            margin: 12mm 10mm;
           }
 
-          /* Oculta tudo que não faz parte do relatório de evolução */
+          /* 1. Oculta tudo que pertence à aplicação e aos overlays do modal */
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            overflow: visible !important;
+            height: auto !important;
+            min-height: auto !important;
+            position: static !important;
+          }
+
           body * {
             visibility: hidden !important;
           }
 
-          /* Desbloqueia rolagem e containers pais do modal */
-          html, body, [data-radix-portal], [role='dialog'] {
+          [data-radix-portal],
+          [role='dialog'],
+          .fixed,
+          .overflow-y-auto {
+            position: static !important;
             overflow: visible !important;
             height: auto !important;
-            background: white !important;
-            position: static !important;
-            inset: auto !important;
+            max-height: none !important;
+            width: 100% !important;
           }
 
-          /* Torna visível exclusivamente o relatório de evolução */
+          /* 2. Isola e torna visível unicamente a folha de relatório */
           #evolution-print-area,
-          #evolution-print-area * {
+          #evolution-print-area *,
+          #home-care-print-area,
+          #home-care-print-area *,
+          #prescription-print-area,
+          #prescription-print-area * {
             visibility: visible !important;
-            font-family: 'Plus Jakarta Sans', sans-serif !important;
           }
 
-          /* Fixa a folha no topo da página A4 e restringe altura */
-          #evolution-print-area {
+          #evolution-print-area,
+          #home-care-print-area,
+          #prescription-print-area {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
-            min-height: 275mm !important;
-            overflow: visible !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
+            max-width: 100% !important;
             margin: 0 !important;
-            padding: 10mm !important;
+            padding: 0 !important;
+            display: block !important;
             box-shadow: none !important;
             border: none !important;
-            background: white !important;
-            color: black !important;
+            overflow: visible !important;
+            height: auto !important;
+            min-height: auto !important;
+          }
+
+          /* 3. Regras de quebra de página anti-fatiamento */
+          .print-avoid-break {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+
+          /* Evita quebras no meio de linhas de tabelas */
+          tr, td, th {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+
+          /* Força cabeçalho da tabela a se repetir em novas páginas se necessário */
+          thead {
+            display: table-header-group !important;
+          }
+
+          /* Rodapé e assinatura */
+          .print-footer {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-top: 24px !important;
           }
         }
       `,
@@ -303,10 +339,9 @@ export function PrintEvolutionModal({
           <div
             id="evolution-print-area"
             ref={printAreaRef}
-            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[18mm] sm:p-[20mm] shadow-lg border border-slate-200 flex flex-col justify-between metropolis-font"
+            className="w-[210mm] min-h-[297mm] bg-white text-slate-900 p-[15mm] sm:p-[20mm] shadow-lg border border-slate-200 flex flex-col space-y-6 mx-auto metropolis-font"
             style={{
               boxSizing: "border-box",
-              aspectRatio: "1/1.414",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
             }}
           >
@@ -344,7 +379,7 @@ export function PrintEvolutionModal({
               </div>
 
               {/* 2. Dados de Identificação do Paciente */}
-              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 mb-5">
+              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 mb-5 print-avoid-break">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 block uppercase">Paciente</span>
@@ -375,7 +410,7 @@ export function PrintEvolutionModal({
               </div>
 
               {/* 3. Destaque do Procedimento / Tipo de Atendimento */}
-              <div className="bg-teal-50/60 border border-teal-200/80 p-3 rounded-xl mb-5 flex items-center justify-between">
+              <div className="bg-teal-50/60 border border-teal-200/80 p-3 rounded-xl mb-5 flex items-center justify-between print-avoid-break">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
                     <Stethoscope className="w-4 h-4" />
@@ -402,7 +437,7 @@ export function PrintEvolutionModal({
               <div className="space-y-4 mb-5">
                 
                 {/* S • Subjetivo */}
-                <div className="border border-slate-200 rounded-xl p-3.5 bg-white">
+                <div className="border border-slate-200 rounded-xl p-3.5 bg-white print-avoid-break">
                   <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100 mb-2">
                     <span className="px-2 py-0.5 text-[10px] font-black tracking-wider uppercase rounded bg-teal-100 text-teal-900 border border-teal-200">
                       S • Subjetivo
@@ -417,7 +452,7 @@ export function PrintEvolutionModal({
                 </div>
 
                 {/* O • Objetivo + Sinais Vitais */}
-                <div className="border border-slate-200 rounded-xl p-3.5 bg-white">
+                <div className="border border-slate-200 rounded-xl p-3.5 bg-white print-avoid-break">
                   <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100 mb-2">
                     <span className="px-2 py-0.5 text-[10px] font-black tracking-wider uppercase rounded bg-sky-100 text-sky-900 border border-sky-200">
                       O • Objetivo
@@ -491,7 +526,7 @@ export function PrintEvolutionModal({
                 </div>
 
                 {/* A • Avaliação / Diagnóstico */}
-                <div className="border border-slate-200 rounded-xl p-3.5 bg-white">
+                <div className="border border-slate-200 rounded-xl p-3.5 bg-white print-avoid-break">
                   <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100 mb-2">
                     <span className="px-2 py-0.5 text-[10px] font-black tracking-wider uppercase rounded bg-amber-100 text-amber-900 border border-amber-200">
                       A • Avaliação / Diagnóstico
@@ -506,7 +541,7 @@ export function PrintEvolutionModal({
                 </div>
 
                 {/* P • Plano / Conduta Regenerativa */}
-                <div className="border border-slate-200 rounded-xl p-3.5 bg-white">
+                <div className="border border-slate-200 rounded-xl p-3.5 bg-white print-avoid-break">
                   <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100 mb-2">
                     <span className="px-2 py-0.5 text-[10px] font-black tracking-wider uppercase rounded bg-emerald-100 text-emerald-900 border border-emerald-200">
                       P • Plano / Conduta Regenerativa
@@ -527,7 +562,7 @@ export function PrintEvolutionModal({
                 (evolution.prescricoes_detalhes && evolution.prescricoes_detalhes.length > 0) ||
                 linkedHomeCareFicha ||
                 evolution.home_care_ficha) && (
-                <div className="border-t border-slate-200 pt-3.5 mt-4 space-y-3">
+                <div className="border-t border-slate-200 pt-3.5 mt-4 space-y-3 print-avoid-break">
                   <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     Vínculos Terapêuticos Associados a esta Sessão
                   </h4>
@@ -584,7 +619,7 @@ export function PrintEvolutionModal({
             </div>
 
             {/* 6. Rodapé Institucional com Chancela Criptográfica */}
-            <div className="mt-6 pt-4 border-t border-slate-200 space-y-3">
+            <div className="mt-auto pt-6 border-t border-slate-200 space-y-3 print-footer">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
                 <span className="font-medium">{formatDateToPortuguese(evolution.data)}</span>
                 <span className="text-[11px] font-semibold text-slate-700">
