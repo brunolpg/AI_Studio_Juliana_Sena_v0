@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Camera, X, ChevronLeft, ChevronRight, ExternalLink, Download, Image as ImageIcon } from "lucide-react";
+import {
+  Camera,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  AlertCircle,
+  Image as ImageIcon,
+} from "lucide-react";
 
 interface EvolutionPhotosModalProps {
   isOpen: boolean;
@@ -9,6 +17,146 @@ interface EvolutionPhotosModalProps {
   fotos: string[];
   procedimento?: string;
   data?: string;
+}
+
+// 1. Normalização das URLs das Fotografias do Supabase
+export const resolvePhotoUrl = (rawUrl: string): string => {
+  if (!rawUrl) return "";
+  const trimmed = rawUrl.trim();
+
+  // Caso já seja uma URL absoluta completa (http/https/blob/data:)
+  if (/^(https?:|blob:|data:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Se for um caminho relativo gravado no Supabase Storage
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const cleanPath = trimmed.replace(/^\/+/, "");
+
+  if (cleanPath.startsWith("prontuarios-fotos/")) {
+    return `${supabaseUrl}/storage/v1/object/public/${cleanPath}`;
+  }
+
+  return `${supabaseUrl}/storage/v1/object/public/prontuarios-fotos/${cleanPath}`;
+};
+
+// 2. Item de Miniatura da Grade com Tratamento de Erro e Indicador de Carregamento
+function EvolutionPhotoItem({
+  url,
+  index,
+  onClick,
+}: {
+  url: string;
+  index: number;
+  onClick: () => void;
+}) {
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const fullUrl = resolvePhotoUrl(url);
+
+  return (
+    <div
+      onClick={!hasError ? onClick : undefined}
+      className={`group relative aspect-square rounded-2xl overflow-hidden border border-slate-200/90 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 flex items-center justify-center ${
+        !hasError ? "cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 shadow-2xs hover:shadow-md" : "opacity-75"
+      } transition-all duration-200`}
+    >
+      {isLoading && !hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-50 dark:bg-slate-900 animate-pulse">
+          <span className="text-xs text-slate-400">Carregando foto...</span>
+        </div>
+      )}
+
+      {hasError ? (
+        <div className="flex flex-col items-center justify-center p-3 text-center text-slate-400">
+          <AlertCircle className="w-6 h-6 mb-1 text-amber-500/80" />
+          <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+            Registro {index + 1}
+          </span>
+          <span className="text-[10px] text-slate-400">Não foi possível carregar</span>
+        </div>
+      ) : (
+        <img
+          src={fullUrl}
+          alt={`Registro Clínico ${index + 1}`}
+          loading="lazy"
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
+          onLoad={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false);
+            setHasError(true);
+          }}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        />
+      )}
+
+      {!hasError && !isLoading && (
+        <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity duration-200 backdrop-blur-[1px]">
+          <span className="text-white text-xs font-bold px-3 py-1 rounded-full bg-emerald-600/90 shadow-md">
+            Ampliar
+          </span>
+          <span className="text-[10px] text-white/80 font-medium">
+            Registro {index + 1}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 3. Visualizador Ampliado com Tratamento Resiliente de Imagem
+function ZoomedPhotoView({
+  url,
+  index,
+}: {
+  url: string;
+  index: number;
+}) {
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const fullUrl = resolvePhotoUrl(url);
+
+  useEffect(() => {
+    setIsLoading(true);
+    setHasError(false);
+  }, [url]);
+
+  return (
+    <div className="relative max-h-[58vh] sm:max-h-[62vh] w-full min-h-[260px] flex items-center justify-center bg-slate-950 rounded-2xl overflow-hidden p-2 sm:p-3 border border-slate-800 shadow-inner">
+      {isLoading && !hasError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 z-10">
+          <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-2" />
+          <span className="text-xs text-slate-400">Carregando imagem em alta resolução...</span>
+        </div>
+      )}
+
+      {hasError ? (
+        <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
+          <AlertCircle className="w-8 h-8 mb-2 text-amber-500" />
+          <span className="text-sm font-semibold text-slate-300">
+            Falha ao carregar visualização ampliada
+          </span>
+          <span className="text-xs text-slate-500 mt-1">
+            O arquivo pode estar indisponível ou em outro formato.
+          </span>
+        </div>
+      ) : (
+        <img
+          src={fullUrl}
+          alt={`Registro clínico ${index + 1}`}
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
+          onLoad={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false);
+            setHasError(true);
+          }}
+          className="max-h-[54vh] sm:max-h-[58vh] max-w-full object-contain rounded-xl select-none"
+        />
+      )}
+    </div>
+  );
 }
 
 export function EvolutionPhotosModal({
@@ -101,13 +249,11 @@ export function EvolutionPhotosModal({
         <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)] flex-1">
           {selectedPhotoIndex !== null ? (
             <div className="flex flex-col items-center animate-in zoom-in-95 duration-200">
-              {/* Preview Ampliado */}
-              <div className="relative max-h-[58vh] sm:max-h-[62vh] w-full flex items-center justify-center bg-slate-950 rounded-2xl overflow-hidden p-2 sm:p-3 border border-slate-800 shadow-inner">
-                <img
-                  src={fotos[selectedPhotoIndex]}
-                  alt={`Registro clínico ${selectedPhotoIndex + 1}`}
-                  className="max-h-[54vh] sm:max-h-[58vh] max-w-full object-contain rounded-xl select-none"
-                  referrerPolicy="no-referrer"
+              {/* Preview Ampliado com Tratamento Resiliente */}
+              <div className="relative w-full">
+                <ZoomedPhotoView
+                  url={fotos[selectedPhotoIndex]}
+                  index={selectedPhotoIndex}
                 />
 
                 {/* Botões Flutuantes de Navegação na Imagem (se mais de 1 foto) */}
@@ -117,7 +263,7 @@ export function EvolutionPhotosModal({
                       type="button"
                       disabled={selectedPhotoIndex === 0}
                       onClick={() => setSelectedPhotoIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : prev))}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white disabled:opacity-30 disabled:cursor-not-allowed shadow-md cursor-pointer transition-all"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white disabled:opacity-30 disabled:cursor-not-allowed shadow-md cursor-pointer transition-all z-20"
                       title="Foto anterior"
                     >
                       <ChevronLeft className="w-5 h-5" />
@@ -128,7 +274,7 @@ export function EvolutionPhotosModal({
                       onClick={() =>
                         setSelectedPhotoIndex((prev) => (prev !== null && prev < fotos.length - 1 ? prev + 1 : prev))
                       }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white disabled:opacity-30 disabled:cursor-not-allowed shadow-md cursor-pointer transition-all"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white disabled:opacity-30 disabled:cursor-not-allowed shadow-md cursor-pointer transition-all z-20"
                       title="Próxima foto"
                     >
                       <ChevronRight className="w-5 h-5" />
@@ -175,7 +321,7 @@ export function EvolutionPhotosModal({
                 </div>
 
                 <a
-                  href={fotos[selectedPhotoIndex]}
+                  href={resolvePhotoUrl(fotos[selectedPhotoIndex])}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
@@ -188,27 +334,12 @@ export function EvolutionPhotosModal({
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 sm:gap-4">
               {fotos.map((url, idx) => (
-                <div
+                <EvolutionPhotoItem
                   key={idx}
+                  url={url}
+                  index={idx}
                   onClick={() => setSelectedPhotoIndex(idx)}
-                  className="group relative aspect-square rounded-2xl overflow-hidden border border-slate-200/90 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-all duration-200 shadow-2xs hover:shadow-md"
-                >
-                  <img
-                    src={url}
-                    alt={`Registro ${idx + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    referrerPolicy="no-referrer"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1.5 transition-opacity duration-200 backdrop-blur-[1px]">
-                    <span className="text-white text-xs font-bold px-3 py-1 rounded-full bg-emerald-600/90 shadow-md">
-                      Ampliar Foto
-                    </span>
-                    <span className="text-[10px] text-white/80 font-medium">
-                      Foto {idx + 1} de {fotos.length}
-                    </span>
-                  </div>
-                </div>
+                />
               ))}
             </div>
           )}
