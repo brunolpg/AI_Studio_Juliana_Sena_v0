@@ -27,6 +27,7 @@ import {
   Sparkles,
   Image as ImageIcon,
   Printer,
+  Camera,
   X,
   FileCheck,
   ExternalLink,
@@ -46,6 +47,7 @@ import { MedicalHistoryModal } from "./medical-history-modal";
 import { PrescriptionModal } from "./prescription-modal";
 import { PrintPrescriptionModal } from "./print-prescription-modal";
 import { PrintEvolutionModal } from "./print-evolution-modal";
+import { EvolutionPhotosModal } from "./evolution-photos-modal";
 import { AestheticEvaluationModal } from "./aesthetic-evaluation-modal";
 import { HomeCareCards } from "./home-care-cards";
 import { HomeCareModal } from "./home-care-modal";
@@ -84,6 +86,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [selectedRxForPrint, setSelectedRxForPrint] = useState<PrescriptionItem | null>(null);
   const [selectedEvolutionForPrint, setSelectedEvolutionForPrint] = useState<ClinicalEvolution | null>(null);
+  const [selectedEvolutionForPhotos, setSelectedEvolutionForPhotos] = useState<ClinicalEvolution | null>(null);
   const [signingRx, setSigningRx] = useState<PrescriptionItem | null>(null);
   const [isUploadingSignedPdf, setIsUploadingSignedPdf] = useState(false);
 
@@ -782,6 +785,18 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                 <span>•</span>
                                 <span>{evo.especialidade}</span>
                               </div>
+
+                              {evo.fotos_paciente && evo.fotos_paciente.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedEvolutionForPhotos(evo)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-colors shadow-xs cursor-pointer"
+                                  title={`Visualizar ${evo.fotos_paciente.length} foto(s) registradas`}
+                                >
+                                  <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                  <span>Ver Fotos ({evo.fotos_paciente.length})</span>
+                                </button>
+                              )}
 
                               <button
                                 type="button"
@@ -1942,6 +1957,16 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
           linkedHomeCareFicha={
             homeCareFichas.find((f) => f.id === selectedEvolutionForPrint.home_care_ficha_id) || null
           }
+        />
+      )}
+
+      {selectedEvolutionForPhotos && (
+        <EvolutionPhotosModal
+          isOpen={true}
+          onClose={() => setSelectedEvolutionForPhotos(null)}
+          fotos={selectedEvolutionForPhotos.fotos_paciente || []}
+          procedimento={selectedEvolutionForPhotos.tipo}
+          data={selectedEvolutionForPhotos.data}
         />
       )}
 
