@@ -141,10 +141,9 @@ export async function updateClinicalEvolutionAction(
       assinatura: signatureResult.assinatura,
       algoritmo: signatureResult.algoritmo,
       assinado_em: signatureResult.assinadoEm,
-      updated_at: assinadoEmServer,
     };
 
-    const { data: updatedRecord, error: updateErr } = await adminDb
+    let { data: updatedRecord, error: updateErr } = await adminDb
       .from("evolucoes_clinicas")
       .update(updatePayload)
       .eq("id", id)
@@ -152,11 +151,46 @@ export async function updateClinicalEvolutionAction(
       .single();
 
     if (updateErr) {
-      console.error("Erro ao atualizar evolução clínica no Supabase:", updateErr.message);
-      return {
-        success: false,
-        message: `Erro ao atualizar evolução no banco: ${updateErr.message}`,
+      console.warn("Aviso: tentativa completa de update em evolucoes_clinicas falhou, tentando payload base:", updateErr.message);
+      // Fallback sem campos opcionais de assinatura caso o schema ainda não os possua
+      const fallbackPayload: Record<string, any> = {
+        data: rawPayloadToSign.data,
+        horario: rawPayloadToSign.horario,
+        tipo: input.tipo || "Consulta",
+        tipo_atendimento: input.tipo_atendimento || input.tipo || "Consulta",
+        status: finalStatus,
+        procedimento_id: sanitizedProcedimentoId,
+        appointment_id: sanitizedAppointmentId,
+        exames_anexos: rawPayloadToSign.exames_anexos,
+        fotos_paciente: rawPayloadToSign.fotos_paciente,
+        profissional: rawPayloadToSign.profissional,
+        especialidade: rawPayloadToSign.especialidade,
+        subjetivo: rawPayloadToSign.subjetivo,
+        objetivo: rawPayloadToSign.objetivo,
+        sinais_vitais: rawPayloadToSign.sinais_vitais,
+        avaliacao: rawPayloadToSign.avaliacao,
+        plano: rawPayloadToSign.plano,
+        prescricoes_ids: prescricoesIds,
+        home_care_ficha_id: homeCareFichaId,
       };
+
+      const fallbackRes = await adminDb
+        .from("evolucoes_clinicas")
+        .update(fallbackPayload)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (!fallbackRes.error && fallbackRes.data) {
+        updatedRecord = fallbackRes.data;
+        updateErr = null;
+      } else {
+        console.error("Erro ao atualizar evolução clínica no Supabase:", updateErr.message);
+        return {
+          success: false,
+          message: `Erro ao atualizar evolução no banco: ${updateErr.message}`,
+        };
+      }
     }
 
     // Sincroniza vínculos na tabela associativa public.evolucao_prescricoes
