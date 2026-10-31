@@ -8,7 +8,8 @@ import { ClientTableView } from "@/components/clients/client-table-view";
 import { AppointmentTableView } from "@/components/appointments/appointment-table-view";
 import { PatientClinicalDashboardView } from "@/components/clinical/patient-clinical-dashboard-view";
 import { DeliverablesView } from "@/components/clients/deliverables-view";
-import { ShieldCheck, CalendarCheck2, FileCode2, Calendar, Stethoscope, Users } from "lucide-react";
+import { PopsView } from "@/components/pops/pops-view";
+import { ShieldCheck, CalendarCheck2, FileCode2, Calendar, Stethoscope, Users, ClipboardList } from "lucide-react";
 
 export function PatientDashboard({ initialTab = "pacientes" }: { initialTab?: DashboardTab } = {}) {
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
@@ -45,6 +46,18 @@ export function PatientDashboard({ initialTab = "pacientes" }: { initialTab?: Da
                 </div>
                 <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-0.5 sm:mt-1 leading-snug">
                   Google Calendar API & Grade de Horários Ativa
+                </p>
+              </>
+            ) : activeTab === "pops" ? (
+              <>
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-emerald-300 shrink-0" />
+                  <h1 className="text-base sm:text-lg md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
+                    Procedimento Operacional Padrão (POPs)
+                  </h1>
+                </div>
+                <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-0.5 sm:mt-1 leading-snug">
+                  Dra. Juliana Sena • Padronização de condutas clínicas, protocolos operacionais e receituário associado.
                 </p>
               </>
             ) : activeTab === "deliverables" ? (
@@ -96,6 +109,12 @@ export function PatientDashboard({ initialTab = "pacientes" }: { initialTab?: Da
         {activeTab === "agendamentos" && (
           <div className="space-y-4">
             <AppointmentTableView />
+          </div>
+        )}
+
+        {activeTab === "pops" && (
+          <div className="space-y-4">
+            <PopsView />
           </div>
         )}
 

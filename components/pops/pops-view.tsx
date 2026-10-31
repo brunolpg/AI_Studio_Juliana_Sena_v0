@@ -21,8 +21,6 @@ import {
   AlertCircle,
   ExternalLink,
   ArrowRight,
-} from "lucide-react";
-import { AppHeader } from "@/components/shared/app-header";
 import { PopFormModal } from "./pop-form-modal";
 import { PrintPopModal } from "@/components/print-pop-modal";
 import { getPopsByPaciente, excluirPop } from "@/app/actions/pops";
@@ -31,7 +29,8 @@ import type { PopProtocoloCompleto } from "@/types/pop";
 import type { Client } from "@/types/client";
 
 interface PopsViewProps {
-  initialPatients: Client[];
+  initialPatients?: Client[];
+  initialClientId?: string;
 }
 
 function formatDateBR(dateStr?: string | null): string {
@@ -44,17 +43,51 @@ function formatDateBR(dateStr?: string | null): string {
   return dateStr;
 }
 
-export function PopsView({ initialPatients }: PopsViewProps) {
+export function PopsView({ initialPatients, initialClientId }: PopsViewProps = {}) {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [patients, setPatients] = useState<Client[]>(initialPatients);
+  const [patients, setPatients] = useState<Client[]>(initialPatients || []);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
-    initialPatients.length > 0 ? initialPatients[0].id : null
+    initialClientId || (initialPatients && initialPatients.length > 0 ? initialPatients[0].id : null)
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Carrega pacientes se não vierem nas props
+  useEffect(() => {
+    async function loadPatients() {
+      if (initialPatients && initialPatients.length > 0) {
+        setPatients(initialPatients);
+        if (!selectedPatientId) {
+          setSelectedPatientId(initialPatients[0].id);
+        }
+        return;
+      }
+
+      try {
+        const { getSupabaseClient } = await import("@/lib/supabase/client");
+        const supabase = getSupabaseClient();
+        if (!supabase) return;
+
+        const { data, error } = await supabase
+          .from("pacientes")
+          .select("*")
+          .is("deleted_at", null)
+          .order("nome", { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          setPatients(data as Client[]);
+          setSelectedPatientId((prev) => prev || data[0].id);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar lista de pacientes em PopsView:", err);
+      }
+    }
+
+    loadPatients();
+  }, [initialPatients]);
 
   // Lista de POPs do paciente selecionado
   const [pops, setPops] = useState<PopProtocoloCompleto[]>([]);
@@ -200,52 +233,9 @@ export function PopsView({ initialPatients }: PopsViewProps) {
   }, [pops]);
 
   return (
-    <div className="font-['Plus_Jakarta_Sans',sans-serif] min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col box-border w-full max-w-full min-w-0 overflow-x-hidden pb-16 landscape:pb-8 lg:pl-64">
-      {/* App Header */}
-      <AppHeader
-        currentTab="pops"
-        onTabChange={(tab) => {
-          if (tab === "pacientes" || tab === "prontuarios" || tab === "agendamentos") {
-            router.push("/dashboard");
-          }
-        }}
-      />
-
-      {/* Container Principal */}
-      <main className="md4-main-content flex-1 min-w-0 w-full px-4 sm:px-8 py-4 sm:py-6 lg:px-10 lg:py-8 space-y-4 sm:space-y-6 box-border overflow-x-hidden max-lg:landscape:space-y-3 max-lg:landscape:pt-2 max-lg:landscape:pl-20 max-lg:landscape:pr-5">
-        {/* Hero Card do Módulo */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-r from-[#003830] via-[#004d40] to-[#022c22] text-white p-4 sm:p-5 lg:p-8 landscape:max-md:py-3 landscape:max-md:px-4 shadow-sm dark:border dark:border-emerald-900/40 w-full min-w-0 box-border font-['Plus_Jakarta_Sans',sans-serif]"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-emerald-300 shrink-0" />
-                <h1 className="text-base sm:text-lg md:text-2xl lg:text-3xl font-bold tracking-tight text-white">
-                  Procedimento Operacional Padrão (POP)
-                </h1>
-              </div>
-              <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-0.5 sm:mt-1 leading-snug">
-                Protocolos Clínicos, Tópicos Operacionais e Prescrições Integradas
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleOpenNew}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition-all cursor-pointer self-start sm:self-auto shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Novo POP</span>
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Barra de Seleção / Busca de Paciente */}
-        <div className="w-full p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+    <div className="font-['Plus_Jakarta_Sans',sans-serif] space-y-4 sm:space-y-6 w-full min-w-0 box-border">
+      {/* Barra de Seleção / Busca de Paciente */}
+      <div className="w-full p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 w-full">
             <div className="flex-1 min-w-[240px] w-full min-w-0">
               <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 block">
@@ -559,7 +549,6 @@ export function PopsView({ initialPatients }: PopsViewProps) {
             </div>
           )}
         </div>
-      </main>
 
       {/* Modal de Formulário de POP */}
       {selectedPatient && (

@@ -59,7 +59,7 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
   if (isAuthorized) {
     navItems.push({
       id: "pops" as DashboardTab,
-      label: "POPs (Procedimentos)",
+      label: "Procedimento Operacional Padrão",
       shortLabel: "POPs",
       icon: ClipboardList,
       badge: null,
@@ -68,17 +68,17 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
   }
 
   const handleItemClick = (item: (typeof navItems)[0]) => {
-    if (item.id === "pops") {
-      if (pathname === "/pops") {
-        onTabChange("pops");
-      } else {
-        router.push("/pops");
-      }
-    } else {
-      if (pathname === "/pops" || pathname.startsWith("/formulas")) {
-        router.push(item.href || "/dashboard");
-      } else {
-        onTabChange(item.id);
+    if (pathname && pathname.startsWith("/formulas")) {
+      router.push(item.href || "/dashboard");
+      return;
+    }
+
+    onTabChange(item.id);
+
+    if (typeof window !== "undefined" && window.history && window.history.pushState) {
+      const targetUrl = item.id === "pacientes" ? "/dashboard" : item.href || "/dashboard";
+      if (window.location.pathname !== targetUrl && window.location.pathname !== "/") {
+        window.history.pushState(null, "", targetUrl);
       }
     }
   };

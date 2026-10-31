@@ -2,8 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
-import { PopsView } from "@/components/pops/pops-view";
-import type { Client } from "@/types/client";
+import { PatientDashboard } from "@/components/clients/patient-dashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -47,16 +46,5 @@ export default async function PopsPage() {
     redirect("/");
   }
 
-  // 3. Busca lista de pacientes ativos para o seletor inicial
-  const { data: pacientes, error: pacError } = await adminDb
-    .from("pacientes")
-    .select("*")
-    .is("deleted_at", null)
-    .order("nome", { ascending: true });
-
-  if (pacError) {
-    console.warn("Aviso ao carregar pacientes na rota /pops:", pacError.message);
-  }
-
-  return <PopsView initialPatients={(pacientes as Client[]) || []} />;
+  return <PatientDashboard initialTab="pops" />;
 }
