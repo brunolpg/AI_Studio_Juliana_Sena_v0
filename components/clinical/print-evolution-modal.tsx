@@ -529,10 +529,17 @@ export function PrintEvolutionModal({
                           <strong className="text-slate-800">{sinaisVitais.oleosidadeSebo}%</strong>
                         </div>
                       )}
-                      {sinaisVitais.indiceElasticidade != null && (
+                      {(sinaisVitais.indiceElasticidade != null || (sinaisVitais as any).elasticidade != null) && (
                         <div className="flex items-center gap-1 font-mono">
                           <span className="text-slate-500 text-[11px]">Elasticidade:</span>
-                          <strong className="text-slate-800">{sinaisVitais.indiceElasticidade}%</strong>
+                          <strong className="text-slate-800">
+                            {(() => {
+                              const val = (sinaisVitais as any).elasticidade ?? sinaisVitais.indiceElasticidade;
+                              const num = Number(val);
+                              const norm = num > 5 ? Math.min(5, Math.max(1, Math.round(num / 20))) : num;
+                              return `${norm}/5`;
+                            })()}
+                          </strong>
                         </div>
                       )}
                     </div>

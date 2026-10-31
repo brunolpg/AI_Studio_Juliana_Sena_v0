@@ -1930,9 +1930,15 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                         </span>
                       </div>
                       <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-200/50">
-                        <span className="text-[10px] text-slate-400 font-semibold block">Elasticidade (%)</span>
+                        <span className="text-[10px] text-slate-400 font-semibold block">Elasticidade</span>
                         <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">
-                          {evolutions[0].sinaisVitais.indiceElasticidade != null ? `${evolutions[0].sinaisVitais.indiceElasticidade}%` : "--"}
+                          {(() => {
+                            const elast = (evolutions[0].sinaisVitais as any)?.elasticidade ?? evolutions[0].sinaisVitais?.indiceElasticidade;
+                            if (elast == null || elast === "") return "--";
+                            const num = Number(elast);
+                            const normalized = num > 5 ? Math.min(5, Math.max(1, Math.round(num / 20))) : num;
+                            return `${normalized}/5`;
+                          })()}
                         </span>
                       </div>
                     </div>
@@ -1959,7 +1965,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                           <th className="py-2.5 px-3">FC (bpm)</th>
                           <th className="py-2.5 px-3">Hidratação (%)</th>
                           <th className="py-2.5 px-3">Oleosidade (%)</th>
-                          <th className="py-2.5 px-3">Elasticidade (%)</th>
+                          <th className="py-2.5 px-3">Elasticidade</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
@@ -1986,7 +1992,13 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                 {e.sinaisVitais?.oleosidadeSebo != null ? `${e.sinaisVitais.oleosidadeSebo}%` : "-"}
                               </td>
                               <td className="py-2 px-3">
-                                {e.sinaisVitais?.indiceElasticidade != null ? `${e.sinaisVitais.indiceElasticidade}%` : "-"}
+                                {(() => {
+                                  const elast = (e.sinaisVitais as any)?.elasticidade ?? e.sinaisVitais?.indiceElasticidade;
+                                  if (elast == null || elast === "") return "-";
+                                  const num = Number(elast);
+                                  const normalized = num > 5 ? Math.min(5, Math.max(1, Math.round(num / 20))) : num;
+                                  return `${normalized}/5`;
+                                })()}
                               </td>
                             </tr>
                           ))}

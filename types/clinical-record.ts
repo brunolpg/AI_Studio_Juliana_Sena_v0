@@ -5,7 +5,10 @@ export interface VitalSigns {
   frequenciaCardiaca?: number; // bpm
   hidratacaoCutanea?: number; // %
   oleosidadeSebo?: number; // %
-  indiceElasticidade?: number; // %
+  indiceElasticidade?: number; // Escala 1 a 5 (ou legado %)
+  elasticidade?: number; // Escala 1 a 5
+  temperatura?: number; // °C
+  peso?: number; // kg
   imc?: number; // Mantido para referência geral, se necessário
 }
 

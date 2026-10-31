@@ -32,6 +32,7 @@ import { getPatientHomeCareFichas } from "@/app/actions/home-care";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
 import { PrescriptionModal } from "./prescription-modal";
 import { HomeCareModal } from "./home-care-modal";
+import { ElasticityScalePicker } from "./elasticity-scale-picker";
 import { useToast } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { validateMultipleFiles } from "@/lib/validations/file-upload";
@@ -299,7 +300,13 @@ export function EvolutionFormModal({
         setFc(initialData.sinaisVitais?.frequenciaCardiaca ? String(initialData.sinaisVitais.frequenciaCardiaca) : "");
         setHidratacao(initialData.sinaisVitais?.hidratacaoCutanea !== undefined ? String(initialData.sinaisVitais.hidratacaoCutanea) : "");
         setOleosidade(initialData.sinaisVitais?.oleosidadeSebo !== undefined ? String(initialData.sinaisVitais.oleosidadeSebo) : "");
-        setElasticidade(initialData.sinaisVitais?.indiceElasticidade !== undefined ? String(initialData.sinaisVitais.indiceElasticidade) : "");
+        const rawElast = (initialData.sinaisVitais as any)?.elasticidade ?? initialData.sinaisVitais?.indiceElasticidade;
+        if (rawElast !== undefined && rawElast !== null && rawElast !== "") {
+          const numElast = Number(rawElast);
+          setElasticidade(numElast > 5 ? String(Math.min(5, Math.max(1, Math.round(numElast / 20)))) : String(numElast));
+        } else {
+          setElasticidade("");
+        }
         setSelectedAppointmentId(initialData.appointment_id || "");
         setSelectedPrescricoesIds(initialData.prescricoes_ids || []);
         setSelectedHomeCareFichaId(initialData.home_care_ficha_id || "");
@@ -504,7 +511,8 @@ export function EvolutionFormModal({
               frequenciaCardiaca: fc ? parseInt(fc) : undefined,
               hidratacaoCutanea: hidratacao ? parseFloat(hidratacao) : undefined,
               oleosidadeSebo: oleosidade ? parseFloat(oleosidade) : undefined,
-              indiceElasticidade: elasticidade ? parseFloat(elasticidade) : undefined,
+              indiceElasticidade: elasticidade ? Number(elasticidade) : undefined,
+              elasticidade: elasticidade ? Number(elasticidade) : undefined,
             },
             avaliacao: avaliacao.trim(),
             plano: plano.trim(),
@@ -531,7 +539,8 @@ export function EvolutionFormModal({
               frequenciaCardiaca: fc ? parseInt(fc) : undefined,
               hidratacaoCutanea: hidratacao ? parseFloat(hidratacao) : undefined,
               oleosidadeSebo: oleosidade ? parseFloat(oleosidade) : undefined,
-              indiceElasticidade: elasticidade ? parseFloat(elasticidade) : undefined,
+              indiceElasticidade: elasticidade ? Number(elasticidade) : undefined,
+              elasticidade: elasticidade ? Number(elasticidade) : undefined,
             },
             avaliacao: avaliacao.trim(),
             plano: plano.trim(),
@@ -753,7 +762,7 @@ export function EvolutionFormModal({
               <Activity className="w-4 h-4" />
               Biometria & Parâmetros Regenerativos
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 items-end">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   PA (mmHg)
@@ -804,17 +813,10 @@ export function EvolutionFormModal({
                   className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                  Elasticidade (%)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  placeholder="45"
+              <div className="col-span-2 sm:col-span-4 lg:col-span-2">
+                <ElasticityScalePicker
                   value={elasticidade}
-                  onChange={(e) => setElasticidade(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500"
+                  onChange={(val) => setElasticidade(String(val))}
                 />
               </div>
             </div>
