@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
-import { Users, Calendar, Stethoscope, Sparkles } from "lucide-react";
+import { Users, Calendar, Stethoscope, Sparkles, ClipboardList } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/components/auth/auth-context";
 import { UserMenu } from "@/components/shared/user-menu";
 import { motion } from "motion/react";
 import type { DashboardTab } from "@/components/shared/app-header";
@@ -13,6 +15,20 @@ export interface SidebarProps {
 }
 
 export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user } = useAuth();
+
+  const rawRole = String(user?.role || (user as any)?.profile?.role || "").toLowerCase().trim();
+  const isEmailAdmin =
+    user?.email?.toLowerCase() === "brunolpg@gmail.com" ||
+    user?.email?.toLowerCase().includes("admin");
+  const isAuthorized =
+    rawRole === "administrador" ||
+    rawRole === "admin" ||
+    rawRole === "profissional" ||
+    isEmailAdmin;
+
   const navItems = [
     {
       id: "pacientes" as DashboardTab,
@@ -20,6 +36,7 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
       shortLabel: "Pacientes",
       icon: Users,
       badge: null,
+      href: "/dashboard",
     },
     {
       id: "prontuarios" as DashboardTab,
@@ -27,6 +44,7 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
       shortLabel: "Prontuários",
       icon: Stethoscope,
       badge: null,
+      href: "/clinical",
     },
     {
       id: "agendamentos" as DashboardTab,
@@ -34,8 +52,36 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
       shortLabel: "Agenda",
       icon: Calendar,
       badge: "Ativo",
+      href: "/appointments",
     },
   ];
+
+  if (isAuthorized) {
+    navItems.push({
+      id: "pops" as DashboardTab,
+      label: "POPs (Procedimentos)",
+      shortLabel: "POPs",
+      icon: ClipboardList,
+      badge: null,
+      href: "/pops",
+    });
+  }
+
+  const handleItemClick = (item: (typeof navItems)[0]) => {
+    if (item.id === "pops") {
+      if (pathname === "/pops") {
+        onTabChange("pops");
+      } else {
+        router.push("/pops");
+      }
+    } else {
+      if (pathname === "/pops" || pathname.startsWith("/formulas")) {
+        router.push(item.href || "/dashboard");
+      } else {
+        onTabChange(item.id);
+      }
+    }
+  };
 
   return (
     <aside
@@ -69,13 +115,13 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
         </div>
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = currentTab === item.id;
+          const isActive = currentTab === item.id || (item.id === "pops" && pathname === "/pops");
 
           return (
             <button
               key={item.id}
               type="button"
-              onClick={() => onTabChange(item.id)}
+              onClick={() => handleItemClick(item)}
               className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-full text-xs font-semibold transition-all cursor-pointer group ${
                 isActive
                   ? "bg-teal-100/90 dark:bg-teal-950/80 text-teal-900 dark:text-teal-200 border border-teal-200/70 dark:border-teal-800/70 shadow-xs"

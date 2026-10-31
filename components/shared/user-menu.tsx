@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, LogOut, Sun, Moon, Monitor, ShieldCheck, FlaskConical, KeyRound } from "lucide-react";
+import { ChevronDown, LogOut, Sun, Moon, Monitor, ShieldCheck, FlaskConical, KeyRound, ClipboardList } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { ChangePasswordModal } from "@/components/ChangePasswordModal";
 import { useAuth } from "@/components/auth/auth-context";
@@ -537,14 +537,25 @@ export function UserMenu({
             {/* Ações Padronizadas com Lucide Icons e hover refinado */}
             <div className="space-y-1 py-0.5 shrink-0">
               {!userRole.toLowerCase().includes("paciente") && (
-                <a
-                  href="/formulas"
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-colors cursor-pointer group"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <FlaskConical className="w-4 h-4 text-teal-600 dark:text-teal-400 transition-transform group-hover:scale-105 shrink-0" />
-                  <span className="truncate">Catálogo de Fórmulas</span>
-                </a>
+                <>
+                  <a
+                    href="/pops"
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-colors cursor-pointer group"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <ClipboardList className="w-4 h-4 text-teal-600 dark:text-teal-400 transition-transform group-hover:scale-105 shrink-0" />
+                    <span className="truncate">POPs (Procedimentos)</span>
+                  </a>
+
+                  <a
+                    href="/formulas"
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-colors cursor-pointer group"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <FlaskConical className="w-4 h-4 text-teal-600 dark:text-teal-400 transition-transform group-hover:scale-105 shrink-0" />
+                    <span className="truncate">Catálogo de Fórmulas</span>
+                  </a>
+                </>
               )}
 
               <button

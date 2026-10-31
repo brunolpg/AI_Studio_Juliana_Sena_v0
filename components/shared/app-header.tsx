@@ -1,11 +1,13 @@
 "use client";
 
 import React from "react";
-import { Users, Calendar, Stethoscope, Sparkles } from "lucide-react";
+import { Users, Calendar, Stethoscope, Sparkles, ClipboardList } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/components/auth/auth-context";
 import { UserMenu } from "@/components/shared/user-menu";
 import { motion } from "motion/react";
 
-export type DashboardTab = "pacientes" | "prontuarios" | "agendamentos";
+export type DashboardTab = "pacientes" | "prontuarios" | "agendamentos" | "pops" | "deliverables";
 
 interface AppHeaderProps {
   currentTab: DashboardTab;
@@ -13,6 +15,20 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user } = useAuth();
+
+  const rawRole = String(user?.role || (user as any)?.profile?.role || "").toLowerCase().trim();
+  const isEmailAdmin =
+    user?.email?.toLowerCase() === "brunolpg@gmail.com" ||
+    user?.email?.toLowerCase().includes("admin");
+  const isAuthorized =
+    rawRole === "administrador" ||
+    rawRole === "admin" ||
+    rawRole === "profissional" ||
+    isEmailAdmin;
+
   const navItems = [
     {
       id: "pacientes" as DashboardTab,
@@ -20,6 +36,7 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
       shortLabel: "Pacientes",
       icon: Users,
       badge: null,
+      href: "/dashboard",
     },
     {
       id: "prontuarios" as DashboardTab,
@@ -27,6 +44,7 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
       shortLabel: "Prontuários",
       icon: Stethoscope,
       badge: null,
+      href: "/clinical",
     },
     {
       id: "agendamentos" as DashboardTab,
@@ -34,8 +52,36 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
       shortLabel: "Agenda",
       icon: Calendar,
       badge: "Ativo",
+      href: "/appointments",
     },
   ];
+
+  if (isAuthorized) {
+    navItems.push({
+      id: "pops" as DashboardTab,
+      label: "POPs (Procedimentos)",
+      shortLabel: "POPs",
+      icon: ClipboardList,
+      badge: null,
+      href: "/pops",
+    });
+  }
+
+  const handleItemClick = (item: (typeof navItems)[0]) => {
+    if (item.id === "pops") {
+      if (pathname === "/pops") {
+        onTabChange("pops");
+      } else {
+        router.push("/pops");
+      }
+    } else {
+      if (pathname === "/pops" || pathname.startsWith("/formulas")) {
+        router.push(item.href || "/dashboard");
+      } else {
+        onTabChange(item.id);
+      }
+    }
+  };
 
   return (
     <>
@@ -74,13 +120,13 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
           </div>
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentTab === item.id;
+            const isActive = currentTab === item.id || (item.id === "pops" && pathname === "/pops");
 
             return (
               <button
                 key={item.id}
                 type="button"
-                onClick={() => onTabChange(item.id)}
+                onClick={() => handleItemClick(item)}
                 className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-full text-xs font-semibold transition-all cursor-pointer group ${
                   isActive
                     ? "bg-teal-100/90 dark:bg-teal-950/80 text-teal-900 dark:text-teal-200 border border-teal-200/70 dark:border-teal-800/70 shadow-xs"
@@ -131,13 +177,13 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
         <nav className="flex-1 flex flex-col items-center gap-1.5 w-full px-1 overflow-y-auto no-scrollbar overscroll-contain min-h-0">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentTab === item.id;
+            const isActive = currentTab === item.id || (item.id === "pops" && pathname === "/pops");
 
             return (
               <button
                 key={item.id}
                 type="button"
-                onClick={() => onTabChange(item.id)}
+                onClick={() => handleItemClick(item)}
                 className={`w-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1 transition-all cursor-pointer ${
                   isActive
                     ? "text-teal-700 dark:text-teal-400 font-bold"
@@ -219,13 +265,13 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
       >
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = currentTab === item.id;
+          const isActive = currentTab === item.id || (item.id === "pops" && pathname === "/pops");
 
           return (
             <button
               key={item.id}
               type="button"
-              onClick={() => onTabChange(item.id)}
+              onClick={() => handleItemClick(item)}
               className={`flex-1 min-h-[48px] flex flex-col items-center justify-center gap-1 rounded-2xl py-1 transition-all cursor-pointer relative ${
                 isActive
                   ? "text-teal-700 dark:text-teal-400 font-bold"
