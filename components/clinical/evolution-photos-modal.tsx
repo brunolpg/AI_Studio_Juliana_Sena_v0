@@ -19,44 +19,56 @@ interface EvolutionPhotosModalProps {
   data?: string;
 }
 
-// Banco de placeholders clínicos reais para imagens mockadas ou não encontradas
-const CLINICAL_FALLBACK_IMAGES = [
-  "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1512290900672-1f49635b2e95?w=800&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&auto=format&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=800&auto=format&fit=crop&q=80",
-];
+// 1. Verificação e detecção de URLs inválidas ou de fallback fictício local
+export const isInvalidStorageUrl = (rawUrl?: string | null): boolean => {
+  if (!rawUrl || typeof rawUrl !== "string") return true;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return true;
+  if (
+    trimmed.includes("supabase-storage-fallback.local") ||
+    trimmed.includes("placeholder") ||
+    trimmed.includes(".local")
+  ) {
+    return true;
+  }
+  return false;
+};
 
-// 1. Normalização das URLs das Fotografias do Supabase com contingência clínica
-export const resolvePhotoUrl = (rawUrl: string, index = 0): string => {
-  if (!rawUrl) return CLINICAL_FALLBACK_IMAGES[index % CLINICAL_FALLBACK_IMAGES.length];
-  const trimmed = String(rawUrl).trim();
+// Verifica se há pelo menos uma foto com URL legítima (não fictícia de fallback de teste local)
+export const hasValidClinicalPhoto = (fotos?: string[] | null): boolean => {
+  if (!fotos || !Array.isArray(fotos) || fotos.length === 0) return false;
+  return fotos.some((foto) => !isInvalidStorageUrl(foto));
+};
 
-  // 1. Detecta URLs de fallback geradas por testes (supabase-storage-fallback.local) ou placeholders
-  if (trimmed.includes("supabase-storage-fallback.local") || trimmed.includes("placeholder-photo")) {
-    return CLINICAL_FALLBACK_IMAGES[index % CLINICAL_FALLBACK_IMAGES.length];
+// 2. Normalização das URLs das Fotografias do Supabase (sem fallbacks aleatórios de terceiros)
+export const resolvePhotoUrl = (rawUrl?: string | null, _index = 0): string => {
+  if (!rawUrl || typeof rawUrl !== "string") return "";
+  const trimmed = rawUrl.trim();
+  if (!trimmed || isInvalidStorageUrl(trimmed)) {
+    return "";
   }
 
-  // 2. URLs absolutas legítimas (Supabase Storage, Unsplash, Blob local ou Data URI)
+  // 1. URLs com blob local ou data URI legítimas
   if (trimmed.startsWith("blob:") || trimmed.startsWith("data:")) {
     return trimmed;
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 
+  // 2. URLs absolutas (HTTP/HTTPS)
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    // Se for URL válida de storage ou internet pública
-    if (!trimmed.includes("localhost:54321") && !trimmed.includes(".local")) {
-      return trimmed;
-    }
-    // Se for rota de localhost apontando para o bucket do Supabase
     if (trimmed.includes("/storage/v1/object/public/")) {
-      const pathAfter = trimmed.split("/storage/v1/object/public/")[1];
-      return `${supabaseUrl}/storage/v1/object/public/${pathAfter}`;
+      if (trimmed.includes("localhost:54321") || trimmed.includes(".local")) {
+        if (!supabaseUrl) return "";
+        const pathAfter = trimmed.split("/storage/v1/object/public/")[1];
+        return `${supabaseUrl}/storage/v1/object/public/${pathAfter}`;
+      }
     }
+    return trimmed;
   }
 
   // 3. Caminho relativo dentro do bucket prontuarios-fotos
+  if (!supabaseUrl) return "";
   const cleanPath = trimmed.replace(/^(\.\/|\/)+/, "");
   if (cleanPath.startsWith("prontuarios-fotos/")) {
     return `${supabaseUrl}/storage/v1/object/public/${cleanPath}`;
@@ -65,7 +77,7 @@ export const resolvePhotoUrl = (rawUrl: string, index = 0): string => {
   return `${supabaseUrl}/storage/v1/object/public/prontuarios-fotos/${cleanPath}`;
 };
 
-// 2. Item de Miniatura da Grade com Tratamento de Erro e Indicador de Carregamento
+// 3. Item de Miniatura da Grade com Tratamento Informativo Sem Placeholders de Terceiros
 function EvolutionPhotoItem({
   url,
   index,
@@ -75,21 +87,27 @@ function EvolutionPhotoItem({
   index: number;
   onClick: () => void;
 }) {
+  const resolved = resolvePhotoUrl(url);
   const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentSrc, setCurrentSrc] = useState(() => resolvePhotoUrl(url, index));
+  const [isLoading, setIsLoading] = useState(!!resolved);
+  const [currentSrc, setCurrentSrc] = useState(resolved);
 
   useEffect(() => {
-    setCurrentSrc(resolvePhotoUrl(url, index));
-    setIsLoading(true);
+    const nextUrl = resolvePhotoUrl(url);
+    setCurrentSrc(nextUrl);
+    setIsLoading(!!nextUrl);
     setHasError(false);
-  }, [url, index]);
+  }, [url]);
+
+  const isInvalid = !currentSrc || hasError;
 
   return (
     <div
-      onClick={!hasError ? onClick : undefined}
+      onClick={!isInvalid ? onClick : undefined}
       className={`group relative aspect-square rounded-2xl overflow-hidden border border-slate-200/90 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 flex items-center justify-center ${
-        !hasError ? "cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 shadow-2xs hover:shadow-md" : "opacity-75"
+        !isInvalid
+          ? "cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 shadow-2xs hover:shadow-md"
+          : "border-dashed border-amber-300 dark:border-amber-800/60 bg-amber-50/40 dark:bg-amber-950/20"
       } transition-all duration-200`}
     >
       {isLoading && !hasError && (
@@ -98,43 +116,41 @@ function EvolutionPhotoItem({
         </div>
       )}
 
-      {hasError ? (
-        <div className="flex flex-col items-center justify-center p-3 text-center text-slate-400">
-          <AlertCircle className="w-6 h-6 mb-1 text-amber-500/80" />
-          <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-            Registro {index + 1}
+      {isInvalid ? (
+        <div className="flex flex-col items-center justify-center p-3 text-center w-full h-full">
+          <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 flex items-center justify-center mb-1.5 shadow-2xs">
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+          </div>
+          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            Registo {index + 1}
           </span>
-          <span className="text-[10px] text-slate-400">Não foi possível carregar</span>
+          <span className="text-[11px] font-medium text-amber-700 dark:text-amber-400 mt-1 max-w-[150px] leading-tight">
+            Fotografia não encontrada no Storage
+          </span>
         </div>
       ) : (
         <img
           src={currentSrc}
-          alt={`Registro Clínico ${index + 1}`}
+          alt={`Registo Clínico ${index + 1}`}
           loading="lazy"
           crossOrigin="anonymous"
           referrerPolicy="no-referrer"
           onLoad={() => setIsLoading(false)}
           onError={() => {
-            // Tenta fallback com imagem de demonstração clínica antes de exibir erro
-            const fallback = CLINICAL_FALLBACK_IMAGES[index % CLINICAL_FALLBACK_IMAGES.length];
-            if (currentSrc !== fallback) {
-              setCurrentSrc(fallback);
-            } else {
-              setIsLoading(false);
-              setHasError(true);
-            }
+            setIsLoading(false);
+            setHasError(true);
           }}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
       )}
 
-      {!hasError && !isLoading && (
+      {!isInvalid && !isLoading && (
         <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity duration-200 backdrop-blur-[1px]">
           <span className="text-white text-xs font-bold px-3 py-1 rounded-full bg-emerald-600/90 shadow-md">
             Ampliar
           </span>
           <span className="text-[10px] text-white/80 font-medium">
-            Registro {index + 1}
+            Registo {index + 1}
           </span>
         </div>
       )}
@@ -142,7 +158,7 @@ function EvolutionPhotoItem({
   );
 }
 
-// 3. Visualizador Ampliado com Tratamento Resiliente de Imagem
+// 4. Visualizador Ampliado com Card Informativo Sem Placeholders de Terceiros
 function ZoomedPhotoView({
   url,
   index,
@@ -150,15 +166,19 @@ function ZoomedPhotoView({
   url: string;
   index: number;
 }) {
+  const resolved = resolvePhotoUrl(url);
   const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentSrc, setCurrentSrc] = useState(() => resolvePhotoUrl(url, index));
+  const [isLoading, setIsLoading] = useState(!!resolved);
+  const [currentSrc, setCurrentSrc] = useState(resolved);
 
   useEffect(() => {
-    setCurrentSrc(resolvePhotoUrl(url, index));
-    setIsLoading(true);
+    const nextUrl = resolvePhotoUrl(url);
+    setCurrentSrc(nextUrl);
+    setIsLoading(!!nextUrl);
     setHasError(false);
-  }, [url, index]);
+  }, [url]);
+
+  const isInvalid = !currentSrc || hasError;
 
   return (
     <div className="relative max-h-[58vh] sm:max-h-[62vh] w-full min-h-[260px] flex items-center justify-center bg-slate-950 rounded-2xl overflow-hidden p-2 sm:p-3 border border-slate-800 shadow-inner">
@@ -169,31 +189,31 @@ function ZoomedPhotoView({
         </div>
       )}
 
-      {hasError ? (
+      {isInvalid ? (
         <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
-          <AlertCircle className="w-8 h-8 mb-2 text-amber-500" />
-          <span className="text-sm font-semibold text-slate-300">
-            Falha ao carregar visualização ampliada
+          <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-3">
+            <AlertCircle className="w-6 h-6 text-amber-500" />
+          </div>
+          <span className="text-sm font-semibold text-slate-200">
+            Registo {index + 1}
           </span>
-          <span className="text-xs text-slate-500 mt-1">
-            O arquivo pode estar indisponível ou em outro formato.
+          <span className="text-xs text-amber-400 mt-1 font-medium">
+            Fotografia não encontrada no Storage
+          </span>
+          <span className="text-[11px] text-slate-500 mt-1 max-w-xs leading-relaxed">
+            O arquivo original não pôde ser recuperado do armazenamento em nuvem.
           </span>
         </div>
       ) : (
         <img
           src={currentSrc}
-          alt={`Registro clínico ${index + 1}`}
+          alt={`Registo clínico ${index + 1}`}
           crossOrigin="anonymous"
           referrerPolicy="no-referrer"
           onLoad={() => setIsLoading(false)}
           onError={() => {
-            const fallback = CLINICAL_FALLBACK_IMAGES[index % CLINICAL_FALLBACK_IMAGES.length];
-            if (currentSrc !== fallback) {
-              setCurrentSrc(fallback);
-            } else {
-              setIsLoading(false);
-              setHasError(true);
-            }
+            setIsLoading(false);
+            setHasError(true);
           }}
           className="max-h-[54vh] sm:max-h-[58vh] max-w-full object-contain rounded-xl select-none"
         />
@@ -363,15 +383,22 @@ export function EvolutionPhotosModal({
                   </button>
                 </div>
 
-                <a
-                  href={resolvePhotoUrl(fotos[selectedPhotoIndex], selectedPhotoIndex)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Abrir original</span>
-                </a>
+                {resolvePhotoUrl(fotos[selectedPhotoIndex]) ? (
+                  <a
+                    href={resolvePhotoUrl(fotos[selectedPhotoIndex])}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Abrir original</span>
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-slate-400 dark:text-slate-500 border border-slate-200/60 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-500/80" />
+                    <span>Fotografia não encontrada</span>
+                  </span>
+                )}
               </div>
             </div>
           ) : (

@@ -25,6 +25,8 @@ import {
   getPatientPrescriptionsForEvolutionAction,
   type PrescricaoParaEvolucao,
 } from "@/actions/clinical-actions";
+import { updateClinicalEvolutionAction } from "@/app/actions/clinical-evolution";
+import { resolvePhotoUrl } from "./evolution-photos-modal";
 import { getPatientHomeCareFichas } from "@/app/actions/home-care";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
 import { PrescriptionModal } from "./prescription-modal";
@@ -33,7 +35,7 @@ import { useToast } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { validateMultipleFiles } from "@/lib/validations/file-upload";
 import type { Client } from "@/types/client";
-import type { EvolutionType } from "@/types/clinical-record";
+import type { EvolutionType, ClinicalEvolution } from "@/types/clinical-record";
 import { PROCEDIMENTOS_CADASTRAIS } from "@/lib/procedimentos-mock";
 
 interface EvolutionFormModalProps {
@@ -42,6 +44,7 @@ interface EvolutionFormModalProps {
   onSuccess: () => void;
   client: Client;
   initialAppointmentId?: string;
+  initialData?: ClinicalEvolution | null;
 }
 
 export function EvolutionFormModal({
@@ -50,6 +53,7 @@ export function EvolutionFormModal({
   onSuccess,
   client,
   initialAppointmentId,
+  initialData,
 }: EvolutionFormModalProps) {
   const { toast } = useToast();
 
@@ -59,6 +63,8 @@ export function EvolutionFormModal({
 
   const [tipo, setTipo] = useState<EvolutionType>("");
   const [procedimentoId, setProcedimentoId] = useState<string>("");
+  const [status, setStatus] = useState<string>("Ativo");
+  const [existingFotosUrls, setExistingFotosUrls] = useState<string[]>([]);
   const [procedimentos, setProcedimentos] = useState<any[]>(PROCEDIMENTOS_CADASTRAIS);
   const [isLoadingProcedimentos, setIsLoadingProcedimentos] = useState(false);
 
@@ -197,9 +203,9 @@ export function EvolutionFormModal({
     }
   }, [isOpen, client?.id, initialAppointmentId]);
 
-  // Preenche e bloqueia os campos quando um agendamento for selecionado
+  // Preenche e bloqueia os campos quando um agendamento for selecionado (no modo criação)
   useEffect(() => {
-    if (selectedAppointmentId) {
+    if (!initialData && selectedAppointmentId) {
       const apt = appointments.find((a) => a.id === selectedAppointmentId);
       if (apt) {
         setData(apt.data);
@@ -220,13 +226,13 @@ export function EvolutionFormModal({
           setProcedimentoId("");
         }
       }
-    } else {
+    } else if (!initialData && !selectedAppointmentId) {
       setData(todayStr);
       setHorario(currentTimeStr);
       setTipo("");
       setProcedimentoId("");
     }
-  }, [selectedAppointmentId, appointments, procedimentos, todayStr, currentTimeStr]);
+  }, [selectedAppointmentId, appointments, procedimentos, todayStr, currentTimeStr, initialData]);
 
   // Agrupa os procedimentos por categoria para <optgroup> em ordem alfabética
   const groupedProcedimentos = useMemo(() => {
@@ -272,6 +278,59 @@ export function EvolutionFormModal({
   const [homeCareFichasDisponiveis, setHomeCareFichasDisponiveis] = useState<HomeCareFichaCompleta[]>([]);
   const [isLoadingHomeCare, setIsLoadingHomeCare] = useState(false);
   const [selectedHomeCareFichaId, setSelectedHomeCareFichaId] = useState<string>("");
+
+  // Sincroniza e preenche o formulário se initialData for passado (Edição) ou reseta (Criação)
+  useEffect(() => {
+    if (isOpen) {
+      if (initialData) {
+        setTipo(initialData.tipo || initialData.tipo_atendimento || "");
+        setProcedimentoId(initialData.procedimento_id || "");
+        setStatus(initialData.status || "Ativo");
+        setData(initialData.data || todayStr);
+        setHorario(initialData.horario || currentTimeStr);
+        setProfissional(initialData.profissional || "Dra. Juliana Sena");
+        setEspecialidade(initialData.especialidade || "Clínica Geral");
+        setSubjetivo(initialData.subjetivo || "");
+        setObjetivo(initialData.objetivo || "");
+        setAvaliacao(initialData.avaliacao || "");
+        setPlano(initialData.plano || "");
+        setPa(initialData.sinaisVitais?.pressaoArterial || "");
+        setFc(initialData.sinaisVitais?.frequenciaCardiaca ? String(initialData.sinaisVitais.frequenciaCardiaca) : "");
+        setHidratacao(initialData.sinaisVitais?.hidratacaoCutanea !== undefined ? String(initialData.sinaisVitais.hidratacaoCutanea) : "");
+        setOleosidade(initialData.sinaisVitais?.oleosidadeSebo !== undefined ? String(initialData.sinaisVitais.oleosidadeSebo) : "");
+        setElasticidade(initialData.sinaisVitais?.indiceElasticidade !== undefined ? String(initialData.sinaisVitais.indiceElasticidade) : "");
+        setSelectedAppointmentId(initialData.appointment_id || "");
+        setSelectedPrescricoesIds(initialData.prescricoes_ids || []);
+        setSelectedHomeCareFichaId(initialData.home_care_ficha_id || "");
+        setExistingFotosUrls(initialData.fotos_paciente || []);
+        setFotosFiles([]);
+        setExamesFiles([]);
+      } else {
+        setData(todayStr);
+        setHorario(currentTimeStr);
+        setTipo("");
+        setProcedimentoId("");
+        setStatus("Ativo");
+        setProfissional("Dra. Juliana Sena");
+        setEspecialidade("Clínica Geral");
+        setSubjetivo("");
+        setObjetivo("");
+        setAvaliacao("");
+        setPlano("");
+        setPa("");
+        setFc("");
+        setHidratacao("");
+        setOleosidade("");
+        setElasticidade("");
+        setSelectedAppointmentId(initialAppointmentId || "");
+        setSelectedPrescricoesIds([]);
+        setSelectedHomeCareFichaId("");
+        setExistingFotosUrls([]);
+        setFotosFiles([]);
+        setExamesFiles([]);
+      }
+    }
+  }, [isOpen, initialData, initialAppointmentId, todayStr, currentTimeStr]);
 
   // Carrega Prescrições e Fichas de Home Care vinculáveis ao abrir o modal
   useEffect(() => {
@@ -419,40 +478,75 @@ export function EvolutionFormModal({
         }
       }
 
-      const res = await addClinicalEvolutionAction(client.id, {
-        client_id: client.id,
-        data,
-        horario,
-        tipo,
-        tipo_atendimento: tipo,
-        procedimento_id: validProcedimentoId || undefined,
-        appointment_id: selectedAppointmentId && uuidRegex.test(selectedAppointmentId) ? selectedAppointmentId : null,
-        exames_anexos: examesUrls,
-        fotos_paciente: fotosUrls,
-        profissional,
-        especialidade,
-        subjetivo: subjetivo.trim(),
-        objetivo: objetivo.trim() || "Exame físico sumário realizado sem anormalidades evidentes.",
-        sinaisVitais: {
-          pressaoArterial: pa.trim() || undefined,
-          frequenciaCardiaca: fc ? parseInt(fc) : undefined,
-          hidratacaoCutanea: hidratacao ? parseFloat(hidratacao) : undefined,
-          oleosidadeSebo: oleosidade ? parseFloat(oleosidade) : undefined,
-          indiceElasticidade: elasticidade ? parseFloat(elasticidade) : undefined,
-        },
-        avaliacao: avaliacao.trim(),
-        plano: plano.trim(),
-        prescricoes_ids: selectedPrescricoesIds,
-        home_care_ficha_id: selectedHomeCareFichaId || null,
-      });
+      const finalFotosList = [...existingFotosUrls, ...fotosUrls];
+      const finalExamesList = initialData?.id
+        ? [...(initialData.exames_anexos || []), ...examesUrls]
+        : examesUrls;
+
+      const res = initialData?.id
+        ? await updateClinicalEvolutionAction(initialData.id, client.id, {
+            data,
+            horario,
+            tipo,
+            tipo_atendimento: tipo,
+            status,
+            procedimento_id: validProcedimentoId || undefined,
+            appointment_id: selectedAppointmentId && uuidRegex.test(selectedAppointmentId) ? selectedAppointmentId : null,
+            exames_anexos: finalExamesList,
+            fotos_paciente: finalFotosList,
+            profissional,
+            especialidade,
+            subjetivo: subjetivo.trim(),
+            objetivo: objetivo.trim() || "Exame físico sumário realizado sem anormalidades evidentes.",
+            sinaisVitais: {
+              pressaoArterial: pa.trim() || undefined,
+              frequenciaCardiaca: fc ? parseInt(fc) : undefined,
+              hidratacaoCutanea: hidratacao ? parseFloat(hidratacao) : undefined,
+              oleosidadeSebo: oleosidade ? parseFloat(oleosidade) : undefined,
+              indiceElasticidade: elasticidade ? parseFloat(elasticidade) : undefined,
+            },
+            avaliacao: avaliacao.trim(),
+            plano: plano.trim(),
+            prescricoes_ids: selectedPrescricoesIds,
+            home_care_ficha_id: selectedHomeCareFichaId || null,
+          })
+        : await addClinicalEvolutionAction(client.id, {
+            client_id: client.id,
+            data,
+            horario,
+            tipo,
+            tipo_atendimento: tipo,
+            status,
+            procedimento_id: validProcedimentoId || undefined,
+            appointment_id: selectedAppointmentId && uuidRegex.test(selectedAppointmentId) ? selectedAppointmentId : null,
+            exames_anexos: finalExamesList,
+            fotos_paciente: finalFotosList,
+            profissional,
+            especialidade,
+            subjetivo: subjetivo.trim(),
+            objetivo: objetivo.trim() || "Exame físico sumário realizado sem anormalidades evidentes.",
+            sinaisVitais: {
+              pressaoArterial: pa.trim() || undefined,
+              frequenciaCardiaca: fc ? parseInt(fc) : undefined,
+              hidratacaoCutanea: hidratacao ? parseFloat(hidratacao) : undefined,
+              oleosidadeSebo: oleosidade ? parseFloat(oleosidade) : undefined,
+              indiceElasticidade: elasticidade ? parseFloat(elasticidade) : undefined,
+            },
+            avaliacao: avaliacao.trim(),
+            plano: plano.trim(),
+            prescricoes_ids: selectedPrescricoesIds,
+            home_care_ficha_id: selectedHomeCareFichaId || null,
+          });
 
       if (res.success) {
         setSelectedPrescricoesIds([]);
         setSelectedHomeCareFichaId("");
         toast({
           type: "success",
-          title: "Evolução registrada!",
-          description: `Nova evolução clínica arquivada no prontuário de ${client.nome}.`,
+          title: initialData?.id ? "Evolução clínica atualizada!" : "Evolução registrada!",
+          description: initialData?.id
+            ? `Evolução clínica atualizada com sucesso no prontuário de ${client.nome}.`
+            : `Nova evolução clínica arquivada no prontuário de ${client.nome}.`,
         });
         onSuccess();
         onClose();
@@ -480,13 +574,26 @@ export function EvolutionFormModal({
               <Stethoscope className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
-                  Nova Evolução do Paciente
+                  {initialData ? "Editar Evolução Clínica" : "Nova Evolução do Paciente"}
                 </h3>
                 <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200/80">
                   Prontuário
                 </span>
+                {initialData && (
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold select-none ${
+                      status === "Ativo"
+                        ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                        : status === "Concluído"
+                        ? "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    {status}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Paciente: <strong className="text-slate-700 dark:text-slate-200">{client.nome}</strong> • CPF: {client.cpf}
@@ -539,7 +646,7 @@ export function EvolutionFormModal({
           </div>
 
           {/* Tipo de Atendimento & Metadados */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
                 Tipo de Atendimento
@@ -565,9 +672,9 @@ export function EvolutionFormModal({
                   }
                 }}
                 required
-                disabled={Boolean(selectedAppointmentId)}
+                disabled={Boolean(selectedAppointmentId && !initialData)}
                 className={`w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none ${
-                  selectedAppointmentId
+                  selectedAppointmentId && !initialData
                     ? "bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed text-slate-500 dark:text-slate-400"
                     : "bg-slate-50 dark:bg-slate-800"
                 }`}
@@ -596,9 +703,9 @@ export function EvolutionFormModal({
                 value={data}
                 onChange={(e) => setData(e.target.value)}
                 required
-                readOnly={Boolean(selectedAppointmentId)}
+                readOnly={Boolean(selectedAppointmentId && !initialData)}
                 className={`w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none ${
-                  selectedAppointmentId
+                  selectedAppointmentId && !initialData
                     ? "bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed text-slate-500 dark:text-slate-400"
                     : "bg-slate-50 dark:bg-slate-800"
                 }`}
@@ -614,13 +721,28 @@ export function EvolutionFormModal({
                 value={horario}
                 onChange={(e) => setHorario(e.target.value)}
                 required
-                readOnly={Boolean(selectedAppointmentId)}
+                readOnly={Boolean(selectedAppointmentId && !initialData)}
                 className={`w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none ${
-                  selectedAppointmentId
+                  selectedAppointmentId && !initialData
                     ? "bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed text-slate-500 dark:text-slate-400"
                     : "bg-slate-50 dark:bg-slate-800"
                 }`}
               />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                Status da Evolução
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 focus:outline-none font-semibold cursor-pointer"
+              >
+                <option value="Ativo">Ativo</option>
+                <option value="Concluído">Concluído</option>
+                <option value="Cancelado">Cancelado</option>
+              </select>
             </div>
           </div>
 
@@ -1094,10 +1216,57 @@ export function EvolutionFormModal({
               </div>
 
               {/* 2. Fotos do Paciente */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
-                  Fotos do Paciente (Antes/Depois ou Lesões)
-                </label>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
+                    Fotos do Paciente (Antes/Depois ou Lesões)
+                  </label>
+                  {(existingFotosUrls.length > 0 || fotosPreviews.length > 0) && (
+                    <span className="text-[11px] font-semibold text-teal-700 dark:text-teal-400">
+                      Total: {existingFotosUrls.length + fotosPreviews.length} foto(s)
+                    </span>
+                  )}
+                </div>
+
+                {/* Galeria de Fotos Já Existentes (com remoção individual) */}
+                {existingFotosUrls.length > 0 && (
+                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 space-y-2">
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <span>Fotografias Registradas no Prontuário ({existingFotosUrls.length})</span>
+                    </span>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {existingFotosUrls.map((url, idx) => {
+                        const resolved = resolvePhotoUrl(url) || url;
+                        return (
+                          <div
+                            key={idx}
+                            className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900"
+                          >
+                            <img
+                              src={resolved}
+                              alt={`Foto existente ${idx + 1}`}
+                              className="w-full h-full object-cover cursor-zoom-in hover:scale-105 transition-transform"
+                              onClick={() => setLightboxUrl(resolved)}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setExistingFotosUrls((prev) => prev.filter((_, i) => i !== idx))}
+                              className="absolute top-1 right-1 p-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full opacity-90 hover:opacity-100 transition-colors shadow-xs cursor-pointer z-10"
+                              title="Remover esta fotografia da evolução"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                            <div className="absolute bottom-1 left-1 px-1.5 py-0.2 rounded bg-black/60 text-white text-[9px] font-medium pointer-events-none">
+                              #{idx + 1}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload para Inclusão de Novas Fotos */}
                 <div className="border border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 rounded-xl p-4 bg-slate-50 dark:bg-slate-800/40 text-center relative transition-colors">
                   <input
                     type="file"
@@ -1123,38 +1292,46 @@ export function EvolutionFormModal({
                   />
                   <div className="space-y-1">
                     <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Adicionar fotos do paciente
+                      Adicionar novas fotos do paciente
                     </p>
                     <p className="text-[10px] text-slate-400">
-                      Formatos aceitos: PNG, JPG, JPEG, BMP
+                      PNG, JPG, JPEG, BMP (upload direto para o Supabase Storage)
                     </p>
                   </div>
                 </div>
 
-                {/* Grid de thumbnails das fotos */}
+                {/* Grid de thumbnails das NOVAS fotos selecionadas */}
                 {fotosPreviews.length > 0 && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
-                    {fotosPreviews.map((preview, idx) => (
-                      <div
-                        key={idx}
-                        className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100"
-                      >
-                        <img
-                          src={preview.url}
-                          alt={`Anexo ${idx + 1}`}
-                          className="w-full h-full object-cover cursor-zoom-in hover:scale-105 transition-transform"
-                          onClick={() => setLightboxUrl(preview.url)}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setFotosFiles((prev) => prev.filter((_, i) => i !== idx))}
-                          className="absolute top-1 right-1 p-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full opacity-90 transition-colors cursor-pointer"
-                          title="Remover foto"
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                      Novas fotos para envio ({fotosPreviews.length}):
+                    </span>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {fotosPreviews.map((preview, idx) => (
+                        <div
+                          key={idx}
+                          className="relative group aspect-square rounded-xl overflow-hidden border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/20"
                         >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                          <img
+                            src={preview.url}
+                            alt={`Nova foto ${idx + 1}`}
+                            className="w-full h-full object-cover cursor-zoom-in hover:scale-105 transition-transform"
+                            onClick={() => setLightboxUrl(preview.url)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFotosFiles((prev) => prev.filter((_, i) => i !== idx))}
+                            className="absolute top-1 right-1 p-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full opacity-90 hover:opacity-100 transition-colors shadow-xs cursor-pointer z-10"
+                            title="Remover esta nova foto"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                          <div className="absolute bottom-1 left-1 px-1.5 py-0.2 rounded bg-emerald-700/80 text-white text-[9px] font-medium pointer-events-none">
+                            Nova
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1198,12 +1375,12 @@ export function EvolutionFormModal({
               {isSubmitting ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Salvando no Prontuário...</span>
+                  <span>{initialData?.id ? "Atualizando Evolução..." : "Salvando no Prontuário..."}</span>
                 </>
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  <span>Salvar Evolução Clínica</span>
+                  <span>{initialData?.id ? "Atualizar Evolução Clínica" : "Salvar Evolução Clínica"}</span>
                 </>
               )}
             </button>

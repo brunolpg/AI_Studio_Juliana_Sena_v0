@@ -188,6 +188,7 @@ export async function getPatientClinicalRecordAction(
             horario: e.horario,
             tipo: e.tipo,
             tipo_atendimento: e.tipo_atendimento,
+            status: e.status || "Ativo",
             procedimento_id: e.procedimento_id,
             appointment_id: e.appointment_id,
             exames_anexos: e.exames_anexos || [],
@@ -343,6 +344,7 @@ export async function addClinicalEvolutionAction(
       horario: rawPayloadToSign.horario,
       tipo: input.tipo || "Consulta",
       tipo_atendimento: input.tipo_atendimento || input.tipo,
+      status: input.status || "Ativo",
       procedimento_id: sanitizedProcedimentoId || undefined,
       appointment_id: sanitizedAppointmentId,
       exames_anexos: rawPayloadToSign.exames_anexos,
@@ -377,6 +379,7 @@ export async function addClinicalEvolutionAction(
             horario: newEvolution.horario,
             tipo: newEvolution.tipo,
             tipo_atendimento: newEvolution.tipo_atendimento,
+            status: newEvolution.status,
             procedimento_id: sanitizedProcedimentoId,
             appointment_id: sanitizedAppointmentId,
             exames_anexos: newEvolution.exames_anexos,
@@ -1462,3 +1465,5 @@ export async function getPatientPrescriptionsForEvolutionAction(
     return [];
   }
 }
+
+export { updateClinicalEvolutionAction, deleteClinicalEvolutionAction } from "@/app/actions/clinical-evolution";

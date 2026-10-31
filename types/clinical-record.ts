@@ -16,6 +16,7 @@ export interface ClinicalEvolution {
   horario: string; // "14:30"
   tipo: EvolutionType;
   tipo_atendimento?: string;
+  status?: "Ativo" | "Concluído" | "Cancelado" | string;
   procedimento_id?: string;
   appointment_id?: string | null;
   exames_anexos?: string[];
