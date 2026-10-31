@@ -1466,4 +1466,15 @@ export async function getPatientPrescriptionsForEvolutionAction(
   }
 }
 
-export { updateClinicalEvolutionAction, deleteClinicalEvolutionAction } from "@/app/actions/clinical-evolution";
+import { 
+  updateClinicalEvolutionAction as _updateAction, 
+  deleteClinicalEvolutionAction as _deleteAction 
+} from "@/app/actions/clinical-evolution";
+
+export async function updateClinicalEvolutionAction(...args: Parameters<typeof _updateAction>) {
+  return await _updateAction(...args);
+}
+
+export async function deleteClinicalEvolutionAction(...args: Parameters<typeof _deleteAction>) {
+  return await _deleteAction(...args);
+}

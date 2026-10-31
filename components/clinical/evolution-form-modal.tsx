@@ -19,6 +19,7 @@ import {
   CheckSquare,
   Square,
   Plus,
+  Trash2,
 } from "lucide-react";
 import {
   addClinicalEvolutionAction,
