@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { X, Plus, Trash2, FlaskConical, AlertCircle, Check, Loader2 } from "lucide-react";
 import { createFormulaAction, createUnidadeQuickAction, createComponenteQuickAction } from "@/actions/formula-actions";
 import { useToast } from "@/components/ui/toast";
+import { Input } from "@/components/ui/input";
 import type { Componente, Unidade } from "@/types/formula";
 
 interface FormulaModalProps {
@@ -210,7 +211,7 @@ export function FormulaModal({
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Nome da Fórmula *
               </label>
-              <input
+              <Input
                 type="text"
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
@@ -238,7 +239,7 @@ export function FormulaModal({
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Veículo Base
               </label>
-              <input
+              <Input
                 type="text"
                 value={veiculo}
                 onChange={(e) => setVeiculo(e.target.value)}
@@ -251,7 +252,7 @@ export function FormulaModal({
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Dosagem / Concentração
               </label>
-              <input
+              <Input
                 type="number"
                 step="any"
                 value={dosagem}
@@ -281,7 +282,7 @@ export function FormulaModal({
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
                 Descrição Resumida
               </label>
-              <input
+              <Input
                 type="text"
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
@@ -330,7 +331,7 @@ export function FormulaModal({
                     </div>
 
                     <div className="w-28 sm:w-36 shrink-0 flex items-center gap-1.5">
-                      <input
+                      <Input
                         type="number"
                         step="any"
                         value={item.quantidade}
@@ -456,7 +457,7 @@ export function FormulaModal({
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">Nome do Componente *</label>
-                <input
+                <Input
                   type="text"
                   value={newCompNome}
                   onChange={(e) => setNewCompNome(e.target.value)}
@@ -485,7 +486,7 @@ export function FormulaModal({
               {newCompUnidadeId === "NEW" && (
                 <div>
                   <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">Nome da Nova Unidade *</label>
-                  <input
+                  <Input
                     type="text"
                     value={newUnidadeNome}
                     onChange={(e) => setNewUnidadeNome(e.target.value)}

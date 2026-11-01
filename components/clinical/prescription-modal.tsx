@@ -9,6 +9,7 @@ import {
   addStructuredPrescriptionAction,
 } from "@/actions/clinical-actions";
 import { useToast } from "@/components/ui/toast";
+import { Input } from "@/components/ui/input";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Client } from "@/types/client";
 
@@ -418,7 +419,7 @@ export function PrescriptionModal({
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1">
                 Nome da Fórmula *
               </label>
-              <input
+              <Input
                 type="text"
                 list="formulas-suggestions"
                 placeholder="Ex: Fórmula Clareadora Facial, Composto Antioxidante..."
@@ -469,7 +470,7 @@ export function PrescriptionModal({
             <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1">
               Descrição do Modelo
             </label>
-            <input
+            <Input
               type="text"
               placeholder="Ex: Recomendado para melasma, rejuvenescimento celular..."
               value={descricao}
@@ -502,7 +503,7 @@ export function PrescriptionModal({
                 >
                   {/* Nome do componente com combobox */}
                   <div className="w-full sm:flex-1 min-w-0">
-                    <input
+                    <Input
                       type="text"
                       list={`comp-suggestions-${row.key}`}
                       placeholder="Nome do Ativo"
@@ -533,7 +534,7 @@ export function PrescriptionModal({
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     {/* Quantidade */}
                     <div className="w-20 sm:w-20">
-                      <input
+                      <Input
                         type="text"
                         inputMode="decimal"
                         placeholder="Qtd."
@@ -595,7 +596,7 @@ export function PrescriptionModal({
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Veículo Base *
                 </label>
-                <input
+                <Input
                   type="text"
                   value={veiculo}
                   onChange={(e) => setVeiculo(e.target.value)}
@@ -610,7 +611,7 @@ export function PrescriptionModal({
                   QSP *
                 </label>
                 <div className="flex items-center w-full gap-1">
-                  <input
+                  <Input
                     type="text"
                     inputMode="decimal"
                     value={dosagemValor}
@@ -637,7 +638,7 @@ export function PrescriptionModal({
                   Quantidade Total *
                 </label>
                 <div className="flex items-center w-full">
-                  <input
+                  <Input
                     type="text"
                     inputMode="decimal"
                     value={totalVeiculo}
