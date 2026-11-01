@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { X, Pill, Check, AlertCircle, Plus, Trash2, Save } from "lucide-react";
 import {
   getFormulasAction,
@@ -9,7 +9,6 @@ import {
   addStructuredPrescriptionAction,
 } from "@/actions/clinical-actions";
 import { useToast } from "@/components/ui/toast";
-import { Input } from "@/components/ui/input";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Client } from "@/types/client";
 
@@ -38,6 +37,14 @@ export function PrescriptionModal({
   zIndex = "z-50",
 }: PrescriptionModalProps) {
   const { toast } = useToast();
+
+  // Refs para inputs/textareas com suporte a IME / Dead Keys (Android / Samsung Keyboard)
+  const nomeFormulaInputRef = useRef<HTMLInputElement>(null);
+  const descricaoInputRef = useRef<HTMLInputElement>(null);
+  const veiculoInputRef = useRef<HTMLInputElement>(null);
+  const posologiaInputRef = useRef<HTMLTextAreaElement>(null);
+  const orientPacienteInputRef = useRef<HTMLTextAreaElement>(null);
+  const orientFarmaciaInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Estados dos catálogos do Supabase (com fallbacks)
   const [formulas, setFormulas] = useState<any[]>([]);
@@ -159,14 +166,41 @@ export function PrescriptionModal({
 
     setSelectedFormulaId(selected.id);
     setNomeFormula(selected.nome);
+    if (nomeFormulaInputRef.current) {
+      nomeFormulaInputRef.current.value = selected.nome || "";
+    }
+
     setDescricao(selected.descricao || "");
+    if (descricaoInputRef.current) {
+      descricaoInputRef.current.value = selected.descricao || "";
+    }
+
     setVia((selected.via || selected.tipo) as "oral" | "tópico");
     setDosagemValor(formatNumberToBr(selected.dosagem));
     setVeiculo(selected.veiculo || "");
+    if (veiculoInputRef.current) {
+      veiculoInputRef.current.value = selected.veiculo || "";
+    }
+
     setTipoVeiculo(selected.tipo_veiculo || "dose(s)");
     setTotalVeiculo(formatNumberToBr(selected.total_veiculo || ''));
+
+    if (selected.posologia) {
+      setPosologia(selected.posologia);
+      if (posologiaInputRef.current) {
+        posologiaInputRef.current.value = selected.posologia;
+      }
+    }
+
     setOrientPaciente(selected.orient_paciente || "");
+    if (orientPacienteInputRef.current) {
+      orientPacienteInputRef.current.value = selected.orient_paciente || "";
+    }
+
     setOrientFarmacia(selected.orient_farmacia || "");
+    if (orientFarmaciaInputRef.current) {
+      orientFarmaciaInputRef.current.value = selected.orient_farmacia || "";
+    }
     
     // Autofill componentes
     if (selected.componentes && selected.componentes.length > 0) {
@@ -250,13 +284,20 @@ export function PrescriptionModal({
     e.preventDefault();
     setErrorMsg(null);
 
+    const finalNomeFormula = nomeFormulaInputRef.current?.value || nomeFormula;
+    const finalDescricao = descricaoInputRef.current?.value || descricao;
+    const finalVeiculo = veiculoInputRef.current?.value || veiculo;
+    const finalPosologia = posologiaInputRef.current?.value || posologia;
+    const finalOrientPaciente = orientPacienteInputRef.current?.value || orientPaciente;
+    const finalOrientFarmacia = orientFarmaciaInputRef.current?.value || orientFarmacia;
+
     // Validações básicas
-    if (!nomeFormula.trim()) {
+    if (!finalNomeFormula.trim()) {
       setErrorMsg("O nome da fórmula é obrigatório.");
       return;
     }
 
-    if (!veiculo.trim() || !dosagemValor.trim() || !totalVeiculo.trim() || !posologia.trim()) {
+    if (!finalVeiculo.trim() || !dosagemValor.trim() || !totalVeiculo.trim() || !finalPosologia.trim()) {
       setErrorMsg("Por favor, preencha o Veículo, Dosagem, Quantidade Total e Posologia.");
       return;
     }
@@ -302,18 +343,18 @@ export function PrescriptionModal({
 
     try {
       const payload = {
-        nome_formula: nomeFormula.trim(),
-        descricao: descricao.trim() || undefined,
+        nome_formula: finalNomeFormula.trim(),
+        descricao: finalDescricao.trim() || undefined,
         via,
         componentes: componentesPayload,
-        veiculo: veiculo.trim(),
+        veiculo: finalVeiculo.trim(),
         dosagem_valor: String(parseBrNumberToFloat(dosagemValor)),
         dosagem_unidade: via === "tópico" ? dosagemUnidade : undefined,
         total_veiculo: parseBrNumberToFloat(totalVeiculo),
         tipo_veiculo: via === "oral" ? tipoVeiculo : "un",
-        posologia: posologia.trim(),
-        orient_paciente: orientPaciente.trim() || undefined,
-        orient_farmacia: orientFarmacia.trim() || undefined,
+        posologia: finalPosologia.trim(),
+        orient_paciente: finalOrientPaciente.trim() || undefined,
+        orient_farmacia: finalOrientFarmacia.trim() || undefined,
         save_as_formula: true,
       };
 
@@ -419,22 +460,22 @@ export function PrescriptionModal({
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1">
                 Nome da Fórmula *
               </label>
-              <Input
+              <input
+                ref={nomeFormulaInputRef}
                 type="text"
                 list="formulas-suggestions"
                 placeholder="Ex: Fórmula Clareadora Facial, Composto Antioxidante..."
-                value={nomeFormula}
-                onChange={(e) => setNomeFormula(e.target.value)}
+                defaultValue={nomeFormula}
+                onInput={(e) => setNomeFormula(e.currentTarget.value)}
+                onBlur={(e) => setNomeFormula(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    const currentVal = e.currentTarget.value || nomeFormula;
-                    const q = currentVal.toLowerCase().trim();
+                    const q = (nomeFormulaInputRef.current?.value || nomeFormula).toLowerCase().trim();
                     const matches = formulas.filter((f) =>
                       f.nome.toLowerCase().includes(q)
                     );
                     if (matches.length > 0) {
-                      e.currentTarget.blur();
                       handleSelectFormula(matches[0].id);
                     }
                   }
@@ -472,11 +513,13 @@ export function PrescriptionModal({
             <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1">
               Descrição do Modelo
             </label>
-            <Input
+            <input
+              ref={descricaoInputRef}
               type="text"
               placeholder="Ex: Recomendado para melasma, rejuvenescimento celular..."
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
+              defaultValue={descricao}
+              onInput={(e) => setDescricao(e.currentTarget.value)}
+              onBlur={(e) => setDescricao(e.target.value)}
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none"
             />
           </div>
@@ -505,7 +548,7 @@ export function PrescriptionModal({
                 >
                   {/* Nome do componente com combobox */}
                   <div className="w-full sm:flex-1 min-w-0">
-                    <Input
+                    <input
                       type="text"
                       list={`comp-suggestions-${row.key}`}
                       placeholder="Nome do Ativo"
@@ -536,7 +579,7 @@ export function PrescriptionModal({
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     {/* Quantidade */}
                     <div className="w-20 sm:w-20">
-                      <Input
+                      <input
                         type="text"
                         inputMode="decimal"
                         placeholder="Qtd."
@@ -598,10 +641,12 @@ export function PrescriptionModal({
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Veículo Base *
                 </label>
-                <Input
+                <input
+                  ref={veiculoInputRef}
                   type="text"
-                  value={veiculo}
-                  onChange={(e) => setVeiculo(e.target.value)}
+                  defaultValue={veiculo}
+                  onInput={(e) => setVeiculo(e.currentTarget.value)}
+                  onBlur={(e) => setVeiculo(e.target.value)}
                   placeholder="Ex: Cápsula vegetal, Gel creme..."
                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
@@ -613,7 +658,7 @@ export function PrescriptionModal({
                   QSP *
                 </label>
                 <div className="flex items-center w-full gap-1">
-                  <Input
+                  <input
                     type="text"
                     inputMode="decimal"
                     value={dosagemValor}
@@ -640,7 +685,7 @@ export function PrescriptionModal({
                   Quantidade Total *
                 </label>
                 <div className="flex items-center w-full">
-                  <Input
+                  <input
                     type="text"
                     inputMode="decimal"
                     value={totalVeiculo}
@@ -662,10 +707,12 @@ export function PrescriptionModal({
               Posologia (Frequência & Horários) *
             </label>
             <textarea
+              ref={posologiaInputRef}
               rows={2}
               placeholder="Ex: Tomar 1 dose via oral todas as manhãs logo após o café; Aplicar no rosto limpo à noite..."
-              value={posologia}
-              onChange={(e) => setPosologia(e.target.value)}
+              defaultValue={posologia}
+              onInput={(e) => setPosologia(e.currentTarget.value)}
+              onBlur={(e) => setPosologia(e.target.value)}
               required
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none focus:outline-none"
             />
@@ -677,10 +724,12 @@ export function PrescriptionModal({
               Orientações ao Paciente/ Instruções Especiais
             </label>
             <textarea
+              ref={orientPacienteInputRef}
               rows={2}
               placeholder="Ex: Suspender o uso se houver irritação; armazenar em local fresco..."
-              value={orientPaciente}
-              onChange={(e) => setOrientPaciente(e.target.value)}
+              defaultValue={orientPaciente}
+              onInput={(e) => setOrientPaciente(e.currentTarget.value)}
+              onBlur={(e) => setOrientPaciente(e.target.value)}
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none focus:outline-none"
             />
           </div>
@@ -691,10 +740,12 @@ export function PrescriptionModal({
               Observações à Farmácia Magistral
             </label>
             <textarea
+              ref={orientFarmaciaInputRef}
               rows={2}
               placeholder="Ex: Ajustar o pH final para 4.5; envasar em frasco âmbar airless..."
-              value={orientFarmacia}
-              onChange={(e) => setOrientFarmacia(e.target.value)}
+              defaultValue={orientFarmacia}
+              onInput={(e) => setOrientFarmacia(e.currentTarget.value)}
+              onBlur={(e) => setOrientFarmacia(e.target.value)}
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none focus:outline-none"
             />
           </div>
