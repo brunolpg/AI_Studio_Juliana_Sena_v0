@@ -217,70 +217,76 @@ export function PopsView() {
   return (
     <div className="font-['Plus_Jakarta_Sans',sans-serif] space-y-4 sm:space-y-6 w-full min-w-0 box-border">
       {/* 1. Métricas Institucionais (Ativos, Em Revisão, Cancelados) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 w-full mb-6 max-lg:landscape:grid-cols-3 max-lg:landscape:gap-3 box-border">
         {/* Card: Ativos */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-start justify-between relative shadow-2xs">
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+        <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
               Ativos
             </span>
-            {isLoadingPops && pops.length === 0 ? (
-              <div className="h-8 w-14 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse mt-1" />
-            ) : (
-              <strong className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 block mt-1">
-                {ativosCount}
-              </strong>
-            )}
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium block mt-1">
-              Procedimentos vigentes
-            </span>
+            <div className="p-2 sm:p-2.5 landscape:p-1.5 rounded-2xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 shrink-0 ml-1 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 landscape:w-7 landscape:h-7">
+              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-5 h-5" />
+          <div className="mt-3 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
+            {isLoadingPops && pops.length === 0 ? (
+              <div className="h-8 w-12 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
+            ) : (
+              <span className="text-2xl sm:text-3xl lg:text-4xl landscape:text-xl font-extrabold tracking-tight text-emerald-700 dark:text-emerald-400 leading-none">
+                {ativosCount}
+              </span>
+            )}
+            <span className="text-[11px] sm:text-xs text-slate-400 font-medium">
+              procedimentos vigentes
+            </span>
           </div>
         </div>
 
         {/* Card: Em Revisão */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-start justify-between relative shadow-2xs">
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+        <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
               Em Revisão
             </span>
-            {isLoadingPops && pops.length === 0 ? (
-              <div className="h-8 w-14 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse mt-1" />
-            ) : (
-              <strong className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 block mt-1">
-                {emRevisaoCount}
-              </strong>
-            )}
-            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium block mt-1">
-              Sob atualização clínica
-            </span>
+            <div className="p-2 sm:p-2.5 landscape:p-1.5 rounded-2xl bg-amber-500/10 text-amber-700 dark:text-amber-400 shrink-0 ml-1 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 landscape:w-7 landscape:h-7">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-            <Clock className="w-5 h-5" />
+          <div className="mt-3 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
+            {isLoadingPops && pops.length === 0 ? (
+              <div className="h-8 w-12 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
+            ) : (
+              <span className="text-2xl sm:text-3xl lg:text-4xl landscape:text-xl font-extrabold tracking-tight text-amber-700 dark:text-amber-400 leading-none">
+                {emRevisaoCount}
+              </span>
+            )}
+            <span className="text-[11px] sm:text-xs text-slate-400 font-medium">
+              sob atualização clínica
+            </span>
           </div>
         </div>
 
         {/* Card: Cancelados */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-start justify-between relative shadow-2xs">
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+        <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
               Cancelados
             </span>
-            {isLoadingPops && pops.length === 0 ? (
-              <div className="h-8 w-14 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse mt-1" />
-            ) : (
-              <strong className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 block mt-1">
-                {canceladosCount}
-              </strong>
-            )}
-            <span className="text-xs text-rose-600 dark:text-rose-400 font-medium block mt-1">
-              Descontinuados
-            </span>
+            <div className="p-2 sm:p-2.5 landscape:p-1.5 rounded-2xl bg-rose-500/10 text-rose-700 dark:text-rose-400 shrink-0 ml-1 flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 landscape:w-7 landscape:h-7">
+              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-            <XCircle className="w-5 h-5" />
+          <div className="mt-3 landscape:mt-1 flex items-baseline gap-1.5 flex-wrap">
+            {isLoadingPops && pops.length === 0 ? (
+              <div className="h-8 w-12 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
+            ) : (
+              <span className="text-2xl sm:text-3xl lg:text-4xl landscape:text-xl font-extrabold tracking-tight text-rose-700 dark:text-rose-400 leading-none">
+                {canceladosCount}
+              </span>
+            )}
+            <span className="text-[11px] sm:text-xs text-slate-400 font-medium">
+              descontinuados
+            </span>
           </div>
         </div>
       </div>
