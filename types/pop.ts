@@ -9,14 +9,20 @@ export interface PopSubtopico {
   created_at?: string;
 }
 
+export interface PopTabelaDados {
+  colunas: string[];
+  linhas: string[][];
+}
+
 export interface PopBloco {
   id?: string;
   pop_id?: string;
-  tipo: "TOPICO" | "FORMULA" | "PRESCRICAO";
+  tipo: "TOPICO" | "FORMULA" | "PRESCRICAO" | "TABELA";
   ordem: number;
   topico_titulo?: string;
   topico_descricao?: string;
   subtopicos?: PopSubtopico[];
+  tabela_dados?: PopTabelaDados;
   formula_id?: string;
   formula?: {
     id: string;
@@ -63,10 +69,11 @@ export interface PopFormData {
   profissional?: string;
   blocos: Array<{
     id?: string;
-    tipo: "TOPICO" | "FORMULA" | "PRESCRICAO";
+    tipo: "TOPICO" | "FORMULA" | "PRESCRICAO" | "TABELA";
     ordem: number;
     topico_titulo?: string;
     topico_descricao?: string;
+    tabela_dados?: PopTabelaDados;
     formula_id?: string;
     prescricao_id?: string;
     subtopicos?: Array<{

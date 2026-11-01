@@ -396,6 +396,7 @@ export function PopsView() {
             {filteredPops.map((pop) => {
               const blocos = pop.blocos || [];
               const topicosCount = blocos.filter((b) => b.tipo === "TOPICO").length;
+              const tabelasCount = blocos.filter((b) => b.tipo === "TABELA").length;
               const prescricoesCount = blocos.filter(
                 (b) => b.tipo === "PRESCRICAO" || b.tipo === "FORMULA"
               ).length;
@@ -498,7 +499,7 @@ export function PopsView() {
                     </p>
 
                     {/* Resumo dos Blocos e Contadores */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                       <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between">
                         <span className="text-slate-500 font-medium">Tópicos:</span>
                         <strong className="text-slate-800 dark:text-slate-200 font-bold">
@@ -509,6 +510,12 @@ export function PopsView() {
                         <span className="text-slate-500 font-medium">Subtópicos:</span>
                         <strong className="text-slate-800 dark:text-slate-200 font-bold">
                           {subtopicosCount}
+                        </strong>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between">
+                        <span className="text-slate-500 font-medium">Tabelas:</span>
+                        <strong className="text-[#004d40] dark:text-emerald-400 font-bold">
+                          {tabelasCount}
                         </strong>
                       </div>
                       <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between">

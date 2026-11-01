@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   ClipboardList,
   Pill,
+  Table,
 } from "lucide-react";
 import type { PopProtocoloCompleto } from "@/types/pop";
 
@@ -141,6 +142,7 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
 
   const blocosOrdenados = [...(pop.blocos || [])].sort((a, b) => a.ordem - b.ordem);
   const totalTopicos = blocosOrdenados.filter((b) => b.tipo === "TOPICO").length;
+  const totalTabelas = blocosOrdenados.filter((b) => b.tipo === "TABELA").length;
   const totalFormulas = blocosOrdenados.filter(
     (b) => b.tipo === "FORMULA" || b.tipo === "PRESCRICAO"
   ).length;
@@ -223,14 +225,18 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
                   {pop.profissional || "Juliana Sena de Souza Vieira"} • COREN-BA 366.344
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+              <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl text-center">
                   <span className="text-[10px] text-slate-400 block">Tópicos</span>
                   <strong className="text-sm text-slate-800 dark:text-slate-200">{totalTopicos}</strong>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl text-center">
+                  <span className="text-[10px] text-slate-400 block">Tabelas</span>
+                  <strong className="text-sm text-[#004d40] dark:text-emerald-400">{totalTabelas}</strong>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl text-center">
                   <span className="text-[10px] text-slate-400 block">Fórmulas</span>
-                  <strong className="text-sm text-[#004d40] dark:text-emerald-400">{totalFormulas}</strong>
+                  <strong className="text-sm text-slate-800 dark:text-slate-200">{totalFormulas}</strong>
                 </div>
               </div>
               {pop.payload_hash && (
@@ -473,6 +479,85 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
                               ))}
                           </div>
                         )}
+                      </div>
+                    );
+                  }
+
+                  // Bloco do Tipo TABELA
+                  if (bloco.tipo === "TABELA") {
+                    const colunas = bloco.tabela_dados?.colunas || [];
+                    const linhas = bloco.tabela_dados?.linhas || [];
+
+                    return (
+                      <div
+                        key={bloco.id || idx}
+                        className="border border-slate-200 rounded-xl p-3.5 bg-white print-avoid-break space-y-2.5"
+                      >
+                        {/* Cabeçalho da Tabela */}
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-md bg-[#004d40] text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                              {numBloco}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <Table className="w-3.5 h-3.5 text-[#004d40]" />
+                              <h3 className="text-xs font-bold text-slate-900">
+                                {bloco.topico_titulo || "Tabela Paramétrica / Conduta"}
+                              </h3>
+                            </div>
+                          </div>
+                          <span className="text-[9px] uppercase tracking-wider font-semibold text-[#004d40] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+                            Tabela Paramétrica
+                          </span>
+                        </div>
+
+                        {/* Descrição / Diretrizes da Tabela */}
+                        {bloco.topico_descricao && (
+                          <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap pl-7">
+                            {bloco.topico_descricao}
+                          </p>
+                        )}
+
+                        {/* Matriz HTML Table */}
+                        {colunas.length > 0 && linhas.length > 0 ? (
+                          <div className="pl-7 pt-1 overflow-x-auto">
+                            <table className="w-full text-xs border-collapse border border-slate-200 rounded-lg overflow-hidden">
+                              <thead>
+                                <tr className="bg-slate-100 text-slate-800">
+                                  {colunas.map((col, cIdx) => (
+                                    <th
+                                      key={cIdx}
+                                      className="border border-slate-200 px-3 py-2 text-left font-bold text-[11px]"
+                                    >
+                                      {col}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {linhas.map((row, rIdx) => (
+                                  <tr
+                                    key={rIdx}
+                                    className={rIdx % 2 === 0 ? "bg-white" : "bg-slate-50/60"}
+                                  >
+                                    {colunas.map((_, cIdx) => (
+                                      <td
+                                        key={cIdx}
+                                        className={`border border-slate-200 px-3 py-1.5 text-xs ${
+                                          cIdx === 0
+                                            ? "font-semibold text-slate-800"
+                                            : "text-slate-700"
+                                        }`}
+                                      >
+                                        {row[cIdx] !== undefined && row[cIdx] !== "" ? row[cIdx] : "—"}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : null}
                       </div>
                     );
                   }

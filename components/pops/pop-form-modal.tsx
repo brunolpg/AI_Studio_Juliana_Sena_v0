@@ -11,8 +11,9 @@ import {
   ShieldCheck,
   FileText,
   Plus,
+  Table,
 } from "lucide-react";
-import type { PopProtocoloCompleto, PopFormData, PopStatus } from "@/types/pop";
+import type { PopProtocoloCompleto, PopFormData, PopStatus, PopTabelaDados } from "@/types/pop";
 import { getFormulasCatalogoAction, salvarPop } from "@/app/actions/pops";
 import { getComponentesEUnidadesAction } from "@/actions/formula-actions";
 import { FormulaModal } from "@/components/formulas/formula-modal";
@@ -44,10 +45,11 @@ export function PopFormModal({
     Array<{
       id?: string;
       tempId: string;
-      tipo: "TOPICO" | "FORMULA" | "PRESCRICAO";
+      tipo: "TOPICO" | "FORMULA" | "PRESCRICAO" | "TABELA";
       ordem: number;
       topico_titulo?: string;
       topico_descricao?: string;
+      tabela_dados?: PopTabelaDados;
       formula_id?: string;
       prescricao_id?: string;
       subtopicos?: Array<{
@@ -86,10 +88,16 @@ export function PopFormModal({
         .map((b, idx) => ({
           id: b.id,
           tempId: `bloco-${idx}-${Date.now()}`,
-          tipo: (b.tipo as "TOPICO" | "FORMULA" | "PRESCRICAO") || (b.formula_id ? "FORMULA" : "TOPICO"),
+          tipo: (b.tipo as "TOPICO" | "FORMULA" | "PRESCRICAO" | "TABELA") || (b.formula_id ? "FORMULA" : "TOPICO"),
           ordem: idx + 1,
           topico_titulo: b.topico_titulo || "",
           topico_descricao: b.topico_descricao || "",
+          tabela_dados: b.tabela_dados
+            ? {
+                colunas: b.tabela_dados.colunas ? [...b.tabela_dados.colunas] : ["Coluna 1", "Coluna 2"],
+                linhas: b.tabela_dados.linhas ? b.tabela_dados.linhas.map((r) => [...r]) : [["", ""]],
+              }
+            : undefined,
           formula_id: b.formula_id || b.prescricao_id || "",
           prescricao_id: b.prescricao_id || "",
           subtopicos: (b.subtopicos || [])
@@ -185,6 +193,176 @@ export function PopFormModal({
         formula_id: primeiraFormulaId,
       },
     ]);
+  };
+
+  const handleAddTabela = () => {
+    const nextOrdem = blocos.length + 1;
+    setBlocos((prev) => [
+      ...prev,
+      {
+        tempId: `bloco-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        tipo: "TABELA",
+        ordem: nextOrdem,
+        topico_titulo: "",
+        topico_descricao: "",
+        tabela_dados: {
+          colunas: ["Coluna 1", "Coluna 2"],
+          linhas: [["", ""]],
+        },
+      },
+    ]);
+  };
+
+  const handleUpdateTabelaTitulo = (blocoIndex: number, titulo: string) => {
+    setBlocos((prev) => {
+      const copy = [...prev];
+      copy[blocoIndex] = { ...copy[blocoIndex], topico_titulo: titulo };
+      return copy;
+    });
+  };
+
+  const handleUpdateTabelaDescricao = (blocoIndex: number, descricao: string) => {
+    setBlocos((prev) => {
+      const copy = [...prev];
+      copy[blocoIndex] = { ...copy[blocoIndex], topico_descricao: descricao };
+      return copy;
+    });
+  };
+
+  const handleUpdateTabelaColuna = (
+    blocoIndex: number,
+    colIndex: number,
+    value: string
+  ) => {
+    setBlocos((prev) => {
+      const copy = [...prev];
+      const b = copy[blocoIndex];
+      const prevDados = b.tabela_dados || {
+        colunas: ["Coluna 1", "Coluna 2"],
+        linhas: [["", ""]],
+      };
+      const newCols = [...prevDados.colunas];
+      newCols[colIndex] = value;
+      copy[blocoIndex] = {
+        ...b,
+        tabela_dados: {
+          ...prevDados,
+          colunas: newCols,
+        },
+      };
+      return copy;
+    });
+  };
+
+  const handleUpdateTabelaCelula = (
+    blocoIndex: number,
+    rowIndex: number,
+    colIndex: number,
+    value: string
+  ) => {
+    setBlocos((prev) => {
+      const copy = [...prev];
+      const b = copy[blocoIndex];
+      const prevDados = b.tabela_dados || {
+        colunas: ["Coluna 1", "Coluna 2"],
+        linhas: [["", ""]],
+      };
+      const newRows = prevDados.linhas.map((row, rIdx) => {
+        if (rIdx !== rowIndex) return row;
+        const rowCopy = [...row];
+        rowCopy[colIndex] = value;
+        return rowCopy;
+      });
+      copy[blocoIndex] = {
+        ...b,
+        tabela_dados: {
+          ...prevDados,
+          linhas: newRows,
+        },
+      };
+      return copy;
+    });
+  };
+
+  const handleAddColuna = (blocoIndex: number) => {
+    setBlocos((prev) => {
+      const copy = [...prev];
+      const b = copy[blocoIndex];
+      const prevDados = b.tabela_dados || {
+        colunas: ["Coluna 1", "Coluna 2"],
+        linhas: [["", ""]],
+      };
+      const newCols = [
+        ...prevDados.colunas,
+        `Coluna ${prevDados.colunas.length + 1}`,
+      ];
+      const newRows = prevDados.linhas.map((row) => [...row, ""]);
+      copy[blocoIndex] = {
+        ...b,
+        tabela_dados: {
+          colunas: newCols,
+          linhas: newRows,
+        },
+      };
+      return copy;
+    });
+  };
+
+  const handleRemoveColuna = (blocoIndex: number, colIndex: number) => {
+    setBlocos((prev) => {
+      const copy = [...prev];
+      const b = copy[blocoIndex];
+      if (!b.tabela_dados || b.tabela_dados.colunas.length <= 1) return prev;
+      const newCols = b.tabela_dados.colunas.filter((_, idx) => idx !== colIndex);
+      const newRows = b.tabela_dados.linhas.map((row) =>
+        row.filter((_, idx) => idx !== colIndex)
+      );
+      copy[blocoIndex] = {
+        ...b,
+        tabela_dados: {
+          colunas: newCols,
+          linhas: newRows,
+        },
+      };
+      return copy;
+    });
+  };
+
+  const handleAddLinha = (blocoIndex: number) => {
+    setBlocos((prev) => {
+      const copy = [...prev];
+      const b = copy[blocoIndex];
+      const prevDados = b.tabela_dados || {
+        colunas: ["Coluna 1", "Coluna 2"],
+        linhas: [["", ""]],
+      };
+      const emptyRow = new Array(prevDados.colunas.length).fill("");
+      copy[blocoIndex] = {
+        ...b,
+        tabela_dados: {
+          ...prevDados,
+          linhas: [...prevDados.linhas, emptyRow],
+        },
+      };
+      return copy;
+    });
+  };
+
+  const handleRemoveLinha = (blocoIndex: number, rowIndex: number) => {
+    setBlocos((prev) => {
+      const copy = [...prev];
+      const b = copy[blocoIndex];
+      if (!b.tabela_dados || b.tabela_dados.linhas.length <= 1) return prev;
+      const newRows = b.tabela_dados.linhas.filter((_, idx) => idx !== rowIndex);
+      copy[blocoIndex] = {
+        ...b,
+        tabela_dados: {
+          ...b.tabela_dados,
+          linhas: newRows,
+        },
+      };
+      return copy;
+    });
   };
 
   const handleRemoveBloco = (index: number) => {
@@ -342,7 +520,7 @@ export function PopFormModal({
       toast({
         type: "error",
         title: "Estrutura Vazia",
-        description: "Adicione ao menos um Tópico ou Fórmula ao procedimento.",
+        description: "Adicione ao menos um Tópico, Tabela ou Fórmula ao procedimento.",
       });
       return;
     }
@@ -357,6 +535,30 @@ export function PopFormModal({
           description: `Preencha o título do Bloco #${i + 1}.`,
         });
         return;
+      }
+      if (b.tipo === "TABELA") {
+        if (!b.topico_titulo?.trim()) {
+          toast({
+            type: "error",
+            title: "Tabela Incompleta",
+            description: `Preencha o título da Tabela no Bloco #${i + 1}.`,
+          });
+          return;
+        }
+        if (
+          !b.tabela_dados ||
+          !b.tabela_dados.colunas ||
+          b.tabela_dados.colunas.length === 0 ||
+          !b.tabela_dados.linhas ||
+          b.tabela_dados.linhas.length === 0
+        ) {
+          toast({
+            type: "error",
+            title: "Tabela Incompleta",
+            description: `A Tabela do Bloco #${i + 1} deve conter ao menos uma coluna e uma linha.`,
+          });
+          return;
+        }
       }
       if (b.tipo === "FORMULA" && !b.formula_id) {
         toast({
@@ -391,6 +593,7 @@ export function PopFormModal({
           ordem: b.ordem,
           topico_titulo: b.topico_titulo?.trim(),
           topico_descricao: b.topico_descricao?.trim(),
+          tabela_dados: b.tipo === "TABELA" ? b.tabela_dados : undefined,
           formula_id: b.formula_id,
           prescricao_id: b.prescricao_id || b.formula_id,
           subtopicos: (b.subtopicos || []).map((s) => ({
@@ -533,15 +736,24 @@ export function PopFormModal({
                 </p>
               </div>
 
-              {/* Botões para Adicionar Tópico ou Fórmula */}
-              <div className="flex items-center gap-2 shrink-0">
+              {/* Botões para Adicionar Tópico, Tabela ou Fórmula */}
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
                 <button
                   type="button"
                   onClick={handleAddTopico}
-                  className="bg-[#004d40] text-white hover:bg-[#003830] rounded-xl px-4 py-2 font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  className="bg-[#004d40] text-white hover:bg-[#003830] rounded-xl px-3.5 py-2 font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                 >
                   <FileText className="w-3.5 h-3.5" />
                   <span>Adicionar Tópico</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAddTabela}
+                  className="bg-[#004d40] text-white hover:bg-[#003830] rounded-xl px-3.5 py-2 font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                >
+                  <Table className="w-3.5 h-3.5" />
+                  <span>Adicionar Tabela</span>
                 </button>
 
                 <button
@@ -735,6 +947,204 @@ export function PopFormModal({
                               </div>
                             );
                           })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (bloco.tipo === "TABELA") {
+                  const colunas = bloco.tabela_dados?.colunas || ["Coluna 1", "Coluna 2"];
+                  const linhas = bloco.tabela_dados?.linhas || [["", ""]];
+
+                  return (
+                    <div
+                      key={bloco.tempId}
+                      className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 relative transition-all"
+                    >
+                      {/* Cabeçalho do Bloco Tabela */}
+                      <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-lg bg-[#004d40] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                            #{bIdx + 1}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <Table className="w-4 h-4 text-[#004d40] dark:text-emerald-400" />
+                            <span className="text-xs font-bold text-[#004d40] dark:text-emerald-400 uppercase tracking-wide">
+                              Bloco Tabela Paramétrica / Conduta
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleMoveBlocoUp(bIdx)}
+                            disabled={isPrimeiro}
+                            title="Subir posição do bloco"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <ArrowUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveBlocoDown(bIdx)}
+                            disabled={isUltimo}
+                            title="Descer posição do bloco"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <ArrowDown className="w-4 h-4" />
+                          </button>
+                          <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveBloco(bIdx)}
+                            title="Excluir tabela"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Campos de Título e Descrição da Tabela */}
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Título / Identificação da Tabela *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={bloco.topico_titulo || ""}
+                            onChange={(e) => handleUpdateTabelaTitulo(bIdx, e.target.value)}
+                            placeholder="Ex.: Parâmetros de Aplicação Laser por Fototipo"
+                            className="w-full px-3.5 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#004d40]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            Descrição / Diretrizes da Tabela (Opcional)
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={bloco.topico_descricao || ""}
+                            onChange={(e) => handleUpdateTabelaDescricao(bIdx, e.target.value)}
+                            placeholder="Instruções para leitura da tabela, notas de segurança ou valores de referência..."
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#004d40] resize-y"
+                          />
+                        </div>
+
+                        {/* Barra de Ações da Tabela */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            Matriz de Dados ({colunas.length} colunas × {linhas.length} {linhas.length === 1 ? "linha" : "linhas"})
+                          </span>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleAddColuna(bIdx)}
+                              className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Adicionar Coluna</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleAddLinha(bIdx)}
+                              className="bg-[#004d40] text-white hover:bg-[#003830] rounded-lg px-2.5 py-1.5 font-semibold text-[11px] flex items-center gap-1 transition-colors cursor-pointer shadow-xs"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Adicionar Linha</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Tabela Interativa Responsiva */}
+                        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-900/50">
+                          <table className="w-full text-xs border-collapse">
+                            <thead>
+                              <tr className="bg-slate-100/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
+                                <th className="w-10 px-2 py-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 dark:border-slate-700">
+                                  #
+                                </th>
+                                {colunas.map((col, cIdx) => (
+                                  <th
+                                    key={cIdx}
+                                    className="px-2.5 py-2 text-left font-semibold text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-700 min-w-[140px]"
+                                  >
+                                    <div className="flex items-center gap-1.5">
+                                      <input
+                                        type="text"
+                                        value={col}
+                                        onChange={(e) => handleUpdateTabelaColuna(bIdx, cIdx, e.target.value)}
+                                        placeholder={`Coluna ${cIdx + 1}`}
+                                        className="w-full px-2 py-1 text-xs font-bold rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#004d40]"
+                                      />
+                                      {colunas.length > 1 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveColuna(bIdx, cIdx)}
+                                          title="Remover coluna"
+                                          className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0"
+                                        >
+                                          <X className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </th>
+                                ))}
+                                <th className="w-12 px-2 py-2 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                  Ações
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {linhas.map((row, rIdx) => (
+                                <tr
+                                  key={rIdx}
+                                  className="border-b border-slate-200/70 dark:border-slate-800/80 hover:bg-white dark:hover:bg-slate-800/40 transition-colors"
+                                >
+                                  <td className="px-2 py-1.5 text-center font-bold text-[10px] text-slate-400 bg-slate-100/50 dark:bg-slate-800/50 border-r border-slate-200 dark:border-slate-700">
+                                    {rIdx + 1}
+                                  </td>
+                                  {colunas.map((_, cIdx) => (
+                                    <td
+                                      key={cIdx}
+                                      className="p-1.5 border-r border-slate-200 dark:border-slate-700 min-w-[140px]"
+                                    >
+                                      <input
+                                        type="text"
+                                        value={row[cIdx] !== undefined ? row[cIdx] : ""}
+                                        onChange={(e) =>
+                                          handleUpdateTabelaCelula(bIdx, rIdx, cIdx, e.target.value)
+                                        }
+                                        placeholder="Valor..."
+                                        className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#004d40]"
+                                      />
+                                    </td>
+                                  ))}
+                                  <td className="px-2 py-1.5 text-center">
+                                    {linhas.length > 1 ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveLinha(bIdx, rIdx)}
+                                        title="Remover linha"
+                                        className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors mx-auto block cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    ) : (
+                                      <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     </div>

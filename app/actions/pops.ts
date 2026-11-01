@@ -89,7 +89,7 @@ export async function getPopsAction(): Promise<PopProtocoloCompleto[]> {
     // 2. Busca blocos agrupados com seleção enxuta
     const { data: blocosDb, error: blocosError } = await adminDb
       .from("pops_blocos")
-      .select("id, pop_id, tipo, ordem, topico_titulo, topico_descricao, formula_id, prescricao_id")
+      .select("id, pop_id, tipo, ordem, topico_titulo, topico_descricao, tabela_dados, formula_id, prescricao_id")
       .in("pop_id", popIds)
       .order("ordem", { ascending: true });
 
@@ -133,6 +133,7 @@ export async function getPopsAction(): Promise<PopProtocoloCompleto[]> {
         ordem: b.ordem,
         topico_titulo: b.topico_titulo,
         topico_descricao: b.topico_descricao,
+        tabela_dados: b.tabela_dados || null,
         formula_id: b.formula_id,
         prescricao_id: b.prescricao_id,
         subtopicos: subsDoBloco,
@@ -259,6 +260,7 @@ export async function getPopCompletoAction(popId: string): Promise<PopProtocoloC
           ordem: b.ordem,
           topico_titulo: b.topico_titulo,
           topico_descricao: b.topico_descricao,
+          tabela_dados: b.tabela_dados || null,
           formula_id: b.formula_id || null,
           formula,
           prescricao_id: b.prescricao_id || null,
@@ -364,7 +366,7 @@ export async function salvarPop(dados: PopFormData): Promise<{
       return { error: "A finalidade clínica do procedimento é obrigatória." };
     }
     if (!dados.blocos || dados.blocos.length === 0) {
-      return { error: "Adicione ao menos um Tópico ou Prescrição ao procedimento." };
+      return { error: "Adicione ao menos um Tópico, Tabela ou Prescrição ao procedimento." };
     }
 
     // Validação dos blocos
@@ -373,6 +375,19 @@ export async function salvarPop(dados: PopFormData): Promise<{
       if (b.tipo === "TOPICO") {
         if (!b.topico_titulo || !b.topico_titulo.trim()) {
           return { error: `O Título do Tópico #${i + 1} é obrigatório.` };
+        }
+      } else if (b.tipo === "TABELA") {
+        if (!b.topico_titulo || !b.topico_titulo.trim()) {
+          return { error: `O Título da Tabela #${i + 1} é obrigatório.` };
+        }
+        if (
+          !b.tabela_dados ||
+          !Array.isArray(b.tabela_dados.colunas) ||
+          b.tabela_dados.colunas.length === 0 ||
+          !Array.isArray(b.tabela_dados.linhas) ||
+          b.tabela_dados.linhas.length === 0
+        ) {
+          return { error: `A Tabela #${i + 1} deve conter ao menos uma coluna e uma linha.` };
         }
       } else if (b.tipo === "FORMULA") {
         if (!b.formula_id) {
@@ -398,8 +413,17 @@ export async function salvarPop(dados: PopFormData): Promise<{
       .map((b, idx) => ({
         ordem: idx + 1,
         tipo: b.tipo,
-        topico_titulo: b.tipo === "TOPICO" ? (b.topico_titulo || "").trim() : null,
-        topico_descricao: b.tipo === "TOPICO" ? (b.topico_descricao || "").trim() : null,
+        topico_titulo: (b.tipo === "TOPICO" || b.tipo === "TABELA") ? (b.topico_titulo || "").trim() : null,
+        topico_descricao: (b.tipo === "TOPICO" || b.tipo === "TABELA") ? (b.topico_descricao || "").trim() : null,
+        tabela_dados:
+          b.tipo === "TABELA" && b.tabela_dados
+            ? {
+                colunas: b.tabela_dados.colunas.map((c) => String(c || "").trim()),
+                linhas: b.tabela_dados.linhas.map((row) =>
+                  Array.isArray(row) ? row.map((cell) => String(cell || "").trim()) : []
+                ),
+              }
+            : null,
         formula_id: b.tipo === "FORMULA" ? b.formula_id || null : null,
         prescricao_id: b.tipo === "PRESCRICAO" ? b.prescricao_id || null : null,
         subtopicos: (b.subtopicos || [])
@@ -425,6 +449,7 @@ export async function salvarPop(dados: PopFormData): Promise<{
         tipo: b.tipo,
         topico_titulo: b.topico_titulo,
         topico_descricao: b.topico_descricao,
+        tabela_dados: b.tabela_dados,
         formula_id: b.formula_id,
         prescricao_id: b.prescricao_id,
         subtopicos: b.subtopicos.map((s) => ({
@@ -501,6 +526,7 @@ export async function salvarPop(dados: PopFormData): Promise<{
           ordem: b.ordem,
           topico_titulo: b.topico_titulo,
           topico_descricao: b.topico_descricao,
+          tabela_dados: b.tipo === "TABELA" ? b.tabela_dados : null,
           formula_id: b.formula_id,
           prescricao_id: b.prescricao_id,
           created_at: new Date().toISOString(),
