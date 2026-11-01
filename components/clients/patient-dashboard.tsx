@@ -57,7 +57,7 @@ export function PatientDashboard({ initialTab = "pacientes" }: { initialTab?: Da
                   </h1>
                 </div>
                 <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-0.5 sm:mt-1 leading-snug">
-                  condutas clínicas, protocolos operacionais e receituário associado
+                  Condutas clínicas, protocolos operacionais e receituário associado
                 </p>
               </>
             ) : activeTab === "deliverables" ? (
