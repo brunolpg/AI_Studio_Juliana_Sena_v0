@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import type { PopProtocoloCompleto, PopFormData, PopStatus, PopTabelaDados } from "@/types/pop";
 import { getFormulasCatalogoAction, salvarPop } from "@/app/actions/pops";
-import { getComponentesEUnidadesAction } from "@/actions/formula-actions";
+import { getComponentesAndUnidadesAction } from "@/actions/formula-actions";
 import { FormulaModal } from "@/components/formulas/formula-modal";
 import { useToast } from "@/components/ui/toast";
 
@@ -144,7 +144,7 @@ export function PopFormModal({
     setIsLoadingFormulas(true);
     Promise.all([
       getFormulasCatalogoAction(),
-      getComponentesEUnidadesAction(),
+      getComponentesAndUnidadesAction(),
     ])
       .then(([formulas, compUni]) => {
         setFormulasDisponiveis(formulas || []);
