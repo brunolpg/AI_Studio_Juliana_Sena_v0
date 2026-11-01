@@ -15,6 +15,7 @@ import {
   FileText,
   Pill,
   Loader2,
+  Plus,
 } from "lucide-react";
 import { PopFormModal } from "./pop-form-modal";
 import { PrintPopModal } from "@/components/print-pop-modal";
@@ -307,9 +308,9 @@ export function PopsView() {
         <button
           type="button"
           onClick={handleOpenNew}
-          className="bg-[#004d40] hover:bg-[#003830] text-white font-semibold rounded-2xl sm:rounded-full px-5 py-2.5 transition-all shadow-sm flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer shrink-0"
+          className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full shadow-xs hover:shadow transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] md-state-layer"
         >
-          <ClipboardList className="w-4 h-4" />
+          <Plus className="w-4 h-4 shrink-0" />
           <span>Cadastrar Novo POP</span>
         </button>
       </div>
@@ -378,9 +379,9 @@ export function PopsView() {
               <button
                 type="button"
                 onClick={handleOpenNew}
-                className="bg-[#004d40] hover:bg-[#003830] text-white font-semibold rounded-2xl sm:rounded-full px-5 py-2.5 transition-all shadow-sm inline-flex items-center gap-2 text-xs sm:text-sm cursor-pointer"
+                className="mt-4 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-medium text-white dark:text-slate-950 bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-500 dark:hover:bg-teal-400 rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] md-state-layer"
               >
-                <ClipboardList className="w-4 h-4" />
+                <Plus className="w-4 h-4 shrink-0" />
                 <span>Criar Primeiro POP</span>
               </button>
             )}
