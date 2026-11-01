@@ -766,8 +766,8 @@ export function EvolutionFormModal({
               <Activity className="w-4 h-4" />
               Biometria & Parâmetros Regenerativos
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 items-end">
-              <div>
+            <div className="grid grid-cols-2 sm:grid-cols-12 gap-2.5 items-end">
+              <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   PA (mmHg)
                 </label>
@@ -779,7 +779,7 @@ export function EvolutionFormModal({
                   className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500"
                 />
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   FC (bpm)
                 </label>
@@ -791,7 +791,7 @@ export function EvolutionFormModal({
                   className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500"
                 />
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Hidratação (%)
                 </label>
@@ -804,7 +804,7 @@ export function EvolutionFormModal({
                   className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500"
                 />
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Oleosidade (%)
                 </label>
@@ -817,7 +817,7 @@ export function EvolutionFormModal({
                   className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-teal-500"
                 />
               </div>
-              <div className="col-span-2 sm:col-span-4 lg:col-span-2">
+              <div className="col-span-2 sm:col-span-4">
                 <ElasticityScalePicker
                   value={elasticidade}
                   onChange={(val) => setElasticidade(String(val))}

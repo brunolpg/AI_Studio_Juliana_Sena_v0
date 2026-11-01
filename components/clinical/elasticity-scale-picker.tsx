@@ -90,7 +90,7 @@ export function ElasticityScalePicker({
         id={componentId}
         role="group"
         aria-label="Escala de Elasticidade de 1 a 5"
-        className="w-full flex items-center gap-1.5 sm:gap-2 px-2 py-1 bg-white dark:bg-zinc-800/90 border border-slate-200 dark:border-slate-700 rounded-lg min-h-[34px]"
+        className="w-full flex items-center justify-between gap-1 sm:gap-1.5 px-2.5 py-1 bg-white dark:bg-zinc-800/90 border border-slate-200 dark:border-slate-700 rounded-lg min-h-[34px] overflow-hidden"
       >
         {/* Lado esquerdo: Ícone de insatisfação (Nível Mínimo 1) */}
         <div
@@ -98,13 +98,13 @@ export function ElasticityScalePicker({
           className="flex items-center justify-center shrink-0 cursor-default"
         >
           <Frown
-            className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-red-500 shrink-0 transition-transform hover:scale-110"
+            className="w-4 h-4 text-red-500 shrink-0 transition-transform hover:scale-110"
             aria-hidden="true"
           />
         </div>
 
         {/* Centro: Régua horizontal de 5 botões (1 a 5) */}
-        <div className="flex-1 flex items-center justify-between gap-1 sm:gap-1.5">
+        <div className="flex-1 flex items-center justify-between gap-1 mx-1 min-w-0">
           {levels.map((lvl) => {
             const isSelected = normalizedValue === lvl;
             return (
@@ -115,7 +115,7 @@ export function ElasticityScalePicker({
                 onClick={() => onChange(lvl)}
                 aria-pressed={isSelected}
                 aria-label={`Elasticidade nível ${lvl} de 5`}
-                className={`flex-1 h-7 sm:h-7.5 min-w-[24px] sm:min-w-[28px] rounded-md text-xs sm:text-xs flex items-center justify-center border transition-all cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed ${getButtonStyles(
+                className={`flex-1 h-7 min-w-[20px] max-w-[32px] rounded-md text-xs flex items-center justify-center border transition-all cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed ${getButtonStyles(
                   lvl,
                   isSelected
                 )}`}
@@ -132,7 +132,7 @@ export function ElasticityScalePicker({
           className="flex items-center justify-center shrink-0 cursor-default"
         >
           <Smile
-            className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-emerald-500 shrink-0 transition-transform hover:scale-110"
+            className="w-4 h-4 text-emerald-500 shrink-0 transition-transform hover:scale-110"
             aria-hidden="true"
           />
         </div>
