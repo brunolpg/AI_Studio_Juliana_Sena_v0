@@ -10,9 +10,12 @@ import {
   Pill,
   ShieldCheck,
   FileText,
+  Plus,
 } from "lucide-react";
 import type { PopProtocoloCompleto, PopFormData, PopStatus } from "@/types/pop";
-import { getPrescricoesDisponiveis, salvarPop } from "@/app/actions/pops";
+import { getFormulasCatalogoAction, salvarPop } from "@/app/actions/pops";
+import { getComponentesEUnidadesAction } from "@/actions/formula-actions";
+import { FormulaModal } from "@/components/formulas/formula-modal";
 import { useToast } from "@/components/ui/toast";
 
 interface PopFormModalProps {
@@ -41,10 +44,11 @@ export function PopFormModal({
     Array<{
       id?: string;
       tempId: string;
-      tipo: "TOPICO" | "PRESCRICAO";
+      tipo: "TOPICO" | "FORMULA" | "PRESCRICAO";
       ordem: number;
       topico_titulo?: string;
       topico_descricao?: string;
+      formula_id?: string;
       prescricao_id?: string;
       subtopicos?: Array<{
         id?: string;
@@ -56,10 +60,16 @@ export function PopFormModal({
     }>
   >([]);
 
-  // Prescrições cadastradas disponíveis no sistema
-  const [prescricoesDisponiveis, setPrescricoesDisponiveis] = useState<any[]>([]);
-  const [isLoadingPrescricoes, setIsLoadingPrescricoes] = useState(false);
+  // Fórmulas cadastradas disponíveis no catálogo
+  const [formulasDisponiveis, setFormulasDisponiveis] = useState<any[]>([]);
+  const [isLoadingFormulas, setIsLoadingFormulas] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Modal para cadastro rápido de Nova Fórmula
+  const [isNovaFormulaModalOpen, setIsNovaFormulaModalOpen] = useState(false);
+  const [componentesList, setComponentesList] = useState<any[]>([]);
+  const [unidadesList, setUnidadesList] = useState<any[]>([]);
+  const [activeBlocoIndexForNewFormula, setActiveBlocoIndexForNewFormula] = useState<number | null>(null);
 
   // Inicializa dados para criação ou edição
   useEffect(() => {
@@ -76,10 +86,11 @@ export function PopFormModal({
         .map((b, idx) => ({
           id: b.id,
           tempId: `bloco-${idx}-${Date.now()}`,
-          tipo: b.tipo,
+          tipo: (b.tipo as "TOPICO" | "FORMULA" | "PRESCRICAO") || (b.formula_id ? "FORMULA" : "TOPICO"),
           ordem: idx + 1,
           topico_titulo: b.topico_titulo || "",
           topico_descricao: b.topico_descricao || "",
+          formula_id: b.formula_id || b.prescricao_id || "",
           prescricao_id: b.prescricao_id || "",
           subtopicos: (b.subtopicos || [])
             .sort((s1, s2) => s1.ordem - s2.ordem)
@@ -121,14 +132,24 @@ export function PopFormModal({
       ]);
     }
 
-    // Carrega prescrições disponíveis globalmente
-    setIsLoadingPrescricoes(true);
-    getPrescricoesDisponiveis()
-      .then((rxList) => {
-        setPrescricoesDisponiveis(rxList || []);
+    // Carrega fórmulas do catálogo institucional e dados para o modal de nova fórmula
+    setIsLoadingFormulas(true);
+    Promise.all([
+      getFormulasCatalogoAction(),
+      getComponentesEUnidadesAction(),
+    ])
+      .then(([formulas, compUni]) => {
+        setFormulasDisponiveis(formulas || []);
+        if (compUni?.success) {
+          setComponentesList(compUni.componentes || []);
+          setUnidadesList(compUni.unidades || []);
+        }
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar catálogo de fórmulas:", err);
       })
       .finally(() => {
-        setIsLoadingPrescricoes(false);
+        setIsLoadingFormulas(false);
       });
   }, [isOpen, popToEdit]);
 
@@ -150,18 +171,18 @@ export function PopFormModal({
     ]);
   };
 
-  const handleAddPrescricao = () => {
+  const handleAddFormula = () => {
     const nextOrdem = blocos.length + 1;
-    const primeiraPrescricaoId =
-      prescricoesDisponiveis.length > 0 ? prescricoesDisponiveis[0].id : "";
+    const primeiraFormulaId =
+      formulasDisponiveis.length > 0 ? formulasDisponiveis[0].id : "";
 
     setBlocos((prev) => [
       ...prev,
       {
         tempId: `bloco-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        tipo: "PRESCRICAO",
+        tipo: "FORMULA",
         ordem: nextOrdem,
-        prescricao_id: primeiraPrescricaoId,
+        formula_id: primeiraFormulaId,
       },
     ]);
   };
@@ -207,10 +228,10 @@ export function PopFormModal({
     });
   };
 
-  const handleUpdatePrescricao = (index: number, prescricaoId: string) => {
+  const handleUpdateFormula = (index: number, formulaId: string) => {
     setBlocos((prev) => {
       const copy = [...prev];
-      copy[index] = { ...copy[index], prescricao_id: prescricaoId };
+      copy[index] = { ...copy[index], formula_id: formulaId, prescricao_id: formulaId };
       return copy;
     });
   };
@@ -321,7 +342,7 @@ export function PopFormModal({
       toast({
         type: "error",
         title: "Estrutura Vazia",
-        description: "Adicione ao menos um Tópico ou Prescrição ao procedimento.",
+        description: "Adicione ao menos um Tópico ou Fórmula ao procedimento.",
       });
       return;
     }
@@ -337,11 +358,19 @@ export function PopFormModal({
         });
         return;
       }
-      if (b.tipo === "PRESCRICAO" && !b.prescricao_id) {
+      if (b.tipo === "FORMULA" && !b.formula_id) {
+        toast({
+          type: "error",
+          title: "Fórmula Não Selecionada",
+          description: `Selecione uma fórmula magistral cadastrada para o Bloco #${i + 1}.`,
+        });
+        return;
+      }
+      if (b.tipo === "PRESCRICAO" && !b.prescricao_id && !b.formula_id) {
         toast({
           type: "error",
           title: "Prescrição Não Selecionada",
-          description: `Selecione uma receita cadastrada para o Bloco #${i + 1}.`,
+          description: `Selecione uma receita ou fórmula para o Bloco #${i + 1}.`,
         });
         return;
       }
@@ -362,7 +391,8 @@ export function PopFormModal({
           ordem: b.ordem,
           topico_titulo: b.topico_titulo?.trim(),
           topico_descricao: b.topico_descricao?.trim(),
-          prescricao_id: b.prescricao_id,
+          formula_id: b.formula_id,
+          prescricao_id: b.prescricao_id || b.formula_id,
           subtopicos: (b.subtopicos || []).map((s) => ({
             id: s.id,
             ordem: s.ordem,
@@ -401,40 +431,41 @@ export function PopFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto font-['Plus_Jakarta_Sans',sans-serif]">
-      <div className="relative w-full max-w-4xl max-h-[92vh] bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* Topo do Modal */}
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/50 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#004d40] text-white flex items-center justify-center shrink-0 shadow-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
+      <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {/* Cabeçalho do Modal */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400 flex items-center justify-center">
               <ClipboardList className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 {popToEdit
-                  ? "Editar Procedimento Operacional Padrão (POP)"
-                  : "Novo Procedimento Operacional Padrão (POP)"}
-              </h3>
+                  ? "Editar Procedimento Operacional Padrão"
+                  : "Novo Procedimento Operacional Padrão"}
+              </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Padronização clínica institucional • Dra. Juliana Sena
+                Padronização institucional de condutas clínicas, parâmetros e fórmulas
               </p>
             </div>
           </div>
+
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Corpo do Formulário com Scroll Suave */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
-          {/* Seção 1: Dados Gerais do POP */}
-          <div className="space-y-4 bg-slate-50 dark:bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#004d40] dark:text-emerald-400 uppercase tracking-wider">
+        {/* Corpo do Formulário */}
+        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-6 flex-1">
+          {/* Seção 1: Identificação do Procedimento */}
+          <div className="space-y-3.5 p-4 sm:p-5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-slate-800/60">
+              <span className="text-xs font-bold text-teal-800 dark:text-teal-400 uppercase tracking-wider">
                 1. Identificação do Procedimento
               </span>
               <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
@@ -442,20 +473,39 @@ export function PopFormModal({
               </span>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Protocolo / Nome do Procedimento *
-              </label>
-              <input
-                type="text"
-                required
-                value={protocolo}
-                onChange={(e) => setProtocolo(e.target.value)}
-                placeholder="Ex.: POP 04 - Microagulhamento com Drug Delivery & Regeneração Cutânea"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#004d40]"
-              />
+            {/* Linha 1: Protocolo (esquerda, maior) e Status (direita, largura compacta/proporcional) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 landscape:grid-cols-3 gap-3.5">
+              <div className="sm:col-span-2 landscape:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Protocolo / Nome do Procedimento *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={protocolo}
+                  onChange={(e) => setProtocolo(e.target.value)}
+                  placeholder="Ex.: POP 04 - Microagulhamento com Drug Delivery & Regeneração Cutânea"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#004d40]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Status do Procedimento
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as PopStatus)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#004d40] cursor-pointer"
+                >
+                  <option value="Ativo">Ativo</option>
+                  <option value="Em Revisão">Em Revisão</option>
+                  <option value="Cancelado">Cancelado</option>
+                </select>
+              </div>
             </div>
 
+            {/* Linha 2: Finalidade Clínica (largura total) */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Finalidade Clínica do Procedimento *
@@ -469,21 +519,6 @@ export function PopFormModal({
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#004d40] resize-y"
               />
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Status do Procedimento
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as PopStatus)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#004d40] cursor-pointer"
-              >
-                <option value="Ativo">Ativo</option>
-                <option value="Em Revisão">Em Revisão</option>
-                <option value="Cancelado">Cancelado</option>
-              </select>
-            </div>
           </div>
 
           {/* Seção 2: Gerenciador de Blocos com Ordem Intercalada */}
@@ -494,12 +529,11 @@ export function PopFormModal({
                   2. Gerenciador de Blocos (Ordem Intercalada)
                 </span>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Organize tópicos operacionais e prescrições terapêuticas na sequência exata de
-                  execução.
+                  Organize tópicos operacionais e fórmulas magistrais na sequência exata de execução.
                 </p>
               </div>
 
-              {/* Botões para Adicionar Tópico ou Prescrição */}
+              {/* Botões para Adicionar Tópico ou Fórmula */}
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
@@ -512,16 +546,16 @@ export function PopFormModal({
 
                 <button
                   type="button"
-                  onClick={handleAddPrescricao}
-                  className="bg-[#004d40] text-white hover:bg-[#003830] rounded-xl px-4 py-2 font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  onClick={handleAddFormula}
+                  className="bg-[#004d40] text-white hover:bg-[#0b5c54] rounded-xl px-3 py-1.5 font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                 >
                   <Pill className="w-3.5 h-3.5" />
-                  <span>Vincular Prescrição</span>
+                  <span>Vincular Fórmula</span>
                 </button>
               </div>
             </div>
 
-            {/* Lista Intercalada de Blocos */}
+            {/* Lista dos Blocos Intercalados */}
             <div className="space-y-4">
               {blocos.map((bloco, bIdx) => {
                 const isPrimeiro = bIdx === 0;
@@ -531,15 +565,15 @@ export function PopFormModal({
                   return (
                     <div
                       key={bloco.tempId}
-                      className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5 relative transition-all"
+                      className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 relative transition-all"
                     >
-                      {/* Cabeçalho do Bloco Tópico com Controles de Posição */}
+                      {/* Cabeçalho do Bloco Tópico */}
                       <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
                         <div className="flex items-center gap-2">
                           <span className="w-6 h-6 rounded-lg bg-[#004d40] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
                             #{bIdx + 1}
                           </span>
-                          <span className="text-xs font-bold text-[#004d40] dark:text-emerald-400 uppercase tracking-wide">
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
                             Bloco Tópico Operacional
                           </span>
                         </div>
@@ -567,7 +601,7 @@ export function PopFormModal({
                           <button
                             type="button"
                             onClick={() => handleRemoveBloco(bIdx)}
-                            title="Excluir tópico"
+                            title="Excluir bloco"
                             className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -588,14 +622,14 @@ export function PopFormModal({
                             onChange={(e) =>
                               handleUpdateTopico(bIdx, "topico_titulo", e.target.value)
                             }
-                            placeholder="Ex.: Aplicação do Ativo Regenerativo ou Técnica de Infusão"
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#004d40]"
+                            placeholder="Ex.: 2. Preparação da Pele & Desinfecção"
+                            className="w-full px-3.5 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#004d40]"
                           />
                         </div>
 
                         <div>
                           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Descrição / Diretrizes Operacionais (opcional)
+                            Descrição / Procedimento Geral
                           </label>
                           <textarea
                             rows={2}
@@ -619,6 +653,7 @@ export function PopFormModal({
                               onClick={() => handleAddSubtopico(bIdx)}
                               className="bg-[#004d40] text-white hover:bg-[#003830] rounded-xl px-3 py-1.5 font-semibold text-[11px] flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                             >
+                              <Plus className="w-3.5 h-3.5" />
                               <span>Adicionar Subtópico</span>
                             </button>
                           </div>
@@ -630,7 +665,7 @@ export function PopFormModal({
                             return (
                               <div
                                 key={sub.tempId}
-                                className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 space-y-2"
+                                className="bg-slate-50 dark:bg-slate-800/50 p-3 sm:p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/80 space-y-2.5"
                               >
                                 <div className="flex items-center justify-between gap-2">
                                   <span className="text-[10px] font-bold text-[#004d40] dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200/60">
@@ -663,25 +698,39 @@ export function PopFormModal({
                                   </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  <input
-                                    type="text"
-                                    value={sub.titulo}
-                                    onChange={(e) =>
-                                      handleUpdateSubtopico(bIdx, sIdx, "titulo", e.target.value)
-                                    }
-                                    placeholder="Título do subtópico (ex.: Ângulo de inserção)"
-                                    className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#004d40]"
-                                  />
-                                  <input
-                                    type="text"
-                                    value={sub.descricao}
-                                    onChange={(e) =>
-                                      handleUpdateSubtopico(bIdx, sIdx, "descricao", e.target.value)
-                                    }
-                                    placeholder="Instrução do subtópico (ex.: Inserir agulha a 45 graus)"
-                                    className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#004d40]"
-                                  />
+                                {/* Container dos campos do Subtópico */}
+                                <div className="space-y-2">
+                                  <div>
+                                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                                      Título do Subtópico *
+                                    </label>
+                                    <input
+                                      type="text"
+                                      required
+                                      value={sub.titulo}
+                                      onChange={(e) =>
+                                        handleUpdateSubtopico(bIdx, sIdx, "titulo", e.target.value)
+                                      }
+                                      placeholder="Ex.: Incompatibilidade Absoluta:"
+                                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#004d40]"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                                      Descrição Detalhada / Conduta Clínica *
+                                    </label>
+                                    <textarea
+                                      required
+                                      rows={3}
+                                      value={sub.descricao}
+                                      onChange={(e) =>
+                                        handleUpdateSubtopico(bIdx, sIdx, "descricao", e.target.value)
+                                      }
+                                      placeholder="Descreva detalhadamente as diretrizes, contraindicações, alertas ou técnica operacional..."
+                                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#004d40] resize-y"
+                                    />
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -692,15 +741,16 @@ export function PopFormModal({
                   );
                 }
 
-                // Bloco do Tipo PRESCRIÇÃO
-                const selectedRx = prescricoesDisponiveis.find((p) => p.id === bloco.prescricao_id);
+                // Bloco do Tipo FÓRMULA (ou PRESCRIÇÃO legada)
+                const formulaIdAtual = bloco.formula_id || bloco.prescricao_id || "";
+                const selectedFormula = formulasDisponiveis.find((f) => f.id === formulaIdAtual);
 
                 return (
                   <div
                     key={bloco.tempId}
                     className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 shadow-sm space-y-3.5 relative transition-all"
                   >
-                    {/* Cabeçalho do Bloco Prescrição */}
+                    {/* Cabeçalho do Bloco Fórmula */}
                     <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700 pb-2.5">
                       <div className="flex items-center gap-2">
                         <span className="w-6 h-6 rounded-lg bg-[#004d40] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
@@ -709,7 +759,7 @@ export function PopFormModal({
                         <div className="flex items-center gap-1.5">
                           <Pill className="w-4 h-4 text-[#004d40] dark:text-emerald-400" />
                           <span className="text-xs font-bold text-[#004d40] dark:text-emerald-400 uppercase tracking-wide">
-                            Bloco Prescrição Vinculada
+                            Bloco Fórmula Vinculada
                           </span>
                         </div>
                       </div>
@@ -737,7 +787,7 @@ export function PopFormModal({
                         <button
                           type="button"
                           onClick={() => handleRemoveBloco(bIdx)}
-                          title="Desvincular prescrição"
+                          title="Desvincular fórmula"
                           className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -745,63 +795,90 @@ export function PopFormModal({
                       </div>
                     </div>
 
-                    {/* Seleção da Prescrição */}
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Selecione a Prescrição Cadastrada *
-                      </label>
+                    {/* Seleção da Fórmula e Botão de Cadastro Rápido */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          Selecione a Fórmula Cadastrada *
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveBlocoIndexForNewFormula(bIdx);
+                            setIsNovaFormulaModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#004d40] dark:text-emerald-400 hover:underline cursor-pointer"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Cadastrar Nova Fórmula</span>
+                        </button>
+                      </div>
 
-                      {isLoadingPrescricoes ? (
+                      {isLoadingFormulas ? (
                         <div className="text-xs text-slate-500 py-2">
-                          Carregando receitas cadastradas...
+                          Carregando fórmulas magistrais...
                         </div>
-                      ) : prescricoesDisponiveis.length === 0 ? (
-                        <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
-                          Nenhuma prescrição encontrada no sistema. Cadastre receitas no módulo de fórmulas/prescrições ou utilize tópicos operacionais.
+                      ) : formulasDisponiveis.length === 0 ? (
+                        <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-2">
+                          <span>Nenhuma fórmula encontrada no catálogo.</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveBlocoIndexForNewFormula(bIdx);
+                              setIsNovaFormulaModalOpen(true);
+                            }}
+                            className="font-bold underline text-amber-900 dark:text-amber-200"
+                          >
+                            Cadastrar agora
+                          </button>
                         </div>
                       ) : (
                         <select
                           required
-                          value={bloco.prescricao_id || ""}
-                          onChange={(e) => handleUpdatePrescricao(bIdx, e.target.value)}
-                          className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#004d40] cursor-pointer"
+                          value={formulaIdAtual}
+                          onChange={(e) => handleUpdateFormula(bIdx, e.target.value)}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#004d40] cursor-pointer"
                         >
-                          <option value="">-- Selecione uma Prescrição --</option>
-                          {prescricoesDisponiveis.map((rx) => {
-                            const itensNomes = (rx.prescricao_itens || [])
-                              .map((it: any) => it.nome_formula)
-                              .join(", ");
-                            return (
-                              <option key={rx.id} value={rx.id}>
-                                Receita de {rx.data_prescricao} • {itensNomes || "Sem fórmulas"}
-                              </option>
-                            );
-                          })}
+                          <option value="">-- Selecione uma Fórmula Magistral --</option>
+                          {formulasDisponiveis.map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.nome} {f.via ? `(${f.via})` : ""} {f.dosagem ? `• Dose: ${f.dosagem}` : ""}
+                            </option>
+                          ))}
                         </select>
                       )}
 
-                      {/* Exibição dos Itens da Receita Selecionada */}
-                      {selectedRx && selectedRx.prescricao_itens?.length > 0 && (
+                      {/* Exibição dos Detalhes da Fórmula Selecionada */}
+                      {selectedFormula && (
                         <div className="mt-2.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#004d40] dark:text-emerald-400 block">
-                            Itens e Fórmulas Inclusos:
-                          </span>
-                          <div className="space-y-1">
-                            {selectedRx.prescricao_itens.map((it: any, itIdx: number) => (
-                              <div
-                                key={it.id || itIdx}
-                                className="flex items-baseline gap-1.5 text-slate-700 dark:text-slate-300 text-[11px]"
-                              >
-                                <span className="font-bold text-[#004d40] dark:text-emerald-400">
-                                  {itIdx + 1}.
-                                </span>
-                                <strong className="text-slate-900 dark:text-slate-100">
-                                  {it.nome_formula}
-                                </strong>
-                                {it.via && <span>(Via {it.via})</span>}
-                                {it.posologia && <span>— {it.posologia}</span>}
-                              </div>
-                            ))}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#004d40] dark:text-emerald-400 block">
+                              Parâmetros da Fórmula:
+                            </span>
+                            {selectedFormula.via && (
+                              <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                Via {selectedFormula.via}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="text-[11px] text-slate-700 dark:text-slate-300 space-y-1">
+                            {selectedFormula.dosagem && (
+                              <p>
+                                <strong>Dosagem:</strong> {selectedFormula.dosagem}
+                                {selectedFormula.veiculo ? ` em ${selectedFormula.veiculo}` : ""}
+                              </p>
+                            )}
+                            {selectedFormula.posologia && (
+                              <p>
+                                <strong>Posologia:</strong> {selectedFormula.posologia}
+                              </p>
+                            )}
+                            {selectedFormula.descricao && (
+                              <p className="text-slate-500 italic">
+                                {selectedFormula.descricao}
+                              </p>
+                            )}
                           </div>
                         </div>
                       )}
@@ -820,12 +897,12 @@ export function PopFormModal({
             <span>Assinatura Digital SHA-256 gerada automaticamente ao salvar.</span>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <button
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="flex-1 sm:flex-none px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
             >
               Cancelar
             </button>
@@ -833,23 +910,48 @@ export function PopFormModal({
               type="button"
               onClick={handleSubmit}
               disabled={isSaving}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#004d40] hover:bg-[#003830] disabled:opacity-50 rounded-xl transition-all shadow-sm cursor-pointer"
+              className="bg-[#004d40] hover:bg-[#003830] text-white px-5 py-2 text-xs font-semibold rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
             >
-              {isSaving ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Assinando e Gravando...</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Salvar e Assinar POP (SHA-256)</span>
-                </>
-              )}
+              {isSaving ? "Salvando..." : popToEdit ? "Atualizar POP" : "Salvar POP"}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Modal para Cadastro de Nova Fórmula */}
+      {isNovaFormulaModalOpen && (
+        <FormulaModal
+          isOpen={isNovaFormulaModalOpen}
+          onClose={() => {
+            setIsNovaFormulaModalOpen(false);
+            setActiveBlocoIndexForNewFormula(null);
+          }}
+          initialComponentes={componentesList}
+          initialUnidades={unidadesList}
+          onSuccess={async () => {
+            setIsNovaFormulaModalOpen(false);
+            try {
+              const updatedFormulas = await getFormulasCatalogoAction();
+              setFormulasDisponiveis(updatedFormulas || []);
+              if (
+                activeBlocoIndexForNewFormula !== null &&
+                updatedFormulas &&
+                updatedFormulas.length > 0
+              ) {
+                // Seleciona a última fórmula criada no bloco que disparou a ação
+                const latest = updatedFormulas[updatedFormulas.length - 1];
+                if (latest) {
+                  handleUpdateFormula(activeBlocoIndexForNewFormula, latest.id);
+                }
+              }
+            } catch (err) {
+              console.error("Erro ao atualizar lista de fórmulas:", err);
+            } finally {
+              setActiveBlocoIndexForNewFormula(null);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

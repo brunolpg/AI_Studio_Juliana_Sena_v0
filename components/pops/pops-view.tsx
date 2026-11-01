@@ -361,25 +361,30 @@ export function PopsView() {
             ))}
           </div>
         ) : filteredPops.length === 0 ? (
-          <div className="p-10 sm:p-14 text-center bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center mx-auto text-[#004d40] dark:text-emerald-400">
-              <ClipboardList className="w-7 h-7" />
+          <div className="py-12 text-center max-w-md mx-auto">
+            {/* Container do Ícone idêntico a Prontuários */}
+            <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center mx-auto mb-3">
+              <ClipboardList className="w-6 h-6" />
             </div>
-            <div className="max-w-md mx-auto">
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                {searchTerm ? "Nenhum procedimento encontrado" : "Nenhum POP Cadastrado"}
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                {searchTerm
-                  ? "Tente ajustar os termos da busca para encontrar o protocolo desejado."
-                  : "A clínica ainda não possui procedimentos operacionais padronizados cadastrados. Comece cadastrando o primeiro POP institucional."}
-              </p>
-            </div>
+
+            {/* Título com a tipografia exata de Prontuários */}
+            <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+              {searchTerm ? "Nenhum POP encontrado" : "Nenhum POP cadastrado"}
+            </h4>
+
+            {/* Subtexto com espaçamento e cor padronizados */}
+            <p className="text-xs text-slate-500 mt-1">
+              {searchTerm
+                ? `Nenhum resultado para "${searchTerm}". Tente outro termo.`
+                : "Comece cadastrando o primeiro procedimento operacional padrão institucional."}
+            </p>
+
+            {/* Botão de Ação */}
             {!searchTerm && (
               <button
                 type="button"
                 onClick={handleOpenNew}
-                className="mt-4 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-medium text-white dark:text-slate-950 bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-500 dark:hover:bg-teal-400 rounded-full shadow-xs hover:shadow-md transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] md-state-layer"
+                className="mt-4 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full shadow-xs hover:shadow transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] md-state-layer"
               >
                 <Plus className="w-4 h-4 shrink-0" />
                 <span>Criar Primeiro POP</span>
@@ -391,7 +396,9 @@ export function PopsView() {
             {filteredPops.map((pop) => {
               const blocos = pop.blocos || [];
               const topicosCount = blocos.filter((b) => b.tipo === "TOPICO").length;
-              const prescricoesCount = blocos.filter((b) => b.tipo === "PRESCRICAO").length;
+              const prescricoesCount = blocos.filter(
+                (b) => b.tipo === "PRESCRICAO" || b.tipo === "FORMULA"
+              ).length;
               const subtopicosCount = blocos.reduce(
                 (acc, b) => acc + (b.subtopicos?.length || 0),
                 0
@@ -505,7 +512,7 @@ export function PopsView() {
                         </strong>
                       </div>
                       <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between">
-                        <span className="text-slate-500 font-medium">Prescrições:</span>
+                        <span className="text-slate-500 font-medium">Fórmulas:</span>
                         <strong className="text-[#004d40] dark:text-emerald-400 font-bold">
                           {prescricoesCount}
                         </strong>

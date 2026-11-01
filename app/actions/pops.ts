@@ -89,7 +89,7 @@ export async function getPopsAction(): Promise<PopProtocoloCompleto[]> {
     // 2. Busca blocos agrupados com seleção enxuta
     const { data: blocosDb, error: blocosError } = await adminDb
       .from("pops_blocos")
-      .select("id, pop_id, tipo, ordem, topico_titulo, topico_descricao, prescricao_id")
+      .select("id, pop_id, tipo, ordem, topico_titulo, topico_descricao, formula_id, prescricao_id")
       .in("pop_id", popIds)
       .order("ordem", { ascending: true });
 
@@ -133,6 +133,7 @@ export async function getPopsAction(): Promise<PopProtocoloCompleto[]> {
         ordem: b.ordem,
         topico_titulo: b.topico_titulo,
         topico_descricao: b.topico_descricao,
+        formula_id: b.formula_id,
         prescricao_id: b.prescricao_id,
         subtopicos: subsDoBloco,
       };
@@ -183,9 +184,12 @@ export async function getPopCompletoAction(popId: string): Promise<PopProtocoloC
     const prescricaoIds = Array.from(
       new Set((blocosDb || []).map((b: any) => b.prescricao_id).filter(Boolean))
     );
+    const formulaIds = Array.from(
+      new Set((blocosDb || []).map((b: any) => b.formula_id).filter(Boolean))
+    );
 
-    // Paraleliza a busca de subtópicos e de prescrições detalhadas
-    const [subsRes, rxRes] = await Promise.all([
+    // Paraleliza a busca de subtópicos, fórmulas e prescrições detalhadas
+    const [subsRes, rxRes, formulasRes] = await Promise.all([
       blocoIds.length > 0
         ? adminDb
             .from("pops_subtopicos")
@@ -216,14 +220,26 @@ export async function getPopCompletoAction(popId: string): Promise<PopProtocoloC
             `)
             .in("id", prescricaoIds)
         : Promise.resolve({ data: [] }),
+      formulaIds.length > 0
+        ? adminDb
+            .from("formulas")
+            .select("id, nome, via, veiculo, dosagem, posologia, descricao, orient_paciente, orient_farmacia")
+            .in("id", formulaIds)
+        : Promise.resolve({ data: [] }),
     ]);
 
     const subtopicosDb = subsRes.data || [];
     const prescricoesDb = rxRes.data || [];
+    const formulasDb = formulasRes.data || [];
 
     const prescricoesMap = new Map<string, any>();
     for (const rx of prescricoesDb) {
       prescricoesMap.set(rx.id, rx);
+    }
+
+    const formulasMap = new Map<string, any>();
+    for (const f of formulasDb) {
+      formulasMap.set(f.id, f);
     }
 
     const blocos: PopBloco[] = (blocosDb || [])
@@ -234,6 +250,7 @@ export async function getPopCompletoAction(popId: string): Promise<PopProtocoloC
           .sort((a: any, b: any) => a.ordem - b.ordem);
 
         const prescricao = b.prescricao_id ? prescricoesMap.get(b.prescricao_id) || null : null;
+        const formula = b.formula_id ? formulasMap.get(b.formula_id) || null : null;
 
         return {
           id: b.id,
@@ -242,7 +259,9 @@ export async function getPopCompletoAction(popId: string): Promise<PopProtocoloC
           ordem: b.ordem,
           topico_titulo: b.topico_titulo,
           topico_descricao: b.topico_descricao,
-          prescricao_id: b.prescricao_id,
+          formula_id: b.formula_id || null,
+          formula,
+          prescricao_id: b.prescricao_id || null,
           prescricao,
           subtopicos: subsDoBloco,
           created_at: b.created_at,
@@ -256,6 +275,30 @@ export async function getPopCompletoAction(popId: string): Promise<PopProtocoloC
   } catch (err: any) {
     console.error("Erro em getPopCompletoAction:", err);
     return null;
+  }
+}
+
+/**
+ * Busca o catálogo institucional de fórmulas magistrais cadastradas no sistema.
+ */
+export async function getFormulasCatalogoAction() {
+  try {
+    const { adminDb } = await checkAuthAndRole();
+
+    const { data, error } = await adminDb
+      .from("formulas")
+      .select("id, nome, via, dosagem, posologia, veiculo, descricao")
+      .order("nome", { ascending: true });
+
+    if (error) {
+      console.warn("Aviso ao carregar fórmulas do catálogo:", error.message);
+      return [];
+    }
+
+    return data || [];
+  } catch (err: any) {
+    console.error("Erro em getFormulasCatalogoAction:", err);
+    return [];
   }
 }
 
@@ -331,9 +374,13 @@ export async function salvarPop(dados: PopFormData): Promise<{
         if (!b.topico_titulo || !b.topico_titulo.trim()) {
           return { error: `O Título do Tópico #${i + 1} é obrigatório.` };
         }
+      } else if (b.tipo === "FORMULA") {
+        if (!b.formula_id) {
+          return { error: `Selecione uma Fórmula para o Bloco #${i + 1}.` };
+        }
       } else if (b.tipo === "PRESCRICAO") {
-        if (!b.prescricao_id) {
-          return { error: `Selecione uma Prescrição para o Bloco #${i + 1}.` };
+        if (!b.prescricao_id && !b.formula_id) {
+          return { error: `Selecione uma Prescrição ou Fórmula para o Bloco #${i + 1}.` };
         }
       }
     }
@@ -353,6 +400,7 @@ export async function salvarPop(dados: PopFormData): Promise<{
         tipo: b.tipo,
         topico_titulo: b.tipo === "TOPICO" ? (b.topico_titulo || "").trim() : null,
         topico_descricao: b.tipo === "TOPICO" ? (b.topico_descricao || "").trim() : null,
+        formula_id: b.tipo === "FORMULA" ? b.formula_id || null : null,
         prescricao_id: b.tipo === "PRESCRICAO" ? b.prescricao_id || null : null,
         subtopicos: (b.subtopicos || [])
           .sort((s1, s2) => s1.ordem - s2.ordem)
@@ -377,6 +425,7 @@ export async function salvarPop(dados: PopFormData): Promise<{
         tipo: b.tipo,
         topico_titulo: b.topico_titulo,
         topico_descricao: b.topico_descricao,
+        formula_id: b.formula_id,
         prescricao_id: b.prescricao_id,
         subtopicos: b.subtopicos.map((s) => ({
           ordem: s.ordem,
@@ -452,6 +501,7 @@ export async function salvarPop(dados: PopFormData): Promise<{
           ordem: b.ordem,
           topico_titulo: b.topico_titulo,
           topico_descricao: b.topico_descricao,
+          formula_id: b.formula_id,
           prescricao_id: b.prescricao_id,
           created_at: new Date().toISOString(),
         })

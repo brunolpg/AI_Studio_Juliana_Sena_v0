@@ -141,7 +141,9 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
 
   const blocosOrdenados = [...(pop.blocos || [])].sort((a, b) => a.ordem - b.ordem);
   const totalTopicos = blocosOrdenados.filter((b) => b.tipo === "TOPICO").length;
-  const totalPrescricoes = blocosOrdenados.filter((b) => b.tipo === "PRESCRICAO").length;
+  const totalFormulas = blocosOrdenados.filter(
+    (b) => b.tipo === "FORMULA" || b.tipo === "PRESCRICAO"
+  ).length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
@@ -227,8 +229,8 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
                   <strong className="text-sm text-slate-800 dark:text-slate-200">{totalTopicos}</strong>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl text-center">
-                  <span className="text-[10px] text-slate-400 block">Prescrições</span>
-                  <strong className="text-sm text-[#004d40] dark:text-emerald-400">{totalPrescricoes}</strong>
+                  <span className="text-[10px] text-slate-400 block">Fórmulas</span>
+                  <strong className="text-sm text-[#004d40] dark:text-emerald-400">{totalFormulas}</strong>
                 </div>
               </div>
               {pop.payload_hash && (
@@ -471,6 +473,80 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
                               ))}
                           </div>
                         )}
+                      </div>
+                    );
+                  }
+
+                  // Bloco do Tipo FÓRMULA
+                  if (bloco.tipo === "FORMULA") {
+                    const formula = bloco.formula;
+
+                    return (
+                      <div
+                        key={bloco.id || idx}
+                        className="border border-emerald-200/80 rounded-xl p-3.5 bg-emerald-50/30 print-avoid-break space-y-2.5"
+                      >
+                        {/* Cabeçalho da Fórmula */}
+                        <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-md bg-[#004d40] text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                              {numBloco}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <Pill className="w-3.5 h-3.5 text-[#004d40]" />
+                              <h3 className="text-xs font-bold text-[#004d40]">
+                                Fórmula Magistral Vinculada ao Protocolo
+                              </h3>
+                            </div>
+                          </div>
+                          {formula?.via && (
+                            <span className="text-[10px] font-semibold text-emerald-800 bg-white/80 px-2 py-0.5 rounded border border-emerald-200 uppercase">
+                              Via {formula.via}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Detalhes da Fórmula */}
+                        <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1.5 text-xs">
+                          <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                            <span className="font-bold text-slate-900 text-xs">
+                              {formula?.nome || "Fórmula Magistral"}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-600">
+                            {formula?.dosagem && (
+                              <div>
+                                <strong className="text-slate-700">Dosagem:</strong> {formula.dosagem}
+                                {formula?.veiculo ? ` em ${formula.veiculo}` : ""}
+                              </div>
+                            )}
+                            {formula?.posologia && (
+                              <div>
+                                <strong className="text-slate-700">Posologia:</strong> {formula.posologia}
+                              </div>
+                            )}
+                          </div>
+
+                          {formula?.orient_paciente && (
+                            <div className="text-[11px] text-slate-700 pt-1 border-t border-slate-100 mt-1">
+                              <strong className="text-[#004d40]">Orientações ao Paciente:</strong>{" "}
+                              {formula.orient_paciente}
+                            </div>
+                          )}
+
+                          {formula?.orient_farmacia && (
+                            <div className="text-[10px] text-slate-500 italic">
+                              <strong>Nota à Farmácia:</strong> {formula.orient_farmacia}
+                            </div>
+                          )}
+
+                          {formula?.descricao && (
+                            <div className="text-[10px] text-slate-500 italic pt-1 border-t border-slate-100">
+                              <strong>Diretrizes Clínicas:</strong> {formula.descricao}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   }
