@@ -348,36 +348,39 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
 
               {/* 2. Dados Institucionais do Protocolo */}
               <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 mb-5 print-avoid-break">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                {/* Linha Superior Exclusiva para o Título do Protocolo */}
+                <div className="pb-2.5 mb-2.5 border-b border-slate-200/70">
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">
+                    Protocolo / Código
+                  </span>
+                  <span className="text-sm font-bold text-slate-900 block leading-tight">
+                    {pop.protocolo}
+                  </span>
+                </div>
+
+                {/* Linha Inferior com os Metadados Complementares */}
+                <div className="grid grid-cols-3 gap-3 text-xs">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">
-                      Protocolo / Código
-                    </span>
-                    <span className="font-bold text-slate-900 block truncate">
-                      {pop.protocolo}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                    <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">
                       Status
                     </span>
-                    <span className="font-semibold text-slate-700 block">
+                    <span className="font-semibold text-slate-700 block mt-0.5">
                       {pop.status || "Ativo"}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                    <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">
                       Data do POP
                     </span>
-                    <span className="font-bold text-[#004d40] block">
+                    <span className="font-bold text-[#004d40] block mt-0.5">
                       {formatDateBR(pop.data_pop)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                    <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">
                       Profissional
                     </span>
-                    <span className="font-semibold text-slate-800 block truncate">
+                    <span className="font-semibold text-slate-800 block truncate mt-0.5">
                       {pop.profissional || "Juliana Sena de Souza Vieira"}
                     </span>
                   </div>
