@@ -1,3 +1,5 @@
+export type PopStatus = "Ativo" | "Em Revisão" | "Cancelado";
+
 export interface PopSubtopico {
   id?: string;
   bloco_id?: string;
@@ -18,7 +20,7 @@ export interface PopBloco {
   prescricao_id?: string;
   prescricao?: {
     id: string;
-    data_prescricao: string;
+    data_prescricao?: string;
     status?: string;
     observacoes?: string | null;
     prescricao_itens?: Array<{
@@ -39,12 +41,10 @@ export interface PopBloco {
 
 export interface PopProtocolo {
   id: string;
-  paciente_id: string;
-  appointment_id?: string | null;
   protocolo: string;
   finalidade: string;
   data_pop: string;
-  status?: string;
+  status: PopStatus;
   profissional: string;
   payload_canonico?: any;
   payload_hash?: string;
@@ -57,32 +57,14 @@ export interface PopProtocolo {
 
 export interface PopProtocoloCompleto extends PopProtocolo {
   blocos: PopBloco[];
-  paciente?: {
-    id: string;
-    nome: string;
-    cpf?: string | null;
-    data_nascimento?: string | null;
-    email?: string | null;
-    telefone?: string | null;
-    idade?: number;
-  };
-  appointment?: {
-    id: string;
-    data: string;
-    horario_inicio: string;
-    horario_fim: string;
-    procedimento: string;
-  } | null;
 }
 
 export interface PopFormData {
   id?: string;
-  paciente_id: string;
-  appointment_id?: string | null;
   protocolo: string;
   finalidade: string;
   data_pop?: string;
-  status?: string;
+  status: PopStatus;
   profissional?: string;
   blocos: Array<{
     id?: string;

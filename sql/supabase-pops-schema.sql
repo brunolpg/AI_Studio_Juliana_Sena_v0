@@ -1,19 +1,18 @@
 -- ==============================================================================
--- SCHEMA DDL: PROCEDIMENTOS OPERACIONAIS PADRÃO (POPs) & PROTOCOLOS CLÍNICOS
--- Dra. Juliana Sena - Gestão Clínica & Prontuário Inteligente
+-- SCHEMA DDL: PROCEDIMENTOS OPERACIONAIS PADRÃO (POPs) & PROTOCOLOS CLÍNICOS INSTITUCIONAIS
+-- Dra. Juliana Sena - Gestão Clínica Institucional & Prontuário Inteligente
 -- ==============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- 1. TABELA PRINCIPAL DE PROTOCOLOS (pops_protocolos)
+-- 1. TABELA PRINCIPAL DE PROTOCOLOS INSTITUCIONAIS (pops_protocolos)
+-- (Sem paciente_id nem appointment_id: POPs são procedimentos globais institucionais)
 CREATE TABLE IF NOT EXISTS public.pops_protocolos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    paciente_id UUID NOT NULL REFERENCES public.pacientes(id) ON DELETE RESTRICT,
-    appointment_id UUID REFERENCES public.appointments(id) ON DELETE SET NULL,
     protocolo TEXT NOT NULL,
     finalidade TEXT NOT NULL,
     data_pop DATE NOT NULL DEFAULT CURRENT_DATE,
-    status VARCHAR(50) NOT NULL DEFAULT 'Ativo' CHECK (status IN ('Ativo', 'Concluído', 'Em Revisão', 'Cancelado')),
+    status VARCHAR(50) NOT NULL DEFAULT 'Ativo' CHECK (status IN ('Ativo', 'Em Revisão', 'Cancelado')),
     profissional TEXT NOT NULL DEFAULT 'Juliana Sena de Souza Vieira',
     payload_canonico JSONB,
     payload_hash TEXT,
@@ -25,8 +24,8 @@ CREATE TABLE IF NOT EXISTS public.pops_protocolos (
 );
 
 -- Índices de consulta rápida
-CREATE INDEX IF NOT EXISTS idx_pops_protocolos_paciente ON public.pops_protocolos (paciente_id, data_pop DESC);
-CREATE INDEX IF NOT EXISTS idx_pops_protocolos_appointment ON public.pops_protocolos (appointment_id);
+CREATE INDEX IF NOT EXISTS idx_pops_protocolos_data ON public.pops_protocolos (data_pop DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pops_protocolos_status ON public.pops_protocolos (status);
 
 -- 2. TABELA DE BLOCOS INTERCALADOS (pops_blocos)
 CREATE TABLE IF NOT EXISTS public.pops_blocos (

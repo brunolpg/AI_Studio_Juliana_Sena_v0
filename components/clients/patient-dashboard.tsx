@@ -89,7 +89,7 @@ export function PatientDashboard({ initialTab = "pacientes" }: { initialTab?: Da
         </div>
 
         {/* Quick Metrics */}
-        <StatsOverview activeTab={activeTab} />
+        {activeTab !== "pops" && <StatsOverview activeTab={activeTab} />}
 
         {/* Views Condicionais por Aba */}
         {activeTab === "pacientes" && (

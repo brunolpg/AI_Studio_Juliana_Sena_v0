@@ -4,7 +4,7 @@ import React from "react";
 import { Users, Calendar, Stethoscope } from "lucide-react";
 import { UserMenu } from "@/components/auth/user-menu";
 
-export type DashboardTab = "pacientes" | "prontuarios" | "agendamentos";
+export type DashboardTab = "pacientes" | "prontuarios" | "agendamentos" | "pops";
 
 interface AppHeaderProps {
   currentTab: DashboardTab;
@@ -74,6 +74,18 @@ export function AppHeader({ currentTab, onTabChange }: AppHeaderProps) {
                 <Calendar className="w-3.5 h-3.5" />
                 <span>Agendamentos</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block animate-pulse" />
+              </button>
+
+              <button
+                id="nav-tab-pops"
+                onClick={() => onTabChange("pops")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  currentTab === "pops"
+                    ? "bg-white dark:bg-slate-700 text-teal-700 dark:text-teal-300 shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                <span>POPs</span>
               </button>
             </div>
 

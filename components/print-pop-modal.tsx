@@ -8,24 +8,16 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Calendar,
-  Clock,
-  User,
   ShieldCheck,
   ClipboardList,
   Pill,
-  Sparkles,
-  ListChecks,
-  CheckCircle2,
-  Stethoscope,
 } from "lucide-react";
-import type { PopProtocoloCompleto, PopBloco } from "@/types/pop";
-import type { Client } from "@/types/client";
+import type { PopProtocoloCompleto } from "@/types/pop";
 
 interface PrintPopModalProps {
   isOpen: boolean;
   onClose: () => void;
   pop: PopProtocoloCompleto;
-  client?: Client | null;
 }
 
 function formatDateBR(dateStr?: string | null): string {
@@ -36,36 +28,6 @@ function formatDateBR(dateStr?: string | null): string {
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
   return dateStr;
-}
-
-function formatCPF(cpf?: string | null): string {
-  if (!cpf) return "Não informado";
-  const clean = cpf.replace(/\D/g, "");
-  if (clean.length !== 11) return cpf;
-  return `${clean.substring(0, 3)}.${clean.substring(3, 6)}.${clean.substring(6, 9)}-${clean.substring(9, 11)}`;
-}
-
-function calculateAge(birthDateStr?: string | null): string {
-  if (!birthDateStr) return "";
-  try {
-    const clean = birthDateStr.split("T")[0];
-    const parts = clean.split("-");
-    if (parts.length !== 3) return "";
-    const birth = new Date(
-      parseInt(parts[0], 10),
-      parseInt(parts[1], 10) - 1,
-      parseInt(parts[2], 10)
-    );
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age >= 0 ? ` (${age} anos)` : "";
-  } catch {
-    return "";
-  }
 }
 
 function formatDateToPortuguese(dateStr?: string | null): string {
@@ -91,15 +53,11 @@ function formatDateToPortuguese(dateStr?: string | null): string {
   return `Salvador - BA, ${day} de ${month} de ${year}`;
 }
 
-export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalProps) {
+export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   if (!isOpen) return null;
-
-  const pacienteNome = client?.nome || pop.paciente?.nome || "Paciente";
-  const pacienteNasc = client?.data_nascimento || pop.paciente?.data_nascimento;
-  const pacienteCpf = client?.cpf || pop.paciente?.cpf;
 
   const handlePrint = () => {
     const printContent = printAreaRef.current;
@@ -148,47 +106,21 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
               font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
-              width: 100% !important;
-              height: auto !important;
-              overflow: visible !important;
-            }
-
-            .print-wrapper {
-              width: 100% !important;
-              max-width: 100% !important;
-              padding: 0 !important;
-              margin: 0 !important;
-              background: #ffffff !important;
             }
 
             .print-avoid-break {
-              page-break-inside: avoid !important;
               break-inside: avoid !important;
-            }
-
-            table, tr, td, th {
               page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-
-            thead {
-              display: table-header-group !important;
-            }
-
-            h3, .section-title {
-              break-after: avoid !important;
-              page-break-after: avoid !important;
             }
 
             .print-footer {
-              page-break-inside: avoid !important;
               break-inside: avoid !important;
-              margin-top: 28px !important;
+              page-break-inside: avoid !important;
             }
           </style>
         </head>
         <body>
-          <div class="print-wrapper">
+          <div style="width: 100%; max-width: 100%;">
             ${printContent.innerHTML}
           </div>
         </body>
@@ -241,7 +173,7 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ClipboardList className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                <ClipboardList className="w-5 h-5 text-[#004d40] dark:text-emerald-400" />
                 <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
                   Relatório POP Oficial
                 </span>
@@ -259,14 +191,6 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
             <div className="space-y-3.5">
               <div>
                 <span className="text-[10px] font-bold text-slate-400 block uppercase">
-                  Paciente
-                </span>
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mt-0.5">
-                  {pacienteNome}
-                </span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 block uppercase">
                   Procedimento / Protocolo
                 </span>
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block mt-0.5">
@@ -275,9 +199,17 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                  Status
+                </span>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mt-0.5">
+                  {pop.status || "Ativo"}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 block uppercase">
                   Data de Emissão
                 </span>
-                <span className="text-xs font-semibold text-teal-700 dark:text-teal-400 block mt-0.5">
+                <span className="text-xs font-semibold text-[#004d40] dark:text-emerald-400 block mt-0.5">
                   {formatDateBR(pop.data_pop)}
                 </span>
               </div>
@@ -296,7 +228,7 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl text-center">
                   <span className="text-[10px] text-slate-400 block">Prescrições</span>
-                  <strong className="text-sm text-teal-600 dark:text-teal-400">{totalPrescricoes}</strong>
+                  <strong className="text-sm text-[#004d40] dark:text-emerald-400">{totalPrescricoes}</strong>
                 </div>
               </div>
               {pop.payload_hash && (
@@ -311,14 +243,13 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
               )}
             </div>
 
-            <div className="bg-teal-50/50 dark:bg-teal-950/30 border border-teal-200/50 dark:border-teal-800/60 p-4 rounded-2xl space-y-2">
-              <h4 className="text-xs font-bold text-teal-800 dark:text-teal-300">
+            <div className="bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-800/60 p-4 rounded-2xl space-y-2">
+              <h4 className="text-xs font-bold text-[#004d40] dark:text-emerald-300">
                 Padrão Institucional A4
               </h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                Relatório operacional e terapêutico completo com cabeçalho institucional, dados do
-                paciente, diretrizes passo a passo, detalhamento de receitas e chancela
-                criptográfica.
+                Procedimento Operacional Padrão institucionalizado com cabeçalho clínico oficial,
+                diretrizes passo a passo, detalhamento de receitas e chancela criptográfica SHA-256.
               </p>
             </div>
           </div>
@@ -327,7 +258,7 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
             <button
               type="button"
               onClick={handlePrint}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all shadow-xs cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-[#004d40] hover:bg-[#003830] rounded-xl transition-all shadow-xs cursor-pointer"
             >
               <Printer className="w-4 h-4" />
               <span>Imprimir / Gerar PDF</span>
@@ -407,54 +338,55 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
                 </div>
               </div>
 
-              {/* 2. Dados de Identificação do Paciente */}
+              {/* 2. Dados Institucionais do Protocolo */}
               <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 mb-5 print-avoid-break">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 block uppercase">
-                      Paciente
+                      Protocolo / Código
                     </span>
-                    <span className="font-bold text-slate-900 block truncate">{pacienteNome}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 block uppercase">
-                      CPF
-                    </span>
-                    <span className="text-slate-700 font-mono block">
-                      {formatCPF(pacienteCpf)}
+                    <span className="font-bold text-slate-900 block truncate">
+                      {pop.protocolo}
                     </span>
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 block uppercase">
-                      Nascimento
+                      Status
                     </span>
-                    <span className="text-slate-700 block">
-                      {formatDateBR(pacienteNasc)}
-                      {calculateAge(pacienteNasc)}
+                    <span className="font-semibold text-slate-700 block">
+                      {pop.status || "Ativo"}
                     </span>
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 block uppercase">
                       Data do POP
                     </span>
-                    <span className="font-bold text-teal-800 block">
+                    <span className="font-bold text-[#004d40] block">
                       {formatDateBR(pop.data_pop)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                      Profissional
+                    </span>
+                    <span className="font-semibold text-slate-800 block truncate">
+                      {pop.profissional || "Juliana Sena de Souza Vieira"}
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* 3. Destaque do Protocolo / Procedimento */}
-              <div className="bg-teal-50/60 border border-teal-200/80 p-3.5 rounded-xl mb-4 print-avoid-break">
+              <div className="bg-emerald-50/60 border border-emerald-200/80 p-3.5 rounded-xl mb-4 print-avoid-break">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                  <div className="w-6 h-6 rounded-lg bg-[#004d40] text-white flex items-center justify-center font-bold text-xs shrink-0">
                     <ClipboardList className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-[10px] font-bold text-teal-900 uppercase tracking-wider">
-                    Protocolo Clínico
+                  <span className="text-[10px] font-bold text-[#004d40] uppercase tracking-wider">
+                    Protocolo Clínico Institucional
                   </span>
                 </div>
-                <h2 className="text-base font-extrabold text-teal-950 leading-tight">
+                <h2 className="text-base font-extrabold text-[#004d40] leading-tight">
                   {pop.protocolo}
                 </h2>
               </div>
@@ -462,7 +394,7 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
               {/* 4. Finalidade do Procedimento */}
               <div className="border border-slate-200 rounded-xl p-3.5 bg-white mb-5 print-avoid-break">
                 <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100 mb-2">
-                  <span className="px-2 py-0.5 text-[10px] font-black tracking-wider uppercase rounded bg-teal-100 text-teal-900 border border-teal-200">
+                  <span className="px-2 py-0.5 text-[10px] font-black tracking-wider uppercase rounded bg-emerald-100 text-emerald-900 border border-emerald-200">
                     Finalidade Clínica
                   </span>
                   <span className="text-[11px] text-slate-500 font-medium">
@@ -497,14 +429,14 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
                         {/* Título do Tópico */}
                         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                           <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-md bg-teal-700 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                            <span className="w-5 h-5 rounded-md bg-[#004d40] text-white font-bold text-[10px] flex items-center justify-center shrink-0">
                               {numBloco}
                             </span>
                             <h3 className="text-xs font-bold text-slate-900">
                               {bloco.topico_titulo}
                             </h3>
                           </div>
-                          <span className="text-[9px] uppercase tracking-wider font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200/60">
+                          <span className="text-[9px] uppercase tracking-wider font-semibold text-[#004d40] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
                             Tópico Operacional
                           </span>
                         </div>
@@ -527,7 +459,7 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
                                   className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-200/80 space-y-1"
                                 >
                                   <div className="flex items-center gap-1.5 font-bold text-[11px] text-slate-800">
-                                    <span className="text-teal-700">{numBloco}.{sIdx + 1}</span>
+                                    <span className="text-[#004d40]">{numBloco}.{sIdx + 1}</span>
                                     <span>{sub.titulo}</span>
                                   </div>
                                   {sub.descricao && (
@@ -550,23 +482,23 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
                   return (
                     <div
                       key={bloco.id || idx}
-                      className="border border-teal-200/80 rounded-xl p-3.5 bg-teal-50/30 print-avoid-break space-y-2.5"
+                      className="border border-emerald-200/80 rounded-xl p-3.5 bg-emerald-50/30 print-avoid-break space-y-2.5"
                     >
                       {/* Cabeçalho da Prescrição */}
-                      <div className="flex items-center justify-between border-b border-teal-200/60 pb-2">
+                      <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
                         <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-md bg-teal-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
+                          <span className="w-5 h-5 rounded-md bg-[#004d40] text-white font-bold text-[10px] flex items-center justify-center shrink-0">
                             {numBloco}
                           </span>
                           <div className="flex items-center gap-1.5">
-                            <Pill className="w-3.5 h-3.5 text-teal-700" />
-                            <h3 className="text-xs font-bold text-teal-950">
+                            <Pill className="w-3.5 h-3.5 text-[#004d40]" />
+                            <h3 className="text-xs font-bold text-[#004d40]">
                               Prescrição Vinculada ao Protocolo
                             </h3>
                           </div>
                         </div>
                         {rx?.data_prescricao && (
-                          <span className="text-[10px] font-medium text-teal-800 bg-white/80 px-2 py-0.5 rounded border border-teal-200">
+                          <span className="text-[10px] font-medium text-emerald-800 bg-white/80 px-2 py-0.5 rounded border border-emerald-200">
                             Receita de {formatDateBR(rx.data_prescricao)}
                           </span>
                         )}
@@ -607,7 +539,7 @@ export function PrintPopModal({ isOpen, onClose, pop, client }: PrintPopModalPro
 
                               {item.orient_paciente && (
                                 <div className="text-[11px] text-slate-700 pt-1 border-t border-slate-100 mt-1">
-                                  <strong className="text-teal-900">Orientações ao Paciente:</strong>{" "}
+                                  <strong className="text-[#004d40]">Orientações:</strong>{" "}
                                   {item.orient_paciente}
                                 </div>
                               )}

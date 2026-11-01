@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { canonicalizeJson, gerarHashSha256, assinarHash } from "@/lib/crypto-payload";
-import type { PopFormData, PopProtocoloCompleto, PopBloco, PopSubtopico } from "@/types/pop";
+import type { PopFormData, PopProtocoloCompleto, PopBloco, PopStatus } from "@/types/pop";
 
 /**
- * Validação de sessão e autorização:
- * Exclusivo para usuários autenticados com perfis 'administrador' ou 'profissional'.
+ * Validação de sessão e autorização otimizada:
+ * Verifica metadata e cache de permissão antes de fazer query adicional.
  */
 async function checkAuthAndRole() {
   const serverClient = await createClient();
@@ -24,26 +24,32 @@ async function checkAuthAndRole() {
     throw new Error("Usuário não autenticado.");
   }
 
-  // Busca papel no banco
+  const rawRole = (user.user_metadata?.role || "").toLowerCase().trim();
+  const isEmailAdmin =
+    user.email?.toLowerCase() === "brunolpg@gmail.com" ||
+    user.email?.toLowerCase().includes("admin");
+
+  if (
+    rawRole === "administrador" ||
+    rawRole === "admin" ||
+    rawRole === "profissional" ||
+    isEmailAdmin
+  ) {
+    return { user, profile: { role: rawRole || "administrador" }, serverClient, adminDb };
+  }
+
+  // Busca papel no banco apenas se não identificado nos metadados
   const { data: profile } = await adminDb
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
 
-  const rawRole = (profile?.role || (user as any).user_metadata?.role || "")
-    .toLowerCase()
-    .trim();
-
-  const isEmailAdmin =
-    user.email?.toLowerCase() === "brunolpg@gmail.com" ||
-    user.email?.toLowerCase().includes("admin");
-
+  const roleFromDb = (profile?.role || "").toLowerCase().trim();
   const isAuthorized =
-    rawRole === "administrador" ||
-    rawRole === "admin" ||
-    rawRole === "profissional" ||
-    isEmailAdmin;
+    roleFromDb === "administrador" ||
+    roleFromDb === "admin" ||
+    roleFromDb === "profissional";
 
   if (!isAuthorized) {
     throw new Error(
@@ -55,34 +61,19 @@ async function checkAuthAndRole() {
 }
 
 /**
- * Retorna todos os POPs cadastrados de um paciente ativo (deleted_at IS NULL)
- * com seus blocos e subtópicos ordenados por ordem ASC.
+ * Retorna todos os POPs institucionais cadastrados de forma ultra-rápida.
+ * - Carrega apenas campos necessários para listagem nos cards.
+ * - Elimina o N+1 sequencial e faz lazy loading de prescrições complexas.
+ * - Utiliza agrupamento em memória para montagem instantânea.
  */
-export async function getPopsByPaciente(pacienteId: string): Promise<PopProtocoloCompleto[]> {
+export async function getPopsAction(): Promise<PopProtocoloCompleto[]> {
   try {
-    if (!pacienteId) return [];
     const { adminDb } = await checkAuthAndRole();
 
-    // 1. Verifica se o paciente está ativo
-    const { data: paciente, error: pacError } = await adminDb
-      .from("pacientes")
-      .select("id, nome, cpf, data_nascimento, email, telefone, idade")
-      .eq("id", pacienteId)
-      .is("deleted_at", null)
-      .maybeSingle();
-
-    if (pacError || !paciente) {
-      return [];
-    }
-
-    // 2. Busca os POPs do paciente
+    // 1. Busca todos os protocolos cadastrados com projeção enxuta
     const { data: protocolos, error: popError } = await adminDb
       .from("pops_protocolos")
-      .select(`
-        *,
-        appointment:appointments (id, data, horario_inicio, horario_fim, procedimento)
-      `)
-      .eq("paciente_id", pacienteId)
+      .select("id, protocolo, finalidade, data_pop, status, profissional, payload_hash, created_at")
       .order("data_pop", { ascending: false })
       .order("created_at", { ascending: false });
 
@@ -95,10 +86,10 @@ export async function getPopsByPaciente(pacienteId: string): Promise<PopProtocol
 
     const popIds = protocolos.map((p: any) => p.id);
 
-    // 3. Busca blocos vinculados aos POPs
+    // 2. Busca blocos agrupados com seleção enxuta
     const { data: blocosDb, error: blocosError } = await adminDb
       .from("pops_blocos")
-      .select("*")
+      .select("id, pop_id, tipo, ordem, topico_titulo, topico_descricao, prescricao_id")
       .in("pop_id", popIds)
       .order("ordem", { ascending: true });
 
@@ -108,12 +99,12 @@ export async function getPopsByPaciente(pacienteId: string): Promise<PopProtocol
 
     const blocoIds = (blocosDb || []).map((b: any) => b.id);
 
-    // 4. Busca subtópicos vinculados aos blocos
+    // 3. Busca subtópicos apenas se houver blocos
     let subtopicosDb: any[] = [];
     if (blocoIds.length > 0) {
       const { data: subs, error: subsError } = await adminDb
         .from("pops_subtopicos")
-        .select("*")
+        .select("id, bloco_id, ordem, titulo, descricao")
         .in("bloco_id", blocoIds)
         .order("ordem", { ascending: true });
 
@@ -124,89 +115,156 @@ export async function getPopsByPaciente(pacienteId: string): Promise<PopProtocol
       }
     }
 
-    // 5. Busca prescrições vinculadas aos blocos do tipo PRESCRICAO
-    const prescricaoIds = Array.from(
-      new Set((blocosDb || []).map((b: any) => b.prescricao_id).filter(Boolean))
-    );
-
-    let prescricoesMap = new Map<string, any>();
-    if (prescricaoIds.length > 0) {
-      const { data: prescricoesDb, error: rxErr } = await adminDb
-        .from("prescricoes")
-        .select(`
-          id,
-          data_prescricao,
-          status,
-          observacoes,
-          prescricao_itens (
-            id,
-            nome_formula,
-            via,
-            veiculo,
-            dosagem,
-            posologia,
-            duracao,
-            orient_paciente,
-            orient_farmacia,
-            componentes_snapshot
-          )
-        `)
-        .in("id", prescricaoIds);
-
-      if (!rxErr && prescricoesDb) {
-        for (const rx of prescricoesDb) {
-          prescricoesMap.set(rx.id, rx);
-        }
-      }
+    // Indexação em Maps para montagem O(N) imediata
+    const subtopicosMap = new Map<string, any[]>();
+    for (const sub of subtopicosDb) {
+      const list = subtopicosMap.get(sub.bloco_id) || [];
+      list.push(sub);
+      subtopicosMap.set(sub.bloco_id, list);
     }
 
-    // 6. Montagem dos protocolos completos
-    const resultado: PopProtocoloCompleto[] = protocolos.map((proto: any) => {
-      const blocosDoPop = (blocosDb || [])
-        .filter((b: any) => b.pop_id === proto.id)
-        .sort((a: any, b: any) => a.ordem - b.ordem)
-        .map((b: any) => {
-          const subsDoBloco = subtopicosDb
-            .filter((s: any) => s.bloco_id === b.id)
-            .sort((a: any, b: any) => a.ordem - b.ordem);
-
-          const prescricao = b.prescricao_id ? prescricoesMap.get(b.prescricao_id) || null : null;
-
-          return {
-            id: b.id,
-            pop_id: b.pop_id,
-            tipo: b.tipo,
-            ordem: b.ordem,
-            topico_titulo: b.topico_titulo,
-            topico_descricao: b.topico_descricao,
-            prescricao_id: b.prescricao_id,
-            prescricao,
-            subtopicos: subsDoBloco,
-            created_at: b.created_at,
-          } as PopBloco;
-        });
-
-      return {
-        ...proto,
-        paciente,
-        blocos: blocosDoPop,
+    const blocosMap = new Map<string, PopBloco[]>();
+    for (const b of blocosDb || []) {
+      const subsDoBloco = subtopicosMap.get(b.id) || [];
+      const itemBloco: PopBloco = {
+        id: b.id,
+        pop_id: b.pop_id,
+        tipo: b.tipo,
+        ordem: b.ordem,
+        topico_titulo: b.topico_titulo,
+        topico_descricao: b.topico_descricao,
+        prescricao_id: b.prescricao_id,
+        subtopicos: subsDoBloco,
       };
-    });
+      const list = blocosMap.get(b.pop_id) || [];
+      list.push(itemBloco);
+      blocosMap.set(b.pop_id, list);
+    }
+
+    // Montagem final dos protocolos
+    const resultado: PopProtocoloCompleto[] = protocolos.map((proto: any) => ({
+      ...proto,
+      blocos: blocosMap.get(proto.id) || [],
+    }));
 
     return resultado;
   } catch (err: any) {
-    console.error("Erro em getPopsByPaciente:", err);
+    console.error("Erro em getPopsAction:", err);
     return [];
   }
 }
 
 /**
- * Lista as prescrições cadastradas do paciente com prescricao_itens
- * para seleção no formulário de POP.
+ * Carrega os detalhes completos de um POP sob demanda (Lazy Loading).
+ * Utilizado exclusivamente ao abrir o modal de Edição ou ao clicar em "Gerar Relatório".
+ * Carrega a árvore completa de prescrições, fórmulas, posologias e componentes.
  */
-export async function getPrescricoesDisponiveis(pacienteId: string) {
+export async function getPopCompletoAction(popId: string): Promise<PopProtocoloCompleto | null> {
   try {
-    if (!pacienteId) return [];
+    if (!popId) return null;
+    const { adminDb } = await checkAuthAndRole();
+
+    const { data: proto, error: protoErr } = await adminDb
+      .from("pops_protocolos")
+      .select("*")
+      .eq("id", popId)
+      .single();
+
+    if (protoErr || !proto) return null;
+
+    // Busca blocos do protocolo
+    const { data: blocosDb } = await adminDb
+      .from("pops_blocos")
+      .select("*")
+      .eq("pop_id", popId)
+      .order("ordem", { ascending: true });
+
+    const blocoIds = (blocosDb || []).map((b: any) => b.id);
+    const prescricaoIds = Array.from(
+      new Set((blocosDb || []).map((b: any) => b.prescricao_id).filter(Boolean))
+    );
+
+    // Paraleliza a busca de subtópicos e de prescrições detalhadas
+    const [subsRes, rxRes] = await Promise.all([
+      blocoIds.length > 0
+        ? adminDb
+            .from("pops_subtopicos")
+            .select("*")
+            .in("bloco_id", blocoIds)
+            .order("ordem", { ascending: true })
+        : Promise.resolve({ data: [] }),
+      prescricaoIds.length > 0
+        ? adminDb
+            .from("prescricoes")
+            .select(`
+              id,
+              data_prescricao,
+              status,
+              observacoes,
+              prescricao_itens (
+                id,
+                nome_formula,
+                via,
+                veiculo,
+                dosagem,
+                posologia,
+                duracao,
+                orient_paciente,
+                orient_farmacia,
+                componentes_snapshot
+              )
+            `)
+            .in("id", prescricaoIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const subtopicosDb = subsRes.data || [];
+    const prescricoesDb = rxRes.data || [];
+
+    const prescricoesMap = new Map<string, any>();
+    for (const rx of prescricoesDb) {
+      prescricoesMap.set(rx.id, rx);
+    }
+
+    const blocos: PopBloco[] = (blocosDb || [])
+      .sort((a: any, b: any) => a.ordem - b.ordem)
+      .map((b: any) => {
+        const subsDoBloco = subtopicosDb
+          .filter((s: any) => s.bloco_id === b.id)
+          .sort((a: any, b: any) => a.ordem - b.ordem);
+
+        const prescricao = b.prescricao_id ? prescricoesMap.get(b.prescricao_id) || null : null;
+
+        return {
+          id: b.id,
+          pop_id: b.pop_id,
+          tipo: b.tipo,
+          ordem: b.ordem,
+          topico_titulo: b.topico_titulo,
+          topico_descricao: b.topico_descricao,
+          prescricao_id: b.prescricao_id,
+          prescricao,
+          subtopicos: subsDoBloco,
+          created_at: b.created_at,
+        };
+      });
+
+    return {
+      ...proto,
+      blocos,
+    };
+  } catch (err: any) {
+    console.error("Erro em getPopCompletoAction:", err);
+    return null;
+  }
+}
+
+/**
+ * Lista prescrições cadastradas no sistema.
+ * Invocada exclusivamente quando o formulário de POP for aberto, desacoplando o carregamento da tela inicial.
+ */
+export async function getPrescricoesDisponiveis() {
+  try {
     const { adminDb } = await checkAuthAndRole();
 
     const { data, error } = await adminDb
@@ -229,8 +287,8 @@ export async function getPrescricoesDisponiveis(pacienteId: string) {
           componentes_snapshot
         )
       `)
-      .eq("paciente_id", pacienteId)
-      .order("data_prescricao", { ascending: false });
+      .order("data_prescricao", { ascending: false })
+      .limit(60);
 
     if (error) {
       console.warn("Aviso ao carregar prescrições disponíveis:", error.message);
@@ -246,7 +304,7 @@ export async function getPrescricoesDisponiveis(pacienteId: string) {
 
 /**
  * Operação transacional de criação/edição em pops_protocolos, pops_blocos e pops_subtopicos.
- * Calcula a assinatura SHA-256 sobre o payload canônico determinístico.
+ * Calcula a assinatura SHA-256 sobre o payload canônico determinístico com dados institucionais.
  */
 export async function salvarPop(dados: PopFormData): Promise<{
   success?: boolean;
@@ -256,9 +314,6 @@ export async function salvarPop(dados: PopFormData): Promise<{
   try {
     const { adminDb } = await checkAuthAndRole();
 
-    if (!dados.paciente_id) {
-      return { error: "Paciente é obrigatório." };
-    }
     if (!dados.protocolo || !dados.protocolo.trim()) {
       return { error: "O título do Procedimento Operacional Padrão (Protocolo) é obrigatório." };
     }
@@ -283,16 +338,12 @@ export async function salvarPop(dados: PopFormData): Promise<{
       }
     }
 
-    // Padroniza profissional responsável oficial
-    let profissionalNome = dados.profissional;
-    if (
-      !profissionalNome ||
-      profissionalNome.toLowerCase().includes("bruno") ||
-      profissionalNome.includes("@") ||
-      profissionalNome === "Dra. Juliana Sena"
-    ) {
-      profissionalNome = "Juliana Sena de Souza Vieira";
-    }
+    // Profissional responsável institucional fixado
+    const profissionalNome = "Juliana Sena de Souza Vieira";
+
+    // Normaliza status institucional ('Ativo' | 'Em Revisão' | 'Cancelado')
+    const validStatuses: PopStatus[] = ["Ativo", "Em Revisão", "Cancelado"];
+    const status: PopStatus = validStatuses.includes(dados.status as any) ? dados.status : "Ativo";
 
     // 1. Monta os blocos ordenados e limpos
     const sortedBlocos = [...dados.blocos]
@@ -314,14 +365,12 @@ export async function salvarPop(dados: PopFormData): Promise<{
 
     const dataPop = dados.data_pop || new Date().toISOString().split("T")[0];
 
-    // 2. Monta o payload canônico determinístico
+    // 2. Monta o payload canônico determinístico com dados institucionais
     const canonicalPayload = {
-      paciente_id: dados.paciente_id,
-      appointment_id: dados.appointment_id || null,
       protocolo: dados.protocolo.trim(),
       finalidade: dados.finalidade.trim(),
       data_pop: dataPop,
-      status: dados.status || "Ativo",
+      status: status,
       profissional: profissionalNome,
       blocos: sortedBlocos.map((b) => ({
         ordem: b.ordem,
@@ -343,12 +392,10 @@ export async function salvarPop(dados: PopFormData): Promise<{
     const assinadoEm = new Date().toISOString();
 
     const protoRecord = {
-      paciente_id: dados.paciente_id,
-      appointment_id: dados.appointment_id || null,
       protocolo: dados.protocolo.trim(),
       finalidade: dados.finalidade.trim(),
       data_pop: dataPop,
-      status: dados.status || "Ativo",
+      status: status,
       profissional: profissionalNome,
       payload_canonico: canonicalPayload,
       payload_hash: payloadHash,
@@ -384,7 +431,6 @@ export async function salvarPop(dados: PopFormData): Promise<{
     }
 
     // 3. Sincronização de pops_blocos e pops_subtopicos
-    // Busca blocos existentes para exclusão de dependências
     const { data: existingBlocos } = await adminDb
       .from("pops_blocos")
       .select("id")

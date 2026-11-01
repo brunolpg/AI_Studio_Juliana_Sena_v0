@@ -3,27 +3,21 @@
 import React, { useState, useEffect } from "react";
 import {
   X,
-  Plus,
   Trash2,
   ArrowUp,
   ArrowDown,
   ClipboardList,
   Pill,
-  Sparkles,
   ShieldCheck,
   FileText,
-  AlertCircle,
-  CheckCircle2,
 } from "lucide-react";
-import type { PopProtocoloCompleto, PopFormData } from "@/types/pop";
-import type { Client } from "@/types/client";
+import type { PopProtocoloCompleto, PopFormData, PopStatus } from "@/types/pop";
 import { getPrescricoesDisponiveis, salvarPop } from "@/app/actions/pops";
 import { useToast } from "@/components/ui/toast";
 
 interface PopFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  paciente: Client;
   popToEdit?: PopProtocoloCompleto | null;
   onSuccess: () => void;
 }
@@ -31,7 +25,6 @@ interface PopFormModalProps {
 export function PopFormModal({
   isOpen,
   onClose,
-  paciente,
   popToEdit,
   onSuccess,
 }: PopFormModalProps) {
@@ -40,8 +33,8 @@ export function PopFormModal({
   const [protocolo, setProtocolo] = useState("");
   const [finalidade, setFinalidade] = useState("");
   const [dataPop, setDataPop] = useState("");
-  const [profissional, setProfissional] = useState("Juliana Sena de Souza Vieira");
-  const [status, setStatus] = useState("Ativo");
+  const profissional = "Juliana Sena de Souza Vieira";
+  const [status, setStatus] = useState<PopStatus>("Ativo");
 
   // Lista intercalada de blocos
   const [blocos, setBlocos] = useState<
@@ -63,7 +56,7 @@ export function PopFormModal({
     }>
   >([]);
 
-  // Prescrições cadastradas do paciente para vínculo
+  // Prescrições cadastradas disponíveis no sistema
   const [prescricoesDisponiveis, setPrescricoesDisponiveis] = useState<any[]>([]);
   const [isLoadingPrescricoes, setIsLoadingPrescricoes] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -76,7 +69,6 @@ export function PopFormModal({
       setProtocolo(popToEdit.protocolo || "");
       setFinalidade(popToEdit.finalidade || "");
       setDataPop(popToEdit.data_pop || new Date().toISOString().split("T")[0]);
-      setProfissional(popToEdit.profissional || "Juliana Sena de Souza Vieira");
       setStatus(popToEdit.status || "Ativo");
 
       const mappedBlocos = (popToEdit.blocos || [])
@@ -105,7 +97,6 @@ export function PopFormModal({
       setProtocolo("");
       setFinalidade("");
       setDataPop(new Date().toISOString().split("T")[0]);
-      setProfissional("Juliana Sena de Souza Vieira");
       setStatus("Ativo");
 
       // Bloco inicial padrão de tópico para facilitar
@@ -130,18 +121,16 @@ export function PopFormModal({
       ]);
     }
 
-    // Carrega prescrições reais do paciente
-    if (paciente?.id) {
-      setIsLoadingPrescricoes(true);
-      getPrescricoesDisponiveis(paciente.id)
-        .then((rxList) => {
-          setPrescricoesDisponiveis(rxList || []);
-        })
-        .finally(() => {
-          setIsLoadingPrescricoes(false);
-        });
-    }
-  }, [isOpen, popToEdit, paciente?.id]);
+    // Carrega prescrições disponíveis globalmente
+    setIsLoadingPrescricoes(true);
+    getPrescricoesDisponiveis()
+      .then((rxList) => {
+        setPrescricoesDisponiveis(rxList || []);
+      })
+      .finally(() => {
+        setIsLoadingPrescricoes(false);
+      });
+  }, [isOpen, popToEdit]);
 
   if (!isOpen) return null;
 
@@ -362,11 +351,10 @@ export function PopFormModal({
     try {
       const payloadData: PopFormData = {
         id: popToEdit?.id,
-        paciente_id: paciente.id,
         protocolo: protocolo.trim(),
         finalidade: finalidade.trim(),
-        data_pop: dataPop,
-        profissional: profissional.trim(),
+        data_pop: dataPop || popToEdit?.data_pop || new Date().toISOString().split("T")[0],
+        profissional: "Juliana Sena de Souza Vieira",
         status,
         blocos: blocos.map((b) => ({
           id: b.id,
@@ -396,7 +384,7 @@ export function PopFormModal({
         toast({
           type: "success",
           title: popToEdit ? "POP Atualizado" : "POP Cadastrado",
-          description: `Procedimento assinado digitalmente com SHA-256 e salvo com sucesso.`,
+          description: `Procedimento institucional assinado digitalmente com SHA-256 e salvo com sucesso.`,
         });
         onSuccess();
         onClose();
@@ -418,7 +406,7 @@ export function PopFormModal({
         {/* Topo do Modal */}
         <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-800/50 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-[#004d40] text-white flex items-center justify-center shrink-0 shadow-xs">
               <ClipboardList className="w-5 h-5" />
             </div>
             <div>
@@ -428,8 +416,7 @@ export function PopFormModal({
                   : "Novo Procedimento Operacional Padrão (POP)"}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Paciente: <strong className="text-teal-700 dark:text-teal-400">{paciente.nome}</strong>{" "}
-                • CPF: {paciente.cpf}
+                Padronização clínica institucional • Dra. Juliana Sena
               </p>
             </div>
           </div>
@@ -447,7 +434,7 @@ export function PopFormModal({
           {/* Seção 1: Dados Gerais do POP */}
           <div className="space-y-4 bg-slate-50 dark:bg-slate-800/40 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-teal-800 dark:text-teal-400 uppercase tracking-wider">
+              <span className="text-xs font-bold text-[#004d40] dark:text-emerald-400 uppercase tracking-wider">
                 1. Identificação do Procedimento
               </span>
               <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
@@ -455,33 +442,18 @@ export function PopFormModal({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Protocolo / Nome do Procedimento *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={protocolo}
-                  onChange={(e) => setProtocolo(e.target.value)}
-                  placeholder="Ex.: POP 04 - Microagulhamento com Drug Delivery & Regeneração Cutânea"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Data de Execução / POP *
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={dataPop}
-                  onChange={(e) => setDataPop(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Protocolo / Nome do Procedimento *
+              </label>
+              <input
+                type="text"
+                required
+                value={protocolo}
+                onChange={(e) => setProtocolo(e.target.value)}
+                placeholder="Ex.: POP 04 - Microagulhamento com Drug Delivery & Regeneração Cutânea"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#004d40]"
+              />
             </div>
 
             <div>
@@ -493,37 +465,24 @@ export function PopFormModal({
                 rows={3}
                 value={finalidade}
                 onChange={(e) => setFinalidade(e.target.value)}
-                placeholder="Descreva a finalidade, objetivos terapêuticos e indicações clínicas deste procedimento para o paciente..."
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-y"
+                placeholder="Descreva a finalidade institucional, objetivos terapêuticos e diretrizes clínicas deste procedimento..."
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#004d40] resize-y"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Profissional Responsável
-                </label>
-                <input
-                  type="text"
-                  value={profissional}
-                  onChange={(e) => setProfissional(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Status do Procedimento
-                </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                >
-                  <option value="Ativo">Ativo</option>
-                  <option value="Concluído">Concluído</option>
-                  <option value="Em Revisão">Em Revisão</option>
-                </select>
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Status do Procedimento
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as PopStatus)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#004d40] cursor-pointer"
+              >
+                <option value="Ativo">Ativo</option>
+                <option value="Em Revisão">Em Revisão</option>
+                <option value="Cancelado">Cancelado</option>
+              </select>
             </div>
           </div>
 
@@ -531,7 +490,7 @@ export function PopFormModal({
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span className="text-xs font-bold text-teal-800 dark:text-teal-400 uppercase tracking-wider block">
+                <span className="text-xs font-bold text-[#004d40] dark:text-emerald-400 uppercase tracking-wider block">
                   2. Gerenciador de Blocos (Ordem Intercalada)
                 </span>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -545,19 +504,19 @@ export function PopFormModal({
                 <button
                   type="button"
                   onClick={handleAddTopico}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/60 rounded-xl transition-all cursor-pointer shadow-2xs"
+                  className="bg-[#004d40] text-white hover:bg-[#003830] rounded-xl px-4 py-2 font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>+ Adicionar Tópico</span>
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Adicionar Tópico</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleAddPrescricao}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 dark:hover:bg-sky-900/60 rounded-xl transition-all cursor-pointer shadow-2xs"
+                  className="bg-[#004d40] text-white hover:bg-[#003830] rounded-xl px-4 py-2 font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                 >
-                  <Pill className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-                  <span>+ Vincular Prescrição</span>
+                  <Pill className="w-3.5 h-3.5" />
+                  <span>Vincular Prescrição</span>
                 </button>
               </div>
             </div>
@@ -577,10 +536,10 @@ export function PopFormModal({
                       {/* Cabeçalho do Bloco Tópico com Controles de Posição */}
                       <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
                         <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-lg bg-teal-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                          <span className="w-6 h-6 rounded-lg bg-[#004d40] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
                             #{bIdx + 1}
                           </span>
-                          <span className="text-xs font-bold text-teal-800 dark:text-teal-300 uppercase tracking-wide">
+                          <span className="text-xs font-bold text-[#004d40] dark:text-emerald-400 uppercase tracking-wide">
                             Bloco Tópico Operacional
                           </span>
                         </div>
@@ -630,7 +589,7 @@ export function PopFormModal({
                               handleUpdateTopico(bIdx, "topico_titulo", e.target.value)
                             }
                             placeholder="Ex.: Aplicação do Ativo Regenerativo ou Técnica de Infusão"
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#004d40]"
                           />
                         </div>
 
@@ -645,12 +604,12 @@ export function PopFormModal({
                               handleUpdateTopico(bIdx, "topico_descricao", e.target.value)
                             }
                             placeholder="Instruções passo a passo, parâmetros do equipamento, técnica aplicada..."
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-y"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#004d40] resize-y"
                           />
                         </div>
 
                         {/* Subtópicos do Tópico */}
-                        <div className="pl-3 sm:pl-4 border-l-2 border-teal-200 dark:border-teal-800 space-y-3 pt-1">
+                        <div className="pl-3 sm:pl-4 border-l-2 border-emerald-200 dark:border-emerald-800 space-y-3 pt-1">
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                               Subtópicos ({bloco.subtopicos?.length || 0})
@@ -658,10 +617,9 @@ export function PopFormModal({
                             <button
                               type="button"
                               onClick={() => handleAddSubtopico(bIdx)}
-                              className="flex items-center gap-1 text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 cursor-pointer"
+                              className="bg-[#004d40] text-white hover:bg-[#003830] rounded-xl px-3 py-1.5 font-semibold text-[11px] flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                             >
-                              <Plus className="w-3 h-3" />
-                              <span>+ Adicionar Subtópico</span>
+                              <span>Adicionar Subtópico</span>
                             </button>
                           </div>
 
@@ -675,7 +633,7 @@ export function PopFormModal({
                                 className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 space-y-2"
                               >
                                 <div className="flex items-center justify-between gap-2">
-                                  <span className="text-[10px] font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded border border-teal-200/60">
+                                  <span className="text-[10px] font-bold text-[#004d40] dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200/60">
                                     Subtópico #{bIdx + 1}.{sIdx + 1}
                                   </span>
                                   <div className="flex items-center gap-1">
@@ -713,7 +671,7 @@ export function PopFormModal({
                                       handleUpdateSubtopico(bIdx, sIdx, "titulo", e.target.value)
                                     }
                                     placeholder="Título do subtópico (ex.: Ângulo de inserção)"
-                                    className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                    className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#004d40]"
                                   />
                                   <input
                                     type="text"
@@ -722,7 +680,7 @@ export function PopFormModal({
                                       handleUpdateSubtopico(bIdx, sIdx, "descricao", e.target.value)
                                     }
                                     placeholder="Instrução do subtópico (ex.: Inserir agulha a 45 graus)"
-                                    className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                    className="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#004d40]"
                                   />
                                 </div>
                               </div>
@@ -740,17 +698,17 @@ export function PopFormModal({
                 return (
                   <div
                     key={bloco.tempId}
-                    className="p-4 sm:p-5 rounded-2xl bg-sky-50/30 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-800 shadow-sm space-y-3.5 relative transition-all"
+                    className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 shadow-sm space-y-3.5 relative transition-all"
                   >
                     {/* Cabeçalho do Bloco Prescrição */}
-                    <div className="flex items-center justify-between gap-2 border-b border-sky-100 dark:border-sky-900/60 pb-2.5">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700 pb-2.5">
                       <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-sky-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                        <span className="w-6 h-6 rounded-lg bg-[#004d40] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
                           #{bIdx + 1}
                         </span>
                         <div className="flex items-center gap-1.5">
-                          <Pill className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                          <span className="text-xs font-bold text-sky-900 dark:text-sky-300 uppercase tracking-wide">
+                          <Pill className="w-4 h-4 text-[#004d40] dark:text-emerald-400" />
+                          <span className="text-xs font-bold text-[#004d40] dark:text-emerald-400 uppercase tracking-wide">
                             Bloco Prescrição Vinculada
                           </span>
                         </div>
@@ -787,27 +745,26 @@ export function PopFormModal({
                       </div>
                     </div>
 
-                    {/* Seleção da Prescrição do Paciente */}
+                    {/* Seleção da Prescrição */}
                     <div className="space-y-2">
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Selecione a Prescrição Cadastrada do Paciente *
+                        Selecione a Prescrição Cadastrada *
                       </label>
 
                       {isLoadingPrescricoes ? (
                         <div className="text-xs text-slate-500 py-2">
-                          Carregando receitas do paciente...
+                          Carregando receitas cadastradas...
                         </div>
                       ) : prescricoesDisponiveis.length === 0 ? (
                         <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
-                          Este paciente ainda não possui prescrições salvas no sistema. Você pode
-                          cadastrar uma nova receita no prontuário ou usar apenas blocos de tópicos.
+                          Nenhuma prescrição encontrada no sistema. Cadastre receitas no módulo de fórmulas/prescrições ou utilize tópicos operacionais.
                         </div>
                       ) : (
                         <select
                           required
                           value={bloco.prescricao_id || ""}
                           onChange={(e) => handleUpdatePrescricao(bIdx, e.target.value)}
-                          className="w-full px-3 py-2.5 rounded-xl border border-sky-300 dark:border-sky-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#004d40] cursor-pointer"
                         >
                           <option value="">-- Selecione uma Prescrição --</option>
                           {prescricoesDisponiveis.map((rx) => {
@@ -816,7 +773,7 @@ export function PopFormModal({
                               .join(", ");
                             return (
                               <option key={rx.id} value={rx.id}>
-                                Receita de {rx.data_prescricao} • {itensNomes || "Sem fórmulas cadastradas"}
+                                Receita de {rx.data_prescricao} • {itensNomes || "Sem fórmulas"}
                               </option>
                             );
                           })}
@@ -825,8 +782,8 @@ export function PopFormModal({
 
                       {/* Exibição dos Itens da Receita Selecionada */}
                       {selectedRx && selectedRx.prescricao_itens?.length > 0 && (
-                        <div className="mt-2.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-sky-200 dark:border-sky-800/80 space-y-1.5 text-xs">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-sky-800 dark:text-sky-300 block">
+                        <div className="mt-2.5 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#004d40] dark:text-emerald-400 block">
                             Itens e Fórmulas Inclusos:
                           </span>
                           <div className="space-y-1">
@@ -835,7 +792,7 @@ export function PopFormModal({
                                 key={it.id || itIdx}
                                 className="flex items-baseline gap-1.5 text-slate-700 dark:text-slate-300 text-[11px]"
                               >
-                                <span className="font-bold text-sky-600 dark:text-sky-400">
+                                <span className="font-bold text-[#004d40] dark:text-emerald-400">
                                   {itIdx + 1}.
                                 </span>
                                 <strong className="text-slate-900 dark:text-slate-100">
@@ -876,7 +833,7 @@ export function PopFormModal({
               type="button"
               onClick={handleSubmit}
               disabled={isSaving}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 rounded-xl transition-all shadow-sm cursor-pointer"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-[#004d40] hover:bg-[#003830] disabled:opacity-50 rounded-xl transition-all shadow-sm cursor-pointer"
             >
               {isSaving ? (
                 <>
