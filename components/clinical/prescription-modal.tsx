@@ -428,11 +428,13 @@ export function PrescriptionModal({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    const q = nomeFormula.toLowerCase().trim();
+                    const currentVal = e.currentTarget.value || nomeFormula;
+                    const q = currentVal.toLowerCase().trim();
                     const matches = formulas.filter((f) =>
                       f.nome.toLowerCase().includes(q)
                     );
                     if (matches.length > 0) {
+                      e.currentTarget.blur();
                       handleSelectFormula(matches[0].id);
                     }
                   }
