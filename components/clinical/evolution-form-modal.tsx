@@ -59,6 +59,8 @@ export function EvolutionFormModal({
 }: EvolutionFormModalProps) {
   const { toast } = useToast();
 
+  const isInitializedRef = React.useRef(false);
+
   const now = new Date();
   const todayStr = now.toISOString().split("T")[0];
   const currentTimeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -205,36 +207,31 @@ export function EvolutionFormModal({
     }
   }, [isOpen, client?.id, initialAppointmentId]);
 
-  // Preenche e bloqueia os campos quando um agendamento for selecionado (no modo criação)
+  // Preenche os campos quando um agendamento for selecionado (no modo criação) sem resetar textos digitados
   useEffect(() => {
     if (!initialData && selectedAppointmentId) {
       const apt = appointments.find((a) => a.id === selectedAppointmentId);
       if (apt) {
-        setData(apt.data);
-        setHorario(apt.horario_inicio);
-        
-        // Vínculo Automático pelo ID do procedimento ou pelo nome
-        const proc = procedimentos.find((p) => 
-          (apt.procedimento_id && p.id === apt.procedimento_id) || 
-          (apt.procedimento && p.procedimento === apt.procedimento)
+        if (apt.data) setData(apt.data);
+        if (apt.horario_inicio) setHorario(apt.horario_inicio);
+
+        const proc = procedimentos.find(
+          (p) =>
+            (apt.procedimento_id && p.id === apt.procedimento_id) ||
+            (apt.procedimento && p.procedimento === apt.procedimento)
         );
-        
+
         const isProcUuid = proc?.id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(proc.id) : false;
         if (proc) {
           setTipo(proc.procedimento);
           setProcedimentoId(isProcUuid ? proc.id : "");
-        } else {
-          setTipo(apt.procedimento || "");
+        } else if (apt.procedimento) {
+          setTipo(apt.procedimento);
           setProcedimentoId("");
         }
       }
-    } else if (!initialData && !selectedAppointmentId) {
-      setData(todayStr);
-      setHorario(currentTimeStr);
-      setTipo("");
-      setProcedimentoId("");
     }
-  }, [selectedAppointmentId, appointments, procedimentos, todayStr, currentTimeStr, initialData]);
+  }, [selectedAppointmentId, appointments, procedimentos, initialData]);
 
   // Agrupa os procedimentos por categoria para <optgroup> em ordem alfabética
   const groupedProcedimentos = useMemo(() => {
@@ -284,61 +281,68 @@ export function EvolutionFormModal({
   // Sincroniza e preenche o formulário se initialData for passado (Edição) ou reseta (Criação)
   useEffect(() => {
     if (isOpen) {
-      if (initialData) {
-        setTipo(initialData.tipo || initialData.tipo_atendimento || "");
-        setProcedimentoId(initialData.procedimento_id || "");
-        setStatus(initialData.status || "Ativo");
-        setData(initialData.data || todayStr);
-        setHorario(initialData.horario || currentTimeStr);
-        setProfissional(initialData.profissional || "Dra. Juliana Sena");
-        setEspecialidade(initialData.especialidade || "Clínica Geral");
-        setSubjetivo(initialData.subjetivo || "");
-        setObjetivo(initialData.objetivo || "");
-        setAvaliacao(initialData.avaliacao || "");
-        setPlano(initialData.plano || "");
-        setPa(initialData.sinaisVitais?.pressaoArterial || "");
-        setFc(initialData.sinaisVitais?.frequenciaCardiaca ? String(initialData.sinaisVitais.frequenciaCardiaca) : "");
-        setHidratacao(initialData.sinaisVitais?.hidratacaoCutanea !== undefined ? String(initialData.sinaisVitais.hidratacaoCutanea) : "");
-        setOleosidade(initialData.sinaisVitais?.oleosidadeSebo !== undefined ? String(initialData.sinaisVitais.oleosidadeSebo) : "");
-        const rawElast = (initialData.sinaisVitais as any)?.elasticidade ?? initialData.sinaisVitais?.indiceElasticidade;
-        if (rawElast !== undefined && rawElast !== null && rawElast !== "") {
-          const numElast = Number(rawElast);
-          setElasticidade(numElast > 5 ? String(Math.min(5, Math.max(1, Math.round(numElast / 20)))) : String(numElast));
+      if (!isInitializedRef.current) {
+        isInitializedRef.current = true;
+
+        if (initialData) {
+          setTipo(initialData.tipo || initialData.tipo_atendimento || "");
+          setProcedimentoId(initialData.procedimento_id || "");
+          setStatus(initialData.status || "Ativo");
+          setData(initialData.data || todayStr);
+          setHorario(initialData.horario || currentTimeStr);
+          setProfissional(initialData.profissional || "Dra. Juliana Sena");
+          setEspecialidade(initialData.especialidade || "Clínica Geral");
+          setSubjetivo(initialData.subjetivo || "");
+          setObjetivo(initialData.objetivo || "");
+          setAvaliacao(initialData.avaliacao || "");
+          setPlano(initialData.plano || "");
+          setPa(initialData.sinaisVitais?.pressaoArterial || "");
+          setFc(initialData.sinaisVitais?.frequenciaCardiaca ? String(initialData.sinaisVitais.frequenciaCardiaca) : "");
+          setHidratacao(initialData.sinaisVitais?.hidratacaoCutanea !== undefined ? String(initialData.sinaisVitais.hidratacaoCutanea) : "");
+          setOleosidade(initialData.sinaisVitais?.oleosidadeSebo !== undefined ? String(initialData.sinaisVitais.oleosidadeSebo) : "");
+          const rawElast = (initialData.sinaisVitais as any)?.elasticidade ?? initialData.sinaisVitais?.indiceElasticidade;
+          if (rawElast !== undefined && rawElast !== null && rawElast !== "") {
+            const numElast = Number(rawElast);
+            setElasticidade(numElast > 5 ? String(Math.min(5, Math.max(1, Math.round(numElast / 20)))) : String(numElast));
+          } else {
+            setElasticidade("");
+          }
+          setSelectedAppointmentId(initialData.appointment_id || "");
+          setSelectedPrescricoesIds(initialData.prescricoes_ids || []);
+          setSelectedHomeCareFichaId(initialData.home_care_ficha_id || "");
+          setExistingFotosUrls(initialData.fotos_paciente || []);
+          setFotosFiles([]);
+          setExamesFiles([]);
         } else {
+          setData(todayStr);
+          setHorario(currentTimeStr);
+          setTipo("");
+          setProcedimentoId("");
+          setStatus("Ativo");
+          setProfissional("Dra. Juliana Sena");
+          setEspecialidade("Clínica Geral");
+          setSubjetivo("");
+          setObjetivo("");
+          setAvaliacao("");
+          setPlano("");
+          setPa("");
+          setFc("");
+          setHidratacao("");
+          setOleosidade("");
           setElasticidade("");
+          setSelectedAppointmentId(initialAppointmentId || "");
+          setSelectedPrescricoesIds([]);
+          setSelectedHomeCareFichaId("");
+          setExistingFotosUrls([]);
+          setFotosFiles([]);
+          setExamesFiles([]);
         }
-        setSelectedAppointmentId(initialData.appointment_id || "");
-        setSelectedPrescricoesIds(initialData.prescricoes_ids || []);
-        setSelectedHomeCareFichaId(initialData.home_care_ficha_id || "");
-        setExistingFotosUrls(initialData.fotos_paciente || []);
-        setFotosFiles([]);
-        setExamesFiles([]);
-      } else {
-        setData(todayStr);
-        setHorario(currentTimeStr);
-        setTipo("");
-        setProcedimentoId("");
-        setStatus("Ativo");
-        setProfissional("Dra. Juliana Sena");
-        setEspecialidade("Clínica Geral");
-        setSubjetivo("");
-        setObjetivo("");
-        setAvaliacao("");
-        setPlano("");
-        setPa("");
-        setFc("");
-        setHidratacao("");
-        setOleosidade("");
-        setElasticidade("");
-        setSelectedAppointmentId(initialAppointmentId || "");
-        setSelectedPrescricoesIds([]);
-        setSelectedHomeCareFichaId("");
-        setExistingFotosUrls([]);
-        setFotosFiles([]);
-        setExamesFiles([]);
       }
+    } else {
+      // Reseta o controle quando o modal for fechado
+      isInitializedRef.current = false;
     }
-  }, [isOpen, initialData, initialAppointmentId, todayStr, currentTimeStr]);
+  }, [isOpen, initialData, initialAppointmentId]);
 
   // Carrega Prescrições e Fichas de Home Care vinculáveis ao abrir o modal
   useEffect(() => {
