@@ -6,6 +6,8 @@ import type { TimeSlot } from "@/types/appointment";
 import {
   getDayScheduleDescription,
   isAllowedAppointmentDay,
+  getDurationInMinutes,
+  formatDurationLabel,
 } from "@/types/appointment";
 
 interface TimeSlotGridProps {
@@ -23,20 +25,24 @@ export function TimeSlotGrid({
   onSelectSlot,
   isLoading = false,
   dateStr,
-  duracao = 1,
+  duracao = 0.5,
 }: TimeSlotGridProps) {
   const scheduleInfo = dateStr ? getDayScheduleDescription(dateStr) : null;
   const isAllowedDay = dateStr ? isAllowedAppointmentDay(dateStr) : slots.length > 0;
+
+  const durationMinutes = getDurationInMinutes(duracao);
+  const durationLabel = formatDurationLabel(durationMinutes);
+  const requiredSlotsCount = Math.max(1, Math.ceil(durationMinutes / 30));
 
   if (isLoading) {
     return (
       <div className="space-y-2">
         <div className="h-4 w-40 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-1">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-2.5 py-1">
+          {Array.from({ length: 9 }).map((_, i) => (
             <div
               key={i}
-              className="h-10 rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse border border-slate-200/60 dark:border-slate-700/60"
+              className="h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 animate-pulse border border-slate-200/60 dark:border-slate-700/60"
             />
           ))}
         </div>
@@ -74,146 +80,168 @@ export function TimeSlotGrid({
           <span>
             {scheduleInfo
               ? `${scheduleInfo.dayName} (${scheduleInfo.hoursDescription.split("(")[0].trim()})`
-              : "Sessões de 1 em 1 hora"}
+              : "Intervalos de 30 minutos"}
           </span>
         </span>
-        <span className="text-[11px] font-semibold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/50 px-2 py-0.5 rounded-full border border-teal-200 dark:border-teal-800">
+        <span className="text-[11px] font-semibold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/50 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-800">
           {freeCount} {freeCount === 1 ? "vaga livre" : "vagas livres"}
         </span>
       </div>
 
-      {/* Chips com o horário de início de cada sessão (intervalos de 1h) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {slots.map((s, i) => {
-          // Determina H_f (fim do expediente do dia, ex: 16:00 ou 18:00)
-          const lastSlot = slots[slots.length - 1];
-          const H_f = lastSlot ? Number(lastSlot.endSlot.split(":")[0]) : 16;
-          
-          const startHour = Number(s.slot.split(":")[0]);
-          const exceedsShift = startHour + duracao > H_f;
+      {/* Grade com rolagem suave no mobile e telas landscape */}
+      <div className="max-h-60 sm:max-h-72 landscape:max-h-48 overflow-y-auto overscroll-contain pr-1 scroll-smooth no-scrollbar sm:scroll-auto">
+        {/* Chips com o horário de início em intervalos de 30m */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          {slots.map((s, i) => {
+            let exceedsShift = false;
+            let hasOverlap = false;
+            let hasGap = false;
 
-          // Verifica se existem overlaps nos blocos de 1h consecutivos necessários
-          let hasOverlap = false;
-          if (!s.isOccupied && !exceedsShift) {
-            for (let offset = 0; offset < duracao; offset++) {
-              const checkIndex = i + offset;
-              if (checkIndex >= slots.length) {
-                hasOverlap = true;
-                break;
-              }
-              if (slots[checkIndex].isOccupied) {
-                hasOverlap = true;
-                break;
+            if (!s.isOccupied) {
+              if (i + requiredSlotsCount > slots.length) {
+                exceedsShift = true;
+              } else {
+                for (let offset = 0; offset < requiredSlotsCount; offset++) {
+                  const checkIndex = i + offset;
+                  if (slots[checkIndex].isOccupied) {
+                    hasOverlap = true;
+                    break;
+                  }
+                  if (offset > 0 && slots[checkIndex].slot !== slots[checkIndex - 1].endSlot) {
+                    hasGap = true;
+                    break;
+                  }
+                }
               }
             }
-          }
 
-          // Verifica se este slot específico faz parte da seleção de múltiplos horários
-          const isSelected = selectedSlot !== null && (() => {
-            const selHour = Number(selectedSlot.split(":")[0]);
-            return startHour >= selHour && startHour < selHour + duracao;
-          })();
+            // Verifica se este slot específico faz parte da seleção contígua
+            const isSelected = selectedSlot !== null && (() => {
+              const selIdx = slots.findIndex((slotObj) => slotObj.slot === selectedSlot);
+              if (selIdx === -1) return false;
+              return i >= selIdx && i < selIdx + requiredSlotsCount;
+            })();
 
-          // 1. Ocupado de forma nativa
-          if (s.isOccupied) {
+            // 1. Ocupado no Supabase ou Google Calendar
+            if (s.isOccupied) {
+              return (
+                <div
+                  key={s.slot}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 cursor-not-allowed select-none text-xs transition-colors shadow-2xs"
+                  title={`Horário ocupado ${s.occupiedPatientName ? `(${s.occupiedPatientName})` : ""}`}
+                >
+                  <div className="flex items-center gap-1.5 font-mono">
+                    <Ban className="w-3 h-3 text-slate-400" />
+                    <span className="font-bold line-through">{s.slot}</span>
+                  </div>
+                  <span className="text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                    Ocupado
+                  </span>
+                </div>
+              );
+            }
+
+            // 2. Bloqueio Preventivo: excede o expediente
+            if (exceedsShift) {
+              return (
+                <div
+                  key={s.slot}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-dashed border-rose-200/80 dark:border-rose-900/30 bg-rose-50/20 dark:bg-rose-950/10 text-rose-600/80 dark:text-rose-400/80 cursor-not-allowed select-none text-xs shadow-2xs"
+                  title={`Duração de ${durationLabel} ultrapassa o expediente`}
+                >
+                  <div className="flex items-center gap-1.5 font-mono opacity-60">
+                    <Ban className="w-3.5 h-3.5" />
+                    <span className="font-bold">{s.slot}</span>
+                  </div>
+                  <span className="text-[9px] font-semibold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-full border border-rose-200/50 dark:border-rose-800/30">
+                    Excede exp.
+                  </span>
+                </div>
+              );
+            }
+
+            // 3. Bloqueio: cruza intervalo de almoço / intervalo de turno
+            if (hasGap) {
+              return (
+                <div
+                  key={s.slot}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-dashed border-amber-200/80 dark:border-amber-900/30 bg-amber-50/20 dark:bg-amber-950/10 text-amber-700/80 dark:text-amber-400/80 cursor-not-allowed select-none text-xs shadow-2xs"
+                  title={`Duração de ${durationLabel} cruza o intervalo de almoço.`}
+                >
+                  <div className="flex items-center gap-1.5 font-mono opacity-60">
+                    <Ban className="w-3.5 h-3.5" />
+                    <span className="font-bold">{s.slot}</span>
+                  </div>
+                  <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-full border border-amber-200/50 dark:border-amber-800/30">
+                    Intervalo
+                  </span>
+                </div>
+              );
+            }
+
+            // 4. Bloqueio: horários subsequentes ocupados
+            if (hasOverlap) {
+              return (
+                <div
+                  key={s.slot}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-dashed border-amber-200/80 dark:border-amber-900/30 bg-amber-50/20 dark:bg-amber-950/10 text-amber-700/80 dark:text-amber-400/80 cursor-not-allowed select-none text-xs shadow-2xs"
+                  title={`Requer ${durationLabel} livres contínuos, mas os horários seguintes estão ocupados.`}
+                >
+                  <div className="flex items-center gap-1.5 font-mono opacity-60">
+                    <Ban className="w-3.5 h-3.5" />
+                    <span className="font-bold">{s.slot}</span>
+                  </div>
+                  <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-full border border-amber-200/50 dark:border-amber-800/30">
+                    Indisponível
+                  </span>
+                </div>
+              );
+            }
+
+            // 5. Slot Disponível / Selecionado
             return (
-              <div
+              <button
                 key={s.slot}
-                className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 cursor-not-allowed select-none text-xs transition-colors shadow-2xs"
-                title={`Horário ocupado ${s.occupiedPatientName ? `(${s.occupiedPatientName})` : ""}`}
+                type="button"
+                onClick={() => onSelectSlot(s.slot)}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-2xl border text-xs font-semibold transition-all cursor-pointer select-none md-state-layer ${
+                  isSelected
+                    ? "bg-teal-700 dark:bg-teal-500 border-teal-700 dark:border-teal-500 text-white dark:text-slate-950 shadow-xs ring-2 ring-teal-500/20"
+                    : "bg-white dark:bg-slate-850 border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-teal-500 hover:bg-teal-50/40 hover:text-teal-700 dark:hover:bg-teal-950/30 shadow-2xs"
+                }`}
               >
                 <div className="flex items-center gap-1.5 font-mono">
-                  <Ban className="w-3 h-3 text-slate-400" />
-                  <span className="font-bold line-through">{s.slot}</span>
+                  <Clock
+                    className={`w-3.5 h-3.5 ${
+                      isSelected ? "text-white dark:text-slate-950" : "text-teal-600 dark:text-teal-400"
+                    }`}
+                  />
+                  <span className="font-bold text-xs">{s.slot}</span>
                 </div>
-                <span className="text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
-                  Ocupado
-                </span>
-              </div>
+
+                {isSelected ? (
+                  <div className="flex items-center gap-1 text-[10px] font-bold">
+                    {selectedSlot === s.slot ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>Início</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3 h-3 text-teal-100 animate-pulse" />
+                        <span>Incluso</span>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200/80 dark:border-emerald-800/60">
+                    {durationLabel}
+                  </span>
+                )}
+              </button>
             );
-          }
-
-          // 2. Bloqueio Preventivo: excede o expediente
-          if (exceedsShift) {
-            return (
-              <div
-                key={s.slot}
-                className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-dashed border-rose-200/80 dark:border-rose-900/30 bg-rose-50/20 dark:bg-rose-950/10 text-rose-600/80 dark:text-rose-400/80 cursor-not-allowed select-none text-xs shadow-2xs"
-                title={`Duração de ${duracao}h ultrapassa o expediente (${H_f}:00)`}
-              >
-                <div className="flex items-center gap-1.5 font-mono opacity-60">
-                  <Ban className="w-3.5 h-3.5" />
-                  <span className="font-bold">{s.slot}</span>
-                </div>
-                <span className="text-[9px] font-semibold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-full border border-rose-200/50 dark:border-rose-800/30">
-                  Excede exp.
-                </span>
-              </div>
-            );
-          }
-
-          // 3. Bloqueio: horários subsequentes ocupados
-          if (hasOverlap) {
-            return (
-              <div
-                key={s.slot}
-                className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-dashed border-amber-200/80 dark:border-amber-900/30 bg-amber-50/20 dark:bg-amber-950/10 text-amber-700/80 dark:text-amber-400/80 cursor-not-allowed select-none text-xs shadow-2xs"
-                title={`Requer ${duracao} horas seguidas livres, mas os horários seguintes estão ocupados.`}
-              >
-                <div className="flex items-center gap-1.5 font-mono opacity-60">
-                  <Ban className="w-3.5 h-3.5" />
-                  <span className="font-bold">{s.slot}</span>
-                </div>
-                <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-full border border-amber-200/50 dark:border-amber-800/30">
-                  Indisponível
-                </span>
-              </div>
-            );
-          }
-
-          // 4. Slot Disponível / Selecionado
-          return (
-            <button
-              key={s.slot}
-              type="button"
-              onClick={() => onSelectSlot(s.slot)}
-              className={`flex items-center justify-between px-3 py-2.5 rounded-2xl border text-xs font-semibold transition-all cursor-pointer select-none md-state-layer ${
-                isSelected
-                  ? "bg-teal-700 dark:bg-teal-500 border-teal-700 dark:border-teal-500 text-white dark:text-slate-950 shadow-xs ring-2 ring-teal-500/20"
-                  : "bg-white dark:bg-slate-850 border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-teal-500 hover:bg-teal-50/40 hover:text-teal-700 dark:hover:bg-teal-950/30 shadow-2xs"
-              }`}
-            >
-              <div className="flex items-center gap-1.5 font-mono">
-                <Clock
-                  className={`w-3.5 h-3.5 ${
-                    isSelected ? "text-white dark:text-slate-950" : "text-teal-600 dark:text-teal-400"
-                  }`}
-                />
-                <span className="font-bold text-xs">{s.slot}</span>
-              </div>
-
-              {isSelected ? (
-                <div className="flex items-center gap-1 text-[10px] font-bold">
-                  {selectedSlot === s.slot ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      <span>Início</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3 h-3 text-teal-100 animate-pulse" />
-                      <span>Incluso</span>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200/80 dark:border-emerald-800/60">
-                  {duracao}h
-                </span>
-              )}
-            </button>
-          );
-        })}
+          })}
+        </div>
       </div>
     </div>
   );

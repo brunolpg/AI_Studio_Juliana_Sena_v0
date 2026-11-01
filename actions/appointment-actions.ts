@@ -8,6 +8,8 @@ import {
   getAllowedStartTimesForDate,
   getDayScheduleDescription,
   getTodaySaoPauloDateString,
+  getDurationInMinutes,
+  calculateEndTime,
   type Appointment,
   type AppointmentInput,
   type AppointmentFilter,
@@ -22,7 +24,7 @@ import {
   generateGoogleCalendarTemplateUrl,
   getGoogleCalendarCredentials,
 } from "@/lib/google-calendar/calendar-service";
-import { deleteAppointmentFromGoogle } from "@/lib/google-calendar/calendar-sync-service";
+import { deleteAppointmentFromGoogle, performFullSync } from "@/lib/google-calendar/calendar-sync-service";
 import { sendNewAppointmentAdminNotification } from "@/lib/notifications/appointment-notification";
 import type { ActionResponse, PaginatedResult } from "@/types/client";
 import type { UserRole } from "@/types/auth";
@@ -397,7 +399,7 @@ export async function getTimeSlotsForDateAction(
       // 1. Verifica colisão com o banco de dados Supabase
       const dbMatch = activeDbList.find((apt) => {
         const aptInicio = apt.horario_inicio;
-        const aptFim = apt.horario_fim || `${String(Number(apt.horario_inicio.split(":")[0]) + 1).padStart(2, "0")}:00`;
+        const aptFim = apt.horario_fim || calculateEndTime(apt.horario_inicio, 30);
         return hasOverlap(slot, endSlot, aptInicio, aptFim);
       });
 
@@ -456,6 +458,26 @@ export async function getTimeSlotsForDateAction(
       data: fallbackSlots,
       message: "Horários carregados em modo de contingência.",
     };
+  }
+}
+
+/**
+ * 2.1 FORÇA SINCRONIZAÇÃO COM GOOGLE CALENDAR (INCLUINDO google_tokens) E RECARREGA SLOTS
+ */
+export async function syncAndRefreshSlotsAction(
+  dateStr: string
+): Promise<ActionResponse<TimeSlot[]>> {
+  try {
+    try {
+      await performFullSync();
+    } catch (syncErr) {
+      console.warn("[syncAndRefreshSlotsAction] Aviso na sincronização do Google Calendar:", syncErr);
+    }
+
+    return await getTimeSlotsForDateAction(dateStr);
+  } catch (err: any) {
+    console.error("[syncAndRefreshSlotsAction] Erro:", err);
+    return await getTimeSlotsForDateAction(dateStr);
   }
 }
 
@@ -886,11 +908,10 @@ export async function updateAppointmentAction(
     if (updates.horario_inicio || updates.procedimento) {
       const procName = updates.procedimento || current.procedimento;
       const matchedProc = PROCEDIMENTOS_CADASTRAIS.find(p => p.procedimento === procName);
-      const duracaoHoras = matchedProc ? Number(matchedProc.duracao) : 1;
+      const duracaoMinutos = getDurationInMinutes(matchedProc?.duracao);
       
       const startSlot = updates.horario_inicio || current.horario_inicio;
-      const startHour = Number(startSlot.split(":")[0]);
-      targetEnd = `${String(startHour + duracaoHoras).padStart(2, "0")}:00`;
+      targetEnd = calculateEndTime(startSlot, duracaoMinutos);
     }
 
     const payloadToUpdate: Record<string, unknown> = {

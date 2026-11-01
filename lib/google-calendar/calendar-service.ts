@@ -219,6 +219,42 @@ export async function getGoogleCalendarAccessToken(): Promise<string | null> {
     console.log("[Google Calendar] Usando refresh token para autenticação...");
     return await refreshGoogleOAuthToken(creds.refreshToken);
   }
+
+  // Consulta tokens OAuth na tabela google_tokens do Supabase
+  try {
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+    if (supabase) {
+      const { data: tokenRow } = await supabase
+        .from("google_tokens")
+        .select("access_token, refresh_token, expiry_date, calendar_id")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (tokenRow) {
+        if (tokenRow.access_token && tokenRow.expiry_date && Number(tokenRow.expiry_date) > Date.now() + 60000) {
+          return tokenRow.access_token;
+        }
+        if (tokenRow.refresh_token) {
+          const refreshed = await refreshGoogleOAuthToken(tokenRow.refresh_token);
+          if (refreshed) {
+            await supabase
+              .from("google_tokens")
+              .update({
+                access_token: refreshed,
+                expiry_date: Date.now() + 3600 * 1000,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("refresh_token", tokenRow.refresh_token);
+            return refreshed;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[Google Calendar] Aviso ao consultar google_tokens:", err);
+  }
   
   return null;
 }
@@ -227,19 +263,21 @@ export async function listGoogleCalendarEventsForDate(
   dateStr: string
 ): Promise<{ events: GoogleCalendarApiEvent[]; isConfigured: boolean }> {
   const creds = getGoogleCalendarCredentials();
-  if (!creds.isConfigured) {
+  const accessToken = await getGoogleCalendarAccessToken();
+  const calendarId = creds.calendarId || "primary";
+
+  if (!creds.isConfigured && !accessToken) {
     return { events: [], isConfigured: false };
   }
   try {
     const timeMin = `${dateStr}T00:00:00-03:00`;
     const timeMax = `${dateStr}T23:59:59-03:00`;
     
-    const accessToken = await getGoogleCalendarAccessToken();
     let res: Response;
 
     if (accessToken) {
       const url = new URL(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(creds.calendarId)}/events`
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`
       );
       url.searchParams.set("timeMin", timeMin);
       url.searchParams.set("timeMax", timeMax);

@@ -25,11 +25,13 @@ import {
   Paperclip,
   Image as ImageIcon,
   Trash2,
+  RefreshCw,
 } from "lucide-react";
 import { AppointmentCalendarPicker } from "./appointment-calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
 import {
   getTimeSlotsForDateAction,
+  syncAndRefreshSlotsAction,
   createAppointmentAction,
   getActivePatientsForSchedulingAction,
   getProcedimentosAction,
@@ -51,6 +53,9 @@ import {
   getDayScheduleDescription,
   getMinSelectableAppointmentDateString,
   getTodaySaoPauloDateString,
+  getDurationInMinutes,
+  formatDurationLabel,
+  calculateEndTime,
 } from "@/types/appointment";
 
 export type SelectablePatient = PatientSummary | Client;
@@ -344,10 +349,14 @@ function AppointmentFormModalContent({
   const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
   const [hasAddedToCalendar, setHasAddedToCalendar] = useState<boolean>(false);
 
-  const selectedDuration = useMemo(() => {
+  const selectedDurationMinutes = useMemo(() => {
     const matched = procedimentosList.find((p) => p.procedimento === procedimento);
-    return matched ? Number(matched.duracao) : 1;
+    return getDurationInMinutes(matched?.duracao);
   }, [procedimento, procedimentosList]);
+
+  const selectedDurationLabel = useMemo(() => {
+    return formatDurationLabel(selectedDurationMinutes);
+  }, [selectedDurationMinutes]);
 
   const selectedProcedureObj = useMemo(() => {
     return procedimentosList.find((p) => p.procedimento === procedimento);
@@ -379,10 +388,8 @@ function AppointmentFormModalContent({
 
   const selectedEndTime = useMemo(() => {
     if (!selectedSlot) return "";
-    const startHour = Number(selectedSlot.split(":")[0]);
-    const endHour = String(startHour + selectedDuration).padStart(2, "0");
-    return `${endHour}:00`;
-  }, [selectedSlot, selectedDuration]);
+    return calculateEndTime(selectedSlot, selectedDurationMinutes);
+  }, [selectedSlot, selectedDurationMinutes]);
 
   // Categorias extraídas dinamicamente dos procedimentos
   const categoriesList = useMemo(() => {
@@ -411,11 +418,10 @@ function AppointmentFormModalContent({
       return;
     }
 
+    const requiredSlotsCount = Math.max(1, Math.ceil(selectedDurationMinutes / 30));
+
     // 1. Limite do expediente do dia
-    const lastSlot = slots[slots.length - 1];
-    const H_f = lastSlot ? Number(lastSlot.endSlot.split(":")[0]) : 16;
-    const startHour = Number(selectedSlot.split(":")[0]);
-    if (startHour + selectedDuration > H_f) {
+    if (selectedIndex + requiredSlotsCount > slots.length) {
       setSelectedSlot(null);
       toast({
         type: "error",
@@ -425,11 +431,15 @@ function AppointmentFormModalContent({
       return;
     }
 
-    // 2. Slots consecutivos livres
+    // 2. Slots consecutivos livres e verificação de continuidade
     let hasOverlap = false;
-    for (let offset = 0; offset < selectedDuration; offset++) {
+    for (let offset = 0; offset < requiredSlotsCount; offset++) {
       const checkIndex = selectedIndex + offset;
       if (checkIndex >= slots.length || slots[checkIndex].isOccupied) {
+        hasOverlap = true;
+        break;
+      }
+      if (offset > 0 && slots[checkIndex].slot !== slots[checkIndex - 1].endSlot) {
         hasOverlap = true;
         break;
       }
@@ -443,7 +453,7 @@ function AppointmentFormModalContent({
         description: "Os horários consecutivos necessários para este procedimento não estão totalmente livres. Selecione um novo horário.",
       });
     }
-  }, [selectedDuration, slots, selectedSlot]);
+  }, [selectedDurationMinutes, slots, selectedSlot]);
 
   const calendarUrl = useMemo(() => {
     if (!confirmedAppointment) return "";
@@ -608,6 +618,58 @@ function AppointmentFormModalContent({
       isMounted = false;
     };
   }, [selectedDate]);
+
+  // Sincronização manual sob demanda com o Google Calendar e atualização dos slots livres
+  const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
+
+  const handleSyncGoogleCalendar = async () => {
+    if (!selectedDate) {
+      toast({
+        type: "error",
+        title: "Selecione uma data",
+        description: "Escolha uma data para sincronizar os horários com o Google Calendar.",
+      });
+      return;
+    }
+
+    setIsSyncingCalendar(true);
+    try {
+      const res = await syncAndRefreshSlotsAction(selectedDate);
+      if (res.success && res.data) {
+        setSlots(res.data);
+        // Desmarca slot selecionado caso tenha sido ocupado após sincronização
+        setSelectedSlot((prev) => {
+          if (!prev) return null;
+          const found = res.data?.find((s) => s.slot === prev);
+          return found && !found.isOccupied ? prev : null;
+        });
+        toast({
+          type: "success",
+          title: "Google Calendar Sincronizado",
+          description: "Horários atualizados com base nos eventos da agenda e agendamentos.",
+        });
+      } else {
+        const fallback = await getTimeSlotsForDateAction(selectedDate);
+        if (fallback.success && fallback.data) {
+          setSlots(fallback.data);
+        }
+        toast({
+          type: "info",
+          title: "Horários Recarregados",
+          description: res.message || "Grade de horários atualizada com sucesso.",
+        });
+      }
+    } catch (err: any) {
+      console.error("Erro na sincronização:", err);
+      toast({
+        type: "error",
+        title: "Falha na sincronização",
+        description: "Não foi possível sincronizar no momento. Tente novamente.",
+      });
+    } finally {
+      setIsSyncingCalendar(false);
+    }
+  };
 
   // 3. BUSCA DINÂMICA E RESPONSIVA DE PACIENTES
   const filteredPatients = useMemo(() => {
@@ -1031,14 +1093,27 @@ function AppointmentFormModalContent({
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
-                  <CalendarIcon className="w-3.5 h-3.5 text-teal-600" />
+                  <CalendarIcon className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                   <span>2. Data do Atendimento *</span>
                 </span>
-                {scheduleInfo?.isOpen && (
-                  <span className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded-full border border-teal-200 dark:border-teal-800">
-                    {scheduleInfo.dayName}
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5">
+                  {/* Botão de Sincronização do Calendário (Apenas Ícone) */}
+                  <button
+                    type="button"
+                    onClick={handleSyncGoogleCalendar}
+                    disabled={isSyncingCalendar || isLoadingSlots}
+                    aria-label="Sincronizar Google Calendar"
+                    title="Sincronizar Google Calendar e atualizar horários livres"
+                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-teal-600 dark:text-slate-400 dark:hover:text-teal-400 bg-white dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/40 transition-colors cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCalendar || isLoadingSlots ? "animate-spin text-teal-600 dark:text-teal-400" : ""}`} />
+                  </button>
+                  {scheduleInfo?.isOpen && (
+                    <span className="text-[10px] font-semibold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded-full border border-teal-200 dark:border-teal-800">
+                      {scheduleInfo.dayName}
+                    </span>
+                  )}
+                </div>
               </label>
 
               <AppointmentCalendarPicker
@@ -1063,12 +1138,12 @@ function AppointmentFormModalContent({
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-teal-600" />
+                  <Clock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                   <span>3. Horários Disponíveis *</span>
                 </div>
                 {selectedSlot && (
                   <span className="text-[11px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/70 px-2.5 py-0.5 rounded-full border border-teal-300 dark:border-teal-700">
-                    {selectedSlot} às {selectedEndTime} ({selectedDuration}h)
+                    {selectedSlot} às {selectedEndTime} ({selectedDurationLabel})
                   </span>
                 )}
               </label>
@@ -1079,7 +1154,7 @@ function AppointmentFormModalContent({
                 onSelectSlot={(s) => setSelectedSlot(s)}
                 isLoading={isLoadingSlots}
                 dateStr={selectedDate}
-                duracao={selectedDuration}
+                duracao={selectedDurationMinutes}
               />
             </div>
           </div>

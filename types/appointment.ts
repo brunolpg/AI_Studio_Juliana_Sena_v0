@@ -60,35 +60,86 @@ export interface TimeSlot {
 
 /**
  * Dias da semana permitidos para agendamento com a Dra. Juliana Sena:
- * 1 = Segunda-feira (09:00 às 16:00, sessões de 1h)
- * 4 = Quinta-feira  (09:00 às 16:00, sessões de 1h)
- * 6 = Sábado        (13:00 às 18:00, sessões de 1h)
+ * 1 = Segunda-feira (09:00 às 16:00, sessões de 30m)
+ * 4 = Quinta-feira  (09:00 às 16:00, sessões de 30m)
+ * 6 = Sábado        (13:00 às 18:00, sessões de 30m)
  */
 export const ALLOWED_APPOINTMENT_DAYS = [1, 4, 6] as const;
 export type AllowedDayOfWeek = typeof ALLOWED_APPOINTMENT_DAYS[number];
 
 /**
- * Grade de Segundas e Quintas-feiras: 09:00 às 16:00 (intervalos de 1h, último às 15:00)
+ * Grade de Segundas e Quintas-feiras: 09:00 às 16:00 (intervalos de 30m)
  */
 export const MONDAY_THURSDAY_SLOTS: Array<{ slot: string; endSlot: string; label: string }> = [
-  { slot: "09:00", endSlot: "10:00", label: "09:00 - 10:00" },
-  { slot: "10:00", endSlot: "11:00", label: "10:00 - 11:00" },
-  { slot: "11:00", endSlot: "12:00", label: "11:00 - 12:00" },
-  { slot: "13:00", endSlot: "14:00", label: "13:00 - 14:00" },
-  { slot: "14:00", endSlot: "15:00", label: "14:00 - 15:00" },
-  { slot: "15:00", endSlot: "16:00", label: "15:00 - 16:00" },
+  { slot: "09:00", endSlot: "09:30", label: "09:00 - 09:30" },
+  { slot: "09:30", endSlot: "10:00", label: "09:30 - 10:00" },
+  { slot: "10:00", endSlot: "10:30", label: "10:00 - 10:30" },
+  { slot: "10:30", endSlot: "11:00", label: "10:30 - 11:00" },
+  { slot: "11:00", endSlot: "11:30", label: "11:00 - 11:30" },
+  { slot: "11:30", endSlot: "12:00", label: "11:30 - 12:00" },
+  { slot: "13:00", endSlot: "13:30", label: "13:00 - 13:30" },
+  { slot: "13:30", endSlot: "14:00", label: "13:30 - 14:00" },
+  { slot: "14:00", endSlot: "14:30", label: "14:00 - 14:30" },
+  { slot: "14:30", endSlot: "15:00", label: "14:30 - 15:00" },
+  { slot: "15:00", endSlot: "15:30", label: "15:00 - 15:30" },
+  { slot: "15:30", endSlot: "16:00", label: "15:30 - 16:00" },
 ];
 
 /**
- * Grade de Sábados: 13:00 às 18:00 (intervalos de 1h, último às 17:00)
+ * Grade de Sábados: 13:00 às 18:00 (intervalos de 30m)
  */
 export const SATURDAY_SLOTS: Array<{ slot: string; endSlot: string; label: string }> = [
-  { slot: "13:00", endSlot: "14:00", label: "13:00 - 14:00" },
-  { slot: "14:00", endSlot: "15:00", label: "14:00 - 15:00" },
-  { slot: "15:00", endSlot: "16:00", label: "15:00 - 16:00" },
-  { slot: "16:00", endSlot: "17:00", label: "16:00 - 17:00" },
-  { slot: "17:00", endSlot: "18:00", label: "17:00 - 18:00" },
+  { slot: "13:00", endSlot: "13:30", label: "13:00 - 13:30" },
+  { slot: "13:30", endSlot: "14:00", label: "13:30 - 14:00" },
+  { slot: "14:00", endSlot: "14:30", label: "14:00 - 14:30" },
+  { slot: "14:30", endSlot: "15:00", label: "14:30 - 15:00" },
+  { slot: "15:00", endSlot: "15:30", label: "15:00 - 15:30" },
+  { slot: "15:30", endSlot: "16:00", label: "15:30 - 16:00" },
+  { slot: "16:00", endSlot: "16:30", label: "16:00 - 16:30" },
+  { slot: "16:30", endSlot: "17:00", label: "16:30 - 17:00" },
+  { slot: "17:00", endSlot: "17:30", label: "17:00 - 17:30" },
+  { slot: "17:30", endSlot: "18:00", label: "17:30 - 18:00" },
 ];
+
+/**
+ * Normaliza a duração em minutos:
+ * - Se <= 8, interpreta como horas (ex: 0.5 -> 30, 1 -> 60, 2 -> 120)
+ * - Se > 8, interpreta como minutos (ex: 30, 45, 60, 90)
+ * - Padrão: 30 minutos
+ */
+export function getDurationInMinutes(duracao?: number | string | null): number {
+  if (duracao === undefined || duracao === null || duracao === "") return 30;
+  const num = Number(duracao);
+  if (isNaN(num) || num <= 0) return 30;
+  if (num <= 8) {
+    return Math.round(num * 60);
+  }
+  return Math.round(num);
+}
+
+/**
+ * Formata minutos em string amigável (ex: 30 -> "30m", 60 -> "1h", 90 -> "1h30m", 120 -> "2h")
+ */
+export function formatDurationLabel(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (remainingMinutes === 0) return `${hours}h`;
+  return `${hours}h${remainingMinutes}m`;
+}
+
+/**
+ * Calcula o horário de término HH:MM a partir do horário de início e duração em minutos
+ */
+export function calculateEndTime(startTime: string, durationMinutes: number = 30): string {
+  if (!startTime) return "";
+  const [h, m] = startTime.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return "";
+  const totalMinutes = h * 60 + m + durationMinutes;
+  const endH = Math.floor(totalMinutes / 60);
+  const endM = totalMinutes % 60;
+  return `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+}
 
 /**
  * Fallback para compatibilidade geral
@@ -206,19 +257,19 @@ export function getDayScheduleDescription(dateStr: string): {
       return {
         isOpen: true,
         dayName: "Segunda-feira",
-        hoursDescription: "09:00 às 16:00 (sessões de 1 em 1 hora)",
+        hoursDescription: "09:00 às 16:00 (sessões de 30 em 30 min)",
       };
     case 4:
       return {
         isOpen: true,
         dayName: "Quinta-feira",
-        hoursDescription: "09:00 às 16:00 (sessões de 1 em 1 hora)",
+        hoursDescription: "09:00 às 16:00 (sessões de 30 em 30 min)",
       };
     case 6:
       return {
         isOpen: true,
         dayName: "Sábado",
-        hoursDescription: "13:00 às 18:00 (sessões de 1 em 1 hora)",
+        hoursDescription: "13:00 às 18:00 (sessões de 30 em 30 min)",
       };
     default:
       return {
