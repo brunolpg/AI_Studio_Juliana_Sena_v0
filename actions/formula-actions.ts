@@ -263,18 +263,65 @@ export async function createComponenteQuickAction(nomeComponente: string, unidad
 
     const formattedNome = nomeComponente.trim();
 
+    // Verificação preventiva no banco de dados (case-insensitive)
+    const { data: existingComp } = await supabase
+      .from("componentes")
+      .select("id, nome, unidade_id, unidades(id, unidade)")
+      .ilike("nome", formattedNome)
+      .maybeSingle();
+
+    if (existingComp) {
+      return {
+        success: false,
+        code: "23505",
+        isDuplicate: true,
+        error: "Este componente já está cadastrado no sistema.",
+        componente: existingComp,
+      };
+    }
+
     const { data, error } = await supabase
       .from("componentes")
       .insert({ nome: formattedNome, unidade_id: unidadeId })
       .select("id, nome, unidade_id, unidades(id, unidade)")
       .single();
 
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      if (
+        error.code === "23505" ||
+        error.message?.includes("componentes_nome_key") ||
+        error.message?.includes("duplicate key value") ||
+        error.message?.includes("already exists") ||
+        error.message?.includes("violates unique constraint")
+      ) {
+        return {
+          success: false,
+          code: "23505",
+          isDuplicate: true,
+          error: "Este componente já está cadastrado no sistema.",
+        };
+      }
+      return { success: false, error: error.message };
+    }
     revalidatePath("/formulas");
     revalidatePath("/dashboard/formulas");
     return { success: true, componente: data };
   } catch (err: any) {
-    return { success: false, error: err.message };
+    if (
+      err?.code === "23505" ||
+      err?.message?.includes("componentes_nome_key") ||
+      err?.message?.includes("duplicate key value") ||
+      err?.message?.includes("already exists") ||
+      err?.message?.includes("violates unique constraint")
+    ) {
+      return {
+        success: false,
+        code: "23505",
+        isDuplicate: true,
+        error: "Este componente já está cadastrado no sistema.",
+      };
+    }
+    return { success: false, error: err?.message || "Erro inesperado ao cadastrar componente." };
   }
 }
 

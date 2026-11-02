@@ -1058,10 +1058,32 @@ export async function addStructuredPrescriptionAction(
           .single();
 
         if (insertErr) {
-          return {
-            success: false,
-            message: `Erro ao criar componente [${rawComponentName}]: ${insertErr.message}`,
-          };
+          if (
+            insertErr.code === "23505" ||
+            insertErr.message?.includes("componentes_nome_key") ||
+            insertErr.message?.includes("duplicate key value")
+          ) {
+            const { data: retryComp } = await supabase
+              .from("componentes")
+              .select("id, nome")
+              .ilike("nome", rawComponentName)
+              .maybeSingle();
+
+            if (retryComp) {
+              compId = retryComp.id;
+              compNome = retryComp.nome || rawComponentName;
+            } else {
+              return {
+                success: false,
+                message: "Este componente já está cadastrado no sistema.",
+              };
+            }
+          } else {
+            return {
+              success: false,
+              message: `Erro ao criar componente [${rawComponentName}]: ${insertErr.message}`,
+            };
+          }
         }
         if (newComp) {
           compId = newComp.id;

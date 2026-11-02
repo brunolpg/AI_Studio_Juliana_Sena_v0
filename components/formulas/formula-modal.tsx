@@ -49,6 +49,7 @@ export function FormulaModal({
   const [newCompUnidadeId, setNewCompUnidadeId] = useState("");
   const [newUnidadeNome, setNewUnidadeNome] = useState("");
   const [isCreatingQuick, setIsCreatingQuick] = useState(false);
+  const [quickCompError, setQuickCompError] = useState<{ title: string; description: string } | null>(null);
 
   const fieldClassName =
     "w-full rounded-xl border transition-all text-sm font-['Plus_Jakarta_Sans',sans-serif] px-3.5 py-2.5 " +
@@ -125,6 +126,8 @@ export function FormulaModal({
 
   const handleQuickCreateComponente = async (e: React.FormEvent) => {
     e.preventDefault();
+    setQuickCompError(null);
+
     if (!newCompNome.trim() || !newCompUnidadeId) {
       toast({ type: "error", title: "Campos obrigatórios", description: "Informe o nome do componente e selecione a unidade." });
       return;
@@ -145,24 +148,71 @@ export function FormulaModal({
           setIsCreatingQuick(false);
           return;
         }
-        setUnidadesList((prev) => [...prev, uRes.unidade!]);
+        setUnidadesList((prev) => {
+          if (prev.some((u) => u.id === uRes.unidade!.id)) return prev;
+          return [...prev, uRes.unidade!];
+        });
         unidadeId = uRes.unidade.id;
       }
 
       const formattedCompNome = newCompNome.trim();
       const cRes = await createComponenteQuickAction(formattedCompNome, unidadeId);
+
       if (cRes.success && cRes.componente) {
-        setComponentesList((prev) => [...prev, cRes.componente!]);
+        setComponentesList((prev) => {
+          if (prev.some((c) => c.id === cRes.componente!.id)) return prev;
+          return [...prev, cRes.componente!];
+        });
         toast({ type: "success", title: "Componente criado!", description: `${formattedCompNome} adicionado com sucesso.` });
         setShowNewCompModal(false);
         setNewCompNome("");
         setNewUnidadeNome("");
         setNewCompUnidadeId("");
+        setQuickCompError(null);
       } else {
-        toast({ type: "error", title: "Erro", description: cRes.error || "Falha ao criar componente." });
+        const isDuplicate =
+          (cRes as any)?.code === "23505" ||
+          (cRes as any)?.isDuplicate ||
+          cRes.error?.toLowerCase().includes("já está cadastrado") ||
+          cRes.error?.includes("componentes_nome_key") ||
+          cRes.error?.includes("duplicate key value");
+
+        if (isDuplicate) {
+          toast({
+            type: "warning",
+            title: "Componente já existente",
+            description: "Já existe um componente cadastrado com este nome no catálogo.",
+          });
+          setQuickCompError({
+            title: "Componente já existente",
+            description: "Já existe um componente cadastrado com este nome no catálogo.",
+          });
+          // Se retornou o componente existente, adiciona à lista para seleção imediata
+          if ((cRes as any)?.componente) {
+            setComponentesList((prev) => {
+              if (prev.some((c) => c.id === (cRes as any).componente.id)) return prev;
+              return [...prev, (cRes as any).componente];
+            });
+          }
+        } else {
+          toast({
+            type: "error",
+            title: "Erro ao cadastrar componente",
+            description: cRes.error || "Falha ao criar componente.",
+          });
+          setQuickCompError({
+            title: "Erro ao cadastrar componente",
+            description: cRes.error || "Falha ao criar componente.",
+          });
+        }
+        // Mantém showNewCompModal aberto e os dados digitados preservados
       }
     } catch (err: any) {
-      toast({ type: "error", title: "Erro", description: err.message });
+      toast({ type: "error", title: "Erro", description: err.message || "Erro inesperado ao cadastrar componente." });
+      setQuickCompError({
+        title: "Erro inesperado",
+        description: err.message || "Erro inesperado ao cadastrar componente.",
+      });
     } finally {
       setIsCreatingQuick(false);
     }
@@ -300,7 +350,10 @@ export function FormulaModal({
               </label>
               <button
                 type="button"
-                onClick={() => setShowNewCompModal(true)}
+                onClick={() => {
+                  setQuickCompError(null);
+                  setShowNewCompModal(true);
+                }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#043e33] hover:bg-[#064e3b] hover:opacity-90 dark:bg-emerald-950 dark:hover:bg-emerald-900 rounded-full shadow-xs cursor-pointer transition-all active:scale-[0.98] dark:border dark:border-white/10"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -446,22 +499,65 @@ export function FormulaModal({
 
       {/* Modal Rápido de Criação de Componente */}
       {showNewCompModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 bg-black/60 backdrop-blur-xs">
-          <form onSubmit={handleQuickCreateComponente} className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
+          <form
+            onSubmit={handleQuickCreateComponente}
+            className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 font-['Plus_Jakarta_Sans',sans-serif]"
+          >
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white">Cadastrar Novo Componente</h4>
-              <button type="button" onClick={() => setShowNewCompModal(false)} className="text-slate-400 hover:text-slate-600">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                Cadastrar Novo Componente
+              </h4>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNewCompModal(false);
+                  setQuickCompError(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
+            {/* Aviso Amigável em Caso de Componente Já Existente / Erro */}
+            {quickCompError && (
+              <div
+                role="alert"
+                className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 flex items-start gap-3 text-xs transition-all animate-in fade-in duration-200"
+              >
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-amber-950 dark:text-amber-100 text-xs">
+                    {quickCompError.title}
+                  </p>
+                  <p className="mt-0.5 text-amber-800/95 dark:text-amber-300/90 text-xs leading-relaxed">
+                    {quickCompError.description}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setQuickCompError(null)}
+                  className="p-1 text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/40 rounded-lg transition-colors cursor-pointer"
+                  aria-label="Fechar aviso"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">Nome do Componente *</label>
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
+                  Nome do Componente *
+                </label>
                 <Input
                   type="text"
                   value={newCompNome}
-                  onChange={(e) => setNewCompNome(e.target.value)}
+                  onChange={(e) => {
+                    setNewCompNome(e.target.value);
+                    if (quickCompError) setQuickCompError(null);
+                  }}
                   placeholder="Ex: Coenzima Q10"
                   className={fieldClassName + " mt-1"}
                   required
@@ -469,24 +565,33 @@ export function FormulaModal({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">Unidade de Medida *</label>
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
+                  Unidade de Medida *
+                </label>
                 <select
                   value={newCompUnidadeId}
-                  onChange={(e) => setNewCompUnidadeId(e.target.value)}
+                  onChange={(e) => {
+                    setNewCompUnidadeId(e.target.value);
+                    if (quickCompError) setQuickCompError(null);
+                  }}
                   className={fieldClassName + " mt-1"}
                   required
                 >
                   <option value="">Selecione a unidade...</option>
                   <option value="NEW">+ Criar Nova Unidade...</option>
                   {unidadesList.map((u) => (
-                    <option key={u.id} value={u.id}>{u.unidade}</option>
+                    <option key={u.id} value={u.id}>
+                      {u.unidade}
+                    </option>
                   ))}
                 </select>
               </div>
 
               {newCompUnidadeId === "NEW" && (
                 <div>
-                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">Nome da Nova Unidade *</label>
+                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight">
+                    Nome da Nova Unidade *
+                  </label>
                   <Input
                     type="text"
                     value={newUnidadeNome}
@@ -502,7 +607,10 @@ export function FormulaModal({
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setShowNewCompModal(false)}
+                onClick={() => {
+                  setShowNewCompModal(false);
+                  setQuickCompError(null);
+                }}
                 className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
               >
                 Cancelar
