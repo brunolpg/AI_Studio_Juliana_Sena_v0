@@ -1,8 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Plus, Trash2, FlaskConical, AlertCircle, Check, Loader2 } from "lucide-react";
-import { createFormulaAction, createUnidadeQuickAction, createComponenteQuickAction } from "@/actions/formula-actions";
+import {
+  createFormulaAction,
+  createUnidadeQuickAction,
+  createComponenteQuickAction,
+  getComponentesAndUnidadesAction,
+} from "@/actions/formula-actions";
 import { useToast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 import type { Componente, Unidade } from "@/types/formula";
@@ -23,8 +28,16 @@ export function FormulaModal({
   initialUnidades,
 }: FormulaModalProps) {
   const { toast } = useToast();
-  const [componentesList, setComponentesList] = useState<Componente[]>(initialComponentes);
-  const [unidadesList, setUnidadesList] = useState<Unidade[]>(initialUnidades);
+  const [componentesList, setComponentesList] = useState<Componente[]>(() =>
+    [...(initialComponentes || [])].sort((a, b) =>
+      a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
+    )
+  );
+  const [unidadesList, setUnidadesList] = useState<Unidade[]>(() =>
+    [...(initialUnidades || [])].sort((a, b) =>
+      a.unidade.localeCompare(b.unidade, "pt-BR", { sensitivity: "base" })
+    )
+  );
 
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -51,6 +64,34 @@ export function FormulaModal({
   const [isCreatingQuick, setIsCreatingQuick] = useState(false);
   const [quickCompError, setQuickCompError] = useState<{ title: string; description: string } | null>(null);
 
+  // Sincronização em tempo real de componentes e unidades com o banco
+  const fetchLatestComponentes = async () => {
+    try {
+      const res = await getComponentesAndUnidadesAction();
+      if (res.success && res.componentes) {
+        const sortedComps = [...res.componentes].sort((a, b) =>
+          a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
+        );
+        setComponentesList(sortedComps);
+      }
+      if (res.success && res.unidades) {
+        const sortedUnits = [...res.unidades].sort((a, b) =>
+          a.unidade.localeCompare(b.unidade, "pt-BR", { sensitivity: "base" })
+        );
+        setUnidadesList(sortedUnits);
+      }
+    } catch (err) {
+      console.error("Erro ao sincronizar componentes e unidades:", err);
+    }
+  };
+
+  // Atualização ao abrir o modal
+  useEffect(() => {
+    if (isOpen) {
+      fetchLatestComponentes();
+    }
+  }, [isOpen]);
+
   const fieldClassName =
     "w-full rounded-xl border transition-all text-sm font-['Plus_Jakarta_Sans',sans-serif] px-3.5 py-2.5 " +
     "bg-slate-50/70 border-slate-200 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 " +
@@ -60,6 +101,7 @@ export function FormulaModal({
 
   const handleAddItem = () => {
     setSelectedItens((prev) => [...prev, { componente_id: "", quantidade: "" }]);
+    fetchLatestComponentes();
   };
 
   const handleRemoveItem = (index: number) => {
@@ -150,7 +192,9 @@ export function FormulaModal({
         }
         setUnidadesList((prev) => {
           if (prev.some((u) => u.id === uRes.unidade!.id)) return prev;
-          return [...prev, uRes.unidade!];
+          return [...prev, uRes.unidade!].sort((a, b) =>
+            a.unidade.localeCompare(b.unidade, "pt-BR", { sensitivity: "base" })
+          );
         });
         unidadeId = uRes.unidade.id;
       }
@@ -159,16 +203,42 @@ export function FormulaModal({
       const cRes = await createComponenteQuickAction(formattedCompNome, unidadeId);
 
       if (cRes.success && cRes.componente) {
+        const novoComponente = cRes.componente;
+
+        // Atualiza a lista local garantindo ordenação alfabética
         setComponentesList((prev) => {
-          if (prev.some((c) => c.id === cRes.componente!.id)) return prev;
-          return [...prev, cRes.componente!];
+          const exists = prev.some((c) => c.id === novoComponente.id);
+          const updated = exists ? prev : [...prev, novoComponente];
+          return updated.sort((a, b) =>
+            a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
+          );
         });
-        toast({ type: "success", title: "Componente criado!", description: `${formattedCompNome} adicionado com sucesso.` });
+
+        // Seleciona automaticamente o novo componente na primeira linha vazia (ou adiciona nova linha)
+        setSelectedItens((prev) => {
+          const emptyIndex = prev.findIndex((item) => !item.componente_id);
+          if (emptyIndex !== -1) {
+            const updated = [...prev];
+            updated[emptyIndex] = { ...updated[emptyIndex], componente_id: novoComponente.id };
+            return updated;
+          } else {
+            return [...prev, { componente_id: novoComponente.id, quantidade: "" }];
+          }
+        });
+
+        toast({
+          type: "success",
+          title: "Componente criado!",
+          description: `${formattedCompNome} adicionado e selecionado com sucesso.`,
+        });
         setShowNewCompModal(false);
         setNewCompNome("");
         setNewUnidadeNome("");
         setNewCompUnidadeId("");
         setQuickCompError(null);
+
+        // Recarrega componentes e unidades atualizados do banco
+        fetchLatestComponentes();
       } else {
         const isDuplicate =
           (cRes as any)?.code === "23505" ||
@@ -187,11 +257,24 @@ export function FormulaModal({
             title: "Componente já existente",
             description: "Já existe um componente cadastrado com este nome no catálogo.",
           });
-          // Se retornou o componente existente, adiciona à lista para seleção imediata
+          // Se retornou o componente existente, adiciona à lista ordenada e auto-seleciona
           if ((cRes as any)?.componente) {
+            const existingComp = (cRes as any).componente;
             setComponentesList((prev) => {
-              if (prev.some((c) => c.id === (cRes as any).componente.id)) return prev;
-              return [...prev, (cRes as any).componente];
+              const exists = prev.some((c) => c.id === existingComp.id);
+              const updated = exists ? prev : [...prev, existingComp];
+              return updated.sort((a, b) =>
+                a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
+              );
+            });
+            setSelectedItens((prev) => {
+              const emptyIndex = prev.findIndex((item) => !item.componente_id);
+              if (emptyIndex !== -1) {
+                const updated = [...prev];
+                updated[emptyIndex] = { ...updated[emptyIndex], componente_id: existingComp.id };
+                return updated;
+              }
+              return prev;
             });
           }
         } else {
@@ -376,11 +459,15 @@ export function FormulaModal({
                         required
                       >
                         <option value="">Selecione o componente...</option>
-                        {componentesList.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.nome} ({(c as any).unidades?.unidade || "un"})
-                          </option>
-                        ))}
+                        {[...componentesList]
+                          .sort((a, b) =>
+                            a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
+                          )
+                          .map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.nome} ({(c as any).unidades?.unidade || "un"})
+                            </option>
+                          ))}
                       </select>
                     </div>
 
@@ -579,11 +666,15 @@ export function FormulaModal({
                 >
                   <option value="">Selecione a unidade...</option>
                   <option value="NEW">+ Criar Nova Unidade...</option>
-                  {unidadesList.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.unidade}
-                    </option>
-                  ))}
+                  {[...unidadesList]
+                    .sort((a, b) =>
+                      a.unidade.localeCompare(b.unidade, "pt-BR", { sensitivity: "base" })
+                    )
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.unidade}
+                      </option>
+                    ))}
                 </select>
               </div>
 
