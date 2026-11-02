@@ -1207,7 +1207,7 @@ export function PopFormModal({
 
                     {/* Seleção da Fórmula e Botão de Cadastro Rápido */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                           Selecione a Fórmula Cadastrada *
                         </label>
@@ -1217,9 +1217,9 @@ export function PopFormModal({
                             setActiveBlocoIndexForNewFormula(bIdx);
                             setIsNovaFormulaModalOpen(true);
                           }}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#004d40] dark:text-emerald-400 hover:underline cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-950 hover:bg-[#064e3b] dark:bg-[#043e33] dark:hover:bg-[#064e3b] text-white text-xs font-semibold hover:opacity-90 transition-all shadow-xs cursor-pointer active:scale-[0.98] dark:border dark:border-white/10"
                         >
-                          <Plus className="w-3 h-3" />
+                          <Plus className="w-3.5 h-3.5" />
                           <span>Cadastrar Nova Fórmula</span>
                         </button>
                       </div>
