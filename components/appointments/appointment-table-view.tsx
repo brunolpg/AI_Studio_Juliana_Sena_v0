@@ -102,7 +102,12 @@ function generatePixPayload({
   return payload.slice(0, -4) + formatField('63', crcHex);
 }
 
-export function AppointmentTableView() {
+interface AppointmentTableViewProps {
+  clientId?: string;
+  patientData?: any;
+}
+
+export function AppointmentTableView({ clientId, patientData }: AppointmentTableViewProps = {}) {
   const { toast } = useToast();
   const { user } = useAuth();
   const isPatient = user?.role === "paciente";
@@ -481,6 +486,8 @@ export function AppointmentTableView() {
   }, [toast]);
 
   // Carregar agendamentos (dependências exclusivamente primitivas e estáveis)
+  const effectiveClientId = clientId || (isPatient ? patientData?.id : undefined);
+
   const loadAppointments = useCallback(() => {
     startTransition(async () => {
       try {
@@ -489,6 +496,7 @@ export function AppointmentTableView() {
           tab: activeFilterTab,
           page: currentPage,
           pageSize,
+          clientId: effectiveClientId,
         });
 
         if (res.success && res.data) {
@@ -509,7 +517,7 @@ export function AppointmentTableView() {
         });
       }
     });
-  }, [debouncedSearch, activeFilterTab, currentPage, pageSize]);
+  }, [debouncedSearch, activeFilterTab, currentPage, pageSize, effectiveClientId]);
 
   useEffect(() => {
     loadAppointments();
@@ -778,8 +786,22 @@ export function AppointmentTableView() {
                       <p className="text-xs text-slate-500 mt-1">
                         {searchTerm
                           ? `Nenhum resultado para "${searchTerm}". Tente outro termo.`
+                          : isPatient
+                          ? activeFilterTab === "hoje"
+                            ? "Você não possui consultas agendadas para hoje."
+                            : activeFilterTab === "proximos"
+                            ? "Você não possui próximas consultas agendadas no momento."
+                            : activeFilterTab === "concluidos"
+                            ? "Você ainda não possui atendimentos concluídos no histórico."
+                            : activeFilterTab === "cancelados"
+                            ? "Nenhum agendamento cancelado no seu histórico."
+                            : "Você ainda não possui consultas cadastradas."
                           : activeFilterTab === "hoje"
                           ? "Não há consultas agendadas para hoje."
+                          : activeFilterTab === "concluidos"
+                          ? "Nenhum agendamento concluído encontrado neste filtro."
+                          : activeFilterTab === "cancelados"
+                          ? "Nenhum agendamento cancelado encontrado neste filtro."
                           : "Clique no botão acima para agendar o primeiro atendimento."}
                       </p>
                       <button
@@ -1165,6 +1187,7 @@ export function AppointmentTableView() {
       {/* Modal de Novo Agendamento */}
       <AppointmentFormModal
         isOpen={isCreateModalOpen}
+        initialPatient={patientData || null}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={() => {
           loadAppointments();

@@ -29,11 +29,18 @@ import { sendNewAppointmentAdminNotification } from "@/lib/notifications/appoint
 import type { ActionResponse, PaginatedResult } from "@/types/client";
 import type { UserRole } from "@/types/auth";
 
-async function getAuthUserRole(): Promise<UserRole | null> {
+export interface AuthenticatedUserContext {
+  user: any;
+  role: UserRole;
+  patientId: string | null;
+}
+
+export async function getAuthenticatedUserContext(): Promise<AuthenticatedUserContext | null> {
   const supabase = await createClient();
   if (!supabase) return null;
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) return null;
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -44,7 +51,39 @@ async function getAuthUserRole(): Promise<UserRole | null> {
   if (!role) {
     role = authUser.email?.toLowerCase() === "brunolpg@gmail.com" ? "administrador" : "paciente";
   }
-  return role;
+
+  let patientId: string | null = null;
+  const userEmail = (authUser.email || "").toLowerCase().trim();
+
+  // Identifica o paciente vinculado através de user_id ou email (com deleted_at IS NULL)
+  let patientQuery = supabase
+    .from("pacientes")
+    .select("id")
+    .is("deleted_at", null);
+
+  if (authUser.id && userEmail) {
+    patientQuery = patientQuery.or(`user_id.eq.${authUser.id},email.ilike.${userEmail}`);
+  } else if (authUser.id) {
+    patientQuery = patientQuery.eq("user_id", authUser.id);
+  } else if (userEmail) {
+    patientQuery = patientQuery.ilike("email", userEmail);
+  }
+
+  const { data: patientRow } = await patientQuery.limit(1).maybeSingle();
+  if (patientRow?.id) {
+    patientId = patientRow.id;
+  }
+
+  return {
+    user: authUser,
+    role,
+    patientId,
+  };
+}
+
+async function getAuthUserRole(): Promise<UserRole | null> {
+  const ctx = await getAuthenticatedUserContext();
+  return ctx?.role || null;
 }
 
 function getTodayString(): string {
@@ -136,7 +175,34 @@ export async function getAppointmentsAction(
       page = 1,
       pageSize = 10,
       data: dateFilter,
+      clientId: requestedClientId,
     } = filter;
+
+    const authCtx = await getAuthenticatedUserContext();
+    const isPatientRole = authCtx?.role === "paciente";
+
+    // 0. Isolamento Estrito de Segurança por Paciente:
+    // Se o usuário autenticado possuir perfil/role 'paciente', nunca permita buscar todos os agendamentos sem essa restrição de ID do paciente.
+    let targetClientId: string | null = null;
+    if (isPatientRole) {
+      targetClientId = authCtx?.patientId || null;
+      if (!targetClientId) {
+        // Paciente logado sem ficha clínica associada não deve visualizar agendamentos de terceiros
+        return {
+          success: true,
+          data: {
+            data: [],
+            total: 0,
+            page: 1,
+            pageSize,
+            totalPages: 1,
+            hasMore: false,
+          },
+        };
+      }
+    } else if (requestedClientId) {
+      targetClientId = requestedClientId;
+    }
 
     const todayStr = getTodayString();
 
@@ -167,6 +233,11 @@ export async function getAppointmentsAction(
       { count: "exact" }
     );
 
+    // Aplica o filtro restritivo de paciente (appointments.client_id = paciente.id)
+    if (targetClientId) {
+      query = query.eq("client_id", targetClientId);
+    }
+
     // 1. Filtros por Tab
     if (tab === "hoje") {
       query = query.eq("data", todayStr).neq("status", "Cancelado");
@@ -188,7 +259,6 @@ export async function getAppointmentsAction(
     // 3. Busca textual inteligente (procedimento, data ou paciente)
     if (search.trim()) {
       const term = search.trim();
-      const isPatientRole = (await getAuthUserRole()) === "paciente";
 
       // Converte se for formato DD/MM/AAAA para AAAA-MM-DD
       let validDateIso: string | null = null;
@@ -209,6 +279,7 @@ export async function getAppointmentsAction(
         const { data: matchedPatients } = await supabase
           .from("pacientes")
           .select("id")
+          .is("deleted_at", null)
           .or(`nome.ilike.%${term}%,email.ilike.%${term}%,telefone.ilike.%${term}%,cpf.ilike.%${term}%`);
 
         const patientIds = matchedPatients?.map((p) => p.id) || [];

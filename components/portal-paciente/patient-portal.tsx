@@ -1039,7 +1039,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
             {/* ABA: AGENDAMENTOS */}
             {activeTab === "agendamentos" && (
               <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-2xs">
-                <AppointmentTableView />
+                <AppointmentTableView clientId={patientData?.id} patientData={patientData} />
               </div>
             )}
           </>

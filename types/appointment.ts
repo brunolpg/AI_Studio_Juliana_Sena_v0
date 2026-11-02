@@ -48,6 +48,7 @@ export interface AppointmentFilter {
   page?: number;
   pageSize?: number;
   data?: string;
+  clientId?: string;
 }
 
 export interface TimeSlot {
