@@ -11,11 +11,15 @@ export interface GoogleCalendarApiEvent {
   endTimeLocal?: string;
 }
 
-export {
+import {
   generateGoogleCalendarTemplateUrl,
   type GoogleCalendarEventInput,
 } from "./calendar-url";
-import type { GoogleCalendarEventInput } from "./calendar-url";
+
+export {
+  generateGoogleCalendarTemplateUrl,
+  type GoogleCalendarEventInput,
+};
 
 export interface GoogleCalendarEventResult {
   success: boolean;
@@ -320,7 +324,12 @@ export async function createGoogleCalendarEvent(
   input: GoogleCalendarEventInput
 ): Promise<GoogleCalendarEventResult> {
   const creds = getGoogleCalendarCredentials();
-  const directLink = generateGoogleCalendarTemplateUrl(input);
+  let directLink: string | null = null;
+  try {
+    directLink = generateGoogleCalendarTemplateUrl(input);
+  } catch (urlErr) {
+    console.warn("[Google Calendar] Falha não-bloqueante ao gerar directLink de template:", urlErr);
+  }
 
   if (!creds.isConfigured) {
     console.warn("[Google Calendar] API não configurada. Sincronização automática não realizada (synced: false).");
@@ -458,7 +467,12 @@ export async function updateGoogleCalendarEvent(
   input: GoogleCalendarEventInput
 ): Promise<GoogleCalendarEventResult> {
   const creds = getGoogleCalendarCredentials();
-  const directLink = generateGoogleCalendarTemplateUrl(input);
+  let directLink: string | null = null;
+  try {
+    directLink = generateGoogleCalendarTemplateUrl(input);
+  } catch (urlErr) {
+    console.warn("[Google Calendar] Falha não-bloqueante ao gerar directLink de template em update:", urlErr);
+  }
 
   if (!creds.isConfigured || !eventId || eventId.startsWith("cal_")) {
     return {

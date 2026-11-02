@@ -94,6 +94,59 @@ function getTodayString(): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Utilitário e fallback seguro para geração da URL de template do Google Calendar.
+ * Retorna uma URL formatada ou null sem nunca disparar exceção ou quebrar a execução.
+ */
+function safeGenerateGoogleCalendarTemplateUrl(options: {
+  patientName: string;
+  patientEmail?: string;
+  patientPhone?: string;
+  procedimento: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  observacoes?: string | null;
+}): string | null {
+  try {
+    if (typeof generateGoogleCalendarTemplateUrl === "function") {
+      return generateGoogleCalendarTemplateUrl(options);
+    }
+  } catch (serviceErr) {
+    console.warn("[safeGenerateGoogleCalendarTemplateUrl] Falha ao invocar generateGoogleCalendarTemplateUrl:", serviceErr);
+  }
+
+  // Fallback seguro direto na action (formato padrão Google Calendar render template)
+  try {
+    const startDateTime = new Date(`${options.date}T${options.startTime}:00-03:00`);
+    const endDateTime = new Date(`${options.date}T${options.endTime}:00-03:00`);
+    const formatToUtcCompact = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const startCompact = formatToUtcCompact(startDateTime);
+    const endCompact = formatToUtcCompact(endDateTime);
+
+    const summary = `Consulta: ${options.procedimento} - Dra. Juliana Sena`;
+    const details = [
+      `Paciente: ${options.patientName}`,
+      options.patientPhone ? `Telefone: ${options.patientPhone}` : "",
+      options.patientEmail ? `E-mail: ${options.patientEmail}` : "",
+      `Procedimento: ${options.procedimento}`,
+      options.observacoes ? `Observações: ${options.observacoes}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const location = "Clínica Dra. Juliana Sena - Salvador/BA";
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+      summary
+    )}&dates=${startCompact}/${endCompact}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(
+      location
+    )}&ctz=America/Sao_Paulo`;
+  } catch (fallbackErr) {
+    console.warn("[safeGenerateGoogleCalendarTemplateUrl] Fallback direto de template URL falhou:", fallbackErr);
+    return null;
+  }
+}
+
 interface RawAppointmentRow {
   id: string;
   client_id: string;
@@ -659,34 +712,51 @@ export async function createAppointmentAction(
     let googleHtmlLink: string | null = null;
     let syncedWithGoogle = false;
 
-    // 4. Integração com a Google Calendar API
+    // 4. Integração com a Google Calendar API (erros externos NUNCA impedem a inserção no Supabase)
     if (input.sync_google) {
-      const gcalRes = await createGoogleCalendarEvent({
-        patientName: input.client_nome,
-        patientEmail: input.client_email || "",
-        patientPhone: input.client_telefone || "",
-        procedimento: input.procedimento,
-        procedimento_id: input.procedimento_id || null,
-        date: input.data,
-        startTime: input.horario_inicio,
-        endTime: horario_fim,
-        observacoes: input.observacoes,
-      });
+      try {
+        const gcalRes = await createGoogleCalendarEvent({
+          patientName: input.client_nome,
+          patientEmail: input.client_email || "",
+          patientPhone: input.client_telefone || "",
+          procedimento: input.procedimento,
+          procedimento_id: input.procedimento_id || null,
+          date: input.data,
+          startTime: input.horario_inicio,
+          endTime: horario_fim,
+          observacoes: input.observacoes,
+        });
 
-      googleEventId = gcalRes.eventId;
-      googleHtmlLink = gcalRes.htmlLink;
-      syncedWithGoogle = gcalRes.synced;
-    } else {
-      googleHtmlLink = generateGoogleCalendarTemplateUrl({
-        patientName: input.client_nome,
-        patientEmail: input.client_email || "",
-        patientPhone: input.client_telefone || "",
-        procedimento: input.procedimento,
-        date: input.data,
-        startTime: input.horario_inicio,
-        endTime: horario_fim,
-        observacoes: input.observacoes,
-      });
+        if (gcalRes) {
+          googleEventId = gcalRes.eventId || null;
+          googleHtmlLink = gcalRes.htmlLink || null;
+          syncedWithGoogle = Boolean(gcalRes.synced);
+        }
+      } catch (gcalError) {
+        console.warn("[createAppointmentAction] Falha externa ao sincronizar com Google Calendar (não-bloqueante):", gcalError);
+        googleEventId = null;
+        googleHtmlLink = null;
+        syncedWithGoogle = false;
+      }
+    }
+
+    // Se a sincronização não gerou link ou se sync_google for falso, gera o link de template de forma resiliente
+    if (!googleHtmlLink) {
+      try {
+        googleHtmlLink = safeGenerateGoogleCalendarTemplateUrl({
+          patientName: input.client_nome,
+          patientEmail: input.client_email || "",
+          patientPhone: input.client_telefone || "",
+          procedimento: input.procedimento,
+          date: input.data,
+          startTime: input.horario_inicio,
+          endTime: horario_fim,
+          observacoes: input.observacoes,
+        });
+      } catch (templateError) {
+        console.warn("[createAppointmentAction] Falha não-bloqueante ao gerar link de template do Google Agenda:", templateError);
+        googleHtmlLink = null;
+      }
     }
 
     // 5. Inserção definitiva na tabela appointments do Supabase
@@ -1042,31 +1112,35 @@ export async function updateAppointmentAction(
 
     // 4. Sincroniza atualização no Google Calendar se houver evento vinculado
     if (current.google_event_id) {
-      const patientData = Array.isArray(current.pacientes)
-        ? current.pacientes[0]
-        : current.pacientes;
+      try {
+        const patientData = Array.isArray(current.pacientes)
+          ? current.pacientes[0]
+          : current.pacientes;
 
-      const syncResult = await updateGoogleCalendarEvent(current.google_event_id, {
-        patientName: patientData?.nome || "Paciente",
-        patientEmail: patientData?.email || "",
-        patientPhone: patientData?.telefone || "",
-        procedimento: updates.procedimento || current.procedimento,
-        date: targetDate,
-        startTime: targetStart,
-        endTime: targetEnd,
-        observacoes: updates.observacoes !== undefined ? updates.observacoes : current.observacoes,
-      });
+        const syncResult = await updateGoogleCalendarEvent(current.google_event_id, {
+          patientName: patientData?.nome || "Paciente",
+          patientEmail: patientData?.email || "",
+          patientPhone: patientData?.telefone || "",
+          procedimento: updates.procedimento || current.procedimento,
+          date: targetDate,
+          startTime: targetStart,
+          endTime: targetEnd,
+          observacoes: updates.observacoes !== undefined ? updates.observacoes : current.observacoes,
+        });
 
-      // Atualiza o status de sincronização com base no resultado da API do Google Calendar
-      if (syncResult.synced !== current.synced_with_google) {
-        console.log(`[Google Calendar Sync] Atualizando synced_with_google para ${syncResult.synced} no Supabase após alteração.`);
-        await supabase
-          .from("appointments")
-          .update({ synced_with_google: syncResult.synced })
-          .eq("id", appointmentId);
-        
-        // Atualiza a resposta de retorno para refletir o estado de sincronização correto
-        mapped.synced_with_google = syncResult.synced;
+        // Atualiza o status de sincronização com base no resultado da API do Google Calendar
+        if (syncResult && syncResult.synced !== current.synced_with_google) {
+          console.log(`[Google Calendar Sync] Atualizando synced_with_google para ${syncResult.synced} no Supabase após alteração.`);
+          await supabase
+            .from("appointments")
+            .update({ synced_with_google: syncResult.synced })
+            .eq("id", appointmentId);
+          
+          // Atualiza a resposta de retorno para refletir o estado de sincronização correto
+          mapped.synced_with_google = syncResult.synced;
+        }
+      } catch (syncErr) {
+        console.warn("[updateAppointmentAction] Falha não-bloqueante na sincronização com o Google Calendar:", syncErr);
       }
     }
 
