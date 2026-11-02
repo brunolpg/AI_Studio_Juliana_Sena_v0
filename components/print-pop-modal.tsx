@@ -346,19 +346,23 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
                 </div>
               </div>
 
-              {/* 2. Dados Institucionais do Protocolo */}
-              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 mb-5 print-avoid-break">
-                {/* Linha Superior Exclusiva para o Título do Protocolo */}
-                <div className="pb-2.5 mb-2.5 border-b border-slate-200/70">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">
-                    Protocolo / Código
-                  </span>
-                  <span className="text-sm font-bold text-slate-900 block leading-tight">
-                    {pop.protocolo}
+              {/* 2. Destaque do Protocolo / Procedimento (Acima das Informações) */}
+              <div className="bg-emerald-50/60 border border-emerald-200/80 p-3.5 rounded-xl mb-3 print-avoid-break">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-6 h-6 rounded-lg bg-[#004d40] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                    <ClipboardList className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-[10px] font-bold text-[#004d40] uppercase tracking-wider">
+                    Protocolo Clínico Institucional
                   </span>
                 </div>
+                <h2 className="text-base font-extrabold text-[#004d40] leading-tight">
+                  {pop.protocolo}
+                </h2>
+              </div>
 
-                {/* Linha Inferior com os Metadados Complementares */}
+              {/* 3. Metadados do Protocolo (Status, Data e Profissional) */}
+              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 mb-5 print-avoid-break">
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">
@@ -385,21 +389,6 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
                     </span>
                   </div>
                 </div>
-              </div>
-
-              {/* 3. Destaque do Protocolo / Procedimento */}
-              <div className="bg-emerald-50/60 border border-emerald-200/80 p-3.5 rounded-xl mb-4 print-avoid-break">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-6 h-6 rounded-lg bg-[#004d40] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                    <ClipboardList className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="text-[10px] font-bold text-[#004d40] uppercase tracking-wider">
-                    Protocolo Clínico Institucional
-                  </span>
-                </div>
-                <h2 className="text-base font-extrabold text-[#004d40] leading-tight">
-                  {pop.protocolo}
-                </h2>
               </div>
 
               {/* 4. Finalidade do Procedimento */}
