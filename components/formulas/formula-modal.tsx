@@ -294,16 +294,17 @@ export function FormulaModal({
 
           {/* Construtor Dinâmico de Componentes */}
           <div className="space-y-3 pt-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 tracking-tight uppercase tracking-wider">
                 Componentes / Ativos da Fórmula *
               </label>
               <button
                 type="button"
                 onClick={() => setShowNewCompModal(true)}
-                className="text-xs text-teal-600 dark:text-teal-400 font-semibold hover:underline cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#043e33] hover:bg-[#064e3b] hover:opacity-90 dark:bg-emerald-950 dark:hover:bg-emerald-900 rounded-full shadow-xs cursor-pointer transition-all active:scale-[0.98] dark:border dark:border-white/10"
               >
-                + Cadastrar Novo Componente
+                <Plus className="w-3.5 h-3.5" />
+                <span>Cadastrar Novo Componente</span>
               </button>
             </div>
 
@@ -418,14 +419,14 @@ export function FormulaModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              className="px-5 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#043e33] hover:bg-[#064e3b] hover:opacity-90 dark:bg-emerald-950 dark:hover:bg-emerald-900 dark:border dark:border-white/10 text-white text-xs font-semibold shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -502,14 +503,14 @@ export function FormulaModal({
               <button
                 type="button"
                 onClick={() => setShowNewCompModal(false)}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isCreatingQuick}
-                className="px-4 py-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#043e33] hover:bg-[#064e3b] dark:bg-emerald-950 dark:hover:bg-emerald-900 dark:border dark:border-white/10 rounded-full shadow-xs disabled:opacity-50 transition-all cursor-pointer"
               >
                 {isCreatingQuick ? "Salvando..." : "Criar Componente"}
               </button>
