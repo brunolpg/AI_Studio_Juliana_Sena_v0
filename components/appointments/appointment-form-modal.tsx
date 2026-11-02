@@ -44,7 +44,7 @@ import { validateFileSize, validateMultipleFiles } from "@/lib/validations/file-
 import { compressReceiptFile } from "@/lib/utils/compressFile";
 import type { Client } from "@/types/client";
 import type { TimeSlot, AppointmentInput, Appointment } from "@/types/appointment";
-import { generateGoogleCalendarTemplateUrl } from "@/lib/google-calendar/calendar-service";
+import { generateGoogleCalendarTemplateUrl } from "@/lib/google-calendar/calendar-url";
 import { PROCEDIMENTO_CATEGORIES, PROCEDIMENTOS_CADASTRAIS, type Procedimento } from "@/lib/procedimentos-mock";
 import {
   getNextAllowedAppointmentDate,
