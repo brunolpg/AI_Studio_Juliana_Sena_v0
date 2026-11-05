@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Heart,
+  HeartHandshake,
   Scale,
   Thermometer,
   AlertCircle,
