@@ -47,11 +47,31 @@ export async function attachSignedPrescription(
   prescriptionId: string,
   pdfBytes: Uint8Array
 ): Promise<AttachSignedResult> {
-  const { data: rx, error: rxErr } = await supabase
+  let targetId = prescriptionId;
+  let { data: rx, error: rxErr } = await supabase
     .from("prescricoes")
     .select("id, pdf_assinado_url")
-    .eq("id", prescriptionId)
+    .eq("id", targetId)
     .maybeSingle();
+
+  if (!rx) {
+    const { data: itemData } = await supabase
+      .from("prescricao_itens")
+      .select("prescricao_id")
+      .eq("id", targetId)
+      .maybeSingle();
+
+    if (itemData?.prescricao_id) {
+      targetId = itemData.prescricao_id;
+      const res = await supabase
+        .from("prescricoes")
+        .select("id, pdf_assinado_url")
+        .eq("id", targetId)
+        .maybeSingle();
+      rx = res.data;
+      rxErr = res.error;
+    }
+  }
 
   if (rxErr || !rx) {
     return { success: false, status: 404, message: "Prescrição não encontrada." };
@@ -66,7 +86,7 @@ export async function attachSignedPrescription(
   }
 
   // Caminho padronizado e organizado: prescricoes/<id>/<timestamp>-assinada.pdf
-  const filePath = `prescricoes/${prescriptionId}/${Date.now()}-assinada.pdf`;
+  const filePath = `prescricoes/${targetId}/${Date.now()}-assinada.pdf`;
 
   // Assegura preventivamente a existência do bucket
   const privilegedClient = await ensureBucketExists(supabase);
@@ -130,7 +150,7 @@ export async function attachSignedPrescription(
       data_assinatura: now,
       updated_at: now,
     })
-    .eq("id", prescriptionId)
+    .eq("id", targetId)
     .is("pdf_assinado_url", null)
     .select("id");
 

@@ -241,13 +241,17 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
     setSignError(null);
     setIsDownloadingPdf(true);
     try {
-      const res = await fetch(`/api/prescricoes/${rx.id}/pdf`, { credentials: "same-origin" });
+      const rxId = rx.prescricao_id || rx.id;
+      if (!rxId) {
+        throw new Error("Identificador da prescrição não encontrado.");
+      }
+      const res = await fetch(`/api/prescricoes/${rxId}/pdf`, { credentials: "same-origin" });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.message || "Não foi possível gerar o PDF da receita.");
       }
       const fileName =
-        /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || "")?.[1] || `Receita_${rx.id}.pdf`;
+        /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || "")?.[1] || `Receita_${rxId}.pdf`;
       const url = URL.createObjectURL(await res.blob());
       const link = document.createElement("a");
       link.href = url;
@@ -287,7 +291,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
     try {
       const body = new FormData();
       body.append("file", file);
-      const res = await fetch(`/api/prescricoes/${signingRx.id}/assinado`, {
+      const rxId = signingRx.prescricao_id || signingRx.id;
+      const res = await fetch(`/api/prescricoes/${rxId}/assinado`, {
         method: "POST",
         body,
         credentials: "same-origin",
@@ -304,7 +309,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
         description: warnings.length > 0 ? warnings[0] : "O documento assinado com ICP-Brasil foi vinculado ao prontuário.",
       });
       
-      const uploadedPdfUrl = data.pdf_assinado_url || data.url || signingRx.pdf_assinado_url || `/api/prescricoes/${signingRx.id}/pdf`;
+      const uploadedPdfUrl = data.pdf_assinado_url || data.url || signingRx.pdf_assinado_url || `/api/prescricoes/${rxId}/pdf`;
       loadClinicalData();
 
       setEmailSent(false);
@@ -313,7 +318,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
       // Em vez de fechar imediatamente o modal, abre a confirmação para comunicar o paciente:
       setSignedNotificationPrompt({
         isOpen: true,
-        rxId: signingRx.id,
+        rxId,
         formulaName: signingRx.medicamento || (signingRx as any).nome_formula || "Prescrição Magistral",
         pdfUrl: uploadedPdfUrl,
       });

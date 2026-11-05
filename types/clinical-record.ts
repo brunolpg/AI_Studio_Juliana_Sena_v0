@@ -82,7 +82,9 @@ export interface MedicalHistory {
 }
 
 export interface PrescriptionItem {
-  id: string;
+  id: string; // ID da tabela prescricoes
+  prescricao_id?: string;
+  item_id?: string;
   client_id: string;
   data: string;
   medicamento: string;

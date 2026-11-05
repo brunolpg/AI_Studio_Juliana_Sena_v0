@@ -95,6 +95,8 @@ export async function getPatientClinicalRecordAction(
         data_prescricao,
         status,
         observacoes,
+        pdf_assinado_url,
+        data_assinatura,
         prescricao_itens (
           id,
           nome_formula,
@@ -134,7 +136,9 @@ export async function getPatientClinicalRecordAction(
           ].filter(Boolean).join("\n\n");
 
           mappedPrescriptions.push({
-            id: item.id || p.id,
+            id: p.id,
+            prescricao_id: p.id,
+            item_id: item.id,
             client_id: clientId,
             data: p.data_prescricao || new Date().toISOString().split("T")[0],
             medicamento: item.nome_formula,
@@ -144,6 +148,8 @@ export async function getPatientClinicalRecordAction(
             duracao: item.via === "oral" ? `${item.duracao} ${sanitizedTipoVeiculo || "un"}` : "Uso recomendado",
             ativo: p.status === "Ativo",
             instrucoes: combinedInstrucoes || undefined,
+            pdf_assinado_url: p.pdf_assinado_url ?? null,
+            data_assinatura: p.data_assinatura ?? null,
           });
         }
       }
@@ -675,7 +681,9 @@ export async function addPrescriptionAction(
 
     const newPrescription: PrescriptionItem = {
       ...prescription,
-      id: item.id || prescricao.id,
+      id: prescricao.id,
+      prescricao_id: prescricao.id,
+      item_id: item?.id,
       client_id: clientId,
     };
 
@@ -1187,7 +1195,9 @@ export async function addStructuredPrescriptionAction(
       .join("\n\n");
 
     const newPrescription: PrescriptionItem = {
-      id: newItem.id, // ID real inserido no banco
+      id: prescricao.id, // ID rigorosamente da tabela prescricoes
+      prescricao_id: prescricao.id,
+      item_id: newItem.id,
       client_id: clientId,
       data: new Date().toISOString().split("T")[0],
       medicamento: cleanFormulaName,
@@ -1198,8 +1208,6 @@ export async function addStructuredPrescriptionAction(
       ativo: true,
       instrucoes: combinedInstrucoes || undefined,
     };
-
-    (newPrescription as any).prescricao_id = prescricao.id;
 
     revalidatePath("/");
 
