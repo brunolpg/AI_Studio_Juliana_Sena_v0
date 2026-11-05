@@ -141,6 +141,22 @@ export const PROCEDIMENTOS_CADASTRAIS: Procedimento[] = [
     valor: 400,
     descricao: "Limpeza profunda para desobstrução e renovação da pele corporal."
   },
+  {
+    id: "p27",
+    procedimento: "PEIM - Pacote 3 sessões",
+    categoria: "Estética Corporal",
+    duracao: 1,
+    valor: 500,
+    descricao: "Procedimento Estético Injetável para Microvasos - Pacote com 3 sessões."
+  },
+  {
+    id: "p28",
+    procedimento: "PEIM - Pacote 5 sessões",
+    categoria: "Estética Corporal",
+    duracao: 1,
+    valor: 800,
+    descricao: "Procedimento Estético Injetável para Microvasos - Pacote com 5 sessões."
+  },
 
   // Controle de Hiperidrose
   {

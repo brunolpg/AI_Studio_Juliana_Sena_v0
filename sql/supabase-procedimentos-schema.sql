@@ -48,6 +48,8 @@ INSERT INTO public.procedimentos (procedimento, categoria, duracao, valor) VALUE
 ('Suplementação Intramuscular (IM)', 'Estética Corporal', 1, 250),
 ('Peeling Químico Corporal e Íntimo', 'Estética Corporal', 1, 450),
 ('Limpeza de Pele Corporal', 'Estética Corporal', 1, 300),
+('PEIM - Pacote 3 sessões', 'Estética Corporal', 1, 500),
+('PEIM - Pacote 5 sessões', 'Estética Corporal', 1, 800),
 
 -- Controle de Hiperidrose
 ('Toxina Botulínica – Axilar', 'Controle de Hiperidrose', 1, 1500),
