@@ -1841,8 +1841,157 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                       ) : (
                         <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-center">
                           <p className="text-xs text-slate-400 italic">
-                            Nenhuma fórmula magistral ou receita registrada no momento.
+                            {isPatient
+                              ? "Nenhuma prescrição ativa encontrada no momento."
+                              : "Nenhuma fórmula magistral ou receita ativa no momento."}
                           </p>
+                        </div>
+                      )}
+
+                      {/* ÁREA EXCLUSIVA PARA SUSPENSAS (Administrador / Profissional) */}
+                      {!isPatient && suspendedPrescriptions.length > 0 && (
+                        <div
+                          ref={suspendedSectionRef}
+                          className="mt-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 overflow-hidden shadow-2xs transition-all"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setIsSuspendedSectionOpen((prev) => !prev)}
+                            className="w-full flex items-center justify-between p-4 bg-slate-100/80 dark:bg-slate-800/60 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer text-left"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                                <Archive className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                    Prescrições Suspensas / Histórico de Suspensões
+                                  </h4>
+                                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/60">
+                                    {suspendedPrescriptions.length}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                  Receitas descontinuadas ou substituídas com registro de justificativa clínica
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-slate-500 dark:text-slate-400 p-1">
+                              {isSuspendedSectionOpen ? (
+                                <ChevronUp className="w-4 h-4" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4" />
+                              )}
+                            </div>
+                          </button>
+
+                          {isSuspendedSectionOpen && (
+                            <div className="p-4 space-y-3 max-h-[460px] overflow-y-auto">
+                              {suspendedPrescriptions.map((rx) => {
+                                const [year, month, day] = (rx.data || "").split("-");
+                                const dateFormatted = year && month && day ? `${day}/${month}/${year}` : rx.data;
+                                const formulaName =
+                                  rx.item?.nome_formula ||
+                                  rx.nome_formula ||
+                                  (rx.medicamento && rx.medicamento !== "Fórmula Magistral" ? rx.medicamento : null);
+                                const viaLabel = rx.item?.via
+                                  ? rx.item.via.toLowerCase() === "oral"
+                                    ? "Oral"
+                                    : "Tópico"
+                                  : rx.via === "oral" || rx.via === "Oral"
+                                  ? "Oral"
+                                  : "Tópico";
+                                const suspDateFormatted = rx.data_suspensao
+                                  ? new Date(rx.data_suspensao).toLocaleDateString("pt-BR", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                    })
+                                  : null;
+
+                                return (
+                                  <div
+                                    key={rx.id}
+                                    className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-2xs opacity-95 hover:opacity-100 transition-opacity"
+                                  >
+                                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 flex-wrap pb-3 border-b border-slate-200/60 dark:border-slate-800/70">
+                                      <div className="flex-1 min-w-[200px]">
+                                        <h5 className="text-sm font-bold text-slate-500 dark:text-slate-400 line-through leading-snug">
+                                          Fórmula Magistral
+                                        </h5>
+                                        {formulaName && (
+                                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-0.5 line-through">
+                                            {formulaName}
+                                          </p>
+                                        )}
+                                        <div className="flex items-center gap-2 text-[11px] text-slate-400 dark:text-slate-500 mt-1 flex-wrap">
+                                          <span>(Uso {viaLabel})</span>
+                                          <span>•</span>
+                                          <span>Prescrito em {dateFormatted}</span>
+                                          {suspDateFormatted && (
+                                            <>
+                                              <span>•</span>
+                                              <span className="text-rose-600 dark:text-rose-400 font-medium">
+                                                Suspenso em {suspDateFormatted}
+                                              </span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center flex-wrap gap-2 shrink-0">
+                                        <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/50 shadow-2xs">
+                                          <AlertTriangle className="w-3 h-3 text-rose-600 dark:text-rose-400 shrink-0" />
+                                          Suspenso
+                                        </span>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => setSelectedRxForPrint(rx)}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 rounded-full cursor-pointer transition-colors shadow-2xs"
+                                          title="Visualizar e imprimir relatório da receita"
+                                        >
+                                          <Printer className="w-3.5 h-3.5 text-slate-500" />
+                                          <span>Relatório</span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => handleReactivatePrescription(rx.id)}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-full cursor-pointer transition-colors shadow-2xs"
+                                          title="Reativar esta prescrição para o tratamento ativo"
+                                        >
+                                          <RotateCcw className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                          <span>Reativar</span>
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Justificativa da Suspensão em Destaque */}
+                                    {rx.justificativa_suspensao && (
+                                      <div className="mt-3 p-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/40 text-xs">
+                                        <div className="flex items-center gap-1.5 text-rose-800 dark:text-rose-300 font-semibold mb-1">
+                                          <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                                          <span>Motivo / Justificativa da Suspensão:</span>
+                                        </div>
+                                        <p className="text-rose-900 dark:text-rose-200 leading-relaxed whitespace-pre-wrap pl-5">
+                                          {rx.justificativa_suspensao}
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {/* Detalhes da fórmula suspensa (dosagem/veículo) */}
+                                    {(rx.dosagem || rx.item?.dosagem) && (
+                                      <div className="mt-2.5 p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
+                                        <strong>Dosagem:</strong> {rx.dosagem || rx.item?.dosagem}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
