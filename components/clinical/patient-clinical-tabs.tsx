@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useTransition } from "react";
+import React, { useState, useEffect, useCallback, useTransition, useMemo, useRef } from "react";
 import {
   FileHeart,
   Activity,
@@ -19,6 +19,10 @@ import {
   Scale,
   Thermometer,
   AlertCircle,
+  AlertTriangle,
+  Archive,
+  ChevronDown,
+  ChevronUp,
   CheckCircle2,
   ChevronRight,
   TrendingUp,
@@ -36,7 +40,9 @@ import {
   Download,
   Mail,
   Trash2,
+  RotateCcw,
 } from "lucide-react";
+import { useAuth } from "@/components/auth/auth-context";
 import {
   getPatientClinicalRecordAction,
   togglePrescriptionStatusAction,
@@ -74,13 +80,27 @@ export type ClinicalSubTab = "historico" | "evolucoes" | "prescricoes" | "metric
 
 export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = false }: PatientClinicalTabsProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isPatient = isPatientView || user?.role === "paciente";
+
   const [activeSubTab, setActiveSubTab] = useState<ClinicalSubTab>(
-    isPatientView ? "prescricoes" : "evolucoes"
+    isPatient ? "prescricoes" : "evolucoes"
   );
   const [isPending, startTransition] = useTransition();
 
   const [clinicalRecord, setClinicalRecord] = useState<PatientClinicalRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Seção de prescrições suspensas (apenas profissional/administrador)
+  const [isSuspendedSectionOpen, setIsSuspendedSectionOpen] = useState(false);
+  const suspendedSectionRef = useRef<HTMLDivElement>(null);
+
+  const handleOpenSuspendedSection = () => {
+    setIsSuspendedSectionOpen(true);
+    setTimeout(() => {
+      suspendedSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  };
 
   // Modais e Lightbox
   const [isEvolutionModalOpen, setIsEvolutionModalOpen] = useState(false);
@@ -552,6 +572,45 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
     }
   };
 
+  // Reativa prescrição suspensa (remove status Suspenso e limpa justificativa)
+  const handleReactivatePrescription = async (prescriptionId: string) => {
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) return;
+
+      const { error } = await supabase
+        .from("prescricoes")
+        .update({
+          status: "Ativo",
+          justificativa_suspensao: null,
+          data_suspensao: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", prescriptionId);
+
+      if (error) {
+        toast({
+          type: "error",
+          title: "Erro ao reativar receita",
+          description: error.message,
+        });
+      } else {
+        toast({
+          type: "success",
+          title: "Receita reativada!",
+          description: "A prescrição voltou para o status Ativo.",
+        });
+        loadClinicalData();
+      }
+    } catch (err: any) {
+      toast({
+        type: "error",
+        title: "Erro inesperado",
+        description: err?.message || "Não foi possível reativar a receita.",
+      });
+    }
+  };
+
   // Alterna status de prescrição (legado/fallback)
   const handleTogglePrescription = async (prescriptionId: string) => {
     try {
@@ -616,12 +675,24 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
 
   const history = clinicalRecord?.medicalHistory;
   const evolutions = clinicalRecord?.evolutions || [];
-  const prescriptions = clinicalRecord?.prescriptions || [];
+  const allPrescriptions = clinicalRecord?.prescriptions || [];
+
+  // Filtros de prescrições por status
+  const activePrescriptions = useMemo(() => {
+    return allPrescriptions.filter((p) => p.status !== "Suspenso");
+  }, [allPrescriptions]);
+
+  const suspendedPrescriptions = useMemo(() => {
+    return allPrescriptions.filter((p) => p.status === "Suspenso");
+  }, [allPrescriptions]);
+
+  // Lista principal exibe apenas as vigentes/ativas
+  const prescriptions = activePrescriptions;
 
   return (
-    <div className={isPatientView ? "space-y-6" : "bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden transition-all duration-200"}>
+    <div className={isPatient ? "space-y-6" : "bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden transition-all duration-200"}>
       {/* Barra de Navegação Interna das Abas Clínicas (Apenas para Administrador / Profissional) */}
-      {!isPatientView && (
+      {!isPatient && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 gap-3">
           {/* Abas MD4 Segmented */}
           <div className="flex items-center p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-full border border-slate-200/80 dark:border-slate-700/80 text-xs overflow-x-auto shadow-2xs">
@@ -677,9 +748,9 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               <span className={`text-[10px] px-2 py-0.5 rounded-full ${
                 activeSubTab === "prescricoes"
                   ? "bg-white/20 text-white"
-                  : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                  : "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60"
               }`}>
-                {prescriptions.filter((p) => p.ativo).length}
+                {activePrescriptions.length}
               </span>
             </button>
 
@@ -734,8 +805,19 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               </div>
             )}
 
-            {activeSubTab === "prescricoes" && (
-              <div className="flex items-center gap-2">
+            {activeSubTab === "prescricoes" && !isPatient && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {suspendedPrescriptions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleOpenSuspendedSection}
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-full border border-amber-300/80 dark:border-amber-700/60 text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-all cursor-pointer shadow-2xs md-state-layer active:scale-[0.98]"
+                    title="Ver histórico de prescrições suspensas"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>Receitas Suspensas ({suspendedPrescriptions.length})</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -1590,7 +1672,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             {/* ======================================================== */}
             {activeSubTab === "prescricoes" && (
               <div className="w-full">
-                {prescriptions.length === 0 && homeCareFichas.length === 0 ? (
+                {prescriptions.length === 0 && homeCareFichas.length === 0 && (isPatient || suspendedPrescriptions.length === 0) ? (
                   <div className="py-12 text-center max-w-sm mx-auto">
                     <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 flex items-center justify-center mx-auto mb-3">
                       <Pill className="w-6 h-6" />
@@ -1599,11 +1681,11 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                       Nenhuma prescrição ou ficha de home care registrada
                     </h4>
                     <p className="text-xs text-slate-500 mt-1">
-                      {isPatientView 
-                        ? "Não há prescrições ou orientações de home care registradas para você no momento." 
+                      {isPatient 
+                        ? "Não há prescrições ativas ou orientações de home care registradas para você no momento." 
                         : "Emita receitas e orientações de home care para ficarem arquivadas no histórico do paciente."}
                     </p>
-                    {!isPatientView && (
+                    {!isPatient && (
                       <div className="flex items-center justify-center gap-2.5 mt-4">
                         <button
                           type="button"
@@ -1631,8 +1713,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                   <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-6 items-start min-w-0">
                     {/* COLUNA 1: RECEITUÁRIO */}
                     <div className="w-full min-w-0 flex flex-col gap-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-3 min-w-0">
                           <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-center shrink-0">
                             <Pill className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                           </div>
@@ -1641,10 +1723,24 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                               Receituário & Fórmulas Magistrais ({prescriptions.length})
                             </h3>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                              Receituário e formulações magistrais prescritas para o tratamento
+                              {isPatient
+                                ? "Fórmulas e medicamentos ativos prescritos para o seu tratamento"
+                                : "Receituário e formulações magistrais ativas para o tratamento"}
                             </p>
                           </div>
                         </div>
+
+                        {!isPatient && suspendedPrescriptions.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleOpenSuspendedSection}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-400 dark:border-rose-900/50 transition-colors cursor-pointer shadow-2xs"
+                            title="Ir para o histórico de prescrições suspensas"
+                          >
+                            <Archive className="w-3.5 h-3.5" />
+                            <span>Suspensas ({suspendedPrescriptions.length})</span>
+                          </button>
+                        )}
                       </div>
 
                       {prescriptions.length > 0 ? (
@@ -1695,7 +1791,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
 
                               {/* Ações e Badges (Container Flexível com flex-wrap) */}
                               <div className="flex items-center flex-wrap gap-2 shrink-0 self-start">
-                                {!isPatientView && (
+                                {!isPatient && (
                                   <>
                                     <button
                                       type="button"
@@ -1733,7 +1829,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                   </>
                                 )}
 
-                                {isPatientView && (
+                                {isPatient && (
                                   rx.pdf_assinado_url ? (
                                     <a
                                       href={rx.pdf_assinado_url}
@@ -1766,7 +1862,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                 )}
 
                                 {rx.ativo || rx.status === "Ativo" ? (
-                                  isPatientView ? (
+                                  isPatient ? (
                                     <span className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 cursor-default select-none shadow-2xs">
                                       Em Uso (Ativo)
                                     </span>
