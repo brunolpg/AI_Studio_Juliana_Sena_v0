@@ -17,8 +17,8 @@ import {
   sanitizePdfFileName,
   sharePdfViaWhatsApp,
   generateGenericClinicalPdf,
-  WhatsAppIcon,
 } from "@/lib/utils/whatsapp-share-pdf";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
 interface PrintHomeCareModalProps {
   isOpen: boolean;
