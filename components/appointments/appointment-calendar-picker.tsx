@@ -102,7 +102,7 @@ export function AppointmentCalendarPicker({
   const isCurrentSelectionAllowed = selectedDate ? isAllowedAppointmentDay(selectedDate) : true;
 
   return (
-    <div className="bg-white dark:bg-slate-850 p-4 rounded-3xl border border-slate-200/90 dark:border-slate-800 select-none space-y-3 shadow-2xs">
+    <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/90 dark:border-slate-800/80 select-none space-y-3 shadow-2xs">
       {/* Cabeçalho do Mês */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
@@ -143,7 +143,7 @@ export function AppointmentCalendarPicker({
             key={w.day}
             className={`py-1 rounded-full transition-colors ${
               w.isAllowed
-                ? "text-teal-700 dark:text-teal-300 font-bold bg-teal-500/10"
+                ? "text-teal-700 dark:text-teal-300 font-bold bg-teal-50 dark:bg-teal-950/40"
                 : "text-slate-400 dark:text-slate-500"
             }`}
             title={w.isAllowed ? "Dia com expediente clínico ativo" : "Sem atendimento"}
@@ -201,12 +201,12 @@ export function AppointmentCalendarPicker({
               }
               className={`h-8 w-8 mx-auto rounded-full flex items-center justify-center text-xs transition-all relative md-state-layer ${
                 isSelected
-                  ? "bg-teal-700 dark:bg-teal-500 text-white dark:text-slate-950 font-bold shadow-xs scale-105 z-10 cursor-pointer"
+                  ? "bg-teal-600 text-white font-bold shadow-xs scale-105 z-10 cursor-pointer"
                   : isDisabled
-                  ? "text-slate-300 dark:text-slate-700 cursor-not-allowed bg-transparent"
+                  ? "text-slate-300 dark:text-slate-600 cursor-not-allowed bg-transparent"
                   : isToday
                   ? "border border-teal-500 text-teal-700 dark:text-teal-400 font-bold bg-teal-50/50 dark:bg-teal-950/40 cursor-pointer hover:bg-teal-100/60"
-                  : "text-slate-700 dark:text-slate-200 font-medium hover:bg-teal-50 hover:text-teal-700 dark:hover:bg-slate-800 cursor-pointer"
+                  : "text-slate-700 dark:text-slate-200 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
               }`}
             >
               {day}

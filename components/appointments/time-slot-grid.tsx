@@ -127,7 +127,7 @@ export function TimeSlotGrid({
               return (
                 <div
                   key={s.slot}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 cursor-not-allowed select-none text-xs transition-colors shadow-2xs"
+                  className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900/40 text-slate-400 dark:text-slate-500 cursor-not-allowed select-none text-xs transition-colors shadow-2xs"
                   title={`Horário ocupado ${s.occupiedPatientName ? `(${s.occupiedPatientName})` : ""}`}
                 >
                   <div className="flex items-center gap-1.5 font-mono">
@@ -146,7 +146,7 @@ export function TimeSlotGrid({
               return (
                 <div
                   key={s.slot}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-dashed border-rose-200/80 dark:border-rose-900/30 bg-rose-50/20 dark:bg-rose-950/10 text-rose-600/80 dark:text-rose-400/80 cursor-not-allowed select-none text-xs shadow-2xs"
+                  className="flex items-center justify-between px-3 py-2.5 rounded-2xl border border-dashed border-rose-200/80 dark:border-rose-900/30 bg-rose-50/20 dark:bg-rose-950/20 text-rose-600/80 dark:text-rose-400/80 cursor-not-allowed select-none text-xs shadow-2xs"
                   title={`Duração de ${durationLabel} ultrapassa o expediente`}
                 >
                   <div className="flex items-center gap-1.5 font-mono opacity-60">
@@ -207,7 +207,7 @@ export function TimeSlotGrid({
                 className={`flex items-center justify-between px-3 py-2.5 rounded-2xl border text-xs font-semibold transition-all cursor-pointer select-none md-state-layer ${
                   isSelected
                     ? "bg-teal-700 dark:bg-teal-500 border-teal-700 dark:border-teal-500 text-white dark:text-slate-950 shadow-xs ring-2 ring-teal-500/20"
-                    : "bg-white dark:bg-slate-850 border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-teal-500 hover:bg-teal-50/40 hover:text-teal-700 dark:hover:bg-teal-950/30 shadow-2xs"
+                    : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-teal-500 hover:bg-teal-50/40 dark:hover:bg-slate-800/80 dark:hover:border-teal-500/50 shadow-2xs"
                 }`}
               >
                 <div className="flex items-center gap-1.5 font-mono">
@@ -234,7 +234,7 @@ export function TimeSlotGrid({
                     )}
                   </div>
                 ) : (
-                  <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200/80 dark:border-emerald-800/60">
+                  <span className="text-[10px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded-full border border-teal-200/80 dark:border-teal-800/60">
                     {durationLabel}
                   </span>
                 )}
