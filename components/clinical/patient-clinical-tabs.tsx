@@ -677,14 +677,19 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const evolutions = clinicalRecord?.evolutions || [];
   const allPrescriptions = clinicalRecord?.prescriptions || [];
 
-  // Filtros de prescrições por status
+  // Prescrições ativas/concluídas (Em Uso)
   const activePrescriptions = useMemo(() => {
-    return allPrescriptions.filter((p) => p.status !== "Suspenso");
-  }, [allPrescriptions]);
+    return (clinicalRecord?.prescriptions || []).filter(
+      (rx) => rx.status !== "Suspenso" && rx.ativo !== false
+    );
+  }, [clinicalRecord?.prescriptions]);
 
+  // Prescrições suspensas
   const suspendedPrescriptions = useMemo(() => {
-    return allPrescriptions.filter((p) => p.status === "Suspenso");
-  }, [allPrescriptions]);
+    return (clinicalRecord?.prescriptions || []).filter(
+      (rx) => rx.status === "Suspenso" || rx.ativo === false
+    );
+  }, [clinicalRecord?.prescriptions]);
 
   // Lista principal exibe apenas as vigentes/ativas
   const prescriptions = activePrescriptions;
@@ -810,12 +815,14 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                 {suspendedPrescriptions.length > 0 && (
                   <button
                     type="button"
-                    onClick={handleOpenSuspendedSection}
-                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-full border border-amber-300/80 dark:border-amber-700/60 text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-all cursor-pointer shadow-2xs md-state-layer active:scale-[0.98]"
-                    title="Ver histórico de prescrições suspensas"
+                    onClick={() => {
+                      setIsSuspendedSectionOpen(true);
+                      document.getElementById("secao-prescricoes-suspensas")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/70 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors"
                   >
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span>Receitas Suspensas ({suspendedPrescriptions.length})</span>
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Ver Suspensas ({suspendedPrescriptions.length})</span>
                   </button>
                 )}
                 <button
@@ -1937,9 +1944,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                       ) : (
                         <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-center">
                           <p className="text-xs text-slate-400 italic">
-                            {isPatient
-                              ? "Nenhuma prescrição ativa encontrada no momento."
-                              : "Nenhuma fórmula magistral ou receita ativa no momento."}
+                            Nenhuma prescrição ativa no momento.
                           </p>
                         </div>
                       )}
@@ -1947,8 +1952,9 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                       {/* ÁREA EXCLUSIVA PARA SUSPENSAS (Administrador / Profissional) */}
                       {!isPatient && suspendedPrescriptions.length > 0 && (
                         <div
+                          id="secao-prescricoes-suspensas"
                           ref={suspendedSectionRef}
-                          className="mt-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 overflow-hidden shadow-2xs transition-all"
+                          className="mt-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 overflow-hidden shadow-2xs transition-all"
                         >
                           <button
                             type="button"
@@ -1962,7 +1968,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                               <div>
                                 <div className="flex items-center gap-2">
                                   <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                                    Prescrições Suspensas / Histórico de Suspensões
+                                    Prescrições Suspensas / Descontinuadas
                                   </h4>
                                   <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/60">
                                     {suspendedPrescriptions.length}
@@ -2009,7 +2015,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                 return (
                                   <div
                                     key={rx.id}
-                                    className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-2xs opacity-95 hover:opacity-100 transition-opacity"
+                                    className="p-4 rounded-xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-2xs opacity-90 hover:opacity-100 transition-opacity"
                                   >
                                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 flex-wrap pb-3 border-b border-slate-200/60 dark:border-slate-800/70">
                                       <div className="flex-1 min-w-[200px]">
@@ -2077,12 +2083,19 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                       </div>
                                     )}
 
-                                    {/* Detalhes da fórmula suspensa (dosagem/veículo) */}
-                                    {(rx.dosagem || rx.item?.dosagem) && (
-                                      <div className="mt-2.5 p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
-                                        <strong>Dosagem:</strong> {rx.dosagem || rx.item?.dosagem}
-                                      </div>
-                                    )}
+                                    {/* Detalhes da fórmula suspensa (dosagem e posologia original) */}
+                                    <div className="mt-2.5 space-y-1.5">
+                                      {(rx.dosagem || rx.item?.dosagem) && (
+                                        <div className="p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
+                                          <strong>Dosagem / Apresentação:</strong> {rx.dosagem || rx.item?.dosagem}
+                                        </div>
+                                      )}
+                                      {(rx.posologia || rx.item?.posologia) && (
+                                        <div className="p-2 rounded-lg bg-slate-100/50 dark:bg-slate-800/30 border border-slate-200/50 dark:border-slate-800/50 text-[11px] text-slate-600 dark:text-slate-400">
+                                          <strong>Posologia Original:</strong> {rx.posologia || rx.item?.posologia}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 );
                               })}
