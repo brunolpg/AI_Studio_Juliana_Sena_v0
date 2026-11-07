@@ -22,6 +22,12 @@ import {
 import type { ClinicalEvolution, PrescriptionItem } from "@/types/clinical-record";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
 import type { Client } from "@/types/client";
+import {
+  sanitizePdfFileName,
+  sharePdfViaWhatsApp,
+  generateGenericClinicalPdf,
+  WhatsAppIcon,
+} from "@/lib/utils/whatsapp-share-pdf";
 
 interface PrintEvolutionModalProps {
   isOpen: boolean;
@@ -91,12 +97,122 @@ export function PrintEvolutionModal({
 }: PrintEvolutionModalProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
 
   if (!isOpen) return null;
 
   const pacienteNome = client?.nome || "Paciente";
   const pacienteNasc = client?.data_nascimento;
   const pacienteCpf = client?.cpf;
+  const pacienteTelefone = client?.telefone || (client as any)?.whatsapp;
+
+  const handleShareWhatsApp = async () => {
+    try {
+      setIsSharingWhatsApp(true);
+      const fileName = sanitizePdfFileName("Evolucao_Clinica", pacienteNome);
+
+      const sections: Array<{
+        title?: string;
+        items?: string[];
+        paragraph?: string;
+        badge?: string;
+      }> = [];
+
+      // Subjetivo
+      if (evolution.subjetivo) {
+        sections.push({
+          title: "Subjetivo (S) - Relato do Paciente",
+          paragraph: evolution.subjetivo,
+        });
+      }
+
+      // Objetivo
+      if (evolution.objetivo) {
+        sections.push({
+          title: "Objetivo (O) - Exame Físico & Achados Clínicos",
+          paragraph: evolution.objetivo,
+        });
+      }
+
+      // Sinais Vitais
+      if (evolution.sinaisVitais) {
+        const sv = evolution.sinaisVitais;
+        const svItems: string[] = [];
+        if (sv.pressaoArterial) svItems.push(`Pressão Arterial (PA): ${sv.pressaoArterial} mmHg`);
+        if (sv.frequenciaCardiaca) svItems.push(`Frequência Cardíaca (FC): ${sv.frequenciaCardiaca} bpm`);
+        if (sv.temperatura) svItems.push(`Temperatura: ${sv.temperatura} °C`);
+        if (sv.peso) svItems.push(`Peso: ${sv.peso} kg`);
+        if (sv.hidratacaoCutanea) svItems.push(`Hidratação Cutânea: ${sv.hidratacaoCutanea} %`);
+        if (sv.oleosidadeSebo) svItems.push(`Oleosidade/Sebo: ${sv.oleosidadeSebo} %`);
+
+        if (svItems.length > 0) {
+          sections.push({
+            title: "Sinais Vitais & Biometria Cutânea",
+            items: svItems,
+          });
+        }
+      }
+
+      // Avaliação
+      if (evolution.avaliacao) {
+        sections.push({
+          title: "Avaliação (A) - Diagnóstico Clínico",
+          paragraph: evolution.avaliacao,
+        });
+      }
+
+      // Plano
+      if (evolution.plano) {
+        sections.push({
+          title: "Plano Terapêutico (P) & Conduta",
+          paragraph: evolution.plano,
+        });
+      }
+
+      // Prescrições Vinculadas
+      if (linkedPrescriptions.length > 0) {
+        sections.push({
+          title: "Prescrições Vinculadas",
+          items: linkedPrescriptions.map(
+            (rx) => `${rx.medicamento} (Uso ${rx.via}) • ${rx.dosagem} • ${rx.posologia}`
+          ),
+        });
+      }
+
+      // Home Care Vinculado
+      if (linkedHomeCareFicha) {
+        sections.push({
+          title: "Home Care Vinculado",
+          paragraph: `Protocolo: ${linkedHomeCareFicha.titulo_protocolo} (Registrado em ${formatDateBR(
+            linkedHomeCareFicha.data_home_care
+          )})`,
+        });
+      }
+
+      const pdfFile = await generateGenericClinicalPdf({
+        fileName,
+        title: "Evolução Clínica & Prontuário",
+        subtitle: `Atendimento: ${evolution.tipo || "Consulta"} • ${evolution.especialidade || "Estética Avançada"}`,
+        patientName: pacienteNome,
+        patientCpf: formatCPF(pacienteCpf),
+        patientPhone: pacienteTelefone,
+        dateStr: `${formatDateBR(evolution.data)}${evolution.horario ? ` às ${evolution.horario}` : ""}`,
+        professionalName: evolution.profissional || "Dra. Juliana Sena de Souza Vieira",
+        sections,
+      });
+
+      await sharePdfViaWhatsApp({
+        file: pdfFile,
+        documentTitle: `Evolução Clínica - ${pacienteNome}`,
+        patientName: pacienteNome,
+        patientPhone: pacienteTelefone,
+      });
+    } catch (err) {
+      console.error("Erro ao compartilhar evolução via WhatsApp:", err);
+    } finally {
+      setIsSharingWhatsApp(false);
+    }
+  };
 
   const handlePrint = () => {
     const printContent = printAreaRef.current;
@@ -313,6 +429,15 @@ export function PrintEvolutionModal({
           </div>
 
           <div className="space-y-2.5 mt-6">
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              disabled={isSharingWhatsApp}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+            >
+              <WhatsAppIcon className="w-4 h-4 shrink-0" />
+              <span>{isSharingWhatsApp ? "Preparando envio..." : "Enviar pelo WhatsApp"}</span>
+            </button>
             <button
               type="button"
               onClick={handlePrint}

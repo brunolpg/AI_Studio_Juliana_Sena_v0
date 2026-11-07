@@ -13,6 +13,12 @@ import {
 } from "lucide-react";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
 import type { Client } from "@/types/client";
+import {
+  sanitizePdfFileName,
+  sharePdfViaWhatsApp,
+  generateGenericClinicalPdf,
+  WhatsAppIcon,
+} from "@/lib/utils/whatsapp-share-pdf";
 
 interface PrintHomeCareModalProps {
   isOpen: boolean;
@@ -59,12 +65,89 @@ export function PrintHomeCareModal({
 }: PrintHomeCareModalProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
 
   if (!isOpen) return null;
 
   const pacienteNome = client?.nome || ficha.paciente?.nome || "Paciente";
   const pacienteNasc = client?.data_nascimento || ficha.paciente?.data_nascimento;
   const pacienteCpf = client?.cpf || ficha.paciente?.cpf;
+  const pacienteTelefone = client?.telefone || (client as any)?.whatsapp;
+
+  const handleShareWhatsApp = async () => {
+    try {
+      setIsSharingWhatsApp(true);
+      const fileName = sanitizePdfFileName("Home_Care", pacienteNome);
+
+      const sections: Array<{
+        title?: string;
+        items?: string[];
+        paragraph?: string;
+        badge?: string;
+      }> = [];
+
+      // Grupo 1: Cuidados Diários
+      if (ficha.cuidados && ficha.cuidados.length > 0) {
+        sections.push({
+          title: "Cuidados Diários e Orientações",
+          items: ficha.cuidados.map((c) => `${c.titulo}: ${c.texto}`),
+        });
+      }
+
+      // Grupo 2: Cronograma de Tratamento (se incluído)
+      if (ficha.cronograma && ficha.cronograma.length > 0) {
+        sections.push({
+          title: "Cronograma de Tratamento",
+          items: ficha.cronograma.map(
+            (cr) =>
+              `Dias ${cr.dia_inicio} a ${cr.dia_fim} • ${cr.nome_formula}: ${cr.posologia}${
+                cr.objetivo_clinico ? ` (Objetivo: ${cr.objetivo_clinico})` : ""
+              }`
+          ),
+        });
+      }
+
+      // Grupo 3: Recomendações Complementares
+      if (ficha.incluir_recomendacoes && ficha.recomendacoes && ficha.recomendacoes.length > 0) {
+        sections.push({
+          title: "Recomendações Complementares",
+          items: ficha.recomendacoes.map((r) => `${r.titulo}: ${r.texto}`),
+        });
+      }
+
+      // Grupo 4: Atenção Crítica
+      if (ficha.incluir_atencao_critica && (ficha.atencao_critica_titulo || ficha.atencao_critica_texto)) {
+        sections.push({
+          title: ficha.atencao_critica_titulo || "Atenção Crítica & Sinais de Alerta",
+          badge: "Alerta Clínico",
+          paragraph: ficha.atencao_critica_texto || "Em caso de reação adversa, contate a clínica imediatamente.",
+        });
+      }
+
+      const pdfFile = await generateGenericClinicalPdf({
+        fileName,
+        title: "Protocolo de Home Care",
+        subtitle: `Protocolo: ${ficha.titulo_protocolo}`,
+        patientName: pacienteNome,
+        patientCpf: formatCPF(pacienteCpf),
+        patientPhone: pacienteTelefone,
+        dateStr: formatDateBR(ficha.data_home_care),
+        professionalName: ficha.profissional || "Dra. Juliana Sena de Souza Vieira",
+        sections,
+      });
+
+      await sharePdfViaWhatsApp({
+        file: pdfFile,
+        documentTitle: `Home Care - ${ficha.titulo_protocolo}`,
+        patientName: pacienteNome,
+        patientPhone: pacienteTelefone,
+      });
+    } catch (err) {
+      console.error("Erro ao compartilhar ficha de Home Care via WhatsApp:", err);
+    } finally {
+      setIsSharingWhatsApp(false);
+    }
+  };
 
   const handlePrint = () => {
     const printContent = printAreaRef.current;
@@ -265,6 +348,15 @@ export function PrintHomeCareModal({
           </div>
 
           <div className="space-y-2.5 mt-6">
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              disabled={isSharingWhatsApp}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+            >
+              <WhatsAppIcon className="w-4 h-4 shrink-0" />
+              <span>{isSharingWhatsApp ? "Preparando envio..." : "Enviar pelo WhatsApp"}</span>
+            </button>
             <button
               type="button"
               onClick={handlePrint}

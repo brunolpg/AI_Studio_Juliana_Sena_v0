@@ -14,6 +14,12 @@ import {
   Table,
 } from "lucide-react";
 import type { PopProtocoloCompleto } from "@/types/pop";
+import {
+  sanitizePdfFileName,
+  sharePdfViaWhatsApp,
+  generateGenericClinicalPdf,
+  WhatsAppIcon,
+} from "@/lib/utils/whatsapp-share-pdf";
 
 interface PrintPopModalProps {
   isOpen: boolean;
@@ -57,8 +63,86 @@ function formatDateToPortuguese(dateStr?: string | null): string {
 export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleShareWhatsApp = async () => {
+    try {
+      setIsSharingWhatsApp(true);
+      const fileName = sanitizePdfFileName("POP", pop.protocolo);
+
+      const sections: Array<{
+        title?: string;
+        items?: string[];
+        paragraph?: string;
+        badge?: string;
+      }> = [];
+
+      // Finalidade
+      if (pop.finalidade) {
+        sections.push({
+          title: "Finalidade & Escopo Clínico",
+          paragraph: pop.finalidade,
+        });
+      }
+
+      // Blocos do POP
+      if (pop.blocos && pop.blocos.length > 0) {
+        for (const bloco of pop.blocos) {
+          if (bloco.tipo === "TOPICO") {
+            const subItems =
+              bloco.subtopicos && bloco.subtopicos.length > 0
+                ? bloco.subtopicos.map((s) => `${s.titulo}: ${s.descricao}`)
+                : undefined;
+            sections.push({
+              title: bloco.topico_titulo || "Diretriz Operacional",
+              paragraph: bloco.topico_descricao,
+              items: subItems,
+            });
+          } else if (bloco.tipo === "FORMULA" && bloco.formula) {
+            sections.push({
+              title: "Protocolo Farmacológico / Fórmula",
+              badge: bloco.formula.via ? `Uso ${bloco.formula.via}` : undefined,
+              paragraph: `${bloco.formula.nome}${bloco.formula.dosagem ? ` - ${bloco.formula.dosagem}` : ""}`,
+              items: [
+                bloco.formula.posologia ? `Posologia: ${bloco.formula.posologia}` : "",
+                bloco.formula.orient_paciente ? `Orientações: ${bloco.formula.orient_paciente}` : "",
+              ].filter(Boolean),
+            });
+          } else if (bloco.tipo === "TABELA" && bloco.tabela_dados) {
+            const linhasFormatadas = bloco.tabela_dados.linhas.map((row) =>
+              row
+                .map((cell, idx) => `${bloco.tabela_dados?.colunas[idx] || "Item"}: ${cell}`)
+                .join(" | ")
+            );
+            sections.push({
+              title: "Parâmetros e Tabela Técnica",
+              items: linhasFormatadas,
+            });
+          }
+        }
+      }
+
+      const pdfFile = await generateGenericClinicalPdf({
+        fileName,
+        title: "Procedimento Operacional Padrão (POP)",
+        subtitle: `Protocolo Clínico: ${pop.protocolo}`,
+        dateStr: formatDateBR(pop.data_pop),
+        professionalName: pop.profissional || "Dra. Juliana Sena de Souza Vieira",
+        sections,
+      });
+
+      await sharePdfViaWhatsApp({
+        file: pdfFile,
+        documentTitle: `POP - ${pop.protocolo}`,
+      });
+    } catch (err) {
+      console.error("Erro ao compartilhar POP via WhatsApp:", err);
+    } finally {
+      setIsSharingWhatsApp(false);
+    }
+  };
 
   const handlePrint = () => {
     const printContent = printAreaRef.current;
@@ -263,6 +347,15 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
           </div>
 
           <div className="space-y-2.5 mt-6">
+            <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              disabled={isSharingWhatsApp}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+            >
+              <WhatsAppIcon className="w-4 h-4 shrink-0" />
+              <span>{isSharingWhatsApp ? "Preparando envio..." : "Enviar pelo WhatsApp"}</span>
+            </button>
             <button
               type="button"
               onClick={handlePrint}

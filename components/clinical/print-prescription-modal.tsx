@@ -4,6 +4,12 @@ import React, { useRef, useState } from "react";
 import { X, Printer, FileText, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { PrescriptionItem } from "@/types/clinical-record";
 import type { Client } from "@/types/client";
+import {
+  sanitizePdfFileName,
+  sharePdfViaWhatsApp,
+  generateGenericClinicalPdf,
+  WhatsAppIcon,
+} from "@/lib/utils/whatsapp-share-pdf";
 
 interface PrintPrescriptionModalProps {
   isOpen: boolean;
@@ -39,6 +45,7 @@ export function PrintPrescriptionModal({
 }: PrintPrescriptionModalProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
 
   if (!isOpen) return null;
 
@@ -118,6 +125,83 @@ export function PrintPrescriptionModal({
   };
 
   const rxDetails = parseRxDetails(prescription);
+
+  const handleShareWhatsApp = async () => {
+    try {
+      setIsSharingWhatsApp(true);
+      const fileName = sanitizePdfFileName("Receituario", client.nome);
+
+      let pdfFile: File | null = null;
+      const targetId = (prescription as any).prescricao_id || prescription.id;
+
+      if (targetId) {
+        try {
+          const res = await fetch(`/api/prescricoes/${targetId}/pdf`);
+          if (res.ok) {
+            const blob = await res.blob();
+            pdfFile = new File([blob], fileName, { type: "application/pdf" });
+          }
+        } catch (e) {
+          console.warn("Falha ao obter PDF do servidor, gerando em memória via pdf-lib:", e);
+        }
+      }
+
+      if (!pdfFile) {
+        pdfFile = await generateGenericClinicalPdf({
+          fileName,
+          title: "Receituário & Prescrição Clínica",
+          subtitle: `Prescrição: ${prescription.medicamento} (Uso ${prescription.via})`,
+          patientName: client.nome,
+          patientCpf: formatCPF(client.cpf),
+          patientPhone: client.telefone || (client as any).whatsapp,
+          dateStr: prescription.data_prescricao || undefined,
+          sections: [
+            {
+              title: "Medicamento / Fórmula Magistral",
+              badge: `Uso ${prescription.via}`,
+              paragraph: prescription.medicamento,
+            },
+            {
+              title: "Composição & Dosagem",
+              items: rxDetails.componentes.map((c) => `${c.nome}: ${c.qtd}`),
+              paragraph: `Veículo: ${rxDetails.veiculo}${rxDetails.total ? ` | Quantidade Total: ${rxDetails.total}` : ""}`,
+            },
+            {
+              title: "Posologia & Modo de Uso",
+              paragraph: prescription.posologia || "Conforme orientação profissional.",
+            },
+            ...(rxDetails.orientPaciente
+              ? [
+                  {
+                    title: "Orientações ao Paciente",
+                    paragraph: rxDetails.orientPaciente,
+                  },
+                ]
+              : []),
+            ...(rxDetails.orientFarmacia
+              ? [
+                  {
+                    title: "Observações à Farmácia Magistral",
+                    paragraph: rxDetails.orientFarmacia,
+                  },
+                ]
+              : []),
+          ],
+        });
+      }
+
+      await sharePdfViaWhatsApp({
+        file: pdfFile,
+        documentTitle: `Receituário - ${prescription.medicamento}`,
+        patientName: client.nome,
+        patientPhone: client.telefone || (client as any).whatsapp,
+      });
+    } catch (err) {
+      console.error("Erro ao compartilhar prescrição via WhatsApp:", err);
+    } finally {
+      setIsSharingWhatsApp(false);
+    }
+  };
 
   const handlePrint = () => {
     const printContent = printAreaRef.current;
@@ -297,6 +381,16 @@ export function PrintPrescriptionModal({
 
           <div className="space-y-2.5 mt-6">
             <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              disabled={isSharingWhatsApp}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+            >
+              <WhatsAppIcon className="w-4 h-4 shrink-0" />
+              <span>{isSharingWhatsApp ? "Preparando envio..." : "Enviar pelo WhatsApp"}</span>
+            </button>
+            <button
+              type="button"
               onClick={handlePrint}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all shadow-xs cursor-pointer"
             >
@@ -304,6 +398,7 @@ export function PrintPrescriptionModal({
               <span>Imprimir / Gerar PDF</span>
             </button>
             <button
+              type="button"
               onClick={onClose}
               className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
             >
