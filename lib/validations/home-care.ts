@@ -52,9 +52,7 @@ export const homeCareFichaSchema = z.object({
   cuidados: z
     .array(topicoItemSchema)
     .min(1, "É obrigatório incluir ao menos 1 item no grupo de Cuidados"),
-  cronograma: z
-    .array(cronogramaItemSchema)
-    .min(1, "É obrigatório incluir ao menos 1 linha no Cronograma de Tratamento"),
+  cronograma: z.array(cronogramaItemSchema).default([]),
   recomendacoes: z.array(topicoItemSchema).optional().default([]),
 });
 

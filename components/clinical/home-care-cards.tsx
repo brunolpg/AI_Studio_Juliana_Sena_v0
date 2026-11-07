@@ -209,24 +209,26 @@ export function HomeCareCards({
                       </div>
                     </div>
 
-                    {/* Cronograma */}
-                    <div className="bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-slate-900/90 dark:border-slate-800 dark:text-slate-100 rounded-xl p-3.5">
-                      <div className="flex items-center justify-between text-xs font-semibold tracking-wide text-slate-600 dark:text-slate-400 mb-2">
-                        <span className="uppercase tracking-wider">Cronograma ({cronoCount} etapas)</span>
+                    {/* Cronograma (se incluído) */}
+                    {cronoCount > 0 && (
+                      <div className="bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-slate-900/90 dark:border-slate-800 dark:text-slate-100 rounded-xl p-3.5">
+                        <div className="flex items-center justify-between text-xs font-semibold tracking-wide text-slate-600 dark:text-slate-400 mb-2">
+                          <span className="uppercase tracking-wider">Cronograma ({cronoCount} {cronoCount === 1 ? "etapa" : "etapas"})</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {ficha.cronograma?.map((cr, idx) => (
+                            <div key={idx} className="grid grid-cols-[88px_1fr] items-baseline gap-2 text-left">
+                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0 text-left">
+                                Dias {cr.dia_inicio} ao {cr.dia_fim}
+                              </span>
+                              <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate text-left">
+                                {cr.nome_formula}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        {ficha.cronograma?.map((cr, idx) => (
-                          <div key={idx} className="grid grid-cols-[88px_1fr] items-baseline gap-2 text-left">
-                            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0 text-left">
-                              Dias {cr.dia_inicio} ao {cr.dia_fim}
-                            </span>
-                            <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate text-left">
-                              {cr.nome_formula}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    )}
 
                     {ficha.incluir_atencao_critica !== false && Boolean(ficha.atencao_critica_texto) && (
                       <div className="px-2 pt-1 flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-semibold">

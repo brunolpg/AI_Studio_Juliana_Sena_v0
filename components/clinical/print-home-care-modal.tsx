@@ -420,56 +420,58 @@ export function PrintHomeCareModal({
               </div>
 
               {/* 5. Bloco: CRONOGRAMA DE TRATAMENTO */}
-              <div className="mb-6 space-y-3">
-                <div className="border-b-2 border-teal-700/80 pb-1.5 flex items-center justify-between">
-                  <h3 className="text-xs font-black text-teal-950 uppercase tracking-widest flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-teal-600 inline-block" />
-                    CRONOGRAMA DE TRATAMENTO
-                  </h3>
-                  <span className="text-[10px] font-semibold text-slate-500">
-                    Fases sequenciais
-                  </span>
-                </div>
+              {ficha.cronograma && ficha.cronograma.length > 0 && (
+                <div className="mb-6 space-y-3">
+                  <div className="border-b-2 border-teal-700/80 pb-1.5 flex items-center justify-between">
+                    <h3 className="text-xs font-black text-teal-950 uppercase tracking-widest flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-teal-600 inline-block" />
+                      CRONOGRAMA DE TRATAMENTO
+                    </h3>
+                    <span className="text-[10px] font-semibold text-slate-500">
+                      Fases sequenciais
+                    </span>
+                  </div>
 
-                <div className="overflow-hidden rounded-xl border border-slate-200 print-avoid-break">
-                  <table className="w-full text-left border-collapse text-xs print-avoid-break">
-                    <thead>
-                      <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 font-bold uppercase text-[10px]">
-                        <th className="py-2.5 px-3 w-[22%]">Período</th>
-                        <th className="py-2.5 px-3 w-[43%]">Produto & Frequência</th>
-                        <th className="py-2.5 px-3 w-[35%]">Objetivo Clínico</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {ficha.cronograma.map((item, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/50">
-                          <td className="py-2.5 px-3 align-top font-bold text-teal-900">
-                            <div>
-                              DIAS {item.dia_inicio} AO {item.dia_fim}
-                            </div>
-                            {item.fase_titulo && (
-                              <div className="text-[10px] font-semibold text-slate-500 mt-0.5">
-                                {item.fase_titulo}
-                              </div>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 align-top">
-                            <span className="font-bold text-slate-900 block">
-                              {item.nome_formula}
-                            </span>
-                            <span className="text-slate-600 text-[11px] block mt-0.5 leading-relaxed">
-                              {item.posologia}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 align-top text-slate-700 leading-relaxed text-[11px]">
-                            {item.objetivo_clinico}
-                          </td>
+                  <div className="overflow-hidden rounded-xl border border-slate-200 print-avoid-break">
+                    <table className="w-full text-left border-collapse text-xs print-avoid-break">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 font-bold uppercase text-[10px]">
+                          <th className="py-2.5 px-3 w-[22%]">Período</th>
+                          <th className="py-2.5 px-3 w-[43%]">Produto & Frequência</th>
+                          <th className="py-2.5 px-3 w-[35%]">Objetivo Clínico</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {ficha.cronograma.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/50">
+                            <td className="py-2.5 px-3 align-top font-bold text-teal-900">
+                              <div>
+                                DIAS {item.dia_inicio} AO {item.dia_fim}
+                              </div>
+                              {item.fase_titulo && (
+                                <div className="text-[10px] font-semibold text-slate-500 mt-0.5">
+                                  {item.fase_titulo}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 align-top">
+                              <span className="font-bold text-slate-900 block">
+                                {item.nome_formula}
+                              </span>
+                              <span className="text-slate-600 text-[11px] block mt-0.5 leading-relaxed">
+                                {item.posologia}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 align-top text-slate-700 leading-relaxed text-[11px]">
+                              {item.objetivo_clinico}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* 6. Bloco: RECOMENDAÇÕES COMPLEMENTARES IMPORTANTES (Se houver) */}
               {ficha.incluir_recomendacoes && ficha.recomendacoes && ficha.recomendacoes.length > 0 && (

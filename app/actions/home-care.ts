@@ -342,7 +342,7 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
         titulo: c.titulo,
         texto: c.texto,
       })),
-      cronograma: validData.cronograma.map((cr, idx) => ({
+      cronograma: (validData.cronograma || []).map((cr, idx) => ({
         ordem: idx + 1,
         dia_inicio: cr.dia_inicio,
         dia_fim: cr.dia_fim,
@@ -438,7 +438,7 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
     // 6. Sincronizar tabela `home_care_cronograma` com cliente admin
     await adminDb.from("home_care_cronograma").delete().eq("ficha_id", fichaId);
 
-    const linhasCronograma = validData.cronograma.map((cr, idx) => ({
+    const linhasCronograma = (validData.cronograma || []).map((cr, idx) => ({
       ficha_id: fichaId,
       ordem: idx + 1,
       dia_inicio: cr.dia_inicio,
