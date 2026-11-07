@@ -7,6 +7,7 @@ import {
   getComponentesAction,
   getUnidadesAction,
   addStructuredPrescriptionAction,
+  updateStructuredPrescriptionAction,
 } from "@/actions/clinical-actions";
 import { useToast } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -18,6 +19,7 @@ interface PrescriptionModalProps {
   onSuccess: (newPrescriptionId?: string) => void;
   client: Client;
   zIndex?: string;
+  initialData?: any | null;
 }
 
 interface ComponentRow {
@@ -35,6 +37,7 @@ export function PrescriptionModal({
   onSuccess,
   client,
   zIndex = "z-50",
+  initialData = null,
 }: PrescriptionModalProps) {
   const { toast } = useToast();
 
@@ -142,6 +145,89 @@ export function PrescriptionModal({
       loadCatalogs();
     }
   }, [isOpen]);
+
+  // Preenche dados quando for modo de edição (initialData) ou reseta para novo cadastro
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (initialData) {
+      const item = initialData.prescricao_itens?.[0] || initialData.item || {};
+      const formulaNome = item.nome_formula || initialData.medicamento || initialData.nome_formula || "";
+      const rawVia = (item.via || initialData.via || "tópico").toLowerCase();
+      const normalizedVia: "oral" | "tópico" = rawVia === "oral" ? "oral" : "tópico";
+      const veiculoVal = item.veiculo || initialData.veiculo || "";
+      const dosagemVal = item.dosagem != null ? String(item.dosagem).replace(".", ",") : (initialData.dosagem_valor || "");
+      const totalVeiculoVal = item.duracao != null ? String(item.duracao) : (initialData.total_veiculo || "");
+      const tipoVeiculoVal = item.tipo_veiculo || initialData.tipo_veiculo || (normalizedVia === "oral" ? "dose(s)" : "un");
+      const posologiaVal = item.posologia || initialData.posologia || "";
+      const orientPacVal = item.orient_paciente || initialData.orient_paciente || "";
+      const orientFarmVal = item.orient_farmacia || initialData.orient_farmacia || "";
+      const descVal = initialData.observacoes || initialData.descricao || "";
+
+      setNomeFormula(formulaNome);
+      if (nomeFormulaInputRef.current) nomeFormulaInputRef.current.value = formulaNome;
+
+      setDescricao(descVal);
+      if (descricaoInputRef.current) descricaoInputRef.current.value = descVal;
+
+      setVia(normalizedVia);
+      setVeiculo(veiculoVal);
+      if (veiculoInputRef.current) veiculoInputRef.current.value = veiculoVal;
+
+      setDosagemValor(dosagemVal);
+      setTotalVeiculo(totalVeiculoVal);
+      setTipoVeiculo(tipoVeiculoVal);
+
+      setPosologia(posologiaVal);
+      if (posologiaInputRef.current) posologiaInputRef.current.value = posologiaVal;
+
+      setOrientPaciente(orientPacVal);
+      if (orientPacienteInputRef.current) orientPacienteInputRef.current.value = orientPacVal;
+
+      setOrientFarmacia(orientFarmVal);
+      if (orientFarmaciaInputRef.current) orientFarmaciaInputRef.current.value = orientFarmVal;
+
+      const rawComponents = item.componentes_snapshot || initialData.componentes || [];
+      if (Array.isArray(rawComponents) && rawComponents.length > 0) {
+        const rows: ComponentRow[] = rawComponents.map((c: any, idx: number) => {
+          const sigla = c.unidade_sigla || c.unidade || "%";
+          const unitMatch = dbUnidades.find((u) => u.unidade === sigla || u.sigla === sigla);
+          const compMatch = dbComponentes.find((comp) => comp.nome?.toLowerCase() === c.nome?.toLowerCase());
+          return {
+            key: `edit_comp_${idx}_${c.nome || idx}`,
+            componente_id: compMatch?.id || c.componente_id || "",
+            nome: c.nome || "",
+            quantidade: c.quantidade != null ? String(c.quantidade).replace(".", ",") : "",
+            unidade_id: unitMatch?.id || sigla,
+            unidade_sigla: sigla,
+          };
+        });
+        setComponentesRows(rows);
+      }
+    } else {
+      setNomeFormula("");
+      if (nomeFormulaInputRef.current) nomeFormulaInputRef.current.value = "";
+      setDescricao("");
+      if (descricaoInputRef.current) descricaoInputRef.current.value = "";
+      setVia("tópico");
+      setVeiculo("");
+      if (veiculoInputRef.current) veiculoInputRef.current.value = "";
+      setDosagemValor("");
+      setDosagemUnidade("g");
+      setTotalVeiculo("");
+      setTipoVeiculo("dose(s)");
+      setPosologia("");
+      if (posologiaInputRef.current) posologiaInputRef.current.value = "";
+      setOrientPaciente("");
+      if (orientPacienteInputRef.current) orientPacienteInputRef.current.value = "";
+      setOrientFarmacia("");
+      if (orientFarmaciaInputRef.current) orientFarmaciaInputRef.current.value = "";
+      setComponentesRows([
+        { key: "initial_1", componente_id: "", nome: "", quantidade: "", unidade_id: "", unidade_sigla: "%" },
+      ]);
+      setSelectedFormulaId(null);
+    }
+  }, [isOpen, initialData, dbUnidades, dbComponentes]);
 
   if (!isOpen) return null;
 
@@ -358,8 +444,15 @@ export function PrescriptionModal({
         save_as_formula: true,
       };
 
-      // Executa a action que realiza toda a persistência lógica no banco (fórmulas, componentes, vínculos e itens)
-      const res = await addStructuredPrescriptionAction(client.id, payload);
+      // Executa a action que realiza o salvamento (novo registro ou atualização com versionamento clínico)
+      let res;
+      const targetPrescriptionId = initialData?.id || initialData?.prescricao_id;
+
+      if (targetPrescriptionId) {
+        res = await updateStructuredPrescriptionAction(client.id, targetPrescriptionId, payload);
+      } else {
+        res = await addStructuredPrescriptionAction(client.id, payload);
+      }
 
       if (res.success) {
         // Atualiza instantaneamente a lista de fórmulas/modelos salvos no seletor
@@ -370,14 +463,16 @@ export function PrescriptionModal({
 
         toast({
           type: "success",
-          title: "Prescrição Magistral Emitida!",
-          description: `Receita gerada e salva com sucesso para ${client.nome}.`,
+          title: targetPrescriptionId ? "Prescrição Atualizada" : "Prescrição Magistral Emitida!",
+          description: targetPrescriptionId
+            ? "Prescrição atualizada e versão anterior arquivada"
+            : `Receita gerada e salva com sucesso para ${client.nome}.`,
         });
         const createdPrescriptionId = res.data?.prescricao_id || res.data?.id;
         onSuccess(createdPrescriptionId);
         onClose();
       } else {
-        setErrorMsg(res.message || "Erro ao adicionar receita.");
+        setErrorMsg(res.message || "Erro ao salvar receita.");
       }
     } catch (err: any) {
       console.error(err);
@@ -401,10 +496,15 @@ export function PrescriptionModal({
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
-                Nova Prescrição Magistral (SOAP)
+                {initialData ? "Editar Prescrição Magistral" : "Nova Prescrição Magistral (SOAP)"}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Paciente: <strong className="text-slate-700 dark:text-slate-200">{client.nome}</strong>
+                {initialData && (
+                  <span className="ml-2 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                    (Versão anterior será arquivada como suspensa)
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -767,12 +867,12 @@ export function PrescriptionModal({
               {isSubmitting ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Registrando Prescrição...</span>
+                  <span>{initialData ? "Salvando Alterações..." : "Registrando Prescrição..."}</span>
                 </>
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  <span>Emitir Receituário Magistral</span>
+                  <span>{initialData ? "Salvar Alterações e Arquivar Versão" : "Emitir Receituário Magistral"}</span>
                 </>
               )}
             </button>

@@ -1226,6 +1226,268 @@ export async function addStructuredPrescriptionAction(
 }
 
 /**
+ * Atualiza uma Prescrição Estruturada com Versionamento Clínico
+ * 1. Arquiva versão anterior como 'Suspenso' com justificativa 'Prescrição ajustada'
+ * 2. Atualiza a prescrição existente como 'Ativo', limpando suspensão e assinatura digital anterior
+ * 3. Atualiza os itens da prescrição
+ */
+export async function updateStructuredPrescriptionAction(
+  clientId: string,
+  prescriptionId: string,
+  input: StructuredPrescriptionPayload
+): Promise<ActionResponse<any>> {
+  try {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!clientId || !uuidRegex.test(clientId)) {
+      return { success: false, message: "ID do paciente inválido." };
+    }
+    if (!prescriptionId || !uuidRegex.test(prescriptionId)) {
+      return { success: false, message: "ID da prescrição inválido." };
+    }
+
+    const supabase = await createClient();
+    if (!supabase) return { success: false, message: "Erro de conexão com o Supabase." };
+
+    // 1. Localiza a prescrição existente e seus itens atuais
+    const { data: oldPresc, error: oldErr } = await supabase
+      .from("prescricoes")
+      .select(`
+        *,
+        prescricao_itens (*)
+      `)
+      .eq("id", prescriptionId)
+      .eq("paciente_id", clientId)
+      .maybeSingle();
+
+    if (oldErr || !oldPresc) {
+      return { success: false, message: `Prescrição original não encontrada: ${oldErr?.message || ""}` };
+    }
+
+    const nowIso = new Date().toISOString();
+
+    // 2. Cria cópia exata do registro anterior com status 'Suspenso' e justificativa 'Prescrição ajustada'
+    const { data: archivedPresc, error: archErr } = await supabase
+      .from("prescricoes")
+      .insert({
+        paciente_id: clientId,
+        data_prescricao: oldPresc.data_prescricao,
+        status: "Suspenso",
+        justificativa_suspensao: "Prescrição ajustada",
+        data_suspensao: nowIso,
+        observacoes: oldPresc.observacoes || null,
+        pdf_assinado_url: oldPresc.pdf_assinado_url || null,
+        data_assinatura: oldPresc.data_assinatura || null,
+      })
+      .select("id")
+      .single();
+
+    if (archErr || !archivedPresc) {
+      return { success: false, message: `Falha ao criar histórico da versão anterior: ${archErr?.message || ""}` };
+    }
+
+    // Copia os itens anteriores para o registro arquivado
+    if (oldPresc.prescricao_itens && oldPresc.prescricao_itens.length > 0) {
+      const archivedItemsPayload = oldPresc.prescricao_itens.map((it: any) => ({
+        prescricao_id: archivedPresc.id,
+        formula_id: it.formula_id,
+        nome_formula: it.nome_formula,
+        via: it.via,
+        veiculo: it.veiculo,
+        dosagem: it.dosagem,
+        tipo_veiculo: it.tipo_veiculo,
+        posologia: it.posologia,
+        duracao: it.duracao,
+        orient_paciente: it.orient_paciente,
+        orient_farmacia: it.orient_farmacia,
+        componentes_snapshot: it.componentes_snapshot,
+      }));
+
+      const { error: archItemsErr } = await supabase
+        .from("prescricao_itens")
+        .insert(archivedItemsPayload);
+
+      if (archItemsErr) {
+        console.warn("Aviso ao arquivar itens da versão anterior:", archItemsErr.message);
+      }
+    }
+
+    // 3. Processamento de Fórmulas e Componentes do novo payload
+    const parseNum = (val: any): number | null => {
+      if (val === undefined || val === null || val === "") return null;
+      const n = typeof val === "number" ? val : parseFloat(String(val).replace(",", ".").replace(/[^0-9.]/g, ""));
+      return isNaN(n) ? null : n;
+    };
+
+    const cleanFormulaName = input.nome_formula.trim();
+    const cleanVeiculo = input.veiculo ? input.veiculo.trim() : "";
+    const normalizedVia = (input.via?.toLowerCase() === "oral" ? "oral" : "tópico") as "oral" | "tópico";
+    const validTiposVeiculo = ["dose(s)", "sachê(s)", "comprimido(s)"];
+    const sanitizedTipoVeiculo = validTiposVeiculo.includes(input.tipo_veiculo) ? input.tipo_veiculo : null;
+    const numDosagem = parseNum(input.dosagem_valor);
+
+    let formulaId = null;
+
+    // Busca ou cria fórmula
+    const { data: existingFormula } = await supabase
+      .from("formulas")
+      .select("id")
+      .ilike("nome", cleanFormulaName)
+      .eq("via", normalizedVia)
+      .maybeSingle();
+
+    if (existingFormula) {
+      formulaId = existingFormula.id;
+    } else {
+      const { data: newFormula } = await supabase
+        .from("formulas")
+        .insert({
+          nome: cleanFormulaName,
+          descricao: input.descricao || null,
+          via: normalizedVia,
+          veiculo: cleanVeiculo || null,
+          dosagem: numDosagem,
+          tipo_veiculo: sanitizedTipoVeiculo,
+          posologia: input.posologia?.trim() || null,
+          orient_paciente: input.orient_paciente || null,
+          orient_farmacia: input.orient_farmacia || null,
+        })
+        .select("id")
+        .single();
+
+      if (newFormula) formulaId = newFormula.id;
+    }
+
+    // Processamento de unidades e componentes
+    const { data: dbUnidades } = await supabase.from("unidades").select("id, unidade");
+    const processedComponentes = [];
+    const isValidUUIDComp = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    for (const comp of input.componentes) {
+      if (!comp.nome || !comp.nome.trim()) continue;
+      const rawComponentName = comp.nome.trim();
+      let matchedUnidadeId = null;
+      let sigla = comp.unidade_sigla || "%";
+
+      if (comp.unidade_id && isValidUUIDComp(comp.unidade_id)) {
+        matchedUnidadeId = comp.unidade_id;
+      } else if (comp.unidade_id && comp.unidade_id.trim() && !comp.unidade_id.startsWith("new_")) {
+        sigla = comp.unidade_id;
+      }
+
+      if (!matchedUnidadeId) {
+        const foundUnit = dbUnidades?.find(
+          (u: any) => u.unidade.toLowerCase() === sigla.toLowerCase()
+        );
+        if (foundUnit) matchedUnidadeId = foundUnit.id;
+      }
+
+      let compId = null;
+      let compNome = rawComponentName;
+      const { data: existingComp } = await supabase
+        .from("componentes")
+        .select("id, nome")
+        .ilike("nome", rawComponentName)
+        .maybeSingle();
+
+      if (existingComp) {
+        compId = existingComp.id;
+        compNome = existingComp.nome || rawComponentName;
+      } else {
+        const { data: newComp } = await supabase
+          .from("componentes")
+          .insert({
+            nome: rawComponentName,
+            unidade_id: matchedUnidadeId || dbUnidades?.[0]?.id,
+          })
+          .select("id, nome")
+          .single();
+
+        if (newComp) {
+          compId = newComp.id;
+          compNome = newComp.nome || rawComponentName;
+        }
+      }
+
+      if (compId) {
+        processedComponentes.push({
+          componente_id: compId,
+          nome: compNome,
+          quantidade: parseNum(comp.quantidade) || 0,
+          unidade_sigla: sigla,
+        });
+      }
+    }
+
+    // 4. Atualiza a prescrição existente no banco com status 'Ativo', limpando suspensão e assinatura
+    const { error: updatePrescErr } = await supabase
+      .from("prescricoes")
+      .update({
+        status: "Ativo",
+        justificativa_suspensao: null,
+        data_suspensao: null,
+        pdf_assinado_url: null,
+        data_assinatura: null,
+        observacoes: input.descricao || null,
+        updated_at: nowIso,
+      })
+      .eq("id", prescriptionId)
+      .eq("paciente_id", clientId);
+
+    if (updatePrescErr) {
+      return { success: false, message: `Erro ao atualizar prescrição: ${updatePrescErr.message}` };
+    }
+
+    // 5. Atualiza o item correspondente em prescricao_itens
+    const componentsSnapshot = processedComponentes.map((r) => ({
+      nome: r.nome,
+      quantidade: r.quantidade,
+      unidade: r.unidade_sigla,
+    }));
+    const numTotalVeiculo = parseNum(input.total_veiculo) || 0;
+
+    await supabase.from("prescricao_itens").delete().eq("prescricao_id", prescriptionId);
+
+    const { data: newItem, error: errNewItem } = await supabase
+      .from("prescricao_itens")
+      .insert({
+        prescricao_id: prescriptionId,
+        formula_id: formulaId,
+        nome_formula: cleanFormulaName,
+        via: normalizedVia,
+        veiculo: cleanVeiculo || null,
+        dosagem: numDosagem,
+        tipo_veiculo: sanitizedTipoVeiculo,
+        posologia: input.posologia.trim(),
+        duracao: String(numTotalVeiculo),
+        orient_paciente: input.orient_paciente || null,
+        orient_farmacia: input.orient_farmacia || null,
+        componentes_snapshot: componentsSnapshot,
+      })
+      .select("id")
+      .single();
+
+    if (errNewItem) {
+      return { success: false, message: `Erro ao salvar itens atualizados da prescrição: ${errNewItem.message}` };
+    }
+
+    revalidatePath("/");
+
+    return {
+      success: true,
+      message: "Prescrição atualizada e versão anterior arquivada",
+      data: { id: prescriptionId, item_id: newItem?.id },
+    };
+  } catch (error: any) {
+    console.error("Erro ao atualizar prescrição com versionamento:", error);
+    return {
+      success: false,
+      message: error?.message || "Falha ao salvar a atualização da prescrição.",
+    };
+  }
+}
+
+
+/**
  * Consulta Prescrições do Paciente com itens para vínculos em Evoluções
  */
 export async function getPatientPrescriptionsWithItemsAction(

@@ -111,6 +111,35 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const [deletingEvolutionId, setDeletingEvolutionId] = useState<string | null>(null);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
+  const [isEditPrescriptionModalOpen, setIsEditPrescriptionModalOpen] = useState(false);
+  const [selectedPrescriptionForEdit, setSelectedPrescriptionForEdit] = useState<any | null>(null);
+
+  const handleOpenEditPrescription = async (rx: any) => {
+    try {
+      const supabase = getSupabaseClient();
+      const rxId = rx.prescricao_id || rx.id;
+      if (supabase && rxId) {
+        const { data, error } = await supabase
+          .from("prescricoes")
+          .select(`
+            *,
+            prescricao_itens (*)
+          `)
+          .eq("id", rxId)
+          .maybeSingle();
+
+        if (!error && data) {
+          setSelectedPrescriptionForEdit(data);
+          setIsEditPrescriptionModalOpen(true);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Erro ao carregar dados completos da prescrição para edição:", err);
+    }
+    setSelectedPrescriptionForEdit(rx);
+    setIsEditPrescriptionModalOpen(true);
+  };
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [selectedRxForPrint, setSelectedRxForPrint] = useState<PrescriptionItem | null>(null);
   const [selectedEvolutionForPrint, setSelectedEvolutionForPrint] = useState<ClinicalEvolution | null>(null);
@@ -1921,6 +1950,18 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                     Suspenso
                                   </span>
                                 )}
+
+                                {!isPatient && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditPrescription(rx)}
+                                    className="p-1.5 rounded-full text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer"
+                                    title="Editar receita"
+                                    aria-label="Editar receita"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                               </div>
                             </div>
 
@@ -2093,6 +2134,18 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                           <RotateCcw className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                                           <span>Reativar</span>
                                         </button>
+
+                                        {!isPatient && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenEditPrescription(rx)}
+                                            className="p-1.5 rounded-full text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer"
+                                            title="Editar receita"
+                                            aria-label="Editar receita"
+                                          >
+                                            <Pencil className="w-3.5 h-3.5" />
+                                          </button>
+                                        )}
                                       </div>
                                     </div>
 
@@ -2350,6 +2403,23 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
         onSuccess={loadClinicalData}
         client={client}
       />
+
+      {isEditPrescriptionModalOpen && selectedPrescriptionForEdit && (
+        <PrescriptionModal
+          isOpen={isEditPrescriptionModalOpen}
+          onClose={() => {
+            setIsEditPrescriptionModalOpen(false);
+            setSelectedPrescriptionForEdit(null);
+          }}
+          onSuccess={() => {
+            loadClinicalData();
+            setIsEditPrescriptionModalOpen(false);
+            setSelectedPrescriptionForEdit(null);
+          }}
+          client={client}
+          initialData={selectedPrescriptionForEdit}
+        />
+      )}
 
       {selectedRxForPrint && (
         <PrintPrescriptionModal
