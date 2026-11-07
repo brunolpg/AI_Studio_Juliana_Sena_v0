@@ -61,6 +61,9 @@ import { AestheticEvaluationModal } from "./aesthetic-evaluation-modal";
 import { HomeCareCards } from "./home-care-cards";
 import { HomeCareModal } from "./home-care-modal";
 import { getPatientHomeCareFichas } from "@/app/actions/home-care";
+import { getPropostasByPaciente } from "@/app/actions/propostas-actions";
+import type { Proposta } from "@/types/proposta";
+import { PropostasChipsSection } from "@/components/propostas/propostas-chips-section";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
 import { useToast } from "@/components/ui/toast";
 import type { Client } from "@/types/client";
@@ -76,7 +79,7 @@ interface PatientClinicalTabsProps {
   isPatientView?: boolean;
 }
 
-export type ClinicalSubTab = "historico" | "evolucoes" | "prescricoes" | "metricas";
+export type ClinicalSubTab = "historico" | "evolucoes" | "prescricoes" | "propostas" | "metricas";
 
 export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = false }: PatientClinicalTabsProps) {
   const { toast } = useToast();
@@ -129,6 +132,12 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
   const [homeCareFichas, setHomeCareFichas] = useState<HomeCareFichaCompleta[]>([]);
   const [isHomeCareModalOpen, setIsHomeCareModalOpen] = useState(false);
   const [selectedHomeCareForEdit, setSelectedHomeCareForEdit] = useState<HomeCareFichaCompleta | null>(null);
+
+  // Propostas de Planejamento Clínico
+  const [propostas, setPropostas] = useState<Proposta[]>([]);
+  const activePropostasCount = useMemo(() => {
+    return propostas.filter((p) => p.status === "Ativo").length;
+  }, [propostas]);
 
   // --- Assinatura digital (VIDaaS) ---------------------------------------
   const [signError, setSignError] = useState<string | null>(null);
@@ -477,6 +486,16 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             console.warn("Erro ao buscar fichas de Home Care:", hcareErr);
           }
 
+          // Busca Propostas de Planejamento do paciente
+          try {
+            const propRes = await getPropostasByPaciente(client.id);
+            if (propRes.success && propRes.data) {
+              setPropostas(propRes.data);
+            }
+          } catch (propErr) {
+            console.warn("Erro ao buscar propostas de planejamento:", propErr);
+          }
+
           setClinicalRecord(record);
         } else {
           toast({
@@ -756,6 +775,26 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                   : "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60"
               }`}>
                 {activePrescriptions.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("propostas")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold transition-all cursor-pointer whitespace-nowrap md-state-layer ${
+                activeSubTab === "propostas"
+                  ? "bg-[#0d6e64] dark:bg-teal-600 text-white shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Propostas</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                activeSubTab === "propostas"
+                  ? "bg-white/20 text-white"
+                  : "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60"
+              }`}>
+                {activePropostasCount}
               </span>
             </button>
 
@@ -2257,6 +2296,23 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     </table>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* ABA: PROPOSTAS DE PLANEJAMENTO */}
+            {/* ======================================================== */}
+            {activeSubTab === "propostas" && (
+              <div className="w-full">
+                <PropostasChipsSection
+                  pacienteId={client.id}
+                  userRole={user?.role}
+                  patientData={{
+                    nome: client.nome,
+                    email: client.email,
+                    telefone: client.telefone,
+                  }}
+                />
               </div>
             )}
           </>
