@@ -786,12 +786,6 @@ export function PropostaFormModal({
                           </div>
                         ))}
                       </div>
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
 
                       <div className="flex justify-end pt-2">
                         <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">

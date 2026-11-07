@@ -63,6 +63,8 @@ import { HomeCareModal } from "./home-care-modal";
 import { getPatientHomeCareFichas } from "@/app/actions/home-care";
 import { getPropostasByPaciente } from "@/app/actions/propostas-actions";
 import type { Proposta } from "@/types/proposta";
+import { PropostasCards } from "@/components/propostas/propostas-cards";
+import { PropostaFormModal } from "@/components/propostas/proposta-form-modal";
 import { PropostasChipsSection } from "@/components/propostas/propostas-chips-section";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
 import { useToast } from "@/components/ui/toast";
@@ -164,6 +166,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
 
   // Propostas de Planejamento Clínico
   const [propostas, setPropostas] = useState<Proposta[]>([]);
+  const [isPropostaFormOpen, setIsPropostaFormOpen] = useState(false);
+  const [selectedPropostaForEdit, setSelectedPropostaForEdit] = useState<Proposta | null>(null);
   const activePropostasCount = useMemo(() => {
     return propostas.filter((p) => p.status === "Ativo").length;
   }, [propostas]);
@@ -900,6 +904,20 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                   <span>Prescrever Receita</span>
                 </button>
               </div>
+            )}
+
+            {activeSubTab === "propostas" && !isPatient && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedPropostaForEdit(null);
+                  setIsPropostaFormOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full shadow-xs transition-all cursor-pointer md-state-layer active:scale-[0.98]"
+              >
+                <Plus className="w-3.5 h-3.5 shrink-0" />
+                <span>Nova Proposta</span>
+              </button>
             )}
           </div>
         </div>
@@ -2228,6 +2246,29 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             )}
 
             {/* ======================================================== */}
+            {/* ABA 3.5: PROPOSTAS DE PLANEJAMENTO */}
+            {/* ======================================================== */}
+            {activeSubTab === "propostas" && (
+              <div className="w-full">
+                <PropostasCards
+                  propostas={propostas}
+                  client={client}
+                  isPatientView={isPatient}
+                  userRole={user?.role}
+                  onEdit={(prop) => {
+                    setSelectedPropostaForEdit(prop);
+                    setIsPropostaFormOpen(true);
+                  }}
+                  onRefresh={loadClinicalData}
+                  onNewProposta={() => {
+                    setSelectedPropostaForEdit(null);
+                    setIsPropostaFormOpen(true);
+                  }}
+                />
+              </div>
+            )}
+
+            {/* ======================================================== */}
             {/* ABA 4: SINAIS VITAIS & BIOMETRIA */}
             {/* ======================================================== */}
             {activeSubTab === "metricas" && !isPatientView && (
@@ -2795,6 +2836,29 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
           setSelectedHomeCareForEdit(null);
         }}
       />
+
+      {/* Modal de Formulário de Propostas de Planejamento */}
+      {isPropostaFormOpen && (
+        <PropostaFormModal
+          isOpen={isPropostaFormOpen}
+          onClose={() => {
+            setIsPropostaFormOpen(false);
+            setSelectedPropostaForEdit(null);
+          }}
+          pacienteId={client.id}
+          propostaToEdit={selectedPropostaForEdit}
+          onSaved={() => {
+            loadClinicalData();
+            setIsPropostaFormOpen(false);
+            setSelectedPropostaForEdit(null);
+          }}
+          patientData={{
+            nome: client.nome,
+            email: client.email,
+            telefone: client.telefone,
+          }}
+        />
+      )}
     </div>
   );
 }
