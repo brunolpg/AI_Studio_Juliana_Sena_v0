@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   X,
   Sparkles,
@@ -16,6 +16,7 @@ import {
   Clock,
   DollarSign,
   ChevronDown,
+  Search,
 } from "lucide-react";
 import type {
   Proposta,
@@ -33,6 +34,144 @@ import {
   PROCEDIMENTO_CATEGORIES,
   type Procedimento,
 } from "@/lib/procedimentos-mock";
+import { getSupabaseClient } from "@/lib/supabase/client";
+
+interface ProcedimentoComboboxProps {
+  valueId: string;
+  valueName: string;
+  onSelect: (proc: Procedimento) => void;
+  procedimentos: Procedimento[];
+}
+
+function ProcedimentoCombobox({
+  valueId,
+  valueName,
+  onSelect,
+  procedimentos,
+}: ProcedimentoComboboxProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(valueName || "");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setSearchTerm(valueName || "");
+  }, [valueName]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm(valueName || "");
+      }
+    }
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, valueName]);
+
+  const filtered = useMemo(() => {
+    if (!searchTerm.trim()) return procedimentos;
+    const term = searchTerm.toLowerCase();
+    return procedimentos.filter(
+      (p) =>
+        p.procedimento?.toLowerCase().includes(term) ||
+        (p.categoria && p.categoria.toLowerCase().includes(term))
+    );
+  }, [procedimentos, searchTerm]);
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <div className="relative flex items-center">
+        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            if (!isOpen) setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder="Buscar procedimento por nome ou categoria..."
+          className="w-full pl-8 pr-16 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1.5 focus:ring-teal-500 transition-all"
+        />
+        <div className="absolute right-1.5 flex items-center gap-0.5">
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSearchTerm("");
+                inputRef.current?.focus();
+                setIsOpen(true);
+              }}
+              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md transition-colors"
+              title="Limpar busca"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md transition-colors"
+          >
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800/80">
+          {filtered.length === 0 ? (
+            <div className="p-3 text-center text-xs text-slate-500 dark:text-slate-400">
+              Nenhum procedimento encontrado para &quot;{searchTerm}&quot;
+            </div>
+          ) : (
+            filtered.map((proc) => {
+              const isSelected = proc.id === valueId;
+              return (
+                <button
+                  key={proc.id}
+                  type="button"
+                  onClick={() => {
+                    onSelect(proc);
+                    setSearchTerm(proc.procedimento);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between gap-2 hover:bg-teal-50/70 dark:hover:bg-teal-950/40 transition-colors cursor-pointer ${
+                    isSelected
+                      ? "bg-teal-50/50 dark:bg-teal-950/30 text-teal-800 dark:text-teal-200 font-semibold"
+                      : "text-slate-700 dark:text-slate-200"
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{proc.procedimento}</div>
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mt-0.5">
+                      <span className="px-1.5 py-0.2 rounded-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                        {proc.categoria}
+                      </span>
+                      {proc.duracao && <span>• {proc.duracao}h</span>}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="font-mono font-bold text-teal-700 dark:text-teal-400">
+                      R$ {proc.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface PropostaFormModalProps {
   isOpen: boolean;
@@ -66,6 +205,28 @@ export function PropostaFormModal({
   const [cronogramaTitulo, setCronogramaTitulo] = useState("Cronograma Clínico Inicial");
   const [etapas, setEtapas] = useState<EtapaCronograma[]>([]);
   const [topicos, setTopicos] = useState<TopicoProposta[]>([]);
+  const [procedimentosList, setProcedimentosList] = useState<Procedimento[]>(PROCEDIMENTOS_CADASTRAIS);
+
+  // Busca procedimentos do banco em tempo real se disponíveis
+  useEffect(() => {
+    async function loadDbProcedimentos() {
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const { data, error } = await supabase
+            .from("procedimentos")
+            .select("id, procedimento, categoria, valor, duracao, descricao")
+            .order("procedimento", { ascending: true });
+          if (data && data.length > 0 && !error) {
+            setProcedimentosList(data as Procedimento[]);
+          }
+        }
+      } catch {
+        // mantém fallback PROCEDIMENTOS_CADASTRAIS
+      }
+    }
+    loadDbProcedimentos();
+  }, []);
 
   // Inicializa ou reseta formulário
   useEffect(() => {
@@ -216,17 +377,14 @@ export function PropostaFormModal({
   const handleSelectProcedimento = (
     opcaoIndex: number,
     procIndex: number,
-    procedimentoId: string
+    selectedProc: Procedimento
   ) => {
-    const found = PROCEDIMENTOS_CADASTRAIS.find((p) => p.id === procedimentoId);
-    if (!found) return;
-
     const updated = [...opcoes];
     const proc = updated[opcaoIndex].procedimentos[procIndex];
-    proc.procedimento_id = found.id;
-    proc.nome_procedimento = found.procedimento;
-    proc.valor_sessao = found.valor;
-    proc.total = proc.num_sessoes * found.valor;
+    proc.procedimento_id = selectedProc.id;
+    proc.nome_procedimento = selectedProc.procedimento;
+    proc.valor_sessao = selectedProc.valor;
+    proc.total = (proc.num_sessoes || 1) * selectedProc.valor;
     setOpcoes(updated);
   };
 
@@ -460,7 +618,7 @@ export function PropostaFormModal({
               <button
                 type="button"
                 onClick={handleAddOpcao}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900 border border-teal-200 dark:border-teal-800 rounded-xl transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 hover:bg-teal-100/60 dark:hover:bg-teal-900/60 transition-all cursor-pointer shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>+ Adicionar Opção</span>
@@ -496,7 +654,7 @@ export function PropostaFormModal({
                         <button
                           type="button"
                           onClick={() => handleRemoveOpcao(oIdx)}
-                          className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition-colors cursor-pointer"
+                          className="p-2 rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                           title="Remover esta opção"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -544,10 +702,10 @@ export function PropostaFormModal({
                         <button
                           type="button"
                           onClick={() => handleAddProcedimento(oIdx)}
-                          className="text-[11px] font-bold text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1 cursor-pointer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 hover:bg-teal-100/60 dark:hover:bg-teal-900/60 transition-all cursor-pointer shadow-2xs"
                         >
-                          <Plus className="w-3 h-3" />
-                          Adicionar Procedimento
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>+ Adicionar Procedimento</span>
                         </button>
                       </div>
 
@@ -558,44 +716,36 @@ export function PropostaFormModal({
                             className="flex flex-wrap sm:flex-nowrap items-center gap-2 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
                           >
                             <div className="flex-1 min-w-[200px]">
-                              <select
-                                value={proc.procedimento_id}
-                                onChange={(e) =>
-                                  handleSelectProcedimento(oIdx, pIdx, e.target.value)
+                              <ProcedimentoCombobox
+                                valueId={proc.procedimento_id}
+                                valueName={proc.nome_procedimento}
+                                onSelect={(selected) =>
+                                  handleSelectProcedimento(oIdx, pIdx, selected)
                                 }
-                                className="w-full p-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                              >
-                                {PROCEDIMENTOS_CADASTRAIS.map((item) => (
-                                  <option key={item.id} value={item.id}>
-                                    {item.procedimento} ({item.categoria}) — R$ {item.valor}
-                                  </option>
-                                ))}
-                              </select>
+                                procedimentos={procedimentosList}
+                              />
                             </div>
 
                             <div className="flex items-center gap-2">
                               <div className="w-20">
-                                <label className="block text-[9px] uppercase font-bold text-slate-400">
+                                <label className="block text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-0.5">
                                   Sessões
                                 </label>
                                 <input
                                   type="number"
                                   min={1}
+                                  step={1}
                                   value={proc.num_sessoes}
-                                  onChange={(e) =>
-                                    handleUpdateProcValue(
-                                      oIdx,
-                                      pIdx,
-                                      "num_sessoes",
-                                      parseInt(e.target.value) || 1
-                                    )
-                                  }
-                                  className="w-full p-1 text-xs text-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                                  onChange={(e) => {
+                                    const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                    handleUpdateProcValue(oIdx, pIdx, "num_sessoes", val);
+                                  }}
+                                  className="w-full px-2 py-1.5 text-xs text-center font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1.5 focus:ring-teal-500"
                                 />
                               </div>
 
                               <div className="w-28">
-                                <label className="block text-[9px] uppercase font-bold text-slate-400">
+                                <label className="block text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-0.5">
                                   Valor/Sessão (R$)
                                 </label>
                                 <input
@@ -611,25 +761,31 @@ export function PropostaFormModal({
                                       parseFloat(e.target.value) || 0
                                     )
                                   }
-                                  className="w-full p-1 text-xs text-right rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                                  className="w-full px-2 py-1.5 text-xs text-right font-mono rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1.5 focus:ring-teal-500"
                                 />
                               </div>
 
                               <div className="w-24 text-right">
-                                <span className="block text-[9px] uppercase font-bold text-slate-400">
+                                <span className="block text-[9px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-0.5">
                                   Subtotal
                                 </span>
                                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono">
-                                  R$ {proc.total || proc.num_sessoes * proc.valor_sessao}
+                                  R$ {(proc.total || proc.num_sessoes * proc.valor_sessao).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                 </span>
                               </div>
 
                               <button
                                 type="button"
                                 onClick={() => handleRemoveProcedimento(oIdx, pIdx)}
-                                className="p-1 text-slate-400 hover:text-rose-500 rounded-lg cursor-pointer"
+                                className="p-2 rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                                 title="Remover procedimento"
                               >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                                 <X className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -668,7 +824,7 @@ export function PropostaFormModal({
               <button
                 type="button"
                 onClick={handleAddEtapa}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900 border border-teal-200 dark:border-teal-800 rounded-xl transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 hover:bg-teal-100/60 dark:hover:bg-teal-900/60 transition-all cursor-pointer shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>+ Adicionar Etapa</span>
@@ -734,7 +890,8 @@ export function PropostaFormModal({
                   <button
                     type="button"
                     onClick={() => handleRemoveEtapa(eIdx)}
-                    className="p-1 text-slate-400 hover:text-rose-500 rounded-lg cursor-pointer"
+                    className="p-2 rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                    title="Remover etapa"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -759,7 +916,7 @@ export function PropostaFormModal({
               <button
                 type="button"
                 onClick={handleAddTopico}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900 border border-teal-200 dark:border-teal-800 rounded-xl transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 hover:bg-teal-100/60 dark:hover:bg-teal-900/60 transition-all cursor-pointer shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>+ Adicionar Tópico</span>
@@ -783,7 +940,8 @@ export function PropostaFormModal({
                     <button
                       type="button"
                       onClick={() => handleRemoveTopico(tIdx)}
-                      className="p-1 text-slate-400 hover:text-rose-500 rounded-lg cursor-pointer"
+                      className="p-2 rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                      title="Remover tópico"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -807,7 +965,7 @@ export function PropostaFormModal({
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="px-5 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 rounded-full hover:bg-slate-200/60 transition-colors cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl transition-colors cursor-pointer"
           >
             Cancelar
           </button>
@@ -816,17 +974,17 @@ export function PropostaFormModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="inline-flex items-center gap-2 px-6 py-2 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full shadow-xs hover:shadow transition-all cursor-pointer disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 active:bg-teal-800 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Salvando & Assinando...
+                <span>Salvando & Assinando...</span>
               </>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                {propostaToEdit ? "Salvar Alterações" : "Salvar & Gerar Proposta"}
+                <span>{propostaToEdit ? "Salvar Alterações" : "Salvar & Gerar Proposta"}</span>
               </>
             )}
           </button>
