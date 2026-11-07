@@ -812,19 +812,6 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
 
             {activeSubTab === "prescricoes" && !isPatient && (
               <div className="flex items-center gap-2 flex-wrap">
-                {suspendedPrescriptions.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSuspendedSectionOpen(true);
-                      document.getElementById("secao-prescricoes-suspensas")?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/70 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors"
-                  >
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-                    <span>Ver Suspensas ({suspendedPrescriptions.length})</span>
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={() => {
