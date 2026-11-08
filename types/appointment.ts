@@ -19,6 +19,8 @@ export interface Appointment {
   status_pagamento?: string | null;
   metodo_pagamento?: string | null;
   comprovante_url?: string | null;
+  anexos_clinicos?: string[];
+  valor_cobrado?: number | null;
   created_at: string;
   updated_at: string;
 }
