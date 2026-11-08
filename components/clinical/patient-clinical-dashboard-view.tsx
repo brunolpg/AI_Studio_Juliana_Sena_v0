@@ -15,24 +15,26 @@ import {
   Activity,
   ShieldCheck,
 } from "lucide-react";
-import { getClientsAction } from "@/actions/client-actions";
-import { PatientClinicalTabs } from "./patient-clinical-tabs";
+import { PatientClinicalTabs, type ClinicalSubTab } from "./patient-clinical-tabs";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Client } from "@/types/client";
 
 interface PatientClinicalDashboardViewProps {
   initialClientId?: string;
   onOpenAppointments?: () => void;
+  initialTab?: ClinicalSubTab;
 }
 
 export function PatientClinicalDashboardView({
   initialClientId,
   onOpenAppointments,
+  initialTab = "evolucoes",
 }: PatientClinicalDashboardViewProps) {
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
     initialClientId || null
   );
+  const [activeTab, setActiveTab] = useState<ClinicalSubTab>(initialTab);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -255,8 +257,9 @@ export function PatientClinicalDashboardView({
       {/* Renderiza o Subcomponente de Abas do Prontuário */}
       {selectedPatient ? (
         <PatientClinicalTabs
-          key={selectedPatient.id}
           client={selectedPatient}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
         />
       ) : (
         <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 text-slate-500">

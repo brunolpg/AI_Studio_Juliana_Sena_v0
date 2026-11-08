@@ -78,18 +78,33 @@ interface PatientClinicalTabsProps {
   client: Client;
   onRefreshClient?: () => void;
   isPatientView?: boolean;
+  activeTab?: ClinicalSubTab;
+  onTabChange?: (tab: ClinicalSubTab) => void;
 }
 
 export type ClinicalSubTab = "historico" | "evolucoes" | "prescricoes" | "propostas" | "metricas";
 
-export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = false }: PatientClinicalTabsProps) {
+export function PatientClinicalTabs({
+  client,
+  onRefreshClient,
+  isPatientView = false,
+  activeTab: controlledActiveTab,
+  onTabChange,
+}: PatientClinicalTabsProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const isPatient = isPatientView || user?.role === "paciente";
 
-  const [activeSubTab, setActiveSubTab] = useState<ClinicalSubTab>(
+  const [internalSubTab, setInternalSubTab] = useState<ClinicalSubTab>(
     isPatient ? "prescricoes" : "evolucoes"
   );
+
+  const activeSubTab = controlledActiveTab ?? internalSubTab;
+
+  const setActiveSubTab = (tab: ClinicalSubTab) => {
+    setInternalSubTab(tab);
+    onTabChange?.(tab);
+  };
   const [isPending, startTransition] = useTransition();
 
   const [clinicalRecord, setClinicalRecord] = useState<PatientClinicalRecord | null>(null);
@@ -413,6 +428,10 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
     startTransition(async () => {
       try {
         setIsLoading(true);
+        setClinicalRecord(null);
+        setAestheticData(null);
+        setHomeCareFichas([]);
+        setPropostas([]);
         const res = await getPatientClinicalRecordAction(client.id);
         if (res.success && res.data) {
           const record = { ...res.data };
