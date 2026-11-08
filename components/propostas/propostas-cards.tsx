@@ -187,7 +187,7 @@ export function PropostasCards({
                 {isSuspended && proposta.data_suspensao && (
                   <>
                     <span>•</span>
-                    <span className="text-rose-600 dark:text-rose-400 font-semibold">
+                    <span className="text-error font-semibold">
                       Suspenso em {formatDateBR(proposta.data_suspensao)}
                     </span>
                   </>
@@ -210,8 +210,8 @@ export function PropostasCards({
               <span
                 className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold select-none shadow-2xs ${
                   proposta.status === "Ativo"
-                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                    : "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60"
+                    ? "bg-success-container text-on-success-container border border-success/30"
+                    : "bg-error-container text-on-error-container border border-error/30"
                 }`}
               >
                 {proposta.status === "Ativo" ? "Ativo" : "Suspenso"}
@@ -236,7 +236,7 @@ export function PropostasCards({
                         setPropostaToSuspend(proposta);
                         setJustificativa("");
                       }}
-                      className="p-1.5 rounded-full text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer md-state-layer"
+                      className="p-1.5 rounded-full text-slate-400 hover:text-error hover:bg-error-container transition-colors cursor-pointer md-state-layer"
                       title="Suspender proposta"
                     >
                       <Archive className="w-3.5 h-3.5" />
@@ -249,12 +249,12 @@ export function PropostasCards({
 
           {/* Justificativa de Suspensão (se suspensa) */}
           {isSuspended && proposta.justificativa_suspensao && (
-            <div className="mb-3 p-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/40 text-xs">
-              <div className="flex items-center gap-1.5 text-rose-800 dark:text-rose-300 font-semibold mb-1">
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+            <div className="mb-3 p-3 rounded-xl bg-error-container border border-error/30 text-xs">
+              <div className="flex items-center gap-1.5 text-on-error-container font-semibold mb-1">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-error" />
                 <span>Motivo da Suspensão:</span>
               </div>
-              <p className="text-rose-900 dark:text-rose-200 leading-relaxed whitespace-pre-wrap pl-5">
+              <p className="text-on-error-container leading-relaxed whitespace-pre-wrap pl-5">
                 {proposta.justificativa_suspensao}
               </p>
             </div>
@@ -415,7 +415,7 @@ export function PropostasCards({
               className="w-full flex items-center justify-between p-4 bg-slate-100/80 dark:bg-slate-800/60 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer text-left"
             >
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-error-container text-error flex items-center justify-center shrink-0">
                   <Archive className="w-4 h-4" />
                 </div>
                 <div>
@@ -423,7 +423,7 @@ export function PropostasCards({
                     <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                       Propostas Suspensas / Arquivadas
                     </h4>
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/60">
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-error-container text-on-error-container border border-error/30">
                       {suspendedPropostas.length}
                     </span>
                   </div>
@@ -488,8 +488,8 @@ export function PropostasCards({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs font-['Plus_Jakarta_Sans',sans-serif]">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2.5 text-rose-600 dark:text-rose-400">
-                <div className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/60 flex items-center justify-center">
+              <div className="flex items-center gap-2.5 text-error">
+                <div className="w-8 h-8 rounded-xl bg-error-container flex items-center justify-center">
                   <Archive className="w-4 h-4" />
                 </div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white">
@@ -518,7 +518,7 @@ export function PropostasCards({
                 onChange={(e) => setJustificativa(e.target.value)}
                 placeholder="Ex: Proposta ajustada após reavaliação clínica, paciente optou por protocolo alternativo..."
                 rows={3}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1.5 focus:ring-rose-500 resize-none"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1.5 focus:ring-error resize-none"
               />
             </div>
 
@@ -535,7 +535,7 @@ export function PropostasCards({
                 type="button"
                 onClick={handleConfirmSuspension}
                 disabled={isSuspending || !justificativa.trim()}
-                className="flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-full shadow-xs cursor-pointer disabled:opacity-50 transition-all"
+                className="flex items-center gap-1.5 px-5 py-2 text-xs font-semibold bg-error text-on-error hover:opacity-90 rounded-full shadow-xs cursor-pointer disabled:opacity-50 transition-all"
               >
                 {isSuspending ? (
                   <>

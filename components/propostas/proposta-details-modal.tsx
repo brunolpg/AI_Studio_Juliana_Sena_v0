@@ -175,13 +175,13 @@ export function PropostaDetailsModal({
 
                   {/* Status Badge */}
                   {isSuspensa ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                      <AlertTriangle className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-error-container text-on-error-container border border-error/30">
+                      <AlertTriangle className="w-3.5 h-3.5 text-error" />
                       Suspenso
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-success-container text-on-success-container border border-success/30">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-success" />
                       Ativo
                     </span>
                   )}
@@ -230,10 +230,10 @@ export function PropostaDetailsModal({
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
             {/* Banner de Suspensão se aplicável */}
             {isSuspensa && (
-              <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              <div className="p-4 rounded-2xl bg-error-container border border-error/30 text-on-error-container flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-error shrink-0 mt-0.5" />
                 <div className="space-y-1 text-xs">
-                  <p className="font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300">
+                  <p className="font-bold uppercase tracking-wider text-on-error-container">
                     Proposta Suspensa em {formatDateTimeBR(proposta.data_suspensao)}
                   </p>
                   <p className="leading-relaxed">
@@ -471,12 +471,12 @@ export function PropostaDetailsModal({
 
             {/* Diálogo inline de Suspensão */}
             {showSuspendDialog && (
-              <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 space-y-3 animate-in fade-in">
-                <div className="flex items-center gap-2 text-rose-800 dark:text-rose-300 font-bold text-xs uppercase tracking-wider">
-                  <AlertTriangle className="w-4 h-4 text-rose-600" />
+              <div className="p-4 rounded-2xl bg-error-container border border-error/30 space-y-3 animate-in fade-in">
+                <div className="flex items-center gap-2 text-on-error-container font-bold text-xs uppercase tracking-wider">
+                  <AlertTriangle className="w-4 h-4 text-error" />
                   Confirmar Suspensão da Proposta
                 </div>
-                <p className="text-xs text-rose-700 dark:text-rose-400">
+                <p className="text-xs text-on-error-container">
                   Ao suspender, esta proposta sairá da listagem de planos ativos do paciente. Forneça o motivo:
                 </p>
                 <textarea
@@ -484,7 +484,7 @@ export function PropostaDetailsModal({
                   onChange={(e) => setJustificativa(e.target.value)}
                   placeholder="Ex: Paciente optou por adiar o protocolo devido a viagem ou preferiu outra linha de tratamento..."
                   rows={3}
-                  className="w-full p-2.5 text-xs rounded-xl border border-rose-300 dark:border-rose-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  className="w-full p-2.5 text-xs rounded-xl border border-error/40 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-error"
                 />
                 <div className="flex items-center justify-end gap-2">
                   <button
@@ -499,7 +499,7 @@ export function PropostaDetailsModal({
                     type="button"
                     onClick={handleConfirmSuspension}
                     disabled={isSuspending}
-                    className="px-4 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    className="px-4 py-1.5 text-xs font-bold bg-error text-on-error hover:opacity-90 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                   >
                     {isSuspending ? (
                       <>
@@ -534,7 +534,7 @@ export function PropostaDetailsModal({
                   <button
                     type="button"
                     onClick={() => setShowSuspendDialog(true)}
-                    className="px-3.5 py-2 text-xs font-semibold text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-full transition-colors cursor-pointer"
+                    className="px-3.5 py-2 text-xs font-semibold text-error hover:bg-error-container rounded-full transition-colors cursor-pointer"
                   >
                     Suspender
                   </button>

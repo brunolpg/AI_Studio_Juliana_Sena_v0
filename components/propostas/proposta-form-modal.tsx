@@ -654,7 +654,7 @@ export function PropostaFormModal({
                         <button
                           type="button"
                           onClick={() => handleRemoveOpcao(oIdx)}
-                          className="p-2 rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          className="p-2 rounded-xl text-error hover:bg-error-container transition-colors cursor-pointer"
                           title="Remover esta opção"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -777,7 +777,7 @@ export function PropostaFormModal({
                               <button
                                 type="button"
                                 onClick={() => handleRemoveProcedimento(oIdx, pIdx)}
-                                className="p-2 rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                                className="p-2 rounded-xl text-error hover:bg-error-container transition-colors cursor-pointer"
                                 title="Remover procedimento"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -884,7 +884,7 @@ export function PropostaFormModal({
                   <button
                     type="button"
                     onClick={() => handleRemoveEtapa(eIdx)}
-                    className="p-2 rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                    className="p-2 rounded-xl text-error hover:bg-error-container transition-colors cursor-pointer"
                     title="Remover etapa"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -934,7 +934,7 @@ export function PropostaFormModal({
                     <button
                       type="button"
                       onClick={() => handleRemoveTopico(tIdx)}
-                      className="p-2 rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                      className="p-2 rounded-xl text-error hover:bg-error-container transition-colors cursor-pointer"
                       title="Remover tópico"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

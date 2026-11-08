@@ -535,15 +535,15 @@ export function HomeCareModal({
 
         {/* Mensagens de Feedback */}
         {errorMsg && (
-          <div className="m-4 mb-0 p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2 shrink-0">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="m-4 mb-0 p-3.5 rounded-2xl bg-error-container border border-error text-on-error-container text-xs flex items-center gap-2 shrink-0">
+            <AlertCircle className="w-4 h-4 shrink-0 text-error" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="m-4 mb-0 p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2 shrink-0">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <div className="m-4 mb-0 p-3.5 rounded-2xl bg-success-container border border-success/30 text-on-success-container text-xs flex items-center gap-2 shrink-0">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-success" />
             <span>{successMsg}</span>
           </div>
         )}
@@ -720,7 +720,7 @@ export function HomeCareModal({
                       <button
                         type="button"
                         onClick={() => setIncluirAtencaoCritica(false)}
-                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 rounded-lg border border-rose-200 dark:border-rose-900 transition-colors cursor-pointer"
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-on-error-container bg-error-container hover:opacity-90 rounded-lg border border-error/30 transition-colors cursor-pointer"
                         title="Ocultar Atenção Crítica deste protocolo"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -813,7 +813,7 @@ export function HomeCareModal({
                           <button
                             type="button"
                             onClick={() => handleRemoveCuidado(idx)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-error hover:bg-error-container transition-colors cursor-pointer"
                             title="Remover este cuidado"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -949,7 +949,7 @@ export function HomeCareModal({
                             <button
                               type="button"
                               onClick={() => handleRemoveCronograma(idx)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-error hover:bg-error-container transition-colors cursor-pointer"
                               title="Remover esta etapa"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1141,7 +1141,7 @@ export function HomeCareModal({
                           <button
                             type="button"
                             onClick={() => handleRemoveRecomendacao(idx)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-error hover:bg-error-container transition-colors cursor-pointer"
                             title="Remover recomendação"
                           >
                             <Trash2 className="w-4 h-4" />

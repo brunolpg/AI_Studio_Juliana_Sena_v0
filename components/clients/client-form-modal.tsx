@@ -427,7 +427,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                   <button
                     type="button"
                     onClick={() => setFotoPerfil(null)}
-                    className="px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg cursor-pointer transition-colors"
+                    className="px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-error hover:bg-error-container rounded-lg cursor-pointer transition-colors"
                   >
                     Remover foto
                   </button>
@@ -454,12 +454,12 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 onChange={(e) => setNome(e.target.value)}
                 className={`w-full px-3.5 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${
                   fieldErrors.nome
-                    ? "border-rose-500 focus:ring-rose-500/20"
+                    ? "border-error focus:ring-error/20"
                     : "border-slate-300 dark:border-slate-700 focus:ring-teal-500/20 focus:border-teal-500"
                 }`}
               />
               {fieldErrors.nome && (
-                <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                <p className="text-xs text-error mt-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> {fieldErrors.nome}
                 </p>
               )}
@@ -495,12 +495,12 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 onChange={(e) => setDataNascimento(e.target.value)}
                 className={`w-full px-3.5 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${
                   fieldErrors.data_nascimento
-                    ? "border-rose-500 focus:ring-rose-500/20"
+                    ? "border-error focus:ring-error/20"
                     : "border-slate-300 dark:border-slate-700 focus:ring-teal-500/20 focus:border-teal-500"
                 }`}
               />
               {fieldErrors.data_nascimento && (
-                <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                <p className="text-xs text-error mt-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> {fieldErrors.data_nascimento}
                 </p>
               )}
@@ -541,8 +541,8 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                   <span
                     className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${
                       isCpfValid
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
-                        : "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800"
+                        ? "bg-success-container text-on-success-container border border-success/30"
+                        : "bg-error-container text-on-error-container border border-error/30"
                     }`}
                   >
                     {isCpfValid ? (
@@ -567,12 +567,12 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 onChange={handleCpfChange}
                 className={`w-full px-3.5 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${
                   fieldErrors.cpf
-                    ? "border-rose-500 focus:ring-rose-500/20"
+                    ? "border-error focus:ring-error/20"
                     : "border-slate-300 dark:border-slate-700 focus:ring-teal-500/20 focus:border-teal-500"
                 }`}
               />
               {fieldErrors.cpf && (
-                <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                <p className="text-xs text-error mt-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> {fieldErrors.cpf}
                 </p>
               )}
@@ -593,12 +593,12 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 onChange={handleTelefoneChange}
                 className={`w-full px-3.5 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${
                   fieldErrors.telefone
-                    ? "border-rose-500 focus:ring-rose-500/20"
+                    ? "border-error focus:ring-error/20"
                     : "border-slate-300 dark:border-slate-700 focus:ring-teal-500/20 focus:border-teal-500"
                 }`}
               />
               {fieldErrors.telefone && (
-                <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                <p className="text-xs text-error mt-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> {fieldErrors.telefone}
                 </p>
               )}
@@ -618,12 +618,12 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 onChange={(e) => setEmail(e.target.value)}
                 className={`w-full px-3.5 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${
                   fieldErrors.email
-                    ? "border-rose-500 focus:ring-rose-500/20"
+                    ? "border-error focus:ring-error/20"
                     : "border-slate-300 dark:border-slate-700 focus:ring-teal-500/20 focus:border-teal-500"
                 }`}
               />
               {fieldErrors.email && (
-                <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                <p className="text-xs text-error mt-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> {fieldErrors.email}
                 </p>
               )}
@@ -667,7 +667,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                   onChange={handleCepChange}
                   className={`w-full pl-3.5 pr-9 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${
                     fieldErrors.cep
-                      ? "border-rose-500 focus:ring-rose-500/20"
+                      ? "border-error focus:ring-error/20"
                       : "border-slate-300 dark:border-slate-700 focus:ring-teal-500/20 focus:border-teal-500"
                   }`}
                 />
@@ -682,7 +682,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 </button>
               </div>
               {fieldErrors.cep && (
-                <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                <p className="text-xs text-error mt-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> {fieldErrors.cep}
                 </p>
               )}
@@ -690,9 +690,9 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 <p
                   className={`text-[11px] mt-1 flex items-start gap-1 leading-snug ${
                     cepFeedback.type === "success"
-                      ? "text-emerald-700 dark:text-emerald-400 font-medium"
+                      ? "text-success font-medium"
                       : cepFeedback.type === "error"
-                      ? "text-amber-700 dark:text-amber-400"
+                      ? "text-error"
                       : "text-slate-500"
                   }`}
                 >
@@ -710,7 +710,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                   Logradouro (Rua, Av, etc.) *
                 </label>
                 {cepFeedback?.type === "success" && (
-                  <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                  <span className="text-[10px] font-semibold text-on-success-container bg-success-container px-1.5 py-0.5 rounded border border-success/30 flex items-center gap-1">
                     <CheckCircle2 className="w-2.5 h-2.5" /> Preenchido via CEP
                   </span>
                 )}
@@ -724,12 +724,12 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 onChange={(e) => setLogradouro(e.target.value)}
                 className={`w-full px-3.5 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${
                   fieldErrors.logradouro
-                    ? "border-rose-500 focus:ring-rose-500/20"
+                    ? "border-error focus:ring-error/20"
                     : "border-slate-300 dark:border-slate-700 focus:ring-teal-500/20 focus:border-teal-500"
                 }`}
               />
               {fieldErrors.logradouro && (
-                <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                <p className="text-xs text-error mt-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> {fieldErrors.logradouro}
                 </p>
               )}
@@ -749,12 +749,12 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 onChange={(e) => setNumero(e.target.value)}
                 className={`w-full px-3.5 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${
                   fieldErrors.numero
-                    ? "border-rose-500 focus:ring-rose-500/20"
+                    ? "border-error focus:ring-error/20"
                     : "border-slate-300 dark:border-slate-700 focus:ring-teal-500/20 focus:border-teal-500"
                 }`}
               />
               {fieldErrors.numero && (
-                <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                <p className="text-xs text-error mt-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> {fieldErrors.numero}
                 </p>
               )}
@@ -812,7 +812,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 }}
                 className={`w-full px-3 py-2 text-sm rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 cursor-pointer ${
                   fieldErrors.cidade
-                    ? "border-rose-500 focus:ring-rose-500/20"
+                    ? "border-error focus:ring-error/20"
                     : "border-slate-300 dark:border-slate-700 focus:ring-teal-500/20 focus:border-teal-500"
                 }`}
               >
@@ -847,7 +847,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
               )}
 
               {fieldErrors.cidade && (
-                <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                <p className="text-xs text-error mt-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> {fieldErrors.cidade}
                 </p>
               )}
@@ -892,7 +892,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                     className="text-teal-600 focus:ring-teal-500"
                   />
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> Ativo
+                    <span className="w-2 h-2 rounded-full bg-success" /> Ativo
                   </span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">

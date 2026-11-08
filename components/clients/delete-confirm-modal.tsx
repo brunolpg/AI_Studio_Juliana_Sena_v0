@@ -77,8 +77,8 @@ export function DeleteConfirmModal({
           <div
             className={`p-3 rounded-2xl flex-shrink-0 shadow-2xs ${
               isPermanent
-                ? "bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400"
-                : "bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400"
+                ? "bg-error-container text-error"
+                : "bg-warning-container text-warning"
             }`}
           >
             {isPermanent ? <ShieldAlert className="w-6 h-6" /> : <AlertTriangle className="w-6 h-6" />}
@@ -120,10 +120,10 @@ export function DeleteConfirmModal({
                 type="button"
                 onClick={handleConfirm}
                 disabled={isPending}
-                className={`px-5 py-2 text-xs font-bold text-white rounded-full shadow-xs hover:shadow flex items-center gap-1.5 disabled:opacity-50 transition-colors md-state-layer cursor-pointer ${
+                className={`px-5 py-2 text-xs font-bold rounded-full shadow-xs hover:shadow flex items-center gap-1.5 disabled:opacity-50 transition-colors md-state-layer cursor-pointer ${
                   isPermanent
-                    ? "bg-rose-600 hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600"
-                    : "bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
+                    ? "bg-error text-on-error hover:opacity-90"
+                    : "bg-warning text-on-warning hover:opacity-90"
                 }`}
               >
                 {isPending ? (

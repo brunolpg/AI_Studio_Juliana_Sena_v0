@@ -65,9 +65,9 @@ export function ClientDetailsModal({
                 <span
                   className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold shadow-2xs ${
                     client.deleted_at
-                      ? "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60"
+                      ? "bg-error-container text-on-error-container border border-error/30"
                       : client.status === "Ativo"
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70"
+                      ? "bg-success-container text-on-success-container border border-success/30"
                       : "bg-slate-100 text-slate-600 dark:bg-slate-800/80 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
                   }`}
                 >

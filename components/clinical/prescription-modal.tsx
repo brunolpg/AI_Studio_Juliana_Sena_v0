@@ -501,7 +501,7 @@ export function PrescriptionModal({
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Paciente: <strong className="text-slate-700 dark:text-slate-200">{client.nome}</strong>
                 {initialData && (
-                  <span className="ml-2 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                  <span className="ml-2 text-[11px] text-warning font-medium">
                     (Versão anterior será arquivada como suspensa)
                   </span>
                 )}
@@ -518,8 +518,8 @@ export function PrescriptionModal({
         </div>
 
         {errorMsg && (
-          <div className="mx-6 mt-4 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2 border border-rose-200 dark:border-rose-900/60 shrink-0">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+          <div className="mx-6 mt-4 p-3 rounded-2xl bg-error-container text-on-error-container text-xs flex items-center gap-2 border border-error shrink-0">
+            <AlertCircle className="w-4 h-4 shrink-0 text-error" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -718,7 +718,7 @@ export function PrescriptionModal({
                       <button
                         type="button"
                         onClick={() => handleRemoveRow(row.key)}
-                        className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg cursor-pointer"
+                        className="p-1.5 text-error hover:bg-error-container rounded-lg cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

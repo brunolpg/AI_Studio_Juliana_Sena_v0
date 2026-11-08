@@ -505,11 +505,11 @@ export function ClientTableView() {
                       {/* Status */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {client.deleted_at ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 shadow-2xs">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-error-container text-on-error-container border border-error/30 shadow-2xs">
                             Excluído (Soft)
                           </span>
                         ) : client.status === "Ativo" ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70 shadow-2xs">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-success-container text-on-success-container border border-success/30 shadow-2xs">
                             Ativo
                           </span>
                         ) : (
@@ -555,7 +555,7 @@ export function ClientTableView() {
                               <button
                                 id={`delete-client-${client.id}`}
                                 onClick={() => handleOpenSoftDelete(client)}
-                                className="p-2 rounded-full text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors md-state-layer cursor-pointer"
+                                className="p-2 rounded-full text-slate-500 hover:text-warning hover:bg-warning-container transition-colors md-state-layer cursor-pointer"
                                 title="Excluir logicamente (Soft Delete)"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -566,7 +566,7 @@ export function ClientTableView() {
                               <button
                                 id={`restore-client-${client.id}`}
                                 onClick={() => handleRestore(client)}
-                                className="p-2 rounded-full text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors md-state-layer cursor-pointer"
+                                className="p-2 rounded-full text-slate-500 hover:text-success hover:bg-success-container transition-colors md-state-layer cursor-pointer"
                                 title="Restaurar paciente para a lista ativa"
                               >
                                 <RotateCcw className="w-4 h-4" />
@@ -574,10 +574,10 @@ export function ClientTableView() {
                               <button
                                 id={`permanent-delete-${client.id}`}
                                 onClick={() => handleOpenPermanentDelete(client)}
-                                className="p-2 rounded-full text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors md-state-layer cursor-pointer"
+                                className="p-2 rounded-full text-slate-500 hover:text-error hover:bg-error-container transition-colors md-state-layer cursor-pointer"
                                 title="Excluir permanentemente do banco"
                               >
-                                <Trash2 className="w-4 h-4 text-rose-500" />
+                                <Trash2 className="w-4 h-4 text-error" />
                               </button>
                             </>
                           )}

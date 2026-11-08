@@ -599,7 +599,7 @@ export function EvolutionFormModal({
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold select-none ${
                       status === "Ativo"
-                        ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                        ? "bg-success-container text-on-success-container border border-success/30"
                         : status === "Concluído"
                         ? "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
                         : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
@@ -624,8 +624,8 @@ export function EvolutionFormModal({
         </div>
 
         {errorMsg && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-rose-50 text-rose-800 text-xs flex items-center gap-2 border border-rose-200 shrink-0">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+          <div className="mx-6 mt-4 p-3 rounded-xl bg-error-container text-on-error-container text-xs flex items-center gap-2 border border-error shrink-0">
+            <AlertCircle className="w-4 h-4 shrink-0 text-error" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -1109,7 +1109,7 @@ export function EvolutionFormModal({
                         <button
                           type="button"
                           onClick={() => setSelectedHomeCareFichaId("")}
-                          className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+                          className="text-[11px] font-semibold text-error hover:underline cursor-pointer"
                         >
                           Desvincular
                         </button>
@@ -1118,13 +1118,13 @@ export function EvolutionFormModal({
                       {/* Aviso de Atenção Crítica se houver */}
                       {selectedHomeCareFicha.incluir_atencao_critica !== false &&
                         Boolean(selectedHomeCareFicha.atencao_critica_texto?.trim()) && (
-                          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 p-2.5 flex items-start gap-2 text-xs text-amber-800 dark:text-amber-200">
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                          <div className="rounded-lg bg-warning-container border border-warning/30 p-2.5 flex items-start gap-2 text-xs text-on-warning-container">
+                            <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
                             <div className="min-w-0">
                               <span className="font-bold text-[11px] block">
                                 {selectedHomeCareFicha.atencao_critica_titulo || "Atenção Crítica Cadastrada"}
                               </span>
-                              <p className="text-[10px] text-amber-700 dark:text-amber-300 line-clamp-2 mt-0.5">
+                              <p className="text-[10px] text-on-warning-container line-clamp-2 mt-0.5">
                                 {selectedHomeCareFicha.atencao_critica_texto}
                               </p>
                             </div>
@@ -1258,7 +1258,7 @@ export function EvolutionFormModal({
                             <button
                               type="button"
                               onClick={() => setExistingFotosUrls((prev) => prev.filter((_, i) => i !== idx))}
-                              className="absolute top-1 right-1 p-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full opacity-90 hover:opacity-100 transition-colors shadow-xs cursor-pointer z-10"
+                              className="absolute top-1 right-1 p-1 bg-error text-on-error hover:opacity-90 rounded-full opacity-90 hover:opacity-100 transition-colors shadow-xs cursor-pointer z-10"
                               title="Remover esta fotografia da evolução"
                             >
                               <X className="w-3.5 h-3.5" />
@@ -1328,7 +1328,7 @@ export function EvolutionFormModal({
                           <button
                             type="button"
                             onClick={() => setFotosFiles((prev) => prev.filter((_, i) => i !== idx))}
-                            className="absolute top-1 right-1 p-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full opacity-90 hover:opacity-100 transition-colors shadow-xs cursor-pointer z-10"
+                            className="absolute top-1 right-1 p-1 bg-error text-on-error hover:opacity-90 rounded-full opacity-90 hover:opacity-100 transition-colors shadow-xs cursor-pointer z-10"
                             title="Remover esta nova foto"
                           >
                             <X className="w-3.5 h-3.5" />

@@ -1943,7 +1943,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
 
                                 {rx.ativo || rx.status === "Ativo" ? (
                                   isPatient ? (
-                                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 cursor-default select-none shadow-2xs">
+                                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold bg-success-container text-on-success-container border border-success/30 cursor-default select-none shadow-2xs">
                                       Em Uso (Ativo)
                                     </span>
                                   ) : (
@@ -1954,7 +1954,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                         setJustificativaTexto("");
                                         setIsSuspensionModalOpen(true);
                                       }}
-                                      className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 dark:hover:border-rose-800 shadow-2xs md-state-layer"
+                                      className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer bg-success-container text-on-success-container border border-success/30 hover:bg-error-container hover:text-on-error-container hover:border-error shadow-2xs md-state-layer"
                                       title="Clique para suspender esta receita"
                                     >
                                       Em Uso (Ativo)
@@ -2047,7 +2047,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                             className="w-full flex items-center justify-between p-4 bg-slate-100/80 dark:bg-slate-800/60 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer text-left"
                           >
                             <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                              <div className="w-8 h-8 rounded-lg bg-error-container text-error flex items-center justify-center shrink-0">
                                 <Archive className="w-4 h-4" />
                               </div>
                               <div>
@@ -2055,7 +2055,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                   <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                                     Prescrições Suspensas / Descontinuadas
                                   </h4>
-                                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/60">
+                                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-error-container text-on-error-container border border-error/30">
                                     {suspendedPrescriptions.length}
                                   </span>
                                 </div>
@@ -2119,7 +2119,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                           {suspDateFormatted && (
                                             <>
                                               <span>•</span>
-                                              <span className="text-rose-600 dark:text-rose-400 font-medium">
+                                              <span className="text-error font-medium">
                                                 Suspenso em {suspDateFormatted}
                                               </span>
                                             </>
@@ -2128,8 +2128,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                       </div>
 
                                       <div className="flex items-center flex-wrap gap-2 shrink-0">
-                                        <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/50 shadow-2xs">
-                                          <AlertTriangle className="w-3 h-3 text-rose-600 dark:text-rose-400 shrink-0" />
+                                        <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-error-container text-on-error-container border border-error/30 shadow-2xs">
+                                          <AlertTriangle className="w-3 h-3 text-error shrink-0" />
                                           Suspenso
                                         </span>
 
@@ -2146,10 +2146,10 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                                         <button
                                           type="button"
                                           onClick={() => handleReactivatePrescription(rx.id)}
-                                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-full cursor-pointer transition-colors shadow-2xs"
+                                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-on-success-container bg-success-container border border-success/30 hover:opacity-90 rounded-full cursor-pointer transition-colors shadow-2xs"
                                           title="Reativar esta prescrição para o tratamento ativo"
                                         >
-                                          <RotateCcw className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                          <RotateCcw className="w-3.5 h-3.5 text-success" />
                                           <span>Reativar</span>
                                         </button>
 
@@ -2169,12 +2169,12 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
 
                                     {/* Justificativa da Suspensão em Destaque */}
                                     {rx.justificativa_suspensao && (
-                                      <div className="mt-3 p-3 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-900/40 text-xs">
-                                        <div className="flex items-center gap-1.5 text-rose-800 dark:text-rose-300 font-semibold mb-1">
-                                          <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                                      <div className="mt-3 p-3 rounded-xl bg-error-container border border-error/30 text-xs">
+                                        <div className="flex items-center gap-1.5 text-on-error-container font-semibold mb-1">
+                                          <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-error" />
                                           <span>Motivo / Justificativa da Suspensão:</span>
                                         </div>
-                                        <p className="text-rose-900 dark:text-rose-200 leading-relaxed whitespace-pre-wrap pl-5">
+                                        <p className="text-on-error-container leading-relaxed whitespace-pre-wrap pl-5">
                                           {rx.justificativa_suspensao}
                                         </p>
                                       </div>
@@ -2558,7 +2558,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                 type="button"
                 onClick={handleConfirmSuspension}
                 disabled={!justificativaTexto.trim() || isSubmittingSuspension}
-                className="px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-full cursor-pointer flex items-center gap-1.5 transition-all shadow-xs md-state-layer"
+                className="px-5 py-2 text-xs font-bold bg-error text-on-error hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-full cursor-pointer flex items-center gap-1.5 transition-all shadow-xs md-state-layer"
               >
                 {isSubmittingSuspension ? (
                   <>
@@ -2606,7 +2606,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
 
             {signedNotificationPrompt?.isOpen ? (
               <div className="py-4 space-y-4 text-center animate-in fade-in zoom-in-95 duration-200 flex-1">
-                <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-xs">
+                <div className="w-14 h-14 rounded-full bg-success-container border border-success/30 text-success flex items-center justify-center mx-auto shadow-xs">
                   <FileCheck className="w-7 h-7"/>
                 </div>
 
@@ -2619,23 +2619,23 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                   </p>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-left text-xs space-y-2">
-                  <p className="font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <div className="p-3.5 rounded-2xl bg-success-container/70 border border-success/30 text-left text-xs space-y-2">
+                  <p className="font-semibold text-on-success-container flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
                     <span>Status do Documento e Comunicações:</span>
                   </p>
                   <ul className="space-y-1.5 text-slate-600 dark:text-slate-400">
                     <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0 mt-1.5" />
                       <span>
                         Prontuário & Portal do Paciente:{" "}
-                        <strong className="text-emerald-700 dark:text-emerald-300 font-medium">
+                        <strong className="text-on-success-container font-medium">
                           documento salvo e pronto para visualização
                         </strong>
                       </span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 mt-1.5" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0 mt-1.5" />
                       <span>
                         E-mail ({client?.email || "não cadastrado"}):{" "}
                         <strong className="text-slate-700 dark:text-slate-200 font-medium">
@@ -2765,8 +2765,8 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
                     />
                   </label>
                   {signError && (
-                    <div role="alert" className="flex items-start gap-2 p-2.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-[11px] text-rose-800 dark:text-rose-200 leading-relaxed">
-                      <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                    <div role="alert" className="flex items-start gap-2 p-2.5 rounded-2xl bg-error-container border border-error text-[11px] text-on-error-container leading-relaxed">
+                      <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-error" />
                       <span>{signError}</span>
                     </div>
                   )}

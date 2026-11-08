@@ -292,8 +292,8 @@ export function MedicalHistoryModal({
         </div>
 
         {errorMsg && (
-          <div className="mx-6 mt-4 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2 border border-rose-200 dark:border-rose-900/60 shrink-0">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+          <div className="mx-6 mt-4 p-3 rounded-2xl bg-error-container text-on-error-container text-xs flex items-center gap-2 border border-error shrink-0">
+            <AlertCircle className="w-4 h-4 shrink-0 text-error" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -301,7 +301,7 @@ export function MedicalHistoryModal({
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1">
           {/* Alergias Conhecidas */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+            <label className="text-xs font-bold text-error flex items-center gap-1.5">
               <ShieldAlert className="w-4 h-4" />
               <span>Alergias Conhecidas (Medicamentosas ou Alimentares)</span>
             </label>
@@ -322,7 +322,7 @@ export function MedicalHistoryModal({
               <button
                 type="button"
                 onClick={handleAddAlergia}
-                className="px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl flex items-center gap-1 cursor-pointer"
+                className="px-3 py-1.5 text-xs font-semibold bg-error text-on-error hover:opacity-90 rounded-xl flex items-center gap-1 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Adicionar</span>
@@ -336,13 +336,13 @@ export function MedicalHistoryModal({
                 alergias.map((alergia, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-error-container text-on-error-container border border-error/30"
                   >
                     <span>{alergia}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveAlergia(idx)}
-                      className="text-rose-500 hover:text-rose-700 cursor-pointer"
+                      className="text-error hover:opacity-80 cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -814,7 +814,7 @@ export function MedicalHistoryModal({
                           setFotosFiles(fotosFiles.filter((_, i) => i !== fileIdx));
                         }
                       }}
-                      className="absolute top-1 right-1 p-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full opacity-90 transition-colors cursor-pointer"
+                      className="absolute top-1 right-1 p-1 bg-error text-on-error hover:opacity-90 rounded-full opacity-90 transition-colors cursor-pointer"
                       title="Remover foto"
                     >
                       <X className="w-3.5 h-3.5" />

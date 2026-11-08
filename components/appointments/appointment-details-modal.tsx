@@ -116,7 +116,13 @@ export function AppointmentDetailsModal({
                 Status da Consulta
               </span>
               <div className="mt-1">
-                <span className="inline-block px-2.5 py-1 text-xs font-bold rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                <span className={`inline-block px-2.5 py-1 text-xs font-bold rounded-lg border ${
+                  appointment.status === "Confirmado"
+                    ? "bg-success-container text-on-success-container border-success/30"
+                    : appointment.status === "Cancelado"
+                    ? "bg-error-container text-on-error-container border-error/30"
+                    : "bg-warning-container text-on-warning-container border-warning/30"
+                }`}>
                   {appointment.status}
                 </span>
               </div>

@@ -695,7 +695,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
               }}
               className={`text-xs px-3.5 py-1.5 rounded-full font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 text-center md-state-layer ${
                 activeFilterTab === "cancelados"
-                  ? "bg-rose-600 dark:bg-rose-500 text-white dark:text-slate-950 shadow-xs"
+                  ? "bg-error text-on-error shadow-xs"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
               }`}
             >
@@ -916,11 +916,11 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                       {/* STATUS: Pílulas coloridas */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {appointment.status === "Confirmado" ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70 shadow-2xs">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-success-container text-on-success-container border border-success/30 shadow-2xs">
                             Confirmado
                           </span>
                         ) : appointment.status === "Pendente" ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/70 shadow-2xs">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-warning-container text-on-warning-container border border-warning/30 shadow-2xs">
                             Pendente
                           </span>
                         ) : appointment.status === "Concluído" ? (
@@ -928,7 +928,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                             Concluído
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800/70 shadow-2xs">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-error-container text-on-error-container border border-error/30 shadow-2xs">
                             Cancelado
                           </span>
                         )}
@@ -938,12 +938,12 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                       <td className="py-3 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           {appointment.status_pagamento === "Pago" ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/70 shadow-2xs">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-success-container text-on-success-container border border-success/30 shadow-2xs">
                               Pago
                             </span>
                           ) : appointment.status_pagamento === "Em Análise" || appointment.comprovante_url ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/70 shadow-2xs">
-                              <Clock className="w-3 h-3 text-amber-600" />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-warning-container text-on-warning-container border border-warning/30 shadow-2xs">
+                              <Clock className="w-3 h-3 text-warning" />
                               <span>Em Análise</span>
                             </span>
                           ) : (
@@ -1035,7 +1035,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                             <button
                               type="button"
                               onClick={() => handleCancelAppointment(appointment)}
-                              className="p-2 rounded-full text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer md-state-layer"
+                              className="p-2 rounded-full text-slate-500 hover:text-error hover:bg-error-container transition-colors cursor-pointer md-state-layer"
                               title="Cancelar agendamento"
                             >
                               <XCircle className="w-4 h-4" />
@@ -1230,7 +1230,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
             <div className="sm:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto -mt-2 mb-2 shrink-0" />
 
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 shadow-2xs">
+              <div className="w-10 h-10 rounded-2xl bg-error-container text-error flex items-center justify-center shrink-0 shadow-2xs">
                 <XCircle className="w-5 h-5" />
               </div>
               <div>
@@ -1272,7 +1272,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                 type="button"
                 onClick={handleConfirmCancel}
                 disabled={isCancelling}
-                className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-full transition-colors cursor-pointer shadow-xs md-state-layer"
+                className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold bg-error text-on-error hover:opacity-90 rounded-full transition-colors cursor-pointer shadow-xs md-state-layer"
               >
                 {isCancelling ? (
                   <>

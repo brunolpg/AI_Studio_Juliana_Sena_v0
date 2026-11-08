@@ -192,7 +192,7 @@ export function PropostaNotificationModal({
             <button
               type="button"
               onClick={handleSendWhatsApp}
-              className="w-full flex items-center justify-between px-4 py-3 text-xs font-semibold rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer active:scale-[0.99]"
+              className="w-full flex items-center justify-between px-4 py-3 text-xs font-semibold rounded-2xl bg-success text-on-success hover:opacity-90 shadow-xs transition-all cursor-pointer active:scale-[0.99]"
             >
               <div className="flex items-center gap-2.5">
                 <MessageSquare className="w-4 h-4" />

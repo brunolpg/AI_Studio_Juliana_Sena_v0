@@ -921,8 +921,8 @@ function AppointmentFormModalContent({
       <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
         {/* Mensagem de Erro Geral */}
         {errorMsg && (
-          <div className="shrink-0 mx-4 sm:mx-6 mt-3 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-800 dark:text-rose-200 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+          <div className="shrink-0 mx-4 sm:mx-6 mt-3 p-3 rounded-xl bg-error-container border border-error text-xs text-on-error-container flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-error shrink-0" />
             <span className="flex-1">{errorMsg}</span>
           </div>
         )}

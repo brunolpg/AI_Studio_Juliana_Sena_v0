@@ -395,7 +395,7 @@ export function PrintPropostaModal({
 
               <div>
                 <span className="text-[10px] font-bold text-slate-400 block uppercase">Assinatura Digital</span>
-                <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 break-all block mt-0.5">
+                <span className="text-[11px] font-mono text-success break-all block mt-0.5">
                   SHA-256: {proposta.payload_hash ? `${proposta.payload_hash.substring(0, 16)}...` : "AUTÊNTICO"}
                 </span>
               </div>
@@ -414,7 +414,7 @@ export function PrintPropostaModal({
               type="button"
               onClick={handleShareWhatsApp}
               disabled={isSharingWhatsApp}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-on-success bg-success hover:opacity-90 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
               <WhatsAppIcon className="w-4 h-4 shrink-0" />
               <span>{isSharingWhatsApp ? "Preparando envio..." : "Enviar pelo WhatsApp"}</span>

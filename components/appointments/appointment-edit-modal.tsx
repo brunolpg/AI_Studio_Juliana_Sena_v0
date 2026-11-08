@@ -257,8 +257,8 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
       </div>
 
       {errorMsg && (
-        <div className="shrink-0 mx-4 sm:mx-6 mt-3 p-3 rounded-xl bg-rose-50 text-rose-800 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="shrink-0 mx-4 sm:mx-6 mt-3 p-3 rounded-xl bg-error-container text-on-error-container text-xs flex items-center gap-2 border border-error">
+          <AlertCircle className="w-4 h-4 shrink-0 text-error" />
           <span>{errorMsg}</span>
         </div>
       )}
@@ -287,12 +287,12 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
                 className={`px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all cursor-pointer md-state-layer shadow-2xs ${
                   status === opt
                     ? opt === "Confirmado"
-                      ? "bg-emerald-600 text-white border-emerald-600"
+                      ? "bg-success text-on-success border-success"
                       : opt === "Pendente"
-                      ? "bg-amber-500 text-white border-amber-500"
+                      ? "bg-warning text-on-warning border-warning"
                       : opt === "Concluído"
                       ? "bg-sky-600 text-white border-sky-600"
-                      : "bg-rose-600 text-white border-rose-600"
+                      : "bg-error text-on-error border-error"
                     : "bg-slate-100/90 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-700/80 hover:bg-slate-200/60 dark:hover:bg-slate-700"
                 }`}
               >
@@ -316,12 +316,12 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
                 className={`px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all cursor-pointer md-state-layer shadow-2xs ${
                   paymentStatus === opt
                     ? opt === "Pago"
-                      ? "bg-emerald-600 text-white border-emerald-600"
+                      ? "bg-success text-on-success border-success"
                       : opt === "Pendente"
-                      ? "bg-amber-500 text-white border-amber-500"
+                      ? "bg-warning text-on-warning border-warning"
                       : opt === "Em Análise"
                       ? "bg-sky-600 text-white border-sky-600"
-                      : "bg-rose-600 text-white border-rose-600"
+                      : "bg-error text-on-error border-error"
                     : "bg-slate-100/90 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-700/80 hover:bg-slate-200/60 dark:hover:bg-slate-700"
                 }`}
               >
@@ -427,7 +427,7 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
                     <button
                       type="button"
                       onClick={() => handleDeleteAttachment(idx)}
-                      className="text-slate-400 hover:text-rose-500 p-1 rounded-lg transition-colors cursor-pointer"
+                      className="text-slate-400 hover:text-error p-1 rounded-lg transition-colors cursor-pointer"
                       title="Excluir anexo"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
