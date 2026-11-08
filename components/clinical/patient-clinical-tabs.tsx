@@ -41,6 +41,7 @@ import {
   Mail,
   Trash2,
   RotateCcw,
+  FlaskConical,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import {
@@ -60,12 +61,18 @@ import { EvolutionPhotosModal, hasValidClinicalPhoto } from "./evolution-photos-
 import { AestheticEvaluationModal } from "./aesthetic-evaluation-modal";
 import { HomeCareCards } from "./home-care-cards";
 import { HomeCareModal } from "./home-care-modal";
+import { ExamPrescriptionCards } from "./exam-prescription-cards";
+import { ExamPrescriptionModal } from "./exam-prescription-modal";
+import { PrintExamPrescriptionModal } from "./print-exam-prescription-modal";
+import { ExamPrescriptionNotificationModal } from "./exam-prescription-notification-modal";
 import { getPatientHomeCareFichas } from "@/app/actions/home-care";
 import { getPropostasByPaciente } from "@/app/actions/propostas-actions";
+import { getPrescricoesExamesByPaciente } from "@/app/actions/prescricoes-exames-actions";
 import type { Proposta } from "@/types/proposta";
 import { PropostasCards } from "@/components/propostas/propostas-cards";
 import { PropostaFormModal } from "@/components/propostas/proposta-form-modal";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
+import type { PrescricaoExame } from "@/types/prescricao-exame";
 import { useToast } from "@/components/ui/toast";
 import type { Client } from "@/types/client";
 import type {
@@ -185,6 +192,17 @@ export function PatientClinicalTabs({
   const activePropostasCount = useMemo(() => {
     return propostas.filter((p) => p.status === "Ativo").length;
   }, [propostas]);
+
+  // Prescrições de Exames Laboratoriais
+  const [prescricoesExames, setPrescricoesExames] = useState<PrescricaoExame[]>([]);
+  const [isExamModalOpen, setIsExamModalOpen] = useState(false);
+  const [selectedExamForEdit, setSelectedExamForEdit] = useState<PrescricaoExame | null>(null);
+  const [selectedExamForPrint, setSelectedExamForPrint] = useState<PrescricaoExame | null>(null);
+  const [examNotificationPrompt, setExamNotificationPrompt] = useState<{
+    isOpen: boolean;
+    prescricao: PrescricaoExame | null;
+    isEdit: boolean;
+  }>({ isOpen: false, prescricao: null, isEdit: false });
 
   // --- Assinatura digital (VIDaaS) ---------------------------------------
   const [signError, setSignError] = useState<string | null>(null);
@@ -432,6 +450,7 @@ export function PatientClinicalTabs({
         setAestheticData(null);
         setHomeCareFichas([]);
         setPropostas([]);
+        setPrescricoesExames([]);
         const res = await getPatientClinicalRecordAction(client.id);
         if (res.success && res.data) {
           const record = { ...res.data };
@@ -545,6 +564,16 @@ export function PatientClinicalTabs({
             }
           } catch (propErr) {
             console.warn("Erro ao buscar propostas de planejamento:", propErr);
+          }
+
+          // Busca Prescrições de Exames do paciente
+          try {
+            const examesRes = await getPrescricoesExamesByPaciente(client.id);
+            if (examesRes.success && examesRes.data) {
+              setPrescricoesExames(examesRes.data);
+            }
+          } catch (exErr) {
+            console.warn("Erro ao buscar prescrições de exames:", exErr);
           }
 
           setClinicalRecord(record);
@@ -761,6 +790,19 @@ export function PatientClinicalTabs({
     );
   }, [clinicalRecord?.prescriptions]);
 
+  // Prescrições de Exames ativas
+  const activeExamPrescriptions = useMemo(() => {
+    return (prescricoesExames || []).filter((p) => p.status === "Ativo");
+  }, [prescricoesExames]);
+
+  // Prescrições de Exames suspensas
+  const suspendedExamPrescriptions = useMemo(() => {
+    return (prescricoesExames || []).filter((p) => p.status === "Suspenso");
+  }, [prescricoesExames]);
+
+  // Total de itens suspensos (Receitas + Exames)
+  const totalSuspendedCount = suspendedPrescriptions.length + suspendedExamPrescriptions.length;
+
   // Lista principal exibe apenas as vigentes/ativas
   const prescriptions = activePrescriptions;
 
@@ -916,10 +958,21 @@ export function PatientClinicalTabs({
                 <button
                   type="button"
                   onClick={() => setIsPrescriptionModalOpen(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full shadow-xs transition-all cursor-pointer md-state-layer active:scale-[0.98]"
+                  className="flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full shadow-xs transition-all cursor-pointer md-state-layer active:scale-[0.98]"
                 >
                   <Plus className="w-3.5 h-3.5 shrink-0" />
                   <span>Prescrever Receita</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedExamForEdit(null);
+                    setIsExamModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold text-on-primary bg-primary hover:brightness-105 rounded-full shadow-xs transition-all cursor-pointer md-state-layer active:scale-[0.98]"
+                >
+                  <FlaskConical className="w-3.5 h-3.5 shrink-0" />
+                  <span>Prescrever Exames</span>
                 </button>
               </div>
             )}
@@ -1770,7 +1823,7 @@ export function PatientClinicalTabs({
             {/* ======================================================== */}
             {activeSubTab === "prescricoes" && (
               <div className="w-full">
-                {prescriptions.length === 0 && homeCareFichas.length === 0 && (isPatient || suspendedPrescriptions.length === 0) ? (
+                {prescriptions.length === 0 && homeCareFichas.length === 0 && activeExamPrescriptions.length === 0 && (isPatient || totalSuspendedCount === 0) ? (
                   <div className="py-12 text-center max-w-sm mx-auto">
                     <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 flex items-center justify-center mx-auto mb-3">
                       <Pill className="w-6 h-6" />
@@ -1780,18 +1833,18 @@ export function PatientClinicalTabs({
                     </h4>
                     <p className="text-xs text-slate-500 mt-1">
                       {isPatient 
-                        ? "Não há prescrições ativas ou orientações de home care registradas para você no momento." 
-                        : "Emita receitas e orientações de home care para ficarem arquivadas no histórico do paciente."}
+                        ? "Não há prescrições ativas, solicitações de exames ou orientações de home care registradas para você no momento." 
+                        : "Emita receitas, exames laboratoriais e orientações de home care para ficarem arquivados no histórico do paciente."}
                     </p>
                     {!isPatient && (
-                      <div className="flex items-center justify-center gap-2.5 mt-4">
+                      <div className="flex items-center justify-center gap-2.5 mt-4 flex-wrap">
                         <button
                           type="button"
                           onClick={() => {
                             setSelectedHomeCareForEdit(null);
                             setIsHomeCareModalOpen(true);
                           }}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full border border-teal-700/30 dark:border-teal-500/40 text-[#0d6e64] dark:text-teal-300 bg-teal-50/60 dark:bg-teal-950/40 hover:bg-teal-100/80 dark:hover:bg-teal-900/50 transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold rounded-full border border-teal-700/30 dark:border-teal-500/40 text-[#0d6e64] dark:text-teal-300 bg-teal-50/60 dark:bg-teal-950/40 hover:bg-teal-100/80 dark:hover:bg-teal-900/50 transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
                         >
                           <Plus className="w-3.5 h-3.5 shrink-0" />
                           <span>Cuidados & Orientações</span>
@@ -1799,10 +1852,21 @@ export function PatientClinicalTabs({
                         <button
                           type="button"
                           onClick={() => setIsPrescriptionModalOpen(true)}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full transition-all cursor-pointer shadow-xs active:scale-[0.98]"
                         >
                           <Plus className="w-3.5 h-3.5 shrink-0" />
                           <span>Prescrever Receita</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedExamForEdit(null);
+                            setIsExamModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold text-on-primary bg-primary hover:brightness-105 rounded-full transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                        >
+                          <FlaskConical className="w-3.5 h-3.5 shrink-0" />
+                          <span>Prescrever Exames</span>
                         </button>
                       </div>
                     )}
@@ -1828,15 +1892,15 @@ export function PatientClinicalTabs({
                           </div>
                         </div>
 
-                        {!isPatient && suspendedPrescriptions.length > 0 && (
+                        {totalSuspendedCount > 0 && (
                           <button
                             type="button"
                             onClick={handleOpenSuspendedSection}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-400 dark:border-rose-900/50 transition-colors cursor-pointer shadow-2xs"
-                            title="Ir para o histórico de prescrições suspensas"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] text-xs font-semibold rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-400 dark:border-rose-900/50 transition-colors cursor-pointer shadow-2xs"
+                            title="Ir para o histórico de prescrições e exames suspensos"
                           >
                             <Archive className="w-3.5 h-3.5" />
-                            <span>Suspensas ({suspendedPrescriptions.length})</span>
+                            <span>Suspensas ({totalSuspendedCount})</span>
                           </button>
                         )}
                       </div>
@@ -2052,8 +2116,8 @@ export function PatientClinicalTabs({
                         </div>
                       )}
 
-                      {/* ÁREA EXCLUSIVA PARA SUSPENSAS (Administrador / Profissional) */}
-                      {!isPatient && suspendedPrescriptions.length > 0 && (
+                      {/* ÁREA DE PRESCRIÇÕES E EXAMES SUSPENSOS / HISTÓRICO */}
+                      {totalSuspendedCount > 0 && (
                         <div
                           id="secao-prescricoes-suspensas"
                           ref={suspendedSectionRef}
@@ -2071,14 +2135,14 @@ export function PatientClinicalTabs({
                               <div>
                                 <div className="flex items-center gap-2">
                                   <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                                    Prescrições Suspensas / Descontinuadas
+                                    Prescrições & Exames Suspensos / Histórico
                                   </h4>
                                   <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-error-container text-on-error-container border border-error/30">
-                                    {suspendedPrescriptions.length}
+                                    {totalSuspendedCount}
                                   </span>
                                 </div>
                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                                  Receitas descontinuadas ou substituídas com registro de justificativa clínica
+                                  Receitas e solicitações de exames descontinuadas ou substituídas com registro de justificativa
                                 </p>
                               </div>
                             </div>
@@ -2214,14 +2278,88 @@ export function PatientClinicalTabs({
                                   </div>
                                 );
                               })}
+
+                              {/* Prescrições de Exames Suspensas */}
+                              {suspendedExamPrescriptions.map((ex) => {
+                                const [year, month, day] = (ex.data || "").split("-");
+                                const dateFormatted = year && month && day ? `${day}/${month}/${year}` : ex.data;
+                                const suspDateFormatted = ex.data_suspensao
+                                  ? new Date(ex.data_suspensao).toLocaleDateString("pt-BR", {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                    })
+                                  : null;
+                                const examesCount = (ex.grupos_exames || []).reduce(
+                                  (acc, g) => acc + (g.exames?.length || 0),
+                                  0
+                                );
+
+                                return (
+                                  <div
+                                    key={`susp_exam_${ex.id}`}
+                                    className="p-4 rounded-xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-2xs opacity-90 hover:opacity-100 transition-opacity"
+                                  >
+                                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 flex-wrap pb-3 border-b border-slate-200/60 dark:border-slate-800/70">
+                                      <div className="flex-1 min-w-[200px]">
+                                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-error-container text-on-error-container border border-error/30">
+                                            <AlertTriangle className="w-3 h-3 text-error shrink-0" />
+                                            Exames • Suspenso
+                                          </span>
+                                          {ex.payload_hash && (
+                                            <span className="text-[10px] font-mono text-slate-400">
+                                              SHA-256: {ex.payload_hash.substring(0, 8)}...
+                                            </span>
+                                          )}
+                                        </div>
+                                        <h5 className="text-sm font-bold text-slate-500 dark:text-slate-400 line-through leading-snug">
+                                          {ex.titulo}
+                                        </h5>
+                                        <div className="flex items-center gap-2 text-[11px] text-slate-400 dark:text-slate-500 mt-1 flex-wrap">
+                                          <span>Prescrito em {dateFormatted}</span>
+                                          {suspDateFormatted && (
+                                            <>
+                                              <span>•</span>
+                                              <span className="text-error font-medium">
+                                                Suspenso em {suspDateFormatted}
+                                              </span>
+                                            </>
+                                          )}
+                                          <span>•</span>
+                                          <span>{examesCount} exames solicitados</span>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center flex-wrap gap-2 shrink-0">
+                                        <button
+                                          type="button"
+                                          onClick={() => setSelectedExamForPrint(ex)}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 rounded-full cursor-pointer transition-colors shadow-2xs"
+                                          title="Visualizar guia de exames suspensa"
+                                        >
+                                          <Printer className="w-3.5 h-3.5 text-slate-500" />
+                                          <span>Ver Guia</span>
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {ex.justificativa_suspensao && (
+                                      <div className="mt-2.5 p-2 rounded-lg bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-900/40 text-[11px] text-rose-700 dark:text-rose-300">
+                                        <strong>Justificativa da Suspensão:</strong> {ex.justificativa_suspensao}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
                       )}
                     </div>
 
-                    {/* COLUNA 2: HOME CARE */}
-                    <div className="w-full min-w-0 flex flex-col gap-4">
+                    {/* COLUNA 2: HOME CARE & PRESCRIÇÃO DE EXAMES */}
+                    <div className="w-full min-w-0 flex flex-col gap-6">
                       {homeCareFichas.length > 0 ? (
                         <HomeCareCards
                           fichas={homeCareFichas}
@@ -2257,6 +2395,25 @@ export function PatientClinicalTabs({
                           </div>
                         </div>
                       )}
+
+                      {/* Seção de Solicitações / Prescrições de Exames Ativas */}
+                      <ExamPrescriptionCards
+                        prescricoes={prescricoesExames}
+                        client={client}
+                        isPatientView={isPatient}
+                        onEdit={(ex) => {
+                          setSelectedExamForEdit(ex);
+                          setIsExamModalOpen(true);
+                        }}
+                        onNotify={(ex) => {
+                          setExamNotificationPrompt({
+                            isOpen: true,
+                            prescricao: ex,
+                            isEdit: false,
+                          });
+                        }}
+                        onRefresh={loadClinicalData}
+                      />
                     </div>
                   </div>
                 )}
@@ -2859,6 +3016,65 @@ export function PatientClinicalTabs({
             email: client.email,
             telefone: client.telefone,
           }}
+        />
+      )}
+
+      {/* Modal de Cadastro / Edição de Prescrição de Exames */}
+      {isExamModalOpen && (
+        <ExamPrescriptionModal
+          isOpen={isExamModalOpen}
+          onClose={() => {
+            setIsExamModalOpen(false);
+            setSelectedExamForEdit(null);
+          }}
+          selectedPatient={client}
+          initialData={selectedExamForEdit}
+          onSuccess={(saved, isEdit) => {
+            loadClinicalData();
+            setIsExamModalOpen(false);
+            setSelectedExamForEdit(null);
+            setExamNotificationPrompt({
+              isOpen: true,
+              prescricao: saved,
+              isEdit,
+            });
+          }}
+        />
+      )}
+
+      {/* Modal de Visualização e Impressão de Exames */}
+      {selectedExamForPrint && (
+        <PrintExamPrescriptionModal
+          isOpen={Boolean(selectedExamForPrint)}
+          onClose={() => setSelectedExamForPrint(null)}
+          prescricao={selectedExamForPrint}
+          client={client}
+          userRole={isPatient ? "paciente" : "profissional"}
+          onEdit={(ex) => {
+            setSelectedExamForPrint(null);
+            setSelectedExamForEdit(ex);
+            setIsExamModalOpen(true);
+          }}
+          onSuccessSuspend={() => {
+            loadClinicalData();
+          }}
+        />
+      )}
+
+      {/* Modal de Notificação ao Paciente (WhatsApp / E-mail) */}
+      {examNotificationPrompt.isOpen && (
+        <ExamPrescriptionNotificationModal
+          isOpen={examNotificationPrompt.isOpen}
+          onClose={() =>
+            setExamNotificationPrompt({ isOpen: false, prescricao: null, isEdit: false })
+          }
+          prescricao={examNotificationPrompt.prescricao}
+          patientData={{
+            nome: client.nome,
+            email: client.email,
+            telefone: client.telefone,
+          }}
+          isEdit={examNotificationPrompt.isEdit}
         />
       )}
     </div>

@@ -605,7 +605,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
               </div>
               <p className="text-[11px] sm:text-xs md:text-sm text-emerald-200/85 font-medium mt-0.5 sm:mt-1 leading-snug">
                 {activeTab === "prontuario"
-                  ? "Receituários, fórmulas e orientações pós-procedimento ativas."
+                  ? "Receituários, solicitações de exames e orientações de home care ativas."
                   : activeTab === "agendamentos"
                   ? "Histórico e marcação de atendimentos presenciais."
                   : "Informações de cadastro e contato do paciente."}
