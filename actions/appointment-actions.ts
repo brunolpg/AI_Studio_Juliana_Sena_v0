@@ -174,13 +174,29 @@ interface RawAppointmentRow {
     email?: string;
     telefone?: string;
     foto_perfil?: string;
+    avatar_url?: string;
+  } | Array<{
+    id?: string;
+    nome?: string;
+    email?: string;
+    telefone?: string;
+    foto_perfil?: string;
+    avatar_url?: string;
   }> | null;
 }
 
-function mapRowToAppointment(row: RawAppointmentRow): Appointment {
+function mapRowToAppointment(
+  row: RawAppointmentRow,
+  profilesMap?: Map<string, string>
+): Appointment {
   const patientData = Array.isArray(row.pacientes)
     ? row.pacientes[0]
     : row.pacientes;
+
+  const email = (patientData?.email || "").toLowerCase().trim();
+  const avatarFromProfile = email && profilesMap ? profilesMap.get(email) : null;
+  const resolvedAvatar =
+    (patientData as any)?.avatar_url || avatarFromProfile || patientData?.foto_perfil || null;
 
   return {
     id: row.id,
@@ -188,7 +204,8 @@ function mapRowToAppointment(row: RawAppointmentRow): Appointment {
     client_nome: patientData?.nome || "Paciente Cadastrado",
     client_email: patientData?.email || "",
     client_telefone: patientData?.telefone || "",
-    patientPhoto: patientData?.foto_perfil || null,
+    avatar_url: resolvedAvatar,
+    patientPhoto: resolvedAvatar,
     data: row.data,
     horario_inicio: row.horario_inicio,
     horario_fim: row.horario_fim,
@@ -379,7 +396,40 @@ export async function getAppointmentsAction(
     const total = count ?? 0;
     const totalPages = Math.ceil(total / pageSize) || 1;
     const currentPage = Math.max(1, Math.min(page, totalPages));
-    const appointments = ((data as unknown as RawAppointmentRow[]) || []).map(mapRowToAppointment);
+
+    const rows = (data as unknown as RawAppointmentRow[]) || [];
+    const patientEmails = Array.from(
+      new Set(
+        rows
+          .map((row) => {
+            const p = Array.isArray(row.pacientes) ? row.pacientes[0] : row.pacientes;
+            return p?.email?.toLowerCase().trim();
+          })
+          .filter((e): e is string => Boolean(e))
+      )
+    );
+
+    const profilesMap = new Map<string, string>();
+    if (patientEmails.length > 0) {
+      try {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("email, avatar_url")
+          .in("email", patientEmails);
+
+        if (profiles) {
+          for (const pr of profiles) {
+            if (pr.email && pr.avatar_url) {
+              profilesMap.set(pr.email.toLowerCase().trim(), pr.avatar_url);
+            }
+          }
+        }
+      } catch (profErr) {
+        console.warn("Falha ao buscar avatar_url em profiles:", profErr);
+      }
+    }
+
+    const appointments = rows.map((row) => mapRowToAppointment(row, profilesMap));
 
     return {
       success: true,
@@ -407,6 +457,8 @@ export interface PatientSummary {
   cpf: string;
   email: string | null;
   telefone: string | null;
+  avatar_url?: string | null;
+  foto_perfil?: string | null;
 }
 
 /**
@@ -425,7 +477,7 @@ export async function getActivePatientsForSchedulingAction(): Promise<ActionResp
 
     const { data, error } = await supabase
       .from("pacientes")
-      .select("id, nome, cpf, email, telefone")
+      .select("id, nome, cpf, email, telefone, foto_perfil")
       .is("deleted_at", null)
       .order("nome", { ascending: true });
 
@@ -438,9 +490,44 @@ export async function getActivePatientsForSchedulingAction(): Promise<ActionResp
       };
     }
 
+    const patientRows = (data as any[]) || [];
+    const emails = Array.from(
+      new Set(patientRows.map((p) => p.email?.toLowerCase().trim()).filter(Boolean))
+    );
+
+    const profilesMap = new Map<string, string>();
+    if (emails.length > 0) {
+      try {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("email, avatar_url")
+          .in("email", emails);
+
+        if (profiles) {
+          for (const pr of profiles) {
+            if (pr.email && pr.avatar_url) {
+              profilesMap.set(pr.email.toLowerCase().trim(), pr.avatar_url);
+            }
+          }
+        }
+      } catch (pErr) {
+        console.warn("Falha ao buscar avatar_url em profiles para scheduling:", pErr);
+      }
+    }
+
+    const enriched = patientRows.map((p) => {
+      const pEmail = (p.email || "").toLowerCase().trim();
+      const avatar = p.avatar_url || profilesMap.get(pEmail) || p.foto_perfil || null;
+      return {
+        ...p,
+        avatar_url: avatar,
+        foto_perfil: p.foto_perfil || avatar,
+      };
+    });
+
     return {
       success: true,
-      data: (data as PatientSummary[]) || [],
+      data: (enriched as PatientSummary[]) || [],
     };
   } catch (err) {
     console.error("Erro interno ao buscar pacientes no Supabase:", err);

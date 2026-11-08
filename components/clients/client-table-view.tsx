@@ -30,6 +30,7 @@ import { DeleteConfirmModal } from "./delete-confirm-modal";
 import { AppointmentFormModal } from "@/components/appointments/appointment-form-modal";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/auth/auth-context";
+import { PatientAvatar } from "@/components/shared/patient-avatar";
 import type { Client, ClientFilter, PaginatedResult } from "@/types/client";
 
 export function ClientTableView() {
@@ -441,17 +442,14 @@ export function ClientTableView() {
                       {/* Nome e Avatar */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          {client.foto_perfil ? (
-                            <img
-                              src={client.foto_perfil}
-                              alt={client.nome}
-                              className="w-9 h-9 rounded-xl object-cover border border-teal-500/20 shadow-2xs shrink-0"
-                            />
-                          ) : (
-                            <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-xs shrink-0 border border-teal-500/20">
-                              {client.nome ? client.nome.charAt(0).toUpperCase() : "P"}
-                            </div>
-                          )}
+                          <PatientAvatar
+                            name={client.nome}
+                            avatarUrl={client.avatar_url || client.foto_perfil}
+                            sizeClassName="w-9 h-9"
+                            textClassName="text-xs"
+                            fallbackClassName="bg-teal-500/10 text-teal-600 dark:text-teal-400"
+                            borderClassName="border-teal-500/20"
+                          />
                           <div className="min-w-0">
                             <span className="font-semibold text-slate-900 dark:text-slate-100 block truncate max-w-[200px]">
                               {client.nome}

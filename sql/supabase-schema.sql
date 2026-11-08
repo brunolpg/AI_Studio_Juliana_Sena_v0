@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS public.pacientes (
     profissao VARCHAR(100),
     status VARCHAR(20) NOT NULL DEFAULT 'Ativo' CHECK (status IN ('Ativo', 'Inativo')),
     observacoes TEXT,
+    avatar_url TEXT NULL,
+    foto_perfil TEXT NULL,
     
     -- Metadados de auditoria e Soft Delete
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),

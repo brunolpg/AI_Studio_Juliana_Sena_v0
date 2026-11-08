@@ -42,6 +42,7 @@ import { AppointmentEditModal } from "./appointment-edit-modal";
 import { AppointmentDetailsModal } from "./appointment-details-modal";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/auth/auth-context";
+import { PatientAvatar } from "@/components/shared/patient-avatar";
 function formatShortName(fullName?: string): string {
   if (!fullName) return "Paciente";
   const parts = fullName.trim().split(/\s+/);
@@ -822,6 +823,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                     status_pagamento?: string | null;
                     comprovante_url?: string | null;
                     patientPhoto?: string | null;
+                    avatar_url?: string | null;
                   };
                   const [year, month, day] = appointment.data.split("-");
                   const dateFormatted = `${day}/${month}/${year}`;
@@ -836,18 +838,15 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                       {!isPatient && (
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2.5">
-                            {/* Foto de Perfil ou Inicial */}
-                            {appointment.patientPhoto ? (
-                              <img
-                                src={appointment.patientPhoto}
-                                alt={appointment.client_nome || "Paciente"}
-                                className="w-8 h-8 rounded-full object-cover shrink-0 border border-teal-200 dark:border-slate-700 shadow-2xs"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 text-xs font-bold flex items-center justify-center shrink-0">
-                                {(appointment.client_nome || "P")[0].toUpperCase()}
-                              </div>
-                            )}
+                            {/* Foto de Perfil (avatar_url) ou Inicial */}
+                            <PatientAvatar
+                              name={appointment.client_nome || "Paciente"}
+                              avatarUrl={appointment.avatar_url || appointment.patientPhoto}
+                              sizeClassName="w-8 h-8"
+                              textClassName="text-xs"
+                              fallbackClassName="bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300"
+                              borderClassName="border-outline-variant"
+                            />
 
                             {/* Nome com iniciais nos sobrenomes do meio */}
                             <div className="min-w-0 truncate">

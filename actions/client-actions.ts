@@ -98,10 +98,45 @@ export async function getClientsAction(
     const total = count ?? 0;
     const totalPages = Math.ceil(total / pageSize);
 
+    const clientRows = (data as Client[]) || [];
+    const clientEmails = Array.from(
+      new Set(clientRows.map((c) => c.email?.toLowerCase().trim()).filter(Boolean))
+    );
+
+    const profilesMap = new Map<string, string>();
+    if (clientEmails.length > 0) {
+      try {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("email, avatar_url")
+          .in("email", clientEmails);
+
+        if (profiles) {
+          for (const pr of profiles) {
+            if (pr.email && pr.avatar_url) {
+              profilesMap.set(pr.email.toLowerCase().trim(), pr.avatar_url);
+            }
+          }
+        }
+      } catch (profErr) {
+        console.warn("Falha ao buscar avatar_url em profiles:", profErr);
+      }
+    }
+
+    const enrichedClients = clientRows.map((c) => {
+      const email = (c.email || "").toLowerCase().trim();
+      const avatar = c.avatar_url || profilesMap.get(email) || c.foto_perfil || null;
+      return {
+        ...c,
+        avatar_url: avatar,
+        foto_perfil: c.foto_perfil || avatar,
+      };
+    });
+
     return {
       success: true,
       data: {
-        data: (data as Client[]) || [],
+        data: enrichedClients,
         total,
         page,
         pageSize,

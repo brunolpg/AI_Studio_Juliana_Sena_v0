@@ -18,6 +18,7 @@ import {
 import { PatientClinicalTabs, type ClinicalSubTab } from "./patient-clinical-tabs";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Client } from "@/types/client";
+import { PatientAvatar } from "@/components/shared/patient-avatar";
 
 interface PatientClinicalDashboardViewProps {
   initialClientId?: string;
@@ -73,13 +74,52 @@ export function PatientClinicalDashboardView({
         }
 
         if (pacientes && pacientes.length > 0) {
-          setClients(pacientes as Client[]);
+          // Busca profiles vinculados para incluir avatar_url
+          const emails = Array.from(
+            new Set(
+              pacientes
+                .map((p: any) => p.email?.toLowerCase().trim())
+                .filter(Boolean)
+            )
+          );
+
+          const profilesMap = new Map<string, string>();
+          if (emails.length > 0) {
+            try {
+              const { data: profiles } = await supabase
+                .from("profiles")
+                .select("email, avatar_url")
+                .in("email", emails);
+
+              if (profiles) {
+                for (const pr of profiles) {
+                  if (pr.email && pr.avatar_url) {
+                    profilesMap.set(pr.email.toLowerCase().trim(), pr.avatar_url);
+                  }
+                }
+              }
+            } catch (pErr) {
+              console.warn("Falha ao buscar avatar_url em profiles para prontuários:", pErr);
+            }
+          }
+
+          const enriched = pacientes.map((p: any) => {
+            const pEmail = (p.email || "").toLowerCase().trim();
+            const avatar = p.avatar_url || profilesMap.get(pEmail) || p.foto_perfil || null;
+            return {
+              ...p,
+              avatar_url: avatar,
+              foto_perfil: p.foto_perfil || avatar,
+            };
+          });
+
+          setClients(enriched as Client[]);
           if (!selectedPatientId) {
-            setSelectedPatientId(pacientes[0].id);
+            setSelectedPatientId(enriched[0].id);
           } else {
-            const exists = pacientes.some((p) => p.id === selectedPatientId);
+            const exists = enriched.some((p) => p.id === selectedPatientId);
             if (!exists) {
-              setSelectedPatientId(pacientes[0].id);
+              setSelectedPatientId(enriched[0].id);
             }
           }
         } else {
@@ -130,9 +170,15 @@ export function PatientClinicalDashboardView({
                 className="w-full min-w-[200px] flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 text-left cursor-pointer hover:border-emerald-500/80 dark:hover:border-emerald-500 transition-colors md-state-layer shadow-2xs overflow-hidden"
               >
                 <div className="flex items-center gap-2.5 min-w-0 overflow-hidden flex-1">
-                  <div className="w-8 h-8 rounded-full bg-emerald-700 dark:bg-emerald-500 text-white dark:text-slate-950 font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-                    {selectedPatient?.nome ? selectedPatient.nome.charAt(0).toUpperCase() : "P"}
-                  </div>
+                  {/* Foto de Perfil (avatar_url) ou Inicial */}
+                  <PatientAvatar
+                    name={selectedPatient?.nome || "Paciente"}
+                    avatarUrl={selectedPatient?.avatar_url || selectedPatient?.foto_perfil}
+                    sizeClassName="w-8 h-8"
+                    textClassName="text-xs"
+                    fallbackClassName="bg-emerald-700 dark:bg-emerald-500 text-white dark:text-slate-950"
+                    borderClassName="border-outline-variant"
+                  />
                   <div className="min-w-0 flex-1 overflow-hidden">
                     <span className="font-bold text-xs text-slate-900 dark:text-slate-100 block truncate">
                       {selectedPatient?.nome || "Selecione um paciente..."}
@@ -197,9 +243,15 @@ export function PatientClinicalDashboardView({
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 overflow-hidden flex-1">
-                          <div className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center shrink-0">
-                            {client.nome ? client.nome.charAt(0).toUpperCase() : "P"}
-                          </div>
+                          {/* Foto de Perfil (avatar_url) ou Inicial */}
+                          <PatientAvatar
+                            name={client.nome || "Paciente"}
+                            avatarUrl={client.avatar_url || client.foto_perfil}
+                            sizeClassName="w-7 h-7"
+                            textClassName="text-xs"
+                            fallbackClassName="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                            borderClassName="border-outline-variant"
+                          />
                           <div className="min-w-0 flex-1 overflow-hidden">
                             <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                               {client.nome}

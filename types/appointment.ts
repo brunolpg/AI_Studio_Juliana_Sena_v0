@@ -6,6 +6,8 @@ export interface Appointment {
   client_nome: string;
   client_email: string;
   client_telefone: string;
+  avatar_url?: string | null;
+  patientPhoto?: string | null;
   data: string; // YYYY-MM-DD
   horario_inicio: string; // "08:00"
   horario_fim: string; // "09:00"
