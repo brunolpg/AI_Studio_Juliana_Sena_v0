@@ -148,34 +148,34 @@ export function PropostasChipsSection({
         )}
       </div>
 
+      {/* Conteúdo Principal */}
+      <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-3">
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-500">
+            <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
+            <span>Carregando propostas de planejamento...</span>
+          </div>
+        ) : (
+          <PropostasCards
+            propostas={propostas}
+            client={
+              patientData
+                ? ({
+                    id: pacienteId,
+                    nome: patientData.nome,
+                    email: patientData.email,
+                    telefone: patientData.telefone,
+                  } as any)
+                : null
+            }
+            isPatientView={isPatient}
+            userRole={userRole}
+            onEdit={handleOpenEdit}
+            onRefresh={loadPropostas}
+            onNewProposta={isAdminOrProfissional ? handleOpenNew : undefined}
+          />
         )}
       </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-500">
-          <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
-          <span>Carregando propostas de planejamento...</span>
-        </div>
-      ) : (
-        <PropostasCards
-          propostas={propostas}
-          client={
-            patientData
-              ? ({
-                  id: pacienteId,
-                  nome: patientData.nome,
-                  email: patientData.email,
-                  telefone: patientData.telefone,
-                } as any)
-              : null
-          }
-          isPatientView={isPatient}
-          userRole={userRole}
-          onEdit={handleOpenEdit}
-          onRefresh={loadPropostas}
-          onNewProposta={isAdminOrProfissional ? handleOpenNew : undefined}
-        />
-      )}
 
       {/* Modal de Detalhes da Proposta */}
       {selectedProposta && (
