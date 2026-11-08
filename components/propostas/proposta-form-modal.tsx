@@ -840,7 +840,7 @@ export function PropostaFormModal({
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 hover:bg-teal-100/60 dark:hover:bg-teal-900/60 transition-all cursor-pointer shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ Adicionar Opção</span>
+                <span>Adicionar Opção</span>
               </button>
             </div>
 
@@ -924,7 +924,7 @@ export function PropostaFormModal({
                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 hover:bg-teal-100/60 dark:hover:bg-teal-900/60 transition-all cursor-pointer shadow-2xs"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          <span>+ Adicionar Procedimento</span>
+                          <span>Adicionar Procedimento</span>
                         </button>
                       </div>
 
@@ -1040,7 +1040,7 @@ export function PropostaFormModal({
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 hover:bg-teal-100/60 dark:hover:bg-teal-900/60 transition-all cursor-pointer shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ Adicionar Etapa</span>
+                <span>Adicionar Etapa</span>
               </button>
             </div>
 
@@ -1132,7 +1132,7 @@ export function PropostaFormModal({
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 hover:bg-teal-100/60 dark:hover:bg-teal-900/60 transition-all cursor-pointer shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ Adicionar Tópico</span>
+                <span>Adicionar Tópico</span>
               </button>
             </div>
 
