@@ -65,7 +65,6 @@ import { getPropostasByPaciente } from "@/app/actions/propostas-actions";
 import type { Proposta } from "@/types/proposta";
 import { PropostasCards } from "@/components/propostas/propostas-cards";
 import { PropostaFormModal } from "@/components/propostas/proposta-form-modal";
-import { PropostasChipsSection } from "@/components/propostas/propostas-chips-section";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
 import { useToast } from "@/components/ui/toast";
 import type { Client } from "@/types/client";
@@ -2246,7 +2245,7 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
             )}
 
             {/* ======================================================== */}
-            {/* ABA 3.5: PROPOSTAS DE PLANEJAMENTO */}
+            {/* ABA: PROPOSTAS DE PLANEJAMENTO CLÍNICO */}
             {/* ======================================================== */}
             {activeSubTab === "propostas" && (
               <div className="w-full">
@@ -2393,22 +2392,6 @@ export function PatientClinicalTabs({ client, onRefreshClient, isPatientView = f
               </div>
             )}
 
-            {/* ======================================================== */}
-            {/* ABA: PROPOSTAS DE PLANEJAMENTO */}
-            {/* ======================================================== */}
-            {activeSubTab === "propostas" && (
-              <div className="w-full">
-                <PropostasChipsSection
-                  pacienteId={client.id}
-                  userRole={user?.role}
-                  patientData={{
-                    nome: client.nome,
-                    email: client.email,
-                    telefone: client.telefone,
-                  }}
-                />
-              </div>
-            )}
           </>
         )}
       </div>

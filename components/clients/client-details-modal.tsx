@@ -3,7 +3,6 @@
 import React from "react";
 import { X, User, Calendar, Mail, Phone, MapPin, Briefcase, FileText, Clock, ShieldCheck, Tag, Stethoscope } from "lucide-react";
 import { PatientClinicalTabs } from "@/components/clinical/patient-clinical-tabs";
-import { PropostasChipsSection } from "@/components/propostas/propostas-chips-section";
 import { useAuth } from "@/components/auth/auth-context";
 import type { Client } from "@/types/client";
 
@@ -164,16 +163,6 @@ export function ClientDetailsModal({
             </div>
           </div>
 
-          {/* Seção de Propostas de Planejamento Clínico */}
-          <PropostasChipsSection
-            pacienteId={client.id}
-            userRole={user?.role}
-            patientData={{
-              nome: client.nome,
-              email: client.email,
-              telefone: client.telefone,
-            }}
-          />
 
           {/* Subcomponente de Abas do Prontuário, Histórico e Evoluções Clínicas */}
           <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
