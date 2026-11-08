@@ -86,7 +86,7 @@ function ProcedimentoCombobox({
   return (
     <div ref={containerRef} className="relative w-full">
       <div className="relative flex items-center">
-        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
+        <Search className="w-3.5 h-3.5 text-on-surface-variant absolute left-2.5 pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
@@ -97,7 +97,7 @@ function ProcedimentoCombobox({
           }}
           onFocus={() => setIsOpen(true)}
           placeholder="Buscar procedimento por nome ou categoria..."
-          className="w-full pl-8 pr-16 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1.5 focus:ring-teal-500 transition-all"
+          className="w-full pl-8 pr-16 py-1.5 text-xs rounded-md-md border border-outline-variant bg-surface-container text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-1.5 focus:ring-primary transition-all"
         />
         <div className="absolute right-1.5 flex items-center gap-0.5">
           {searchTerm && (
@@ -109,7 +109,7 @@ function ProcedimentoCombobox({
                 inputRef.current?.focus();
                 setIsOpen(true);
               }}
-              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md transition-colors"
+              className="p-1 text-on-surface-variant hover:text-on-surface rounded-md transition-colors"
               title="Limpar busca"
             >
               <X className="w-3 h-3" />
@@ -118,7 +118,7 @@ function ProcedimentoCombobox({
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md transition-colors"
+            className="p-1 text-on-surface-variant hover:text-on-surface rounded-md transition-colors"
           >
             <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
           </button>
@@ -126,9 +126,9 @@ function ProcedimentoCombobox({
       </div>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl z-50 divide-y divide-slate-100 dark:divide-slate-800/80">
+        <div className="absolute left-0 right-0 top-full mt-1.5 max-h-56 overflow-y-auto rounded-md-md border border-outline-variant bg-surface-container shadow-xl z-50 divide-y divide-outline-variant/30">
           {filtered.length === 0 ? (
-            <div className="p-3 text-center text-xs text-slate-500 dark:text-slate-400">
+            <div className="p-3 text-center text-xs text-on-surface-variant">
               Nenhum procedimento encontrado para &quot;{searchTerm}&quot;
             </div>
           ) : (
@@ -143,29 +143,178 @@ function ProcedimentoCombobox({
                     setSearchTerm(proc.procedimento);
                     setIsOpen(false);
                   }}
-                  className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between gap-2 hover:bg-teal-50/70 dark:hover:bg-teal-950/40 transition-colors cursor-pointer ${
+                  className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between gap-2 hover:bg-primary-container/30 transition-colors cursor-pointer ${
                     isSelected
-                      ? "bg-teal-50/50 dark:bg-teal-950/30 text-teal-800 dark:text-teal-200 font-semibold"
-                      : "text-slate-700 dark:text-slate-200"
+                      ? "bg-primary-container/50 text-on-primary-container font-semibold"
+                      : "text-on-surface"
                   }`}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{proc.procedimento}</div>
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1.5 mt-0.5">
-                      <span className="px-1.5 py-0.2 rounded-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                    <div className="text-[10px] text-on-surface-variant flex items-center gap-1.5 mt-0.5">
+                      <span className="px-1.5 py-0.2 rounded-sm bg-surface-container-high text-on-surface-variant">
                         {proc.categoria}
                       </span>
                       {proc.duracao && <span>• {proc.duracao}h</span>}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="font-mono font-bold text-teal-700 dark:text-teal-400">
+                    <span className="font-mono font-bold text-primary">
                       R$ {proc.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </button>
               );
             })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface PropostaModelo {
+  id: string;
+  titulo: string;
+  objetivo?: string;
+  opcoes?: OpcaoProposta[];
+  cronograma?: {
+    titulo?: string;
+    etapas?: EtapaCronograma[];
+  };
+  topicos?: TopicoProposta[];
+  profissional?: string;
+}
+
+interface TituloPropostaComboboxProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSelectModelo: (modelo: PropostaModelo) => void;
+  catalogo: PropostaModelo[];
+}
+
+function TituloPropostaCombobox({
+  value,
+  onChange,
+  onSelectModelo,
+  catalogo,
+}: TituloPropostaComboboxProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const filtered = useMemo(() => {
+    if (!catalogo || catalogo.length === 0) return [];
+    if (!value.trim()) return catalogo;
+    const term = value.toLowerCase();
+    return catalogo.filter(
+      (p) =>
+        p.titulo?.toLowerCase().includes(term) ||
+        (p.objetivo && p.objetivo.toLowerCase().includes(term))
+    );
+  }, [catalogo, value]);
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <div className="relative flex items-center">
+        <Search className="w-3.5 h-3.5 text-on-surface-variant absolute left-3 pointer-events-none" />
+        <input
+          ref={inputRef}
+          type="text"
+          required
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            if (!isOpen) setIsOpen(true);
+          }}
+          onFocus={() => {
+            if (catalogo.length > 0) setIsOpen(true);
+          }}
+          placeholder="Ex: Protocolo Rejuvenescimento Facial 2026"
+          className="w-full pl-9 pr-16 py-2.5 text-xs sm:text-sm rounded-md-md border border-outline-variant bg-surface-container text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+        />
+        <div className="absolute right-2 flex items-center gap-0.5">
+          {value && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange("");
+                inputRef.current?.focus();
+                setIsOpen(true);
+              }}
+              className="p-1 text-on-surface-variant hover:text-on-surface rounded-md transition-colors cursor-pointer"
+              title="Limpar título"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {catalogo.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-1 text-on-surface-variant hover:text-on-surface rounded-md transition-colors cursor-pointer"
+              title="Modelos salvos no banco"
+            >
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isOpen && catalogo.length > 0 && (
+        <div className="absolute left-0 right-0 top-full mt-1.5 max-h-56 overflow-y-auto rounded-md-md border border-outline-variant bg-surface-container shadow-xl z-50 divide-y divide-outline-variant/30">
+          {filtered.length === 0 ? (
+            <div className="p-3 text-center text-xs text-on-surface-variant">
+              Nenhuma proposta encontrada para &quot;{value}&quot;
+            </div>
+          ) : (
+            filtered.map((modelo) => (
+              <button
+                key={modelo.id}
+                type="button"
+                onClick={() => {
+                  onSelectModelo(modelo);
+                  setIsOpen(false);
+                }}
+                className="w-full px-3.5 py-2.5 text-left text-xs flex flex-col gap-1 hover:bg-primary-container/30 transition-colors cursor-pointer"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold text-on-surface truncate">{modelo.titulo}</span>
+                  {modelo.opcoes && (
+                    <span className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-sm bg-surface-container-high text-on-surface-variant">
+                      {modelo.opcoes.length} {modelo.opcoes.length === 1 ? "opção" : "opções"}
+                    </span>
+                  )}
+                </div>
+                {modelo.objetivo && (
+                  <p className="text-[11px] text-on-surface-variant line-clamp-1">
+                    {modelo.objetivo}
+                  </p>
+                )}
+              </button>
+            ))
           )}
         </div>
       )}
@@ -206,10 +355,11 @@ export function PropostaFormModal({
   const [etapas, setEtapas] = useState<EtapaCronograma[]>([]);
   const [topicos, setTopicos] = useState<TopicoProposta[]>([]);
   const [procedimentosList, setProcedimentosList] = useState<Procedimento[]>(PROCEDIMENTOS_CADASTRAIS);
+  const [catalogoPropostas, setCatalogoPropostas] = useState<PropostaModelo[]>([]);
 
-  // Busca procedimentos do banco em tempo real se disponíveis
+  // Busca procedimentos e modelos de propostas do banco em tempo real
   useEffect(() => {
-    async function loadDbProcedimentos() {
+    async function loadDbData() {
       try {
         const supabase = getSupabaseClient();
         if (supabase) {
@@ -220,13 +370,84 @@ export function PropostaFormModal({
           if (data && data.length > 0 && !error) {
             setProcedimentosList(data as Procedimento[]);
           }
+
+          const { data: propData, error: propError } = await supabase
+            .from("propostas")
+            .select("id, titulo, objetivo, opcoes, cronograma, topicos, profissional")
+            .order("created_at", { ascending: false });
+
+          if (propData && propData.length > 0 && !propError) {
+            const seen = new Set<string>();
+            const uniquePropostas: PropostaModelo[] = [];
+            for (const p of propData) {
+              const norm = (p.titulo || "").trim().toLowerCase();
+              if (norm && !seen.has(norm)) {
+                seen.add(norm);
+                uniquePropostas.push(p as unknown as PropostaModelo);
+              }
+            }
+            setCatalogoPropostas(uniquePropostas);
+          }
         }
       } catch {
-        // mantém fallback PROCEDIMENTOS_CADASTRAIS
+        // mantém fallbacks
       }
     }
-    loadDbProcedimentos();
+    loadDbData();
   }, []);
+
+  // Preenchimento automático ao selecionar modelo de proposta pré-existente
+  const handleSelectModelo = (modelo: PropostaModelo) => {
+    if (modelo.titulo) setTitulo(modelo.titulo);
+    if (modelo.objetivo) setObjetivo(modelo.objetivo);
+
+    if (modelo.opcoes && Array.isArray(modelo.opcoes) && modelo.opcoes.length > 0) {
+      const clonedOpcoes: OpcaoProposta[] = modelo.opcoes.map((opc) => ({
+        ...opc,
+        id: crypto.randomUUID(),
+        procedimentos: Array.isArray(opc.procedimentos)
+          ? opc.procedimentos.map((proc) => ({ ...proc }))
+          : [],
+        formas_pagamento: Array.isArray(opc.formas_pagamento)
+          ? opc.formas_pagamento.map((fp) => ({ ...fp }))
+          : [],
+      }));
+      setOpcoes(clonedOpcoes);
+    }
+
+    if (modelo.cronograma) {
+      if (modelo.cronograma.titulo) {
+        setCronogramaTitulo(modelo.cronograma.titulo);
+      }
+      if (Array.isArray(modelo.cronograma.etapas) && modelo.cronograma.etapas.length > 0) {
+        setEtapas(
+          modelo.cronograma.etapas.map((etapa) => ({
+            ...etapa,
+            id: crypto.randomUUID(),
+          }))
+        );
+      }
+    }
+
+    if (modelo.topicos && Array.isArray(modelo.topicos) && modelo.topicos.length > 0) {
+      setTopicos(
+        modelo.topicos.map((topico) => ({
+          ...topico,
+          id: crypto.randomUUID(),
+        }))
+      );
+    }
+
+    if (!propostaToEdit && modelo.profissional) {
+      setProfissional(modelo.profissional);
+    }
+
+    toast({
+      type: "success",
+      title: "Modelo Carregado",
+      description: "Dados da proposta carregados com sucesso",
+    });
+  };
 
   // Inicializa ou reseta formulário
   useEffect(() => {
@@ -561,16 +782,14 @@ export function PropostaFormModal({
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Título da Proposta *
                 </label>
-                <input
-                  type="text"
-                  required
+                <TituloPropostaCombobox
                   value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  placeholder="Ex: Protocolo Rejuvenescimento Facial 2026"
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  onChange={(val) => setTitulo(val)}
+                  onSelectModelo={handleSelectModelo}
+                  catalogo={catalogoPropostas}
                 />
               </div>
 
