@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { Appointment } from "@/types/appointment";
 import { useToast } from "@/components/ui/toast";
+import { PatientAvatar } from "@/components/shared/patient-avatar";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
 interface AppointmentDetailsModalProps {
   isOpen: boolean;
@@ -99,14 +101,32 @@ export function AppointmentDetailsModal({
     }
   };
 
-  const handleOpenLink = async () => {
+  const handleSendWhatsApp = async () => {
     let url = checkoutUrl;
     if (!url) {
       url = await handleGenerateLink();
     }
-    if (url) {
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
+    if (!url) return;
+
+    const rawPhone = appointment.client_telefone || "";
+    const cleanDigits = rawPhone.replace(/\D/g, "");
+    const targetPhone = cleanDigits.startsWith("55")
+      ? cleanDigits
+      : cleanDigits.length >= 10
+      ? `55${cleanDigits}`
+      : cleanDigits;
+
+    const patientName = appointment.client_nome || "Paciente";
+    const procedimentoNome = appointment.procedimento || "Consulta";
+
+    const message = `Olá, ${patientName}! Segue o link para pagamento do procedimento ${procedimentoNome}: ${url}`;
+    const encodedMessage = encodeURIComponent(message);
+
+    const waUrl = targetPhone
+      ? `https://wa.me/${targetPhone}?text=${encodedMessage}`
+      : `https://wa.me/?text=${encodedMessage}`;
+
+    window.open(waUrl, "_blank", "noopener,noreferrer");
   };
 
   const handleCopyLink = async () => {
@@ -143,16 +163,28 @@ export function AppointmentDetailsModal({
         {/* Cabeçalho */}
         <div className="p-4 sm:p-6 pb-4 flex items-center justify-between border-b border-outline-variant bg-surface-container shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-md-2xl bg-primary-container text-on-primary-container font-bold flex items-center justify-center shrink-0 shadow-2xs border border-primary/20">
-              {(appointment.client_nome || "P")[0].toUpperCase()}
-            </div>
+            <PatientAvatar
+              name={appointment.client_nome}
+              avatarUrl={
+                appointment.avatar_url ||
+                appointment.patientPhoto ||
+                (appointment as any).foto_url ||
+                (appointment as any).foto_perfil
+              }
+              sizeClassName="w-10 h-10"
+              textClassName="text-sm font-bold"
+              borderClassName="border-outline-variant"
+            />
             <div>
               <h3 className="text-base font-bold text-on-surface">
                 Detalhes do Atendimento
               </h3>
-              <p className="text-xs text-on-surface-variant">
-                {formatDateBR(appointment.data)}
-              </p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs sm:text-sm font-semibold bg-surface-container-high text-on-surface border border-outline-variant/80 shadow-2xs">
+                  <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                  {formatDateBR(appointment.data)}
+                </span>
+              </div>
             </div>
           </div>
           <button
@@ -168,26 +200,42 @@ export function AppointmentDetailsModal({
         {/* Conteúdo rolável */}
         <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
           {/* Card do Paciente */}
-          <div className="p-4 rounded-md-2xl bg-surface-container border border-outline-variant space-y-2">
+          <div className="p-4 rounded-md-2xl bg-surface-container border border-outline-variant space-y-3">
             <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
               PACIENTE
             </span>
-            <p className="text-sm font-bold text-on-surface">
-              {appointment.client_nome}
-            </p>
-            <div className="space-y-1 pt-1 text-xs text-on-surface-variant">
-              {appointment.client_telefone && (
-                <p className="flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span>{appointment.client_telefone}</span>
+            <div className="flex items-center gap-3">
+              <PatientAvatar
+                name={appointment.client_nome}
+                avatarUrl={
+                  appointment.avatar_url ||
+                  appointment.patientPhoto ||
+                  (appointment as any).foto_url ||
+                  (appointment as any).foto_perfil
+                }
+                sizeClassName="w-12 h-12"
+                textClassName="text-base font-bold"
+                borderClassName="border-outline-variant"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-on-surface truncate">
+                  {appointment.client_nome}
                 </p>
-              )}
-              {appointment.client_email && (
-                <p className="flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span>{appointment.client_email}</span>
-                </p>
-              )}
+                <div className="space-y-1 pt-1 text-xs text-on-surface-variant">
+                  {appointment.client_telefone && (
+                    <p className="flex items-center gap-2 truncate">
+                      <Phone className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span>{appointment.client_telefone}</span>
+                    </p>
+                  )}
+                  {appointment.client_email && (
+                    <p className="flex items-center gap-2 truncate">
+                      <Mail className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span>{appointment.client_email}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -265,7 +313,7 @@ export function AppointmentDetailsModal({
                       Pagamento via InfinitePay
                     </h4>
                     <p className="text-[11px] text-on-surface-variant">
-                      Gere ou copie o link de checkout seguro para o paciente
+                      Gere ou envie o link de checkout seguro diretamente pelo WhatsApp
                     </p>
                   </div>
                 </div>
@@ -314,15 +362,15 @@ export function AppointmentDetailsModal({
                 <button
                   type="button"
                   disabled={isGenerating}
-                  onClick={handleOpenLink}
+                  onClick={handleSendWhatsApp}
                   className="min-h-[44px] px-3.5 py-2 rounded-md-lg bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-2xs md-state-layer"
                 >
                   {isGenerating ? (
                     <Loader2 className="w-4 h-4 animate-spin text-on-primary shrink-0" />
                   ) : (
-                    <ExternalLink className="w-4 h-4 shrink-0" />
+                    <WhatsAppIcon className="w-4 h-4 shrink-0" />
                   )}
-                  <span>Abrir Link de Pagamento</span>
+                  <span>Enviar Link de Pagamento</span>
                 </button>
               </div>
             </div>

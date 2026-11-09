@@ -168,12 +168,6 @@ interface RawAppointmentRow {
     email?: string;
     telefone?: string;
     foto_perfil?: string;
-  } | Array<{
-    id?: string;
-    nome?: string;
-    email?: string;
-    telefone?: string;
-    foto_perfil?: string;
     avatar_url?: string;
   } | Array<{
     id?: string;
@@ -1370,5 +1364,131 @@ export async function addAppointmentAttachmentsAction({
   revalidatePath('/paciente');
   revalidatePath('/agendamentos');
   return { success: true, data: updatedList, message: 'Arquivos anexados com sucesso!' };
+}
+
+/**
+ * 8. GERAÇÃO DINÂMICA DE CHECKOUT INFINITEPAY BASEADA NO PROCEDIMENTO
+ */
+export async function getInfinitePayCheckoutLinkAction(
+  appointmentId: string
+): Promise<ActionResponse<{ checkoutUrl: string; valor: number }>> {
+  try {
+    const supabase = await createClient();
+    if (!supabase) {
+      return { success: false, message: "Banco de dados Supabase não configurado." };
+    }
+
+    const { data: appointment, error: appError } = await supabase
+      .from("appointments")
+      .select(`
+        id,
+        procedimento,
+        procedimento_id,
+        valor_cobrado,
+        pacientes (
+          nome,
+          email,
+          telefone
+        )
+      `)
+      .eq("id", appointmentId)
+      .single();
+
+    if (appError || !appointment) {
+      return { success: false, message: "Agendamento não encontrado no banco de dados." };
+    }
+
+    // Busca dinâmica do valor do procedimento vinculado
+    let procedurePrice: number | null = null;
+
+    if (appointment.valor_cobrado && Number(appointment.valor_cobrado) > 0) {
+      procedurePrice = Number(appointment.valor_cobrado);
+    } else {
+      if (appointment.procedimento_id) {
+        const { data: procById } = await supabase
+          .from("procedimentos")
+          .select("valor, procedimento")
+          .eq("id", appointment.procedimento_id)
+          .maybeSingle();
+
+        if (procById?.valor && Number(procById.valor) > 0) {
+          procedurePrice = Number(procById.valor);
+        }
+      }
+
+      if (!procedurePrice && appointment.procedimento) {
+        const { data: procByName } = await supabase
+          .from("procedimentos")
+          .select("valor, procedimento")
+          .ilike("procedimento", appointment.procedimento.trim())
+          .maybeSingle();
+
+        if (procByName?.valor && Number(procByName.valor) > 0) {
+          procedurePrice = Number(procByName.valor);
+        }
+      }
+
+      if (!procedurePrice && appointment.procedimento) {
+        const fallbackProc = PROCEDIMENTOS_CADASTRAIS.find(
+          (p) => p.procedimento.toLowerCase().trim() === appointment.procedimento.toLowerCase().trim()
+        );
+        if (fallbackProc?.valor) {
+          procedurePrice = Number(fallbackProc.valor);
+        }
+      }
+    }
+
+    const amountNumber = procedurePrice && procedurePrice > 0 ? procedurePrice : 200;
+    const priceInCents = Math.round(amountNumber * 100);
+
+    const handle = process.env.INFINITEPAY_HANDLE || "juliana-sena-rgl";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://drajulianasena.vercel.app";
+
+    const rawPhone = (appointment.pacientes as any)?.telefone || "";
+    const cleanPhone = rawPhone.replace(/\D/g, "");
+    const phoneWithCountry = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+
+    const payload = {
+      handle,
+      order_nsu: appointment.id,
+      items: [
+        {
+          quantity: 1,
+          price: priceInCents,
+          description: appointment.procedimento || "Consulta / Procedimento Estético",
+        },
+      ],
+      customer: {
+        name: (appointment.pacientes as any)?.nome || "Paciente",
+        email: (appointment.pacientes as any)?.email || undefined,
+        phone_number: phoneWithCountry.length >= 10 ? phoneWithCountry : undefined,
+      },
+      redirect_url: `${appUrl}/paciente?payment_status=success&id=${appointment.id}`,
+      webhook_url: `${appUrl}/api/webhooks/infinitepay`,
+    };
+
+    const response = await fetch("https://api.checkout.infinitepay.io/links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.url) {
+      return { success: false, message: data.message || "Erro ao gerar checkout na InfinitePay." };
+    }
+
+    return {
+      success: true,
+      message: "Link de pagamento InfinitePay gerado com sucesso!",
+      data: {
+        checkoutUrl: data.url,
+        valor: amountNumber,
+      },
+    };
+  } catch (err: any) {
+    console.error("[getInfinitePayCheckoutLinkAction] Erro:", err);
+    return { success: false, message: err.message || "Erro interno ao gerar link de pagamento." };
+  }
 }
 
