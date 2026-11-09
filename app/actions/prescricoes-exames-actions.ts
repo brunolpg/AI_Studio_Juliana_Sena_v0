@@ -53,7 +53,7 @@ const DEFAULT_ORIENTACOES: string[] = [
 async function getSupabaseClients() {
   const serverClient = await createClient();
   const adminClient = getSupabaseAdminClient();
-  const db = serverClient || adminClient;
+  const db = adminClient || serverClient;
   return { serverClient, adminClient, db };
 }
 
@@ -344,15 +344,16 @@ export async function savePrescricaoExame(
       };
     }
 
-    const { serverClient, adminClient } = await getSupabaseClients();
-    if (!serverClient && !adminClient) {
+    const serverClient = await createClient();
+    const adminClient = getSupabaseAdminClient();
+    const db = adminClient || serverClient;
+
+    if (!db) {
       return {
         success: false,
         error: "Banco de dados indisponível no momento.",
       };
     }
-
-    const db = adminClient || serverClient;
 
     // 1. Valida permissão do usuário autenticado ('administrador' ou 'profissional')
     if (serverClient) {
@@ -571,15 +572,16 @@ export async function suspenderPrescricaoExame(
       };
     }
 
-    const { serverClient, adminClient } = await getSupabaseClients();
-    if (!serverClient && !adminClient) {
+    const serverClient = await createClient();
+    const adminClient = getSupabaseAdminClient();
+    const db = adminClient || serverClient;
+
+    if (!db) {
       return {
         success: false,
         error: "Banco de dados indisponível no momento.",
       };
     }
-
-    const db = adminClient || serverClient;
 
     // Valida permissão do usuário
     if (serverClient) {
