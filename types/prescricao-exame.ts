@@ -59,4 +59,5 @@ export interface CatalogoExamesPreCadastrados {
   gruposSugeridos: string[];
   examesSugeridos: string[];
   orientacoesSugeridas: string[];
+  grupoItensMap?: Record<string, string[]>;
 }

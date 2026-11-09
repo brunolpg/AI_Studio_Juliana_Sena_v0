@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useId } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   FlaskConical,
@@ -12,6 +12,8 @@ import {
   Sparkles,
   Info,
   Check,
+  ChevronDown,
+  Search,
 } from "lucide-react";
 import type { Client } from "@/types/client";
 import type {
@@ -25,6 +27,279 @@ import {
   getCatalogoExamesPreCadastrados,
 } from "@/app/actions/prescricoes-exames-actions";
 import { useToast } from "@/components/ui/toast";
+
+interface GrupoSearchDropdownProps {
+  value: string;
+  onChange: (val: string) => void;
+  suggestions: string[];
+  disabled?: boolean;
+  grupoItensMap?: Record<string, string[]>;
+  onSelectSuggestion?: (groupName: string, suggestedExames?: string[]) => void;
+}
+
+function GrupoSearchDropdown({
+  value,
+  onChange,
+  suggestions,
+  disabled,
+  grupoItensMap,
+  onSelectSuggestion,
+}: GrupoSearchDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const query = value.toLowerCase().trim();
+  const filtered = suggestions.filter((s) =>
+    s.toLowerCase().includes(query)
+  );
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            if (!isOpen) setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder="Ex: Perfil Hematológico e Inflamatório"
+          className="w-full min-h-[44px] pl-3 pr-10 rounded-md-md border border-outline-variant bg-surface-container text-on-surface text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40"
+          disabled={disabled}
+          required
+        />
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          disabled={disabled}
+          className="absolute right-1 p-2 min-h-[36px] min-w-[36px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer flex items-center justify-center rounded-md-md"
+          title="Ver grupos sugeridos"
+          tabIndex={-1}
+        >
+          <ChevronDown
+            className={`w-4 h-4 transition-transform duration-150 ${
+              isOpen ? "rotate-180 text-primary" : ""
+            }`}
+          />
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container-high border border-outline-variant max-h-56 overflow-y-auto z-30 shadow-lg rounded-md-lg py-1.5 animate-in fade-in zoom-in-95 duration-100">
+          <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-outline-variant/60 flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <Search className="w-3 h-3 text-primary" />
+              <span>Grupos Sugeridos</span>
+            </span>
+            <span>{filtered.length} opções</span>
+          </div>
+          {filtered.length > 0 ? (
+            filtered.map((grpName, idx) => {
+              const isSelected = grpName.toLowerCase() === query;
+              const examesVinculados = grupoItensMap?.[grpName];
+              return (
+                <button
+                  key={`grp_opt_${idx}`}
+                  type="button"
+                  onClick={() => {
+                    onChange(grpName);
+                    if (onSelectSuggestion) {
+                      onSelectSuggestion(grpName, examesVinculados);
+                    }
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs sm:text-sm text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer flex items-center justify-between group"
+                >
+                  <div className="flex flex-col min-w-0 pr-2">
+                    <span
+                      className={`truncate ${
+                        isSelected ? "font-bold text-primary" : "font-medium"
+                      }`}
+                    >
+                      {grpName}
+                    </span>
+                    {examesVinculados && examesVinculados.length > 0 && (
+                      <span className="text-[10px] text-on-surface-variant truncate">
+                        {examesVinculados.slice(0, 3).join(", ")}
+                        {examesVinculados.length > 3 ? "..." : ""}
+                      </span>
+                    )}
+                  </div>
+                  {isSelected && (
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                  )}
+                </button>
+              );
+            })
+          ) : (
+            <div className="px-3 py-2.5 text-xs text-on-surface-variant italic">
+              Nenhum grupo correspondente. Continue digitando para cadastrar um novo grupo livremente.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ExameSearchDropdownProps {
+  value: string;
+  onChange: (val: string) => void;
+  suggestions: string[];
+  disabled?: boolean;
+  prioritySuggestions?: string[];
+}
+
+function ExameSearchDropdown({
+  value,
+  onChange,
+  suggestions,
+  disabled,
+  prioritySuggestions,
+}: ExameSearchDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const query = value.toLowerCase().trim();
+
+  const allSortedSuggestions = React.useMemo(() => {
+    if (!prioritySuggestions || prioritySuggestions.length === 0) {
+      return suggestions;
+    }
+    const prioritySet = new Set(
+      prioritySuggestions.map((s) => s.toLowerCase().trim())
+    );
+    const priorityItems = suggestions.filter((s) =>
+      prioritySet.has(s.toLowerCase().trim())
+    );
+    const otherItems = suggestions.filter(
+      (s) => !prioritySet.has(s.toLowerCase().trim())
+    );
+    return [...priorityItems, ...otherItems];
+  }, [suggestions, prioritySuggestions]);
+
+  const filtered = allSortedSuggestions.filter((s) =>
+    s.toLowerCase().includes(query)
+  );
+
+  return (
+    <div ref={containerRef} className="relative flex-1">
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            if (!isOpen) setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder="Digite ou selecione o exame (ex: Hemograma Completo)"
+          className="w-full min-h-[44px] pl-3 pr-10 rounded-md-md border border-outline-variant bg-surface text-on-surface text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          disabled={disabled}
+          required
+        />
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          disabled={disabled}
+          className="absolute right-1 p-2 min-h-[36px] min-w-[36px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer flex items-center justify-center rounded-md-md"
+          title="Ver exames sugeridos"
+          tabIndex={-1}
+        >
+          <ChevronDown
+            className={`w-4 h-4 transition-transform duration-150 ${
+              isOpen ? "rotate-180 text-primary" : ""
+            }`}
+          />
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container-high border border-outline-variant max-h-56 overflow-y-auto z-30 shadow-lg rounded-md-lg py-1.5 animate-in fade-in zoom-in-95 duration-100">
+          <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-outline-variant/60 flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <Search className="w-3 h-3 text-primary" />
+              <span>Exames Sugeridos</span>
+            </span>
+            <span>{filtered.length} opções</span>
+          </div>
+          {filtered.length > 0 ? (
+            filtered.map((exName, idx) => {
+              const isSelected = exName.toLowerCase() === query;
+              const isPriority = prioritySuggestions?.some(
+                (p) => p.toLowerCase().trim() === exName.toLowerCase().trim()
+              );
+              return (
+                <button
+                  key={`ex_opt_${idx}`}
+                  type="button"
+                  onClick={() => {
+                    onChange(exName);
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs sm:text-sm text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <span
+                      className={`truncate ${
+                        isSelected ? "font-bold text-primary" : "font-medium"
+                      }`}
+                    >
+                      {exName}
+                    </span>
+                    {isPriority && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-md-sm bg-primary-container text-on-primary-container font-semibold shrink-0">
+                        Do Grupo
+                      </span>
+                    )}
+                  </div>
+                  {isSelected && (
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                  )}
+                </button>
+              );
+            })
+          ) : (
+            <div className="px-3 py-2.5 text-xs text-on-surface-variant italic">
+              Nenhum exame correspondente. Continue digitando para cadastrar um novo exame livremente.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface ExamPrescriptionModalProps {
   isOpen: boolean;
@@ -60,8 +335,6 @@ export function ExamPrescriptionModal({
   zIndex = "z-50",
 }: ExamPrescriptionModalProps) {
   const { toast } = useToast();
-  const datalistGroupId = useId();
-  const datalistExamId = useId();
 
   const [catalogo, setCatalogo] = useState<CatalogoExamesPreCadastrados>({
     gruposSugeridos: [],
@@ -195,6 +468,36 @@ export function ExamPrescriptionModal({
   const handleGrupoNameChange = (index: number, newName: string) => {
     setGrupos((prev) =>
       prev.map((g, i) => (i === index ? { ...g, nome_grupo: newName } : g))
+    );
+  };
+
+  const handleSelectGrupoSuggestion = (
+    index: number,
+    groupName: string,
+    suggestedExames?: string[]
+  ) => {
+    setGrupos((prev) =>
+      prev.map((g, i) => {
+        if (i !== index) return g;
+        const currentFilledExames = g.exames
+          .map((e) => e.trim())
+          .filter((e) => e.length > 0);
+        if (
+          currentFilledExames.length === 0 &&
+          suggestedExames &&
+          suggestedExames.length > 0
+        ) {
+          return {
+            ...g,
+            nome_grupo: groupName,
+            exames: [...suggestedExames],
+          };
+        }
+        return {
+          ...g,
+          nome_grupo: groupName,
+        };
+      })
     );
   };
 
@@ -359,18 +662,6 @@ export function ExamPrescriptionModal({
     <div
       className={`fixed inset-0 ${zIndex} flex items-center justify-center p-3 sm:p-4 md:p-6 bg-on-surface/40 backdrop-blur-xs animate-in fade-in duration-200`}
     >
-      {/* Datalists compartilhados para autocompletes inteligentes */}
-      <datalist id={datalistGroupId}>
-        {catalogo.gruposSugeridos.map((grp, i) => (
-          <option key={`grp_${i}`} value={grp} />
-        ))}
-      </datalist>
-
-      <datalist id={datalistExamId}>
-        {catalogo.examesSugeridos.map((ex, i) => (
-          <option key={`ex_${i}`} value={ex} />
-        ))}
-      </datalist>
 
       <div className="w-full max-w-4xl max-h-[85dvh] bg-surface rounded-md-2xl sm:rounded-md-3xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Cabeçalho do Modal */}
@@ -543,15 +834,15 @@ export function ExamPrescriptionModal({
                           {grupo.exames.length} {grupo.exames.length === 1 ? "exame" : "exames"}
                         </span>
                       </div>
-                      <input
-                        type="text"
-                        list={datalistGroupId}
+                      <GrupoSearchDropdown
                         value={grupo.nome_grupo}
-                        onChange={(e) => handleGrupoNameChange(gIdx, e.target.value)}
-                        placeholder="Ex: Perfil Hematológico e Inflamatório"
-                        className="w-full min-h-[44px] px-3 rounded-md-md border border-outline-variant bg-surface-container text-on-surface text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        onChange={(newName) => handleGrupoNameChange(gIdx, newName)}
+                        suggestions={catalogo.gruposSugeridos}
+                        grupoItensMap={catalogo.grupoItensMap}
+                        onSelectSuggestion={(groupName, suggestedExames) =>
+                          handleSelectGrupoSuggestion(gIdx, groupName, suggestedExames)
+                        }
                         disabled={isSubmitting}
-                        required
                       />
                     </div>
 
@@ -580,17 +871,16 @@ export function ExamPrescriptionModal({
                         <span className="text-xs text-on-surface-variant font-mono w-5 text-right shrink-0">
                           {eIdx + 1}.
                         </span>
-                        <input
-                          type="text"
-                          list={datalistExamId}
+                        <ExameSearchDropdown
                           value={exame}
-                          onChange={(e) =>
-                            handleExameChange(gIdx, eIdx, e.target.value)
+                          onChange={(newValue) =>
+                            handleExameChange(gIdx, eIdx, newValue)
                           }
-                          placeholder="Digite ou selecione o exame (ex: Hemograma Completo)"
-                          className="flex-1 min-h-[44px] px-3 rounded-md-md border border-outline-variant bg-surface text-on-surface text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                          suggestions={catalogo.examesSugeridos}
+                          prioritySuggestions={
+                            catalogo.grupoItensMap?.[grupo.nome_grupo]
+                          }
                           disabled={isSubmitting}
-                          required
                         />
 
                         <button

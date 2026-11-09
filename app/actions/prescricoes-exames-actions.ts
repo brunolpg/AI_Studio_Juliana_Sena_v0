@@ -215,11 +215,40 @@ export async function getPrescricoesExamesByPaciente(
   }
 }
 
+const DEFAULT_GRUPO_ITENS: Record<string, string[]> = {
+  "Perfil Hematológico e Inflamatório": [
+    "Hemograma Completo",
+    "PCR Ultrassensível",
+    "Ferritina",
+  ],
+  "Perfil Metabólico e Glicídico": [
+    "Glicemia de Jejum",
+    "Hemoglobina Glicada (HbA1c)",
+    "Insulina Basal",
+  ],
+  "Perfil Hormonal e Tireoidiano": [
+    "TSH Ultrassensível",
+    "T4 Livre",
+  ],
+  "Vitaminas e Minerais": [
+    "Vitamina D (25-OH)",
+    "Vitamina B12",
+    "Zinco Sérico",
+  ],
+  "Função Hepática e Renal": [
+    "TGO (AST)",
+    "TGP (ALT)",
+    "Creatinina",
+    "Lipidograma Completo",
+  ],
+};
+
 /**
  * 2. getCatalogoExamesPreCadastrados
  * Agrega e retorna listas únicas de nomes de grupos, exames e orientações
- * extraídos dos registros existentes na tabela public.prescricoes_exames combinados
- * com o catálogo padrão inicial.
+ * extraídos das tabelas exames_grupos, exames_itens, exames_grupos_itens
+ * e dos registros existentes na tabela public.prescricoes_exames,
+ * combinados com o catálogo padrão inicial e ordenados alfabeticamente.
  */
 export async function getCatalogoExamesPreCadastrados(): Promise<
   PrescricaoExameActionResult<CatalogoExamesPreCadastrados>
@@ -231,49 +260,135 @@ export async function getCatalogoExamesPreCadastrados(): Promise<
     const gruposSet = new Set<string>(DEFAULT_GRUPOS);
     const examesSet = new Set<string>(DEFAULT_EXAMES);
     const orientacoesSet = new Set<string>(DEFAULT_ORIENTACOES);
+    const grupoItensMap: Record<string, string[]> = { ...DEFAULT_GRUPO_ITENS };
 
     if (activeDb) {
-      const { data: records, error } = await activeDb
-        .from("prescricoes_exames")
-        .select("grupos_exames, orientacoes")
-        .limit(200);
+      // 1. Consulta grupos cadastrados
+      try {
+        const { data: dbGrupos } = await activeDb
+          .from("exames_grupos")
+          .select("id, nome")
+          .order("nome", { ascending: true });
 
-      if (!error && records) {
-        for (const item of records) {
-          // Extrai grupos e exames
-          if (Array.isArray(item.grupos_exames)) {
-            for (const grp of item.grupos_exames as GrupoExameItem[]) {
-              if (grp && typeof grp.nome_grupo === "string" && grp.nome_grupo.trim()) {
-                gruposSet.add(grp.nome_grupo.trim());
-              }
-              if (Array.isArray(grp?.exames)) {
-                for (const ex of grp.exames) {
-                  if (typeof ex === "string" && ex.trim()) {
-                    examesSet.add(ex.trim());
-                  }
-                }
-              }
+        if (dbGrupos && Array.isArray(dbGrupos)) {
+          for (const g of dbGrupos) {
+            if (g?.nome && typeof g.nome === "string" && g.nome.trim()) {
+              gruposSet.add(g.nome.trim());
             }
           }
+        }
+      } catch (err) {
+        console.warn("Aviso ao consultar exames_grupos:", err);
+      }
 
-          // Extrai orientações
-          if (Array.isArray(item.orientacoes)) {
-            for (const ori of item.orientacoes) {
-              if (typeof ori === "string" && ori.trim()) {
-                orientacoesSet.add(ori.trim());
+      // 2. Consulta exames cadastrados
+      try {
+        const { data: dbItens } = await activeDb
+          .from("exames_itens")
+          .select("id, nome")
+          .order("nome", { ascending: true });
+
+        if (dbItens && Array.isArray(dbItens)) {
+          for (const item of dbItens) {
+            if (item?.nome && typeof item.nome === "string" && item.nome.trim()) {
+              examesSet.add(item.nome.trim());
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Aviso ao consultar exames_itens:", err);
+      }
+
+      // 3. Consulta relação grupo-exame caso exista para facilitar a sugestão automática
+      try {
+        const { data: dbRelacoes } = await activeDb
+          .from("exames_grupos_itens")
+          .select(`
+            grupo_id,
+            item_id,
+            exames_grupos ( nome ),
+            exames_itens ( nome )
+          `);
+
+        if (dbRelacoes && Array.isArray(dbRelacoes)) {
+          for (const rel of dbRelacoes) {
+            const grupoNome = (rel as any)?.exames_grupos?.nome;
+            const itemNome = (rel as any)?.exames_itens?.nome;
+            if (grupoNome && itemNome) {
+              const gKey = grupoNome.trim();
+              const iVal = itemNome.trim();
+              if (!grupoItensMap[gKey]) {
+                grupoItensMap[gKey] = [];
+              }
+              if (!grupoItensMap[gKey].includes(iVal)) {
+                grupoItensMap[gKey].push(iVal);
               }
             }
           }
         }
+      } catch {
+        // Tabela de relacionamento pode ser opcional
+      }
+
+      // 4. Agrega registros de prescrições existentes
+      try {
+        const { data: records, error } = await activeDb
+          .from("prescricoes_exames")
+          .select("grupos_exames, orientacoes")
+          .limit(200);
+
+        if (!error && records) {
+          for (const item of records) {
+            // Extrai grupos e exames
+            if (Array.isArray(item.grupos_exames)) {
+              for (const grp of item.grupos_exames as GrupoExameItem[]) {
+                if (grp && typeof grp.nome_grupo === "string" && grp.nome_grupo.trim()) {
+                  const gName = grp.nome_grupo.trim();
+                  gruposSet.add(gName);
+                  if (Array.isArray(grp?.exames)) {
+                    if (!grupoItensMap[gName]) {
+                      grupoItensMap[gName] = [];
+                    }
+                    for (const ex of grp.exames) {
+                      if (typeof ex === "string" && ex.trim()) {
+                        const exName = ex.trim();
+                        examesSet.add(exName);
+                        if (!grupoItensMap[gName].includes(exName)) {
+                          grupoItensMap[gName].push(exName);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            // Extrai orientações
+            if (Array.isArray(item.orientacoes)) {
+              for (const ori of item.orientacoes) {
+                if (typeof ori === "string" && ori.trim()) {
+                  orientacoesSet.add(ori.trim());
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // Ignora erro
       }
     }
 
     return {
       success: true,
       data: {
-        gruposSugeridos: Array.from(gruposSet),
-        examesSugeridos: Array.from(examesSet),
+        gruposSugeridos: Array.from(gruposSet).sort((a, b) =>
+          a.localeCompare(b, "pt-BR", { sensitivity: "base" })
+        ),
+        examesSugeridos: Array.from(examesSet).sort((a, b) =>
+          a.localeCompare(b, "pt-BR", { sensitivity: "base" })
+        ),
         orientacoesSugeridas: Array.from(orientacoesSet),
+        grupoItensMap,
       },
     };
   } catch (err: any) {
@@ -281,9 +396,14 @@ export async function getCatalogoExamesPreCadastrados(): Promise<
       success: false,
       error: err?.message || "Erro ao consultar catálogo de exames pré-cadastrados.",
       data: {
-        gruposSugeridos: DEFAULT_GRUPOS,
-        examesSugeridos: DEFAULT_EXAMES,
+        gruposSugeridos: [...DEFAULT_GRUPOS].sort((a, b) =>
+          a.localeCompare(b, "pt-BR", { sensitivity: "base" })
+        ),
+        examesSugeridos: [...DEFAULT_EXAMES].sort((a, b) =>
+          a.localeCompare(b, "pt-BR", { sensitivity: "base" })
+        ),
         orientacoesSugeridas: DEFAULT_ORIENTACOES,
+        grupoItensMap: DEFAULT_GRUPO_ITENS,
       },
     };
   }
