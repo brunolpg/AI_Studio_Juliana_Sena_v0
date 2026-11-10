@@ -520,6 +520,82 @@ export async function savePrescricaoExame(
     const { payloadCanonico, hash, assinatura, algoritmo } =
       generatePropostaHash(payloadParaHash);
 
+    // 3.1. Persistência de Novos Grupos e Exames no Catálogo
+    try {
+      for (const grp of gruposFiltrados) {
+        const nomeGrupoTrim = grp.nome_grupo.trim();
+        if (!nomeGrupoTrim) continue;
+
+        let grupoId: string | null = null;
+        try {
+          const { data: insertedGrupo } = await db
+            .from("exames_grupos")
+            .upsert(
+              { nome: nomeGrupoTrim },
+              { onConflict: "nome", ignoreDuplicates: true }
+            )
+            .select("id")
+            .maybeSingle();
+
+          if (insertedGrupo?.id) {
+            grupoId = insertedGrupo.id;
+          } else {
+            const { data: existingGrupo } = await db
+              .from("exames_grupos")
+              .select("id")
+              .eq("nome", nomeGrupoTrim)
+              .maybeSingle();
+            grupoId = existingGrupo?.id || null;
+          }
+        } catch (grpErr) {
+          console.warn("Aviso ao persistir grupo no catálogo:", grpErr);
+        }
+
+        // Itera sobre cada exame da lista
+        for (const exameNome of grp.exames) {
+          const exameNomeTrim = typeof exameNome === "string" ? exameNome.trim() : "";
+          if (!exameNomeTrim) continue;
+
+          let itemId: string | null = null;
+          try {
+            const { data: insertedItem } = await db
+              .from("exames_itens")
+              .upsert(
+                { nome: exameNomeTrim },
+                { onConflict: "nome", ignoreDuplicates: true }
+              )
+              .select("id")
+              .maybeSingle();
+
+            if (insertedItem?.id) {
+              itemId = insertedItem.id;
+            } else {
+              const { data: existingItem } = await db
+                .from("exames_itens")
+                .select("id")
+                .eq("nome", exameNomeTrim)
+                .maybeSingle();
+              itemId = existingItem?.id || null;
+            }
+
+            // Amarração dos IDs na tabela associativa exames_grupos_itens
+            if (grupoId && itemId) {
+              await db
+                .from("exames_grupos_itens")
+                .upsert(
+                  { grupo_id: grupoId, item_id: itemId },
+                  { onConflict: "grupo_id,item_id", ignoreDuplicates: true }
+                );
+            }
+          } catch (itemErr) {
+            console.warn("Aviso ao persistir exame/vínculo no catálogo:", itemErr);
+          }
+        }
+      }
+    } catch (catErr) {
+      console.warn("Aviso geral ao persistir catálogo de exames:", catErr);
+    }
+
     const now = new Date().toISOString();
 
     let resultData: PrescricaoExame;

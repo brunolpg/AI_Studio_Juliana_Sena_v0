@@ -35,6 +35,7 @@ interface GrupoSearchDropdownProps {
   disabled?: boolean;
   grupoItensMap?: Record<string, string[]>;
   onSelectSuggestion?: (groupName: string, suggestedExames?: string[]) => void;
+  gruposJaSelecionadosEmOutros?: string[];
 }
 
 function GrupoSearchDropdown({
@@ -44,14 +45,17 @@ function GrupoSearchDropdown({
   disabled,
   grupoItensMap,
   onSelectSuggestion,
+  gruposJaSelecionadosEmOutros = [],
 }: GrupoSearchDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsTyping(false);
         setIsOpen(false);
       }
     };
@@ -64,9 +68,9 @@ function GrupoSearchDropdown({
   }, [isOpen]);
 
   const query = value.toLowerCase().trim();
-  const filtered = suggestions.filter((s) =>
-    s.toLowerCase().includes(query)
-  );
+  const filtered = isTyping && query
+    ? suggestions.filter((s) => s.toLowerCase().includes(query))
+    : suggestions;
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -76,9 +80,13 @@ function GrupoSearchDropdown({
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
+            setIsTyping(true);
             if (!isOpen) setIsOpen(true);
           }}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setIsTyping(false);
+            setIsOpen(true);
+          }}
           placeholder="Ex: Perfil Hematológico e Inflamatório"
           className="w-full min-h-[44px] pl-3 pr-10 rounded-md-md border border-outline-variant bg-surface-container text-on-surface text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40"
           disabled={disabled}
@@ -86,10 +94,13 @@ function GrupoSearchDropdown({
         />
         <button
           type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
+          onClick={() => {
+            setIsTyping(false);
+            setIsOpen((prev) => !prev);
+          }}
           disabled={disabled}
           className="absolute right-1 p-2 min-h-[36px] min-w-[36px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer flex items-center justify-center rounded-md-md"
-          title="Ver grupos sugeridos"
+          title="Ver todos os grupos sugeridos"
           tabIndex={-1}
         >
           <ChevronDown
@@ -101,18 +112,41 @@ function GrupoSearchDropdown({
       </div>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container-high border border-outline-variant max-h-56 overflow-y-auto z-30 shadow-lg rounded-md-lg py-1.5 animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container-high border border-outline-variant shadow-xl rounded-md-xl max-h-60 overflow-y-auto z-30 py-1.5 animate-in fade-in zoom-in-95 duration-100">
           <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-outline-variant/60 flex items-center justify-between">
             <span className="flex items-center gap-1">
               <Search className="w-3 h-3 text-primary" />
-              <span>Grupos Sugeridos</span>
+              <span>Grupos Disponíveis</span>
             </span>
             <span>{filtered.length} opções</span>
           </div>
           {filtered.length > 0 ? (
             filtered.map((grpName, idx) => {
-              const isSelected = grpName.toLowerCase() === query;
+              const grpLower = grpName.trim().toLowerCase();
+              const isSelected = grpLower === query;
+              const isAlreadySelected = gruposJaSelecionadosEmOutros.includes(grpLower);
               const examesVinculados = grupoItensMap?.[grpName];
+
+              if (isAlreadySelected) {
+                return (
+                  <button
+                    key={`grp_opt_${idx}`}
+                    type="button"
+                    disabled={true}
+                    className="w-full text-left px-3 py-2 text-xs sm:text-sm text-on-surface-variant/40 bg-surface-container/50 cursor-not-allowed flex items-center justify-between transition-colors"
+                  >
+                    <div className="flex flex-col min-w-0 pr-2">
+                      <span className="truncate font-medium line-through decoration-on-surface-variant/30">
+                        {grpName}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-warning px-1.5 py-0.5 rounded-md-sm bg-warning-container/40 text-on-warning-container shrink-0">
+                      (Já selecionado)
+                    </span>
+                  </button>
+                );
+              }
+
               return (
                 <button
                   key={`grp_opt_${idx}`}
@@ -122,9 +156,10 @@ function GrupoSearchDropdown({
                     if (onSelectSuggestion) {
                       onSelectSuggestion(grpName, examesVinculados);
                     }
+                    setIsTyping(false);
                     setIsOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs sm:text-sm text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer flex items-center justify-between group"
+                  className="w-full text-left px-3 py-2 text-xs sm:text-sm text-on-surface hover:bg-surface-container-highest cursor-pointer flex items-center justify-between transition-colors group"
                 >
                   <div className="flex flex-col min-w-0 pr-2">
                     <span
@@ -164,6 +199,7 @@ interface ExameSearchDropdownProps {
   suggestions: string[];
   disabled?: boolean;
   prioritySuggestions?: string[];
+  examesJaSelecionadosNesteGrupo?: string[];
 }
 
 function ExameSearchDropdown({
@@ -172,14 +208,17 @@ function ExameSearchDropdown({
   suggestions,
   disabled,
   prioritySuggestions,
+  examesJaSelecionadosNesteGrupo = [],
 }: ExameSearchDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsTyping(false);
         setIsOpen(false);
       }
     };
@@ -209,9 +248,9 @@ function ExameSearchDropdown({
     return [...priorityItems, ...otherItems];
   }, [suggestions, prioritySuggestions]);
 
-  const filtered = allSortedSuggestions.filter((s) =>
-    s.toLowerCase().includes(query)
-  );
+  const filtered = isTyping && query
+    ? allSortedSuggestions.filter((s) => s.toLowerCase().includes(query))
+    : allSortedSuggestions;
 
   return (
     <div ref={containerRef} className="relative flex-1">
@@ -221,9 +260,13 @@ function ExameSearchDropdown({
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
+            setIsTyping(true);
             if (!isOpen) setIsOpen(true);
           }}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setIsTyping(false);
+            setIsOpen(true);
+          }}
           placeholder="Digite ou selecione o exame (ex: Hemograma Completo)"
           className="w-full min-h-[44px] pl-3 pr-10 rounded-md-md border border-outline-variant bg-surface text-on-surface text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           disabled={disabled}
@@ -231,10 +274,13 @@ function ExameSearchDropdown({
         />
         <button
           type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
+          onClick={() => {
+            setIsTyping(false);
+            setIsOpen((prev) => !prev);
+          }}
           disabled={disabled}
           className="absolute right-1 p-2 min-h-[36px] min-w-[36px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer flex items-center justify-center rounded-md-md"
-          title="Ver exames sugeridos"
+          title="Ver todos os exames sugeridos"
           tabIndex={-1}
         >
           <ChevronDown
@@ -246,29 +292,53 @@ function ExameSearchDropdown({
       </div>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container-high border border-outline-variant max-h-56 overflow-y-auto z-30 shadow-lg rounded-md-lg py-1.5 animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container-high border border-outline-variant shadow-xl rounded-md-xl max-h-60 overflow-y-auto z-30 py-1.5 animate-in fade-in zoom-in-95 duration-100">
           <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-outline-variant/60 flex items-center justify-between">
             <span className="flex items-center gap-1">
               <Search className="w-3 h-3 text-primary" />
-              <span>Exames Sugeridos</span>
+              <span>Exames Disponíveis</span>
             </span>
             <span>{filtered.length} opções</span>
           </div>
           {filtered.length > 0 ? (
             filtered.map((exName, idx) => {
-              const isSelected = exName.toLowerCase() === query;
+              const exLower = exName.trim().toLowerCase();
+              const isSelected = exLower === query;
+              const isAlreadyAdded = examesJaSelecionadosNesteGrupo.includes(exLower);
               const isPriority = prioritySuggestions?.some(
-                (p) => p.toLowerCase().trim() === exName.toLowerCase().trim()
+                (p) => p.toLowerCase().trim() === exLower
               );
+
+              if (isAlreadyAdded) {
+                return (
+                  <button
+                    key={`ex_opt_${idx}`}
+                    type="button"
+                    disabled={true}
+                    className="w-full text-left px-3 py-2 text-xs sm:text-sm text-on-surface-variant/40 bg-surface-container/50 cursor-not-allowed flex items-center justify-between transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className="truncate font-medium line-through decoration-on-surface-variant/30">
+                        {exName}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-warning px-1.5 py-0.5 rounded-md-sm bg-warning-container/40 text-on-warning-container shrink-0">
+                      (Já adicionado neste grupo)
+                    </span>
+                  </button>
+                );
+              }
+
               return (
                 <button
                   key={`ex_opt_${idx}`}
                   type="button"
                   onClick={() => {
                     onChange(exName);
+                    setIsTyping(false);
                     setIsOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs sm:text-sm text-on-surface hover:bg-surface-container-highest transition-colors cursor-pointer flex items-center justify-between group"
+                  className="w-full text-left px-3 py-2 text-xs sm:text-sm text-on-surface hover:bg-surface-container-highest cursor-pointer flex items-center justify-between transition-colors group"
                 >
                   <div className="flex items-center gap-2 min-w-0 pr-2">
                     <span
@@ -818,82 +888,97 @@ export function ExamPrescriptionModal({
             </div>
 
             <div className="space-y-4">
-              {grupos.map((grupo, gIdx) => (
-                <div
-                  key={grupo.id || `grp_${gIdx}`}
-                  className="p-4 rounded-md-xl border border-outline-variant bg-surface-container-lowest space-y-3 shadow-2xs"
-                >
-                  {/* Cabeçalho do Grupo */}
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex-1 min-w-[240px] space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-primary">
-                          Grupo #{gIdx + 1}
-                        </label>
-                        <span className="text-[10px] text-on-surface-variant">
-                          {grupo.exames.length} {grupo.exames.length === 1 ? "exame" : "exames"}
-                        </span>
-                      </div>
-                      <GrupoSearchDropdown
-                        value={grupo.nome_grupo}
-                        onChange={(newName) => handleGrupoNameChange(gIdx, newName)}
-                        suggestions={catalogo.gruposSugeridos}
-                        grupoItensMap={catalogo.grupoItensMap}
-                        onSelectSuggestion={(groupName, suggestedExames) =>
-                          handleSelectGrupoSuggestion(gIdx, groupName, suggestedExames)
-                        }
-                        disabled={isSubmitting}
-                      />
-                    </div>
+              {grupos.map((grupo, gIdx) => {
+                const gruposJaSelecionadosEmOutros = grupos
+                  .filter((_, idx) => idx !== gIdx)
+                  .map((g) => g.nome_grupo.trim().toLowerCase())
+                  .filter(Boolean);
 
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveGrupo(gIdx)}
-                      className="p-2 min-h-[44px] min-w-[44px] text-on-surface-variant hover:text-error hover:bg-error-container/40 rounded-full transition-colors cursor-pointer self-end flex items-center justify-center"
-                      title="Excluir este grupo"
-                      disabled={isSubmitting}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Lista de Exames do Grupo */}
-                  <div className="space-y-2 pl-1 sm:pl-3 border-l-2 border-primary/30">
-                    <div className="text-[11px] font-medium text-on-surface-variant">
-                      Exames Solicitados neste Grupo:
-                    </div>
-
-                    {grupo.exames.map((exame, eIdx) => (
-                      <div
-                        key={`ex_${gIdx}_${eIdx}`}
-                        className="flex items-center gap-2"
-                      >
-                        <span className="text-xs text-on-surface-variant font-mono w-5 text-right shrink-0">
-                          {eIdx + 1}.
-                        </span>
-                        <ExameSearchDropdown
-                          value={exame}
-                          onChange={(newValue) =>
-                            handleExameChange(gIdx, eIdx, newValue)
+                return (
+                  <div
+                    key={grupo.id || `grp_${gIdx}`}
+                    className="p-4 rounded-md-xl border border-outline-variant bg-surface-container-lowest space-y-3 shadow-2xs"
+                  >
+                    {/* Cabeçalho do Grupo */}
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex-1 min-w-[240px] space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                            Grupo #{gIdx + 1}
+                          </label>
+                          <span className="text-[10px] text-on-surface-variant">
+                            {grupo.exames.length} {grupo.exames.length === 1 ? "exame" : "exames"}
+                          </span>
+                        </div>
+                        <GrupoSearchDropdown
+                          value={grupo.nome_grupo}
+                          onChange={(newName) => handleGrupoNameChange(gIdx, newName)}
+                          suggestions={catalogo.gruposSugeridos}
+                          grupoItensMap={catalogo.grupoItensMap}
+                          onSelectSuggestion={(groupName, suggestedExames) =>
+                            handleSelectGrupoSuggestion(gIdx, groupName, suggestedExames)
                           }
-                          suggestions={catalogo.examesSugeridos}
-                          prioritySuggestions={
-                            catalogo.grupoItensMap?.[grupo.nome_grupo]
-                          }
+                          gruposJaSelecionadosEmOutros={gruposJaSelecionadosEmOutros}
                           disabled={isSubmitting}
                         />
-
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveExame(gIdx, eIdx)}
-                          className="p-2 min-h-[44px] min-w-[44px] text-on-surface-variant hover:text-error hover:bg-error-container/40 rounded-full transition-colors cursor-pointer flex items-center justify-center shrink-0"
-                          title="Remover exame"
-                          disabled={isSubmitting}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
                       </div>
-                    ))}
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveGrupo(gIdx)}
+                        className="p-2 min-h-[44px] min-w-[44px] text-on-surface-variant hover:text-error hover:bg-error-container/40 rounded-full transition-colors cursor-pointer self-end flex items-center justify-center"
+                        title="Excluir este grupo"
+                        disabled={isSubmitting}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Lista de Exames do Grupo */}
+                    <div className="space-y-2 pl-1 sm:pl-3 border-l-2 border-primary/30">
+                      <div className="text-[11px] font-medium text-on-surface-variant">
+                        Exames Solicitados neste Grupo:
+                      </div>
+
+                      {grupo.exames.map((exame, eIdx) => {
+                        const examesJaSelecionadosNesteGrupo = grupo.exames
+                          .filter((_, idx) => idx !== eIdx)
+                          .map((ex) => ex.trim().toLowerCase())
+                          .filter(Boolean);
+
+                        return (
+                          <div
+                            key={`ex_${gIdx}_${eIdx}`}
+                            className="flex items-center gap-2"
+                          >
+                            <span className="text-xs text-on-surface-variant font-mono w-5 text-right shrink-0">
+                              {eIdx + 1}.
+                            </span>
+                            <ExameSearchDropdown
+                              value={exame}
+                              onChange={(newValue) =>
+                                handleExameChange(gIdx, eIdx, newValue)
+                              }
+                              suggestions={catalogo.examesSugeridos}
+                              prioritySuggestions={
+                                catalogo.grupoItensMap?.[grupo.nome_grupo]
+                              }
+                              examesJaSelecionadosNesteGrupo={examesJaSelecionadosNesteGrupo}
+                              disabled={isSubmitting}
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveExame(gIdx, eIdx)}
+                              className="p-2 min-h-[44px] min-w-[44px] text-on-surface-variant hover:text-error hover:bg-error-container/40 rounded-full transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                              title="Remover exame"
+                              disabled={isSubmitting}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
 
                     <div className="pt-1">
                       <button
@@ -908,8 +993,9 @@ export function ExamPrescriptionModal({
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
+          </div>
           </div>
 
           {/* =============================================================== */}
