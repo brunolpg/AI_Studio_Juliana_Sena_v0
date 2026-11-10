@@ -371,6 +371,157 @@ function ExameSearchDropdown({
   );
 }
 
+interface OrientacaoSearchDropdownProps {
+  value: string;
+  onChange: (val: string) => void;
+  suggestions: string[];
+  disabled?: boolean;
+  outrasOrientacoes?: string[];
+}
+
+function OrientacaoSearchDropdown({
+  value,
+  onChange,
+  suggestions,
+  disabled,
+  outrasOrientacoes = [],
+}: OrientacaoSearchDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsTyping(false);
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const query = value.toLowerCase().trim();
+  const filtered = isTyping && query
+    ? suggestions.filter((s) => s.toLowerCase().includes(query))
+    : suggestions;
+
+  return (
+    <div ref={containerRef} className="relative flex-1">
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setIsTyping(true);
+            if (!isOpen) setIsOpen(true);
+          }}
+          onFocus={() => {
+            setIsTyping(false);
+            setIsOpen(true);
+          }}
+          placeholder="Ex: Jejum obrigatório de 8 a 12 horas."
+          className="w-full min-h-[44px] pl-3 pr-10 rounded-md-md border border-outline-variant bg-surface-container-lowest text-on-surface text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          disabled={disabled}
+          required
+        />
+        <button
+          type="button"
+          onClick={() => {
+            setIsTyping(false);
+            setIsOpen((prev) => !prev);
+          }}
+          disabled={disabled}
+          className="absolute right-1 p-2 min-h-[36px] min-w-[36px] text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer flex items-center justify-center rounded-md-md"
+          title="Ver todas as orientações sugeridas"
+          tabIndex={-1}
+        >
+          <ChevronDown
+            className={`w-4 h-4 transition-transform duration-150 ${
+              isOpen ? "rotate-180 text-primary" : ""
+            }`}
+          />
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-container-high border border-outline-variant shadow-xl rounded-md-xl max-h-60 overflow-y-auto z-30 py-1.5 animate-in fade-in zoom-in-95 duration-100">
+          <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant border-b border-outline-variant/60 flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <Search className="w-3 h-3 text-primary" />
+              <span>Orientações Sugeridas</span>
+            </span>
+            <span>{filtered.length} opções</span>
+          </div>
+          {filtered.length > 0 ? (
+            filtered.map((oriText, idx) => {
+              const oriLower = oriText.trim().toLowerCase();
+              const isSelected = oriLower === query;
+              const isAlreadyAdded = outrasOrientacoes.includes(oriLower);
+
+              if (isAlreadyAdded) {
+                return (
+                  <button
+                    key={`ori_opt_${idx}`}
+                    type="button"
+                    disabled={true}
+                    className="w-full text-left px-3 py-2 text-xs sm:text-sm text-on-surface-variant/40 bg-surface-container/50 cursor-not-allowed flex items-center justify-between transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className="truncate font-medium line-through decoration-on-surface-variant/30">
+                        {oriText}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-warning px-1.5 py-0.5 rounded-md-sm bg-warning-container/40 text-on-warning-container shrink-0">
+                      (Já adicionada)
+                    </span>
+                  </button>
+                );
+              }
+
+              return (
+                <button
+                  key={`ori_opt_${idx}`}
+                  type="button"
+                  onClick={() => {
+                    onChange(oriText);
+                    setIsTyping(false);
+                    setIsOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs sm:text-sm text-on-surface hover:bg-surface-container-highest cursor-pointer flex items-center justify-between transition-colors group"
+                >
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <span
+                      className={`truncate ${
+                        isSelected ? "font-bold text-primary" : "font-medium"
+                      }`}
+                    >
+                      {oriText}
+                    </span>
+                  </div>
+                  {isSelected && (
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                  )}
+                </button>
+              );
+            })
+          ) : (
+            <div className="px-3 py-2.5 text-xs text-on-surface-variant italic">
+              Nenhuma orientação correspondente. Continue digitando para cadastrar uma nova orientação livremente.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface ExamPrescriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -1013,7 +1164,7 @@ export function ExamPrescriptionModal({
               <button
                 type="button"
                 onClick={() => handleAddOrientacao("")}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] text-xs font-semibold rounded-md-full bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-all cursor-pointer shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] text-xs font-semibold rounded-md-full bg-primary-container text-on-primary-container hover:brightness-95 transition-all cursor-pointer shadow-2xs"
                 disabled={isSubmitting}
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -1029,25 +1180,32 @@ export function ExamPrescriptionModal({
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {catalogo.orientacoesSugeridas.map((sug, sIdx) => {
-                    const alreadyAdded = orientacoes.includes(sug);
+                    const isJaAdicionada = orientacoes.some(
+                      (ori) => ori.trim().toLowerCase() === sug.trim().toLowerCase()
+                    );
                     return (
                       <button
                         key={`sug_${sIdx}`}
                         type="button"
                         onClick={() => {
-                          if (!alreadyAdded) {
+                          if (!isJaAdicionada) {
                             handleAddOrientacao(sug);
                           }
                         }}
-                        disabled={alreadyAdded || isSubmitting}
-                        className={`text-[11px] px-2.5 py-1 rounded-md-full border text-left transition-colors cursor-pointer flex items-center gap-1 ${
-                          alreadyAdded
-                            ? "bg-primary-container text-on-primary-container border-primary/30 opacity-70"
-                            : "bg-surface-container-lowest text-on-surface border-outline-variant hover:border-primary/50"
+                        disabled={isJaAdicionada || isSubmitting}
+                        className={`text-[11px] px-2.5 py-1 rounded-md-full border text-left transition-colors flex items-center gap-1 ${
+                          isJaAdicionada
+                            ? "bg-primary-container text-on-primary-container border-primary/30 opacity-60 cursor-not-allowed"
+                            : "bg-surface-container-lowest text-on-surface border-outline-variant hover:border-primary/50 cursor-pointer"
                         }`}
                       >
-                        {alreadyAdded && <Check className="w-3 h-3 text-primary" />}
+                        {isJaAdicionada && <Check className="w-3 h-3 text-primary shrink-0" />}
                         <span>{sug}</span>
+                        {isJaAdicionada && (
+                          <span className="text-[9px] font-semibold text-primary ml-0.5">
+                            (Já adicionada)
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -1057,31 +1215,36 @@ export function ExamPrescriptionModal({
 
             {/* Lista Editável de Orientações */}
             <div className="space-y-2">
-              {orientacoes.map((ori, oIdx) => (
-                <div key={`ori_${oIdx}`} className="flex items-center gap-2">
-                  <span className="text-xs text-on-surface-variant font-mono w-5 text-right shrink-0">
-                    {oIdx + 1}.
-                  </span>
-                  <input
-                    type="text"
-                    value={ori}
-                    onChange={(e) => handleOrientacaoChange(oIdx, e.target.value)}
-                    placeholder="Ex: Jejum obrigatório de 8 a 12 horas."
-                    className="flex-1 min-h-[44px] px-3.5 rounded-md-md border border-outline-variant bg-surface-container-lowest text-on-surface text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    disabled={isSubmitting}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveOrientacao(oIdx)}
-                    className="p-2 min-h-[44px] min-w-[44px] text-on-surface-variant hover:text-error hover:bg-error-container/40 rounded-full transition-colors cursor-pointer flex items-center justify-center shrink-0"
-                    title="Remover orientação"
-                    disabled={isSubmitting}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+              {orientacoes.map((ori, oIdx) => {
+                const outrasOrientacoes = orientacoes
+                  .filter((_, idx) => idx !== oIdx)
+                  .map((o) => o.trim().toLowerCase())
+                  .filter(Boolean);
+
+                return (
+                  <div key={`ori_${oIdx}`} className="flex items-center gap-2">
+                    <span className="text-xs text-on-surface-variant font-mono w-5 text-right shrink-0">
+                      {oIdx + 1}.
+                    </span>
+                    <OrientacaoSearchDropdown
+                      value={ori}
+                      onChange={(val) => handleOrientacaoChange(oIdx, val)}
+                      suggestions={catalogo.orientacoesSugeridas}
+                      outrasOrientacoes={outrasOrientacoes}
+                      disabled={isSubmitting}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveOrientacao(oIdx)}
+                      className="p-2 min-h-[44px] min-w-[44px] text-on-surface-variant hover:text-error hover:bg-error-container/40 rounded-full transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                      title="Remover orientação"
+                      disabled={isSubmitting}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </form>
