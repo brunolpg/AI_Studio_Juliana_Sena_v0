@@ -291,15 +291,21 @@ export function PrescriptionModal({
     // Autofill componentes
     if (selected.componentes && selected.componentes.length > 0) {
       const rows = selected.componentes.map((c: any, index: number) => {
-        // Tenta encontrar unidade correspondente
-        const unit = dbUnidades.find((u) => u.id === c.unidade_id);
+        const targetSigla = c.unidade_sigla || c.unidade || "%";
+        const unit = dbUnidades.find(
+          (u) =>
+            u.id === c.unidade_id ||
+            u.unidade?.toLowerCase() === targetSigla.toLowerCase() ||
+            u.sigla?.toLowerCase() === targetSigla.toLowerCase()
+        );
+        const resolvedSigla = unit ? (unit.unidade || unit.sigla || targetSigla) : targetSigla;
         return {
           key: `f_${selected.id}_${index}_${Date.now()}`,
-          componente_id: c.id || "",
+          componente_id: c.componente_id || c.id || "",
           nome: c.nome,
           quantidade: formatNumberToBr(c.quantidade),
-          unidade_id: c.unidade_id || "",
-          unidade_sigla: unit ? unit.sigla : "%",
+          unidade_id: unit?.id || c.unidade_id || dbUnidades[0]?.id || resolvedSigla,
+          unidade_sigla: resolvedSigla,
         };
       });
       setComponentesRows(rows);
@@ -315,7 +321,11 @@ export function PrescriptionModal({
   // Funções da lista dinâmica de ativos
   const handleAddRow = () => {
     // Escolhe a primeira unidade do db como default se houver
-    const defUnit = dbUnidades.find((u) => u.sigla === "%") || dbUnidades[0] || { id: "", sigla: "%" };
+    const defUnit =
+      dbUnidades.find((u) => u.unidade === "%" || u.sigla === "%") ||
+      dbUnidades[0] ||
+      { id: "%", unidade: "%", sigla: "%" };
+    const defSigla = defUnit.unidade || defUnit.sigla || "%";
     setComponentesRows((prev) => [
       ...prev,
       {
@@ -323,8 +333,8 @@ export function PrescriptionModal({
         componente_id: "",
         nome: "",
         quantidade: "",
-        unidade_id: defUnit.id,
-        unidade_sigla: defUnit.sigla,
+        unidade_id: defUnit.id || defSigla,
+        unidade_sigla: defSigla,
       },
     ]);
   };
@@ -352,12 +362,17 @@ export function PrescriptionModal({
           return { ...row, nome: value, componente_id: match ? match.id : "" };
         }
         
-        if (field === "unidade_id") {
-          const match = dbUnidades.find((u) => u.id === value || u.sigla === value || u.unidade === value);
+        if (field === "unidade_id" || field === "unidade_sigla") {
+          const match = dbUnidades.find(
+            (u) =>
+              u.id === value ||
+              u.unidade?.toLowerCase() === value.toLowerCase() ||
+              u.sigla?.toLowerCase() === value.toLowerCase()
+          );
           return { 
             ...row, 
             unidade_id: match ? match.id : value, 
-            unidade_sigla: match ? match.sigla || match.unidade || value : value 
+            unidade_sigla: match ? (match.unidade || match.sigla || value) : value 
           };
         }
 
@@ -406,9 +421,23 @@ export function PrescriptionModal({
       return isNaN(parsed) ? 0 : parsed;
     };
 
-    // Validação flexível: garante que a quantidade seja positiva para todos os ativos preenchidos
-    const invalidComp = componentesRows.some(
-      (c) => !c.nome.trim() || parseBrNumberToFloat(c.quantidade) <= 0 || !c.unidade_id
+    const resolvedRows = ativosValidos.map((c) => {
+      const sigla = c.unidade_sigla || (c as any).unidade || "%";
+      const matchedUnit = dbUnidades.find(
+        (u) =>
+          u.id === c.unidade_id ||
+          u.unidade?.toLowerCase() === sigla.toLowerCase() ||
+          u.sigla?.toLowerCase() === sigla.toLowerCase()
+      );
+      return {
+        ...c,
+        unidade_sigla: sigla,
+        unidade_id: matchedUnit?.id || c.unidade_id || dbUnidades[0]?.id || sigla,
+      };
+    });
+
+    const invalidComp = resolvedRows.some(
+      (c) => !c.nome.trim() || parseBrNumberToFloat(c.quantidade) <= 0 || !c.unidade_sigla
     );
 
     if (invalidComp) {
@@ -416,13 +445,13 @@ export function PrescriptionModal({
       return;
     }
 
-    // Mapeamento e associação flexível de unidade
-    const componentesPayload = ativosValidos.map((c) => ({
+    // Mapeamento e associação de unidade a partir de resolvedRows
+    const componentesPayload = resolvedRows.map((c) => ({
       componente_id: c.componente_id || undefined,
       nome: c.nome.trim(),
       quantidade: parseBrNumberToFloat(c.quantidade),
-      unidade_sigla: c.unidade_sigla || (c as any).unidade || '%',
-      unidade_id: c.unidade_id || (dbUnidades.find(u => u.unidade === (c.unidade_sigla || '%'))?.id) || (dbUnidades[0]?.id) || ''
+      unidade_sigla: c.unidade_sigla,
+      unidade_id: c.unidade_id,
     }));
 
     setIsSubmitting(true);
@@ -701,7 +730,26 @@ export function PrescriptionModal({
                     <div className="w-24 sm:w-24">
                       <select
                         value={row.unidade_sigla}
-                        onChange={(e) => handleRowChange(row.key, "unidade_id", e.target.value)}
+                        onChange={(e) => {
+                          const newSigla = e.target.value;
+                          const matched = dbUnidades.find(
+                            (u) =>
+                              u.unidade?.toLowerCase() === newSigla.toLowerCase() ||
+                              u.sigla?.toLowerCase() === newSigla.toLowerCase() ||
+                              u.id === newSigla
+                          );
+                          setComponentesRows((prev) =>
+                            prev.map((r) =>
+                              r.key === row.key
+                                ? {
+                                    ...r,
+                                    unidade_sigla: newSigla,
+                                    unidade_id: matched?.id || newSigla,
+                                  }
+                                : r
+                            )
+                          );
+                        }}
                         className="w-full py-1 text-xs border-0 border-b border-slate-200 dark:border-slate-700 focus:outline-none bg-transparent text-slate-900 dark:text-slate-100"
                       >
                         <option value="" disabled>Unidade</option>
