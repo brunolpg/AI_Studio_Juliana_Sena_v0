@@ -10,6 +10,8 @@ import type {
   PrescricaoExameActionResult,
   GrupoExameItem,
   CatalogoExamesPreCadastrados,
+  PrescricaoExameModelo,
+  PrescricaoExameModeloInput,
 } from "@/types/prescricao-exame";
 
 /**
@@ -830,6 +832,352 @@ export async function suspenderPrescricaoExame(
     return {
       success: false,
       error: err?.message || "Erro inesperado ao suspender prescrição de exames.",
+    };
+  }
+}
+
+/**
+ * 5. getModelosPrescricaoExames
+ * Busca todos os modelos reutilizáveis ativos (ativo = true) ordenados por titulo ASC.
+ */
+export async function getModelosPrescricaoExames(): Promise<
+  PrescricaoExameActionResult<PrescricaoExameModelo[]>
+> {
+  try {
+    const { serverClient, adminClient, db } = await getSupabaseClients();
+    const activeDb = db || adminClient || serverClient;
+
+    if (!activeDb) {
+      return {
+        success: false,
+        error: "Banco de dados indisponível no momento.",
+      };
+    }
+
+    const { data, error } = await activeDb
+      .from("prescricoes_exames_modelos")
+      .select("*")
+      .eq("ativo", true)
+      .order("titulo", { ascending: true });
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message || "Erro ao consultar modelos de prescrição de exames.",
+      };
+    }
+
+    return {
+      success: true,
+      data: (data || []) as PrescricaoExameModelo[],
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro inesperado ao consultar modelos de prescrição de exames.",
+    };
+  }
+}
+
+/**
+ * 6. saveModeloPrescricaoExame
+ * Cria ou atualiza um modelo reutilizável de prescrição de exames (independente de paciente)
+ * e sincroniza novos grupos e exames com o catálogo (exames_grupos / exames_itens).
+ */
+export async function saveModeloPrescricaoExame(
+  input: PrescricaoExameModeloInput,
+  modeloId?: string
+): Promise<PrescricaoExameActionResult<PrescricaoExameModelo>> {
+  try {
+    if (!input || !input.titulo || !input.titulo.trim()) {
+      return {
+        success: false,
+        error: "O título do modelo de prescrição de exames é obrigatório.",
+      };
+    }
+
+    if (!input.descricao || !input.descricao.trim()) {
+      return {
+        success: false,
+        error: "A descrição do modelo de prescrição de exames é obrigatória.",
+      };
+    }
+
+    const gruposFiltrados: GrupoExameItem[] = (input.grupos_exames || [])
+      .map((g) => ({
+        id: g.id,
+        nome_grupo: (g.nome_grupo || "").trim(),
+        exames: (g.exames || [])
+          .map((e) => (typeof e === "string" ? e.trim() : ""))
+          .filter((e) => e.length > 0),
+      }))
+      .filter((g) => g.nome_grupo.length > 0 && g.exames.length > 0);
+
+    if (gruposFiltrados.length === 0) {
+      return {
+        success: false,
+        error: "Informe ao menos um grupo com pelo menos um exame válido.",
+      };
+    }
+
+    const orientacoesFiltradas: string[] = (input.orientacoes || [])
+      .map((o) => (typeof o === "string" ? o.trim() : ""))
+      .filter((o) => o.length > 0);
+
+    if (orientacoesFiltradas.length === 0) {
+      return {
+        success: false,
+        error: "Informe ao menos uma orientação para a realização dos exames.",
+      };
+    }
+
+    const { serverClient, db } = await getSupabaseClients();
+
+    if (!db) {
+      return {
+        success: false,
+        error: "Banco de dados indisponível no momento.",
+      };
+    }
+
+    if (serverClient) {
+      const authCheck = await verifyProfissionalOrAdmin(serverClient, db);
+      if (!authCheck.authorized) {
+        return {
+          success: false,
+          error: authCheck.error || "Acesso não autorizado.",
+        };
+      }
+    }
+
+    // Sincroniza novos grupos e exames com exames_grupos e exames_itens (ON CONFLICT (nome) DO NOTHING)
+    try {
+      for (const grp of gruposFiltrados) {
+        const nomeGrupoTrim = grp.nome_grupo.trim();
+        if (!nomeGrupoTrim) continue;
+
+        let grupoId: string | null = null;
+        try {
+          const { data: insertedGrupo } = await db
+            .from("exames_grupos")
+            .upsert(
+              { nome: nomeGrupoTrim },
+              { onConflict: "nome", ignoreDuplicates: true }
+            )
+            .select("id")
+            .maybeSingle();
+
+          if (insertedGrupo?.id) {
+            grupoId = insertedGrupo.id;
+          } else {
+            const { data: existingGrupo } = await db
+              .from("exames_grupos")
+              .select("id")
+              .eq("nome", nomeGrupoTrim)
+              .maybeSingle();
+            grupoId = existingGrupo?.id || null;
+          }
+        } catch (grpErr) {
+          console.warn("Aviso ao sincronizar grupo no catálogo:", grpErr);
+        }
+
+        for (const exameNome of grp.exames) {
+          const exameNomeTrim = typeof exameNome === "string" ? exameNome.trim() : "";
+          if (!exameNomeTrim) continue;
+
+          let itemId: string | null = null;
+          try {
+            const { data: insertedItem } = await db
+              .from("exames_itens")
+              .upsert(
+                { nome: exameNomeTrim },
+                { onConflict: "nome", ignoreDuplicates: true }
+              )
+              .select("id")
+              .maybeSingle();
+
+            if (insertedItem?.id) {
+              itemId = insertedItem.id;
+            } else {
+              const { data: existingItem } = await db
+                .from("exames_itens")
+                .select("id")
+                .eq("nome", exameNomeTrim)
+                .maybeSingle();
+              itemId = existingItem?.id || null;
+            }
+
+            if (grupoId && itemId) {
+              await db
+                .from("exames_grupos_itens")
+                .upsert(
+                  { grupo_id: grupoId, item_id: itemId },
+                  { onConflict: "grupo_id,item_id", ignoreDuplicates: true }
+                );
+            }
+          } catch (itemErr) {
+            console.warn("Aviso ao sincronizar exame/vínculo no catálogo:", itemErr);
+          }
+        }
+      }
+    } catch (catErr) {
+      console.warn("Aviso geral ao sincronizar catálogo de exames:", catErr);
+    }
+
+    const now = new Date().toISOString();
+    const profissionalFinal = input.profissional?.trim() || "Dra. Juliana Sena";
+    let resultData: PrescricaoExameModelo;
+
+    if (modeloId) {
+      const { data: existing, error: findErr } = await db
+        .from("prescricoes_exames_modelos")
+        .select("id")
+        .eq("id", modeloId)
+        .eq("ativo", true)
+        .maybeSingle();
+
+      if (findErr || !existing) {
+        return {
+          success: false,
+          error: "Modelo de prescrição de exames não encontrado para atualização.",
+        };
+      }
+
+      const { data: updated, error: updateErr } = await db
+        .from("prescricoes_exames_modelos")
+        .update({
+          titulo: input.titulo.trim(),
+          descricao: input.descricao.trim(),
+          grupos_exames: gruposFiltrados,
+          orientacoes: orientacoesFiltradas,
+          profissional: profissionalFinal,
+          updated_at: now,
+        })
+        .eq("id", modeloId)
+        .select()
+        .single();
+
+      if (updateErr) {
+        return {
+          success: false,
+          error: updateErr.message || "Erro ao atualizar modelo de prescrição de exames.",
+        };
+      }
+
+      resultData = updated as PrescricaoExameModelo;
+    } else {
+      const { data: inserted, error: insertErr } = await db
+        .from("prescricoes_exames_modelos")
+        .insert({
+          titulo: input.titulo.trim(),
+          descricao: input.descricao.trim(),
+          grupos_exames: gruposFiltrados,
+          orientacoes: orientacoesFiltradas,
+          profissional: profissionalFinal,
+          ativo: true,
+          created_at: now,
+          updated_at: now,
+        })
+        .select()
+        .single();
+
+      if (insertErr) {
+        return {
+          success: false,
+          error: insertErr.message || "Erro ao salvar modelo de prescrição de exames.",
+        };
+      }
+
+      resultData = inserted as PrescricaoExameModelo;
+    }
+
+    try {
+      revalidatePath("/clinical");
+      revalidatePath("/patients");
+    } catch {
+      // Revalidação segura
+    }
+
+    return {
+      success: true,
+      data: resultData,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro inesperado ao salvar modelo de prescrição de exames.",
+    };
+  }
+}
+
+/**
+ * 7. deleteModeloPrescricaoExame
+ * Realiza soft-delete (ativo = false) de um modelo de prescrição de exames.
+ */
+export async function deleteModeloPrescricaoExame(
+  modeloId: string
+): Promise<PrescricaoExameActionResult<PrescricaoExameModelo>> {
+  try {
+    if (!modeloId) {
+      return {
+        success: false,
+        error: "Identificador do modelo não informado.",
+      };
+    }
+
+    const { serverClient, db } = await getSupabaseClients();
+
+    if (!db) {
+      return {
+        success: false,
+        error: "Banco de dados indisponível no momento.",
+      };
+    }
+
+    if (serverClient) {
+      const authCheck = await verifyProfissionalOrAdmin(serverClient, db);
+      if (!authCheck.authorized) {
+        return {
+          success: false,
+          error: authCheck.error || "Acesso não autorizado.",
+        };
+      }
+    }
+
+    const now = new Date().toISOString();
+
+    const { data, error } = await db
+      .from("prescricoes_exames_modelos")
+      .update({
+        ativo: false,
+        updated_at: now,
+      })
+      .eq("id", modeloId)
+      .select()
+      .single();
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message || "Erro ao excluir modelo de prescrição de exames.",
+      };
+    }
+
+    try {
+      revalidatePath("/clinical");
+      revalidatePath("/patients");
+    } catch {
+      // Revalidação segura
+    }
+
+    return {
+      success: true,
+      data: data as PrescricaoExameModelo,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro inesperado ao excluir modelo de prescrição de exames.",
     };
   }
 }

@@ -61,3 +61,23 @@ export interface CatalogoExamesPreCadastrados {
   orientacoesSugeridas: string[];
   grupoItensMap?: Record<string, string[]>;
 }
+
+export interface PrescricaoExameModelo {
+  id: string;
+  titulo: string;
+  descricao: string;
+  grupos_exames: GrupoExameItem[];
+  orientacoes: string[];
+  profissional: string;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PrescricaoExameModeloInput {
+  titulo: string;
+  descricao: string;
+  grupos_exames: GrupoExameItem[];
+  orientacoes: string[];
+  profissional?: string;
+}
