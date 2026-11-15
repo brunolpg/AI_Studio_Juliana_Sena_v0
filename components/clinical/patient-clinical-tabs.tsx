@@ -138,21 +138,47 @@ export function PatientClinicalTabs({
   const [selectedPrescriptionForEdit, setSelectedPrescriptionForEdit] = useState<any | null>(null);
 
   const handleOpenEditPrescription = async (rx: any) => {
+    const rootRxId = rx.prescricao_id ?? rx.id;
     try {
       const supabase = getSupabaseClient();
-      const rxId = rx.prescricao_id || rx.id;
-      if (supabase && rxId) {
-        const { data, error } = await supabase
+      if (supabase && rootRxId) {
+        let { data, error } = await supabase
           .from("prescricoes")
           .select(`
             *,
             prescricao_itens (*)
           `)
-          .eq("id", rxId)
+          .eq("id", rootRxId)
           .maybeSingle();
 
+        // Fallback: caso o ID recebido seja de prescricao_itens, resolve o prescricao_id pai
+        if (!error && !data) {
+          const { data: itemRef } = await supabase
+            .from("prescricao_itens")
+            .select("prescricao_id")
+            .eq("id", rootRxId)
+            .maybeSingle();
+
+          if (itemRef?.prescricao_id) {
+            const retry = await supabase
+              .from("prescricoes")
+              .select(`
+                *,
+                prescricao_itens (*)
+              `)
+              .eq("id", itemRef.prescricao_id)
+              .maybeSingle();
+            data = retry.data;
+            error = retry.error;
+          }
+        }
+
         if (!error && data) {
-          setSelectedPrescriptionForEdit(data);
+          setSelectedPrescriptionForEdit({
+            ...data,
+            id: data.id,
+            prescricao_id: data.id,
+          });
           setIsEditPrescriptionModalOpen(true);
           return;
         }
@@ -160,7 +186,11 @@ export function PatientClinicalTabs({
     } catch (err) {
       console.warn("Erro ao carregar dados completos da prescrição para edição:", err);
     }
-    setSelectedPrescriptionForEdit(rx);
+    setSelectedPrescriptionForEdit({
+      ...rx,
+      id: rootRxId,
+      prescricao_id: rootRxId,
+    });
     setIsEditPrescriptionModalOpen(true);
   };
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -507,6 +537,8 @@ export function PatientClinicalTabs({
 
                   return {
                     id: p.id,
+                    prescricao_id: p.id,
+                    item_id: item?.id,
                     client_id: p.paciente_id,
                     data: p.data_prescricao,
                     medicamento: item?.nome_formula || "Fórmula Magistral",
@@ -2032,7 +2064,7 @@ export function PatientClinicalTabs({
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        setSelectedRxForSuspension(rx.id);
+                                        setSelectedRxForSuspension(rx.prescricao_id ?? rx.id);
                                         setJustificativaTexto("");
                                         setIsSuspensionModalOpen(true);
                                       }}
@@ -2054,7 +2086,13 @@ export function PatientClinicalTabs({
                                 {!isPatient && (
                                   <button
                                     type="button"
-                                    onClick={() => handleOpenEditPrescription(rx)}
+                                    onClick={() =>
+                                      handleOpenEditPrescription({
+                                        ...rx,
+                                        id: rx.prescricao_id ?? rx.id,
+                                        prescricao_id: rx.prescricao_id ?? rx.id,
+                                      })
+                                    }
                                     className="p-1.5 rounded-full text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer"
                                     title="Editar receita"
                                     aria-label="Editar receita"
@@ -2227,7 +2265,9 @@ export function PatientClinicalTabs({
 
                                         <button
                                           type="button"
-                                          onClick={() => handleReactivatePrescription(rx.id)}
+                                          onClick={() =>
+                                            handleReactivatePrescription(rx.prescricao_id ?? rx.id)
+                                          }
                                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-on-success-container bg-success-container border border-success/30 hover:opacity-90 rounded-full cursor-pointer transition-colors shadow-2xs"
                                           title="Reativar esta prescrição para o tratamento ativo"
                                         >
@@ -2238,7 +2278,13 @@ export function PatientClinicalTabs({
                                         {!isPatient && (
                                           <button
                                             type="button"
-                                            onClick={() => handleOpenEditPrescription(rx)}
+                                            onClick={() =>
+                                              handleOpenEditPrescription({
+                                                ...rx,
+                                                id: rx.prescricao_id ?? rx.id,
+                                                prescricao_id: rx.prescricao_id ?? rx.id,
+                                              })
+                                            }
                                             className="p-1.5 rounded-full text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer"
                                             title="Editar receita"
                                             aria-label="Editar receita"
@@ -2617,7 +2663,15 @@ export function PatientClinicalTabs({
             setSelectedPrescriptionForEdit(null);
           }}
           client={client}
-          initialData={selectedPrescriptionForEdit}
+          initialData={{
+            ...selectedPrescriptionForEdit,
+            id:
+              selectedPrescriptionForEdit.prescricao_id ??
+              selectedPrescriptionForEdit.id,
+            prescricao_id:
+              selectedPrescriptionForEdit.prescricao_id ??
+              selectedPrescriptionForEdit.id,
+          }}
         />
       )}
 

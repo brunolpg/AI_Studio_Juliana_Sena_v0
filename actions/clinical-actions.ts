@@ -1253,59 +1253,122 @@ export async function updateStructuredPrescriptionAction(
     const supabase = await createClient();
     if (!supabase) return { success: false, message: "Erro de conexão com o Supabase." };
 
-    // 1. Localiza a prescrição existente e seus itens atuais
-    const { data: oldPresc, error: oldErr } = await supabase
+    // 1. Localiza a prescrição existente e seus itens atuais (com fallback via prescricao_itens)
+    let resolvedPrescriptionId = prescriptionId;
+
+    let { data: oldPresc, error: oldErr } = await supabase
       .from("prescricoes")
       .select(`
-        *,
-        prescricao_itens (*)
+        id,
+        paciente_id,
+        data_prescricao,
+        status,
+        observacoes,
+        pdf_assinado_url,
+        data_assinatura,
+        appointment_id,
+        prescricao_itens (
+          id,
+          formula_id,
+          nome_formula,
+          via,
+          veiculo,
+          dosagem,
+          tipo_veiculo,
+          posologia,
+          duracao,
+          orient_paciente,
+          orient_farmacia,
+          componentes_snapshot
+        )
       `)
-      .eq("id", prescriptionId)
+      .eq("id", resolvedPrescriptionId)
       .eq("paciente_id", clientId)
       .maybeSingle();
 
+    // Fallback: caso prescriptionId seja o id de prescricao_itens, resolve o prescricao_id pai
+    if (!oldPresc && !oldErr) {
+      const { data: itemRef } = await supabase
+        .from("prescricao_itens")
+        .select("prescricao_id")
+        .eq("id", prescriptionId)
+        .maybeSingle();
+
+      if (itemRef?.prescricao_id) {
+        resolvedPrescriptionId = itemRef.prescricao_id;
+        const retry = await supabase
+          .from("prescricoes")
+          .select(`
+            id,
+            paciente_id,
+            data_prescricao,
+            status,
+            observacoes,
+            pdf_assinado_url,
+            data_assinatura,
+            appointment_id,
+            prescricao_itens (
+              id,
+              formula_id,
+              nome_formula,
+              via,
+              veiculo,
+              dosagem,
+              tipo_veiculo,
+              posologia,
+              duracao,
+              orient_paciente,
+              orient_farmacia,
+              componentes_snapshot
+            )
+          `)
+          .eq("id", resolvedPrescriptionId)
+          .eq("paciente_id", clientId)
+          .maybeSingle();
+
+        oldPresc = retry.data;
+        oldErr = retry.error;
+      }
+    }
+
     if (oldErr || !oldPresc) {
-      return { success: false, message: `Prescrição original não encontrada: ${oldErr?.message || ""}` };
+      return {
+        success: false,
+        message: `Prescrição original não encontrada (ID: ${prescriptionId}): ${oldErr?.message || "registro inexistente ou sem permissão RLS"}`,
+      };
     }
 
     const nowIso = new Date().toISOString();
 
     // 2. Cria cópia exata do registro anterior com status 'Suspenso' e justificativa 'Prescrição ajustada'
-    const { data: archivedPresc, error: archErr } = await supabase
+    const { data: historicoPresc, error: histErr } = await supabase
       .from("prescricoes")
       .insert({
-        paciente_id: clientId,
+        paciente_id: oldPresc.paciente_id,
+        appointment_id: oldPresc.appointment_id ?? null,
         data_prescricao: oldPresc.data_prescricao,
         status: "Suspenso",
         justificativa_suspensao: "Prescrição ajustada",
         data_suspensao: nowIso,
-        observacoes: oldPresc.observacoes || null,
-        pdf_assinado_url: oldPresc.pdf_assinado_url || null,
-        data_assinatura: oldPresc.data_assinatura || null,
+        observacoes: oldPresc.observacoes ?? null,
+        pdf_assinado_url: oldPresc.pdf_assinado_url ?? null,
+        data_assinatura: oldPresc.data_assinatura ?? null,
       })
       .select("id")
       .single();
 
-    if (archErr || !archivedPresc) {
-      return { success: false, message: `Falha ao criar histórico da versão anterior: ${archErr?.message || ""}` };
+    if (histErr || !historicoPresc) {
+      return { success: false, message: `Falha ao criar histórico da versão anterior: ${histErr?.message || ""}` };
     }
 
-    // Copia os itens anteriores para o registro arquivado
+    // Duplica os itens anteriores para o registro histórico apontando para historicoPresc.id
     if (oldPresc.prescricao_itens && oldPresc.prescricao_itens.length > 0) {
-      const archivedItemsPayload = oldPresc.prescricao_itens.map((it: any) => ({
-        prescricao_id: archivedPresc.id,
-        formula_id: it.formula_id,
-        nome_formula: it.nome_formula,
-        via: it.via,
-        veiculo: it.veiculo,
-        dosagem: it.dosagem,
-        tipo_veiculo: it.tipo_veiculo,
-        posologia: it.posologia,
-        duracao: it.duracao,
-        orient_paciente: it.orient_paciente,
-        orient_farmacia: it.orient_farmacia,
-        componentes_snapshot: it.componentes_snapshot,
-      }));
+      const archivedItemsPayload = oldPresc.prescricao_itens.map(
+        ({ id: _id, created_at: _createdAt, prescricao_id: _prescId, ...it }: any) => ({
+          ...it,
+          prescricao_id: historicoPresc.id,
+        })
+      );
 
       const { error: archItemsErr } = await supabase
         .from("prescricao_itens")
@@ -1435,7 +1498,7 @@ export async function updateStructuredPrescriptionAction(
         observacoes: input.descricao || null,
         updated_at: nowIso,
       })
-      .eq("id", prescriptionId)
+      .eq("id", oldPresc.id)
       .eq("paciente_id", clientId);
 
     if (updatePrescErr) {
@@ -1450,12 +1513,19 @@ export async function updateStructuredPrescriptionAction(
     }));
     const numTotalVeiculo = parseNum(input.total_veiculo) || 0;
 
-    await supabase.from("prescricao_itens").delete().eq("prescricao_id", prescriptionId);
+    const { error: delItemsErr } = await supabase
+      .from("prescricao_itens")
+      .delete()
+      .eq("prescricao_id", oldPresc.id);
+
+    if (delItemsErr) {
+      return { success: false, message: `Erro ao substituir itens da prescrição: ${delItemsErr.message}` };
+    }
 
     const { data: newItem, error: errNewItem } = await supabase
       .from("prescricao_itens")
       .insert({
-        prescricao_id: prescriptionId,
+        prescricao_id: oldPresc.id,
         formula_id: formulaId,
         nome_formula: cleanFormulaName,
         via: normalizedVia,
@@ -1480,7 +1550,7 @@ export async function updateStructuredPrescriptionAction(
     return {
       success: true,
       message: "Prescrição atualizada e versão anterior arquivada",
-      data: { id: prescriptionId, item_id: newItem?.id },
+      data: { id: oldPresc.id, prescricao_id: oldPresc.id, item_id: newItem?.id },
     };
   } catch (error: any) {
     console.error("Erro ao atualizar prescrição com versionamento:", error);
