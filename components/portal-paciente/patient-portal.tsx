@@ -662,7 +662,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                         Foto de Perfil do Paciente
                       </p>
                       <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-1.5 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-full transition-all shadow-xs cursor-pointer md-state-layer">
+                        <label className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap">
                           <span>+ Foto</span>
                           <input
                             type="file"
@@ -704,7 +704,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                           <button
                             type="button"
                             onClick={() => setShowConfirmDeletePhoto(true)}
-                            className="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:border-rose-300 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-full transition-all cursor-pointer md-state-layer shadow-2xs"
+                            className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-error-container text-on-error-container hover:bg-error-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                           >
                             Remover foto
                           </button>
@@ -806,7 +806,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                       <button
                         type="button"
                         onClick={() => setIsHistoryModalOpen(true)}
-                        className="px-3.5 py-1.5 font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-colors cursor-pointer shrink-0"
+                        className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                       >
                         Preencher Anamnese Agora
                       </button>

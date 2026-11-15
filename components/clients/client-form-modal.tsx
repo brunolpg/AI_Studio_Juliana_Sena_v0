@@ -414,7 +414,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                 Foto de Perfil do Paciente
               </span>
               <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-                <label className="px-3 py-1.5 text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white rounded-lg cursor-pointer shadow-xs transition-colors">
+                <label className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap">
                   <span>+ Foto</span>
                   <input
                     type="file"
@@ -427,7 +427,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                   <button
                     type="button"
                     onClick={() => setFotoPerfil(null)}
-                    className="px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-error hover:bg-error-container rounded-lg cursor-pointer transition-colors"
+                    className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-error-container text-on-error-container hover:bg-error-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                   >
                     Remover foto
                   </button>

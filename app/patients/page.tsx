@@ -43,5 +43,5 @@ export default function PatientsPage() {
     return null;
   }
 
-  return <PatientDashboard initialTab="pacientes" />;
+  return <PatientDashboard initialTab="prontuarios" />;
 }

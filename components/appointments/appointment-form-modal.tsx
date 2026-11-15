@@ -948,7 +948,7 @@ function AppointmentFormModalContent({
                       setPatientSearch("");
                       setIsPatientDropdownOpen(true);
                     }}
-                    className="text-[11px] text-teal-600 dark:text-teal-400 hover:underline cursor-pointer font-medium"
+                    className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                   >
                     Alterar paciente
                   </button>
@@ -1496,11 +1496,11 @@ function AppointmentFormModalContent({
                 <button
                   type="button"
                   onClick={handleCopyPix}
-                  className="mt-3 md:mt-0 w-full md:w-auto md:absolute md:top-3.5 md:right-3.5 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-50/70 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 transition-colors text-xs font-medium whitespace-nowrap cursor-pointer"
+                  className="mt-3 md:mt-0 w-full md:w-auto md:absolute md:top-3.5 md:right-3.5 inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                 >
                   {copiedPix ? (
                     <>
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
                       <span>Copiado!</span>
                     </>
                   ) : (

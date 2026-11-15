@@ -140,9 +140,9 @@ export function PropostasChipsSection({
           <button
             type="button"
             onClick={handleOpenNew}
-            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900 border border-teal-200 dark:border-teal-800 rounded-full transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
           >
-            <Plus className="w-3 h-3" />
+            <Plus className="w-3.5 h-3.5 shrink-0" />
             <span>Nova Proposta</span>
           </button>
         )}

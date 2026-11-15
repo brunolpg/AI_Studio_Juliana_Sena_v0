@@ -437,9 +437,9 @@ export function FormulaModal({
                   setQuickCompError(null);
                   setShowNewCompModal(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#043e33] hover:bg-[#064e3b] hover:opacity-90 dark:bg-emerald-950 dark:hover:bg-emerald-900 rounded-full shadow-xs cursor-pointer transition-all active:scale-[0.98] dark:border dark:border-white/10"
+                className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 shrink-0" />
                 <span>Cadastrar Novo Componente</span>
               </button>
             </div>
@@ -504,9 +504,9 @@ export function FormulaModal({
             <button
               type="button"
               onClick={handleAddItem}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dashed border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300 text-xs font-semibold hover:bg-teal-50 dark:hover:bg-teal-950/40 transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 shrink-0" />
               <span>Adicionar Outro Componente</span>
             </button>
           </div>

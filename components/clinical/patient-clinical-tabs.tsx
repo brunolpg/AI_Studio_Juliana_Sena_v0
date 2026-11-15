@@ -1418,7 +1418,7 @@ export function PatientClinicalTabs({
                     <button
                       type="button"
                       onClick={() => setIsHistoryModalOpen(true)}
-                      className="text-xs text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
+                      className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-error-container text-on-error-container hover:bg-error-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                     >
                       Editar
                     </button>
@@ -1700,7 +1700,7 @@ export function PatientClinicalTabs({
                     <button
                       type="button"
                       onClick={() => setIsAestheticModalOpen(true)}
-                      className="text-xs text-teal-600 dark:text-teal-400 hover:underline cursor-pointer font-medium"
+                      className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                     >
                       Editar Avaliação
                     </button>
@@ -2932,7 +2932,7 @@ export function PatientClinicalTabs({
                   <button
                     type="button"
                     onClick={openVidaasStore}
-                    className="block mx-auto text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline-offset-2 hover:underline cursor-pointer"
+                    className="mx-auto flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                   >
                     Não tem o app? Instalar o VIDaaS
                   </button>

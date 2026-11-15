@@ -424,7 +424,7 @@ export function AestheticEvaluationModal({
                       <button
                         type="button"
                         onClick={() => setAcneGrau("")}
-                        className="text-[10px] text-rose-500 hover:underline block mt-1 cursor-pointer"
+                        className="mt-1.5 inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-error-container text-on-error-container hover:bg-error-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                       >
                         Limpar seleção
                       </button>

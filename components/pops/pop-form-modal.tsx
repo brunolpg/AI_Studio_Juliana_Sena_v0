@@ -741,27 +741,27 @@ export function PopFormModal({
                 <button
                   type="button"
                   onClick={handleAddTopico}
-                  className="bg-[#004d40] text-white hover:bg-[#003830] rounded-xl px-3.5 py-2 font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                 >
-                  <FileText className="w-3.5 h-3.5" />
+                  <FileText className="w-3.5 h-3.5 shrink-0" />
                   <span>Adicionar Tópico</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleAddTabela}
-                  className="bg-[#004d40] text-white hover:bg-[#003830] rounded-xl px-3.5 py-2 font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                 >
-                  <Table className="w-3.5 h-3.5" />
+                  <Table className="w-3.5 h-3.5 shrink-0" />
                   <span>Adicionar Tabela</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleAddFormula}
-                  className="bg-[#004d40] text-white hover:bg-[#0b5c54] rounded-xl px-3 py-1.5 font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                 >
-                  <Pill className="w-3.5 h-3.5" />
+                  <Pill className="w-3.5 h-3.5 shrink-0" />
                   <span>Vincular Fórmula</span>
                 </button>
               </div>
@@ -863,9 +863,9 @@ export function PopFormModal({
                             <button
                               type="button"
                               onClick={() => handleAddSubtopico(bIdx)}
-                              className="bg-[#004d40] text-white hover:bg-[#003830] rounded-xl px-3 py-1.5 font-semibold text-[11px] flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                              className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                             >
-                              <Plus className="w-3.5 h-3.5" />
+                              <Plus className="w-3.5 h-3.5 shrink-0" />
                               <span>Adicionar Subtópico</span>
                             </button>
                           </div>
@@ -1042,22 +1042,22 @@ export function PopFormModal({
                             Matriz de Dados ({colunas.length} colunas × {linhas.length} {linhas.length === 1 ? "linha" : "linhas"})
                           </span>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <button
                               type="button"
                               onClick={() => handleAddColuna(bIdx)}
-                              className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                              className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                             >
-                              <Plus className="w-3.5 h-3.5" />
+                              <Plus className="w-3.5 h-3.5 shrink-0" />
                               <span>Adicionar Coluna</span>
                             </button>
 
                             <button
                               type="button"
                               onClick={() => handleAddLinha(bIdx)}
-                              className="bg-[#004d40] text-white hover:bg-[#003830] rounded-lg px-2.5 py-1.5 font-semibold text-[11px] flex items-center gap-1 transition-colors cursor-pointer shadow-xs"
+                              className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                             >
-                              <Plus className="w-3.5 h-3.5" />
+                              <Plus className="w-3.5 h-3.5 shrink-0" />
                               <span>Adicionar Linha</span>
                             </button>
                           </div>
@@ -1217,9 +1217,9 @@ export function PopFormModal({
                             setActiveBlocoIndexForNewFormula(bIdx);
                             setIsNovaFormulaModalOpen(true);
                           }}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-950 hover:bg-[#064e3b] dark:bg-[#043e33] dark:hover:bg-[#064e3b] text-white text-xs font-semibold hover:opacity-90 transition-all shadow-xs cursor-pointer active:scale-[0.98] dark:border dark:border-white/10"
+                          className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                         >
-                          <Plus className="w-3.5 h-3.5" />
+                          <Plus className="w-3.5 h-3.5 shrink-0" />
                           <span>Cadastrar Nova Fórmula</span>
                         </button>
                       </div>
@@ -1229,7 +1229,7 @@ export function PopFormModal({
                           Carregando fórmulas magistrais...
                         </div>
                       ) : formulasDisponiveis.length === 0 ? (
-                        <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-2">
+                        <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between gap-2 flex-wrap">
                           <span>Nenhuma fórmula encontrada no catálogo.</span>
                           <button
                             type="button"
@@ -1237,9 +1237,10 @@ export function PopFormModal({
                               setActiveBlocoIndexForNewFormula(bIdx);
                               setIsNovaFormulaModalOpen(true);
                             }}
-                            className="font-bold underline text-amber-900 dark:text-amber-200"
+                            className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                           >
-                            Cadastrar agora
+                            <Plus className="w-3.5 h-3.5 shrink-0" />
+                            <span>Cadastrar agora</span>
                           </button>
                         </div>
                       ) : (

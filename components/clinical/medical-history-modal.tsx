@@ -322,9 +322,9 @@ export function MedicalHistoryModal({
               <button
                 type="button"
                 onClick={handleAddAlergia}
-                className="px-3 py-1.5 text-xs font-semibold bg-error text-on-error hover:opacity-90 rounded-xl flex items-center gap-1 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-error-container text-on-error-container hover:bg-error-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 shrink-0" />
                 <span>Adicionar</span>
               </button>
             </div>
@@ -375,9 +375,9 @@ export function MedicalHistoryModal({
               <button
                 type="button"
                 onClick={handleAddComorbidade}
-                className="px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl flex items-center gap-1 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 shrink-0" />
                 <span>Adicionar</span>
               </button>
             </div>
@@ -428,9 +428,9 @@ export function MedicalHistoryModal({
               <button
                 type="button"
                 onClick={handleAddMedicamento}
-                className="px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl flex items-center gap-1 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 shrink-0" />
                 <span>Adicionar</span>
               </button>
             </div>
@@ -481,9 +481,9 @@ export function MedicalHistoryModal({
               <button
                 type="button"
                 onClick={handleAddAcompanhamento}
-                className="px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl flex items-center gap-1 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 shrink-0" />
                 <span>Adicionar</span>
               </button>
             </div>

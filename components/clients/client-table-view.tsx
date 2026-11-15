@@ -209,9 +209,9 @@ export function ClientTableView() {
           </div>
           <button
             onClick={() => openAuthModal("login")}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-2xs self-start sm:self-auto transition-all"
+            className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap self-start sm:self-auto"
           >
-            <LogIn className="w-3.5 h-3.5" />
+            <LogIn className="w-3.5 h-3.5 shrink-0" />
             <span>Fazer Login</span>
           </button>
         </div>
@@ -417,7 +417,7 @@ export function ClientTableView() {
                       {statusFilter === "todos" && !searchTerm && (
                         <button
                           onClick={handleOpenCreate}
-                          className="mt-4 px-3.5 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors"
+                          className="mt-4 inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                         >
                           Cadastrar Paciente Agora
                         </button>

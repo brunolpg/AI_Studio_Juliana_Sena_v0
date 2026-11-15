@@ -824,9 +824,9 @@ export function PropostaFormModal({
               <button
                 type="button"
                 onClick={handleAddOpcao}
-                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-on-primary bg-primary hover:bg-primary/90 active:scale-[0.98] rounded-full shadow-xs cursor-pointer transition-all md-state-layer"
+                className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 shrink-0" />
                 <span>Adicionar Opção</span>
               </button>
             </div>
@@ -908,9 +908,9 @@ export function PropostaFormModal({
                         <button
                           type="button"
                           onClick={() => handleAddProcedimento(oIdx)}
-                          className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-on-primary bg-primary hover:bg-primary/90 active:scale-[0.98] rounded-full shadow-xs cursor-pointer transition-all md-state-layer"
+                          className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                         >
-                          <Plus className="w-3.5 h-3.5" />
+                          <Plus className="w-3.5 h-3.5 shrink-0" />
                           <span>Adicionar Procedimento</span>
                         </button>
                       </div>
@@ -1024,9 +1024,9 @@ export function PropostaFormModal({
               <button
                 type="button"
                 onClick={handleAddEtapa}
-                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-on-primary bg-primary hover:bg-primary/90 active:scale-[0.98] rounded-full shadow-xs cursor-pointer transition-all md-state-layer"
+                className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 shrink-0" />
                 <span>Adicionar Etapa</span>
               </button>
             </div>
@@ -1116,9 +1116,9 @@ export function PropostaFormModal({
               <button
                 type="button"
                 onClick={handleAddTopico}
-                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-on-primary bg-primary hover:bg-primary/90 active:scale-[0.98] rounded-full shadow-xs cursor-pointer transition-all md-state-layer"
+                className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 shrink-0" />
                 <span>Adicionar Tópico</span>
               </button>
             </div>

@@ -455,7 +455,7 @@ export function AppointmentDetailsModal({
                 onClose();
                 onEdit(appointment);
               }}
-              className="text-xs font-bold text-primary hover:underline cursor-pointer min-h-[44px] flex items-center"
+              className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
             >
               Editar Horário / Status
             </button>

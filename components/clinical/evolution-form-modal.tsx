@@ -1109,7 +1109,7 @@ export function EvolutionFormModal({
                         <button
                           type="button"
                           onClick={() => setSelectedHomeCareFichaId("")}
-                          className="text-[11px] font-semibold text-error hover:underline cursor-pointer"
+                          className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-error-container text-on-error-container hover:bg-error-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                         >
                           Desvincular
                         </button>

@@ -251,10 +251,10 @@ export function HomeCareCards({
                   <button
                     type="button"
                     onClick={() => setSelectedFichaForPrint(ficha)}
-                    className="text-teal-600 dark:text-teal-400 font-bold hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                    className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                   >
                     <span>Ver Orientações Completas</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    <ChevronRight className="w-3.5 h-3.5 shrink-0" />
                   </button>
                 </div>
               </div>

@@ -1370,11 +1370,11 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                 <button
                   type="button"
                   onClick={handleCopyPixPaymentModal}
-                  className="mt-3 md:mt-0 w-full md:w-auto md:absolute md:top-3.5 md:right-3.5 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-50/70 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 transition-colors text-xs font-medium whitespace-nowrap cursor-pointer"
+                  className="mt-3 md:mt-0 w-full md:w-auto md:absolute md:top-3.5 md:right-3.5 inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                 >
                   {copiedPixPaymentModal ? (
                     <>
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
                       <span>Copiado!</span>
                     </>
                   ) : (
@@ -1415,7 +1415,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                         href={paymentModalAppointment.comprovante_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-2.5 py-1 text-[11px] font-bold text-teal-700 dark:text-teal-300 bg-teal-100 hover:bg-teal-200 dark:bg-teal-900 dark:hover:bg-teal-800 rounded-lg transition-colors shrink-0"
+                        className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                       >
                         Visualizar Recibo
                       </a>
@@ -1584,7 +1584,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                             href={url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-2.5 py-1 text-[11px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900 rounded-lg border border-teal-200 dark:border-teal-800 transition-colors"
+                            className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                           >
                             Visualizar
                           </a>

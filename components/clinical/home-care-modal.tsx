@@ -667,10 +667,10 @@ export function HomeCareModal({
                   <button
                     type="button"
                     onClick={() => setIncluirAtencaoCritica(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-all shadow-xs cursor-pointer"
+                    className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>+ Adicionar Atenção Crítica</span>
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
+                    <span>Adicionar Atenção Crítica</span>
                   </button>
                 </div>
               ) : (
@@ -773,9 +773,9 @@ export function HomeCareModal({
                   <button
                     type="button"
                     onClick={handleAddCuidado}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 text-xs font-semibold hover:bg-teal-100 transition-colors cursor-pointer"
+                    className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
                     <span>Adicionar Cuidado</span>
                   </button>
                 </div>
@@ -882,9 +882,9 @@ export function HomeCareModal({
                     <button
                       type="button"
                       onClick={handleAddCronograma}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold hover:bg-emerald-100 transition-colors cursor-pointer"
+                      className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      <Plus className="w-3.5 h-3.5 shrink-0" />
                       <span>Adicionar Etapa</span>
                     </button>
                   </div>
@@ -908,10 +908,10 @@ export function HomeCareModal({
                     <button
                       type="button"
                       onClick={handleAddCronograma}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0"
+                      className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>+ Adicionar Cronograma</span>
+                      <Plus className="w-3.5 h-3.5 shrink-0" />
+                      <span>Adicionar Cronograma</span>
                     </button>
                   </div>
                 ) : (
@@ -1104,9 +1104,9 @@ export function HomeCareModal({
                     <button
                       type="button"
                       onClick={handleAddRecomendacao}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-semibold hover:bg-amber-100 transition-colors cursor-pointer"
+                      className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      <Plus className="w-3.5 h-3.5 shrink-0" />
                       <span>Adicionar Recomendação</span>
                     </button>
                   </div>

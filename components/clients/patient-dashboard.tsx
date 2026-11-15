@@ -11,7 +11,7 @@ import { DeliverablesView } from "@/components/clients/deliverables-view";
 import { PopsView } from "@/components/pops/pops-view";
 import { ShieldCheck, CalendarCheck2, FileCode2, Calendar, Stethoscope, Users, ClipboardList } from "lucide-react";
 
-export function PatientDashboard({ initialTab = "pacientes" }: { initialTab?: DashboardTab } = {}) {
+export function PatientDashboard({ initialTab = "prontuarios" }: { initialTab?: DashboardTab } = {}) {
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
 
   return (

@@ -1347,7 +1347,7 @@ export function ExamPrescriptionModal({
                   type="button"
                   onClick={() => setSelectedModeloId(null)}
                   disabled={isSubmitting || isSavingModelo}
-                  className="text-[11px] font-semibold text-primary hover:underline cursor-pointer min-h-[44px] px-2 flex items-center"
+                  className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                 >
                   Desvincular modelo selecionado
                 </button>
@@ -1574,10 +1574,10 @@ export function ExamPrescriptionModal({
                       <button
                         type="button"
                         onClick={() => handleAddExame(gIdx)}
-                        className="inline-flex items-center gap-1.5 px-3 h-9 text-xs font-medium text-primary hover:text-on-surface hover:bg-surface-container rounded-md-md transition-colors cursor-pointer"
+                        className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                         disabled={isSubmitting}
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-3.5 h-3.5 shrink-0" />
                         <span>Adicionar Exame ao Grupo</span>
                       </button>
                     </div>
