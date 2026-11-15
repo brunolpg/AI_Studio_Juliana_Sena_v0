@@ -183,11 +183,11 @@ export function ExamPrescriptionCards({
                       <button
                         type="button"
                         onClick={() => setSelectedForPrint(presc)}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 min-h-[44px] text-xs font-semibold text-primary bg-surface-container-lowest border border-outline-variant hover:bg-surface-container rounded-md-full cursor-pointer transition-colors shadow-2xs"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary bg-surface-container-lowest border border-outline-variant hover:bg-surface-container rounded-md-full cursor-pointer transition-colors shadow-2xs"
                         title="Visualizar e imprimir guia de exames"
                       >
                         <Printer className="w-3.5 h-3.5 text-primary" />
-                        <span>Ver / Imprimir</span>
+                        <span>Gerar Relatório</span>
                       </button>
 
                       {!isPatientView && (
