@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   X,
   Loader2,
+  Plus,
 } from "lucide-react";
 import type { Proposta } from "@/types/proposta";
 import type { Client } from "@/types/client";
@@ -377,9 +378,10 @@ export function PropostasCards({
             <button
               type="button"
               onClick={onNewProposta}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full shadow-xs transition-all cursor-pointer md-state-layer active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full shadow-xs hover:shadow transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] md-state-layer"
             >
-              <span>+ Nova Proposta</span>
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>Nova Proposta</span>
             </button>
           )}
         </div>
