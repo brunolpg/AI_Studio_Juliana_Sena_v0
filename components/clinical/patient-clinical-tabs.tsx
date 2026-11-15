@@ -810,9 +810,9 @@ export function PatientClinicalTabs({
     <div className={isPatient ? "space-y-6" : "bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden transition-all duration-200"}>
       {/* Barra de Navegação Interna das Abas Clínicas (Apenas para Administrador / Profissional) */}
       {!isPatient && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 gap-3">
           {/* Abas MD4 Segmented */}
-          <div className="flex items-center p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-full border border-slate-200/80 dark:border-slate-700/80 text-xs overflow-x-auto shadow-2xs">
+          <div className="flex items-center p-1 bg-slate-100/90 dark:bg-slate-800/80 rounded-full border border-slate-200/80 dark:border-slate-700/80 text-xs overflow-x-auto scrollbar-none max-w-full shadow-2xs">
             <button
               type="button"
               onClick={() => setActiveSubTab("evolucoes")}
@@ -950,7 +950,7 @@ export function PatientClinicalTabs({
                     setSelectedHomeCareForEdit(null);
                     setIsHomeCareModalOpen(true);
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full border border-teal-700/30 dark:border-teal-500/40 text-[#0d6e64] dark:text-teal-300 bg-teal-50/60 dark:bg-teal-950/40 hover:bg-teal-100/80 dark:hover:bg-teal-900/50 transition-all cursor-pointer shadow-2xs md-state-layer active:scale-[0.98]"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full ring-1 ring-inset ring-teal-700/30 dark:ring-teal-500/40 text-[#0d6e64] dark:text-teal-300 bg-teal-50/60 dark:bg-teal-950/40 hover:bg-teal-100/80 dark:hover:bg-teal-900/50 transition-all cursor-pointer shadow-2xs md-state-layer active:scale-[0.98] whitespace-nowrap shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5 shrink-0" />
                   <span>Cuidados & Orientações</span>
@@ -958,7 +958,7 @@ export function PatientClinicalTabs({
                 <button
                   type="button"
                   onClick={() => setIsPrescriptionModalOpen(true)}
-                  className="flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full shadow-xs transition-all cursor-pointer md-state-layer active:scale-[0.98]"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full shadow-xs transition-all cursor-pointer md-state-layer active:scale-[0.98] whitespace-nowrap shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5 shrink-0" />
                   <span>Prescrever Receita</span>
@@ -969,7 +969,7 @@ export function PatientClinicalTabs({
                     setSelectedExamForEdit(null);
                     setIsExamModalOpen(true);
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold text-on-primary bg-primary hover:brightness-105 rounded-full shadow-xs transition-all cursor-pointer md-state-layer active:scale-[0.98]"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-on-primary bg-primary hover:brightness-105 rounded-full shadow-xs transition-all cursor-pointer md-state-layer active:scale-[0.98] whitespace-nowrap shrink-0"
                 >
                   <FlaskConical className="w-3.5 h-3.5 shrink-0" />
                   <span>Prescrever Exames</span>
@@ -1844,7 +1844,7 @@ export function PatientClinicalTabs({
                             setSelectedHomeCareForEdit(null);
                             setIsHomeCareModalOpen(true);
                           }}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold rounded-full border border-teal-700/30 dark:border-teal-500/40 text-[#0d6e64] dark:text-teal-300 bg-teal-50/60 dark:bg-teal-950/40 hover:bg-teal-100/80 dark:hover:bg-teal-900/50 transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full ring-1 ring-inset ring-teal-700/30 dark:ring-teal-500/40 text-[#0d6e64] dark:text-teal-300 bg-teal-50/60 dark:bg-teal-950/40 hover:bg-teal-100/80 dark:hover:bg-teal-900/50 transition-all cursor-pointer shadow-2xs md-state-layer active:scale-[0.98] whitespace-nowrap shrink-0"
                         >
                           <Plus className="w-3.5 h-3.5 shrink-0" />
                           <span>Cuidados & Orientações</span>
@@ -1852,7 +1852,7 @@ export function PatientClinicalTabs({
                         <button
                           type="button"
                           onClick={() => setIsPrescriptionModalOpen(true)}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full transition-all cursor-pointer shadow-xs md-state-layer active:scale-[0.98] whitespace-nowrap shrink-0"
                         >
                           <Plus className="w-3.5 h-3.5 shrink-0" />
                           <span>Prescrever Receita</span>
@@ -1863,7 +1863,7 @@ export function PatientClinicalTabs({
                             setSelectedExamForEdit(null);
                             setIsExamModalOpen(true);
                           }}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold text-on-primary bg-primary hover:brightness-105 rounded-full transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-on-primary bg-primary hover:brightness-105 rounded-full transition-all cursor-pointer shadow-xs md-state-layer active:scale-[0.98] whitespace-nowrap shrink-0"
                         >
                           <FlaskConical className="w-3.5 h-3.5 shrink-0" />
                           <span>Prescrever Exames</span>

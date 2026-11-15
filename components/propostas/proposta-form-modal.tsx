@@ -780,8 +780,8 @@ export function PropostaFormModal({
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
           {/* Informações Básicas */}
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="w-full col-span-full">
                 <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
                   Título da Proposta *
                 </label>
@@ -790,19 +790,6 @@ export function PropostaFormModal({
                   onChange={(val) => setTitulo(val)}
                   onSelectModelo={handleSelectModelo}
                   catalogo={catalogoPropostas}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-                  Profissional Responsável
-                </label>
-                <input
-                  type="text"
-                  value={profissional}
-                  onChange={(e) => setProfissional(e.target.value)}
-                  placeholder="Dra. Juliana Sena"
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
               </div>
             </div>
@@ -837,7 +824,7 @@ export function PropostaFormModal({
               <button
                 type="button"
                 onClick={handleAddOpcao}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 hover:bg-teal-100/60 dark:hover:bg-teal-900/60 transition-all cursor-pointer shadow-2xs"
+                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-on-primary bg-primary hover:bg-primary/90 active:scale-[0.98] rounded-full shadow-xs cursor-pointer transition-all md-state-layer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Adicionar Opção</span>
@@ -921,7 +908,7 @@ export function PropostaFormModal({
                         <button
                           type="button"
                           onClick={() => handleAddProcedimento(oIdx)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 hover:bg-teal-100/60 dark:hover:bg-teal-900/60 transition-all cursor-pointer shadow-2xs"
+                          className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-on-primary bg-primary hover:bg-primary/90 active:scale-[0.98] rounded-full shadow-xs cursor-pointer transition-all md-state-layer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           <span>Adicionar Procedimento</span>
@@ -1037,7 +1024,7 @@ export function PropostaFormModal({
               <button
                 type="button"
                 onClick={handleAddEtapa}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 hover:bg-teal-100/60 dark:hover:bg-teal-900/60 transition-all cursor-pointer shadow-2xs"
+                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-on-primary bg-primary hover:bg-primary/90 active:scale-[0.98] rounded-full shadow-xs cursor-pointer transition-all md-state-layer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Adicionar Etapa</span>
@@ -1129,7 +1116,7 @@ export function PropostaFormModal({
               <button
                 type="button"
                 onClick={handleAddTopico}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl text-teal-600 dark:text-teal-400 bg-teal-50/50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 hover:bg-teal-100/60 dark:hover:bg-teal-900/60 transition-all cursor-pointer shadow-2xs"
+                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-on-primary bg-primary hover:bg-primary/90 active:scale-[0.98] rounded-full shadow-xs cursor-pointer transition-all md-state-layer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Adicionar Tópico</span>
@@ -1173,12 +1160,12 @@ export function PropostaFormModal({
         </form>
 
         {/* Modal Footer */}
-        <div className="shrink-0 p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/60 flex items-center justify-end gap-3">
+        <div className="shrink-0 p-4 sm:p-5 border-t border-outline-variant bg-surface-container-low flex items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl transition-colors cursor-pointer"
+            className="px-5 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-high rounded-full cursor-pointer transition-colors md-state-layer"
           >
             Cancelar
           </button>
@@ -1187,7 +1174,7 @@ export function PropostaFormModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 active:bg-teal-800 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-2 text-xs font-semibold text-on-primary bg-primary hover:bg-primary/90 active:scale-[0.98] rounded-full shadow-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer md-state-layer"
           >
             {isSaving ? (
               <>
