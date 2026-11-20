@@ -247,6 +247,7 @@ export function PatientClinicalTabs({
   } | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [gmailAuthUrl, setGmailAuthUrl] = useState<string | null>(null);
 
   const openSigningModal = (rx: PrescriptionItem) => {
     setSignError(null);
@@ -255,6 +256,7 @@ export function PatientClinicalTabs({
     setSignedNotificationPrompt(null);
     setIsSendingEmail(false);
     setEmailSent(false);
+    setGmailAuthUrl(null);
     setSigningRx(rx);
   };
 
@@ -267,6 +269,7 @@ export function PatientClinicalTabs({
     setSignedNotificationPrompt(null);
     setIsSendingEmail(false);
     setEmailSent(false);
+    setGmailAuthUrl(null);
   };
 
   // Disparo manual de e-mail com a prescrição assinada em anexo
@@ -284,6 +287,7 @@ export function PatientClinicalTabs({
 
     try {
       setIsSendingEmail(true);
+      setGmailAuthUrl(null);
       const res = await fetch(`/api/prescricoes/${signedNotificationPrompt.rxId}/notify-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -296,7 +300,27 @@ export function PatientClinicalTabs({
         }),
       });
 
-      if (!res.ok) throw new Error("Erro ao disparar e-mail");
+      const data = await res.json().catch(() => ({}));
+
+      if (data?.code === "GMAIL_AUTH_REQUIRED") {
+        const authPath =
+          typeof data?.authUrl === "string" && data.authUrl.startsWith("/api/auth/google")
+            ? data.authUrl
+            : "/api/auth/google";
+        setGmailAuthUrl(authPath);
+        toast({
+          type: "warning",
+          title: "Conexão com Gmail Necessária",
+          description:
+            data?.message ||
+            "Conecte a conta Gmail (julianasevieira@gmail.com) para enviar a receita por e-mail.",
+        });
+        return;
+      }
+
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || data?.error || "Erro ao disparar e-mail");
+      }
 
       setEmailSent(true);
       toast({
@@ -304,12 +328,12 @@ export function PatientClinicalTabs({
         title: "E-mail enviado com sucesso!",
         description: `Receita com PDF assinado enviada para ${patientEmail}.`,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao enviar e-mail:", err);
       toast({
         type: "error",
         title: "Falha no envio do e-mail",
-        description: "Não foi possível realizar o envio por e-mail neste momento. Tente novamente.",
+        description: err?.message || "Não foi possível realizar o envio por e-mail neste momento. Tente novamente.",
       });
     } finally {
       setIsSendingEmail(false);
@@ -2890,6 +2914,18 @@ export function PatientClinicalTabs({
                   </button>
 
                   {/* Botão Concluir / Fechar */}
+                  {gmailAuthUrl && (
+                    <div className="p-2.5 rounded-md-xl bg-surface-container border border-outline-variant">
+                      <a
+                        href={gmailAuthUrl}
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-md-xl bg-primary text-on-primary hover:brightness-105 border border-outline-variant text-xs sm:text-sm font-semibold transition-all shadow-xs"
+                      >
+                        <Mail className="w-4 h-4 shrink-0" />
+                        <span>Conectar Gmail (julianasevieira@gmail.com)</span>
+                      </a>
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => {
@@ -2899,6 +2935,7 @@ export function PatientClinicalTabs({
                       setIsDraggingSigned(false);
                       setEmailSent(false);
                       setIsSendingEmail(false);
+                      setGmailAuthUrl(null);
                     }}
                     className="w-full py-2 px-4 rounded-full border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer mt-0.5"
                   >

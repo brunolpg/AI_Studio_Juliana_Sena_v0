@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { denyUnlessStaff } from "@/lib/prescricoes/access";
+import { sendEmailViaGmail } from "@/lib/google-gmail/gmail-service";
 import {
   buildExamNotificationMessage,
   buildExamPrescriptionPdf,
   examPrescriptionPdfFileName,
 } from "@/lib/prescricoes-exames/pdf";
 import type { GrupoExameItem, PrescricaoExame, PrescricaoExameStatus } from "@/types/prescricao-exame";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function escapeHtml(value: string): string {
   return value
@@ -31,6 +36,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const denied = await denyUnlessStaff();
+    if (denied) return denied;
+
     const { id: prescricaoId } = await params;
     const body = await request.json().catch(() => ({}));
 
@@ -240,53 +248,40 @@ export async function POST(
       </div>
     `;
 
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const emailFrom = process.env.EMAIL_FROM || "Dra. Juliana Sena <nao-responda@julianasena.com.br>";
-
-    if (!resendApiKey) {
-      console.warn("[prescricoes-exames/notify-email] RESEND_API_KEY não configurada.");
-      return NextResponse.json({
-        success: true,
-        mocked: true,
-        message: "RESEND_API_KEY não configurada.",
-      });
-    }
-
-    const resendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: emailFrom,
-        to: [patientEmail],
-        subject: `Solicitação de Exames Laboratoriais - ${prescricao.titulo}`,
-        html: htmlContent,
-        attachments: [
-          {
-            filename: fileName,
-            content: pdfBase64,
-          },
-        ],
-      }),
+    const gmailResult = await sendEmailViaGmail({
+      to: patientEmail,
+      subject: `Solicitação de Exames Laboratoriais - ${prescricao.titulo}`,
+      html: htmlContent,
+      attachments: [
+        {
+          filename: fileName,
+          content: pdfBase64,
+          contentType: "application/pdf",
+        },
+      ],
     });
 
-    if (!resendRes.ok) {
-      const errText = await resendRes.text();
-      console.warn("[prescricoes-exames/notify-email] Falha ao enviar e-mail via Resend:", errText);
+    if (!gmailResult.success) {
       return NextResponse.json(
-        { success: false, error: errText || "Falha ao enviar e-mail pelo provedor Resend." },
-        { status: 502 }
+        {
+          success: false,
+          code: gmailResult.code,
+          ...(gmailResult.authUrl ? { authUrl: gmailResult.authUrl } : {}),
+          message: gmailResult.error,
+          error: gmailResult.error,
+        },
+        { status: gmailResult.status }
       );
     }
-
-    const resendData = await resendRes.json().catch(() => ({}));
 
     return NextResponse.json({
       success: true,
       message: "Solicitação de exames enviada em PDF para o e-mail do paciente com sucesso.",
-      data: resendData,
+      data: {
+        id: gmailResult.messageId,
+        threadId: gmailResult.threadId,
+        sender: gmailResult.sender,
+      },
       recipient: patientEmail,
       filename: fileName,
     });

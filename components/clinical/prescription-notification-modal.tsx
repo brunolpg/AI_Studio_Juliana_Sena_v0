@@ -160,6 +160,7 @@ export function PrescriptionNotificationModal({
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailFeedback, setEmailFeedback] = useState<FeedbackState | null>(null);
+  const [gmailAuthUrl, setGmailAuthUrl] = useState<string | null>(null);
 
   const rxId = prescription?.prescricao_id || prescription?.id || "";
 
@@ -167,6 +168,7 @@ export function PrescriptionNotificationModal({
     if (isOpen) {
       setEmailSent(false);
       setEmailFeedback(null);
+      setGmailAuthUrl(null);
       setIsSendingWhatsApp(false);
       setIsSendingEmail(false);
     }
@@ -354,6 +356,7 @@ export function PrescriptionNotificationModal({
 
     setIsSendingEmail(true);
     setEmailFeedback(null);
+    setGmailAuthUrl(null);
 
     try {
       const res = await fetch(`/api/prescricoes/${rxId}/notify-email`, {
@@ -371,6 +374,24 @@ export function PrescriptionNotificationModal({
 
       const data = await res.json().catch(() => ({}));
 
+      if (data?.code === "GMAIL_AUTH_REQUIRED") {
+        const authPath =
+          typeof data?.authUrl === "string" && data.authUrl.startsWith("/api/auth/google")
+            ? data.authUrl
+            : "/api/auth/google";
+        const authMsg =
+          data?.message ||
+          "Conecte a conta Gmail (julianasevieira@gmail.com) para enviar prescrições por e-mail.";
+        setGmailAuthUrl(authPath);
+        setEmailFeedback({ type: "warning", message: authMsg });
+        toast({
+          type: "warning",
+          title: "Conexão com Gmail Necessária",
+          description: authMsg,
+        });
+        return;
+      }
+
       if (!res.ok || !data?.success) {
         const errMsg =
           data?.message ||
@@ -381,19 +402,6 @@ export function PrescriptionNotificationModal({
           type: "error",
           title: "Falha no Envio por E-mail",
           description: errMsg,
-        });
-        return;
-      }
-
-      if (data?.mocked) {
-        const mockedMsg =
-          "PDF processado com sucesso, porém a chave RESEND_API_KEY precisa estar ativa no servidor para o disparo externo de e-mails.";
-        setEmailSent(true);
-        setEmailFeedback({ type: "warning", message: mockedMsg });
-        toast({
-          type: "warning",
-          title: "Envio Externo Não Configurado",
-          description: mockedMsg,
         });
         return;
       }
@@ -562,6 +570,18 @@ export function PrescriptionNotificationModal({
                 </>
               )}
             </button>
+
+            {gmailAuthUrl && (
+              <div className="p-2.5 rounded-md-xl bg-surface-container border border-outline-variant">
+                <a
+                  href={gmailAuthUrl}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px] rounded-md-xl bg-primary text-on-primary hover:brightness-105 border border-outline-variant text-xs sm:text-sm font-semibold transition-all shadow-xs"
+                >
+                  <Mail className="w-4 h-4 shrink-0" />
+                  <span>Conectar Gmail (julianasevieira@gmail.com)</span>
+                </a>
+              </div>
+            )}
           </div>
         </div>
 
