@@ -49,9 +49,11 @@ interface EditContentProps {
 function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditContentProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const isPatient = user?.role === "paciente";
+  const normalizedRole = String(user?.role || "").toLowerCase().trim();
+  const isPatient = normalizedRole === "paciente";
+  const isAdminOnly = normalizedRole === "administrador" || normalizedRole === "admin";
   const isAdminOrProfessional =
-    user?.role === "administrador" || user?.role === "profissional";
+    isAdminOnly || normalizedRole === "profissional";
 
   const availableStatusOptions = isPatient
     ? STATUS_OPTIONS.filter((opt) => opt !== "Cancelado")
@@ -210,15 +212,18 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
     setErrorMsg(null);
 
     try {
-      const res = await updateAppointmentAction(appointment.id, {
+      const updatePayload: Parameters<typeof updateAppointmentAction>[1] = {
         data: date,
         horario_inicio: selectedSlot,
         procedimento,
-        observacoes,
         status,
         status_pagamento: paymentStatus,
-        anexos_clinicos: clinicalAttachments,
-      });
+      };
+      if (!isAdminOnly) {
+        updatePayload.observacoes = observacoes;
+        updatePayload.anexos_clinicos = clinicalAttachments;
+      }
+      const res = await updateAppointmentAction(appointment.id, updatePayload);
 
       if (res.success) {
         toast({
@@ -382,89 +387,93 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
           />
         </div>
 
-        {/* Observações */}
-        <div>
-          <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
-            Observações
-          </label>
-          <textarea
-            rows={2}
-            value={observacoes}
-            onChange={(e) => setObservacoes(e.target.value)}
-            className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none"
-          />
-        </div>
-
-        {/* Exames e Fotos da Região */}
-        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-              <Paperclip className="w-3.5 h-3.5 text-teal-600" />
-              <span>Exames e Fotos da Região</span>
-            </label>
-            <span className="text-[10px] text-slate-400 font-medium">
-              {clinicalAttachments.length}/3 arquivos anexados
-            </span>
-          </div>
-
-          {/* Lista de anexos existentes */}
-          {clinicalAttachments.length > 0 && (
-            <div className="space-y-1.5">
-              {clinicalAttachments.map((url, idx) => {
-                const isImage = url.match(/\.(jpeg|jpg|png|webp)($|\?)/i);
-                return (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      {isImage ? (
-                        <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
-                      ) : (
-                        <FileText className="w-4 h-4 text-rose-600 shrink-0" />
-                      )}
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="truncate text-teal-700 dark:text-teal-300 hover:underline font-medium"
-                      >
-                        Anexo {idx + 1} ({isImage ? "Foto" : "Documento"})
-                      </a>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteAttachment(idx)}
-                      className="text-slate-400 hover:text-error p-1 rounded-lg transition-colors cursor-pointer"
-                      title="Excluir anexo"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Botão de Upload se restarem vagas */}
-          {clinicalAttachments.length < 3 && (
-            <label className="flex items-center justify-center gap-2 p-3 border border-dashed border-teal-300 dark:border-teal-700 rounded-xl bg-teal-50/30 dark:bg-slate-800/40 hover:bg-teal-50/60 dark:hover:bg-slate-800 transition-all cursor-pointer">
-              <UploadCloud className="w-4 h-4 text-teal-600 shrink-0" />
-              <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">
-                {isUploadingAttachment
-                  ? "Enviando arquivo..."
-                  : `Adicionar arquivo (PDF, PNG ou JPG) - Restam ${3 - clinicalAttachments.length}`}
-              </span>
-              <input
-                type="file"
-                disabled={isUploadingAttachment}
-                accept=".pdf,image/png,image/jpeg,image/jpg,image/webp"
-                className="hidden"
-                onChange={handleUploadFile}
+        {/* Observações e Exames Clínicos (Ocultos para administrador) */}
+        {!isAdminOnly && (
+          <>
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                Observações
+              </label>
+              <textarea
+                rows={2}
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 resize-none"
               />
-            </label>
-          )}
-        </div>
+            </div>
+
+            {/* Exames e Fotos da Região */}
+            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                  <Paperclip className="w-3.5 h-3.5 text-teal-600" />
+                  <span>Exames e Fotos da Região</span>
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {clinicalAttachments.length}/3 arquivos anexados
+                </span>
+              </div>
+
+              {/* Lista de anexos existentes */}
+              {clinicalAttachments.length > 0 && (
+                <div className="space-y-1.5">
+                  {clinicalAttachments.map((url, idx) => {
+                    const isImage = url.match(/\.(jpeg|jpg|png|webp)($|\?)/i);
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {isImage ? (
+                            <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
+                          ) : (
+                            <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                          )}
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="truncate text-teal-700 dark:text-teal-300 hover:underline font-medium"
+                          >
+                            Anexo {idx + 1} ({isImage ? "Foto" : "Documento"})
+                          </a>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAttachment(idx)}
+                          className="text-slate-400 hover:text-error p-1 rounded-lg transition-colors cursor-pointer"
+                          title="Excluir anexo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Botão de Upload se restarem vagas */}
+              {clinicalAttachments.length < 3 && (
+                <label className="flex items-center justify-center gap-2 p-3 border border-dashed border-teal-300 dark:border-teal-700 rounded-xl bg-teal-50/30 dark:bg-slate-800/40 hover:bg-teal-50/60 dark:hover:bg-slate-800 transition-all cursor-pointer">
+                  <UploadCloud className="w-4 h-4 text-teal-600 shrink-0" />
+                  <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">
+                    {isUploadingAttachment
+                      ? "Enviando arquivo..."
+                      : `Adicionar arquivo (PDF, PNG ou JPG) - Restam ${3 - clinicalAttachments.length}`}
+                  </span>
+                  <input
+                    type="file"
+                    disabled={isUploadingAttachment}
+                    accept=".pdf,image/png,image/jpeg,image/jpg,image/webp"
+                    className="hidden"
+                    onChange={handleUploadFile}
+                  />
+                </label>
+              )}
+            </div>
+          </>
+        )}
 
         </div>
 

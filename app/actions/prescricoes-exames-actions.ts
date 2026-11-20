@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { requireProfissionalAccess, verifyProfissionalOrOwnPaciente } from "@/lib/auth/session";
 import { generatePropostaHash } from "@/lib/hash-proposta";
 import type {
   PrescricaoExame,
@@ -50,95 +49,6 @@ const DEFAULT_ORIENTACOES: string[] = [
 ];
 
 /**
- * Obtém os clientes Supabase para execução segura e fallback administrativo.
- */
-async function getSupabaseClients() {
-  const serverClient = await createClient();
-  const adminClient = getSupabaseAdminClient();
-  const db = adminClient || serverClient;
-  return { serverClient, adminClient, db };
-}
-
-/**
- * Valida se o usuário autenticado possui role de 'administrador' ou 'profissional'
- * checando metadados da sessão e a tabela public.profiles.
- */
-async function verifyProfissionalOrAdmin(
-  serverClient: any,
-  adminDb: any
-): Promise<{
-  authorized: boolean;
-  error?: string;
-  user?: any;
-  role?: string;
-  profile?: any;
-}> {
-  if (!serverClient) {
-    return {
-      authorized: false,
-      error: "Cliente de autenticação indisponível.",
-    };
-  }
-
-  const {
-    data: { user },
-    error: authError,
-  } = await serverClient.auth.getUser();
-
-  if (authError || !user) {
-    return {
-      authorized: false,
-      error: "Acesso não autenticado. Por favor, realize login.",
-    };
-  }
-
-  const rawRole = (
-    user.user_metadata?.role ||
-    user.app_metadata?.role ||
-    ""
-  )
-    .toLowerCase()
-    .trim();
-
-  const isEmailAdmin =
-    user.email?.toLowerCase().includes("juliana") ||
-    user.email?.toLowerCase().includes("admin");
-
-  if (
-    rawRole === "administrador" ||
-    rawRole === "admin" ||
-    rawRole === "profissional" ||
-    isEmailAdmin
-  ) {
-    return { authorized: true, user, role: rawRole || "administrador" };
-  }
-
-  // Consulta papel do usuário na tabela profiles
-  const targetDb = adminDb || serverClient;
-  const { data: profile } = await targetDb
-    .from("profiles")
-    .select("role, nome")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const roleFromDb = (profile?.role || "").toLowerCase().trim();
-  const isAuthorized =
-    roleFromDb === "administrador" ||
-    roleFromDb === "admin" ||
-    roleFromDb === "profissional";
-
-  if (!isAuthorized) {
-    return {
-      authorized: false,
-      error:
-        "Acesso não autorizado. Apenas administradores e profissionais podem gerenciar prescrições de exames.",
-    };
-  }
-
-  return { authorized: true, user, role: roleFromDb, profile };
-}
-
-/**
  * 1. getPrescricoesExamesByPaciente
  * Valida se o paciente existe e está ativo (deleted_at IS NULL) e busca todas as prescrições
  * de exames do paciente ordenadas por data DESC, created_at DESC.
@@ -154,15 +64,16 @@ export async function getPrescricoesExamesByPaciente(
       };
     }
 
-    const { serverClient, adminClient, db } = await getSupabaseClients();
-    if (!db) {
+    const auth = await verifyProfissionalOrOwnPaciente(pacienteId);
+    if (!auth.authorized) {
       return {
         success: false,
-        error: "Banco de dados indisponível no momento.",
+        error: auth.message,
+        message: auth.message,
       };
     }
 
-    const activeDb = serverClient || adminClient || db;
+    const activeDb = auth.supabase;
 
     // 1. Valida se o paciente existe e está ativo (filtro soft delete)
     const { data: paciente, error: pacError } = await activeDb
@@ -256,8 +167,16 @@ export async function getCatalogoExamesPreCadastrados(): Promise<
   PrescricaoExameActionResult<CatalogoExamesPreCadastrados>
 > {
   try {
-    const { serverClient, adminClient, db } = await getSupabaseClients();
-    const activeDb = adminClient || serverClient || db;
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
+      return {
+        success: false,
+        error: auth.message,
+        message: auth.message,
+      };
+    }
+
+    const activeDb = auth.supabase;
 
     const gruposSet = new Set<string>(DEFAULT_GRUPOS);
     const examesSet = new Set<string>(DEFAULT_EXAMES);
@@ -466,27 +385,17 @@ export async function savePrescricaoExame(
       };
     }
 
-    const serverClient = await createClient();
-    const adminClient = getSupabaseAdminClient();
-    const db = adminClient || serverClient;
-
-    if (!db) {
+    // 1. Valida permissão estrita para perfil profissional
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
       return {
         success: false,
-        error: "Banco de dados indisponível no momento.",
+        error: auth.message,
+        message: auth.message,
       };
     }
 
-    // 1. Valida permissão do usuário autenticado ('administrador' ou 'profissional')
-    if (serverClient) {
-      const authCheck = await verifyProfissionalOrAdmin(serverClient, db);
-      if (!authCheck.authorized) {
-        return {
-          success: false,
-          error: authCheck.error || "Acesso não autorizado.",
-        };
-      }
-    }
+    const db = auth.supabase;
 
     // 2. Valida paciente ativo (deleted_at IS NULL)
     const { data: paciente, error: pacError } = await db
@@ -770,27 +679,16 @@ export async function suspenderPrescricaoExame(
       };
     }
 
-    const serverClient = await createClient();
-    const adminClient = getSupabaseAdminClient();
-    const db = adminClient || serverClient;
-
-    if (!db) {
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
       return {
         success: false,
-        error: "Banco de dados indisponível no momento.",
+        error: auth.message,
+        message: auth.message,
       };
     }
 
-    // Valida permissão do usuário
-    if (serverClient) {
-      const authCheck = await verifyProfissionalOrAdmin(serverClient, db);
-      if (!authCheck.authorized) {
-        return {
-          success: false,
-          error: authCheck.error || "Acesso não autorizado.",
-        };
-      }
-    }
+    const db = auth.supabase;
 
     const now = new Date().toISOString();
     const justificativaFinal =
@@ -851,27 +749,16 @@ export async function reativarPrescricaoExame(
       };
     }
 
-    const serverClient = await createClient();
-    const adminClient = getSupabaseAdminClient();
-    const db = adminClient || serverClient;
-
-    if (!db) {
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
       return {
         success: false,
-        error: "Banco de dados indisponível no momento.",
+        error: auth.message,
+        message: auth.message,
       };
     }
 
-    // Valida permissão do usuário
-    if (serverClient) {
-      const authCheck = await verifyProfissionalOrAdmin(serverClient, db);
-      if (!authCheck.authorized) {
-        return {
-          success: false,
-          error: authCheck.error || "Acesso não autorizado.",
-        };
-      }
-    }
+    const db = auth.supabase;
 
     const now = new Date().toISOString();
 
@@ -922,15 +809,16 @@ export async function getModelosPrescricaoExames(): Promise<
   PrescricaoExameActionResult<PrescricaoExameModelo[]>
 > {
   try {
-    const { serverClient, adminClient, db } = await getSupabaseClients();
-    const activeDb = db || adminClient || serverClient;
-
-    if (!activeDb) {
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
       return {
         success: false,
-        error: "Banco de dados indisponível no momento.",
+        error: auth.message,
+        message: auth.message,
       };
     }
+
+    const activeDb = auth.supabase;
 
     const { data, error } = await activeDb
       .from("prescricoes_exames_modelos")
@@ -1009,24 +897,16 @@ export async function saveModeloPrescricaoExame(
       };
     }
 
-    const { serverClient, db } = await getSupabaseClients();
-
-    if (!db) {
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
       return {
         success: false,
-        error: "Banco de dados indisponível no momento.",
+        error: auth.message,
+        message: auth.message,
       };
     }
 
-    if (serverClient) {
-      const authCheck = await verifyProfissionalOrAdmin(serverClient, db);
-      if (!authCheck.authorized) {
-        return {
-          success: false,
-          error: authCheck.error || "Acesso não autorizado.",
-        };
-      }
-    }
+    const db = auth.supabase;
 
     // Sincroniza novos grupos e exames com exames_grupos e exames_itens (ON CONFLICT (nome) DO NOTHING)
     try {
@@ -1203,24 +1083,16 @@ export async function deleteModeloPrescricaoExame(
       };
     }
 
-    const { serverClient, db } = await getSupabaseClients();
-
-    if (!db) {
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
       return {
         success: false,
-        error: "Banco de dados indisponível no momento.",
+        error: auth.message,
+        message: auth.message,
       };
     }
 
-    if (serverClient) {
-      const authCheck = await verifyProfissionalOrAdmin(serverClient, db);
-      if (!authCheck.authorized) {
-        return {
-          success: false,
-          error: authCheck.error || "Acesso não autorizado.",
-        };
-      }
-    }
+    const db = auth.supabase;
 
     const now = new Date().toISOString();
 

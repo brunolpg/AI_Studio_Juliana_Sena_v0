@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  getSession,
+  requireProfissionalAccess,
+  verifyProfissionalOrOwnPaciente,
+} from "@/lib/auth/session";
 import type {
   PatientClinicalRecord,
   MedicalHistory,
@@ -28,10 +32,11 @@ export async function getPatientClinicalRecordAction(
       return { success: false, message: "ID de paciente inválido." };
     }
 
-    const supabase = await createClient();
-    if (!supabase) {
-      return { success: false, message: "Banco de dados não disponível." };
+    const auth = await verifyProfissionalOrOwnPaciente(clientId);
+    if (!auth.authorized) {
+      return { success: false, message: auth.message };
     }
+    const supabase = auth.supabase;
 
     // 1. Carrega histórico clínico
     const defaultHistory: MedicalHistory = {
@@ -274,18 +279,12 @@ export async function addClinicalEvolutionAction(
       calculatedImc = Number((input.sinaisVitais.peso / (alturaMetros * alturaMetros)).toFixed(1));
     }
 
-    // Validação de autenticação via server client e escrita via admin client
-    const serverClient = await createClient();
-    if (!serverClient) {
-      return { success: false, message: "Banco de dados não disponível." };
+    // Validação estrita: apenas profissional de saúde autenticado
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
+      return { success: false, message: auth.message };
     }
-
-    const { data: { user }, error: authErr } = await serverClient.auth.getUser();
-    if (authErr || !user) {
-      return { success: false, message: "Acesso não autorizado. Por favor, realize login novamente." };
-    }
-
-    const supabase = getSupabaseAdminClient() || serverClient;
+    const supabase = auth.supabase;
 
     // Sanitiza o procedimento_id: aceita apenas se for UUID legítimo, caso contrário grava null
     let sanitizedProcedimentoId: string | null = null;
@@ -576,10 +575,11 @@ export async function updateMedicalHistoryAction(
       return { success: false, message: "ID de paciente inválido." };
     }
 
-    const supabase = await createClient();
-    if (!supabase) {
-      return { success: false, message: "Banco de dados não disponível." };
+    const auth = await verifyProfissionalOrOwnPaciente(clientId);
+    if (!auth.authorized) {
+      return { success: false, message: auth.message };
     }
+    const supabase = auth.supabase;
 
     // Gravar na tabela historico_clinico do Supabase (upsert)
     const { error } = await supabase.from("historico_clinico").upsert(
@@ -645,10 +645,11 @@ export async function addPrescriptionAction(
       return { success: false, message: "ID de paciente inválido." };
     }
 
-    const supabase = await createClient();
-    if (!supabase) {
-      return { success: false, message: "Banco de dados não disponível." };
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
+      return { success: false, message: auth.message };
     }
+    const supabase = auth.supabase;
 
     // Registra como prescrição simples
     const { data: prescricao, error: errPresc } = await supabase
@@ -725,10 +726,11 @@ export async function togglePrescriptionStatusAction(
       return { success: false, message: "ID de paciente inválido." };
     }
 
-    const supabase = await createClient();
-    if (!supabase) {
-      return { success: false, message: "Banco de dados não disponível." };
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
+      return { success: false, message: auth.message };
     }
+    const supabase = auth.supabase;
 
     // Busca a prescrição para ver o status atual
     const { data: prescricao, error: fetchErr } = await supabase
@@ -775,7 +777,11 @@ export async function togglePrescriptionStatusAction(
  */
 export async function getFormulasAction(): Promise<ActionResponse<any[]>> {
   try {
-    const supabase = getSupabaseAdminClient() || (await createClient());
+    const user = await getSession();
+    if (!user || (user.role !== "profissional" && user.role !== "administrador")) {
+      return { success: true, data: [] };
+    }
+    const supabase = await createClient();
     if (!supabase) {
       return { success: true, data: [] };
     }
@@ -829,7 +835,11 @@ export async function getFormulasAction(): Promise<ActionResponse<any[]>> {
  */
 export async function getComponentesAction(): Promise<ActionResponse<any[]>> {
   try {
-    const supabase = getSupabaseAdminClient() || (await createClient());
+    const user = await getSession();
+    if (!user || (user.role !== "profissional" && user.role !== "administrador")) {
+      return { success: true, data: [] };
+    }
+    const supabase = await createClient();
     if (!supabase) {
       return { success: true, data: [] };
     }
@@ -869,7 +879,11 @@ export async function getComponentesAction(): Promise<ActionResponse<any[]>> {
  */
 export async function getUnidadesAction(): Promise<ActionResponse<any[]>> {
   try {
-    const supabase = getSupabaseAdminClient() || (await createClient());
+    const user = await getSession();
+    if (!user || (user.role !== "profissional" && user.role !== "administrador")) {
+      return { success: true, data: [] };
+    }
+    const supabase = await createClient();
     if (!supabase) {
       return { success: true, data: [] };
     }
@@ -926,8 +940,11 @@ export async function addStructuredPrescriptionAction(
       return { success: false, message: "ID do paciente inválido. Acesso ao banco recusado." };
     }
 
-    const supabase = await createClient();
-    if (!supabase) return { success: false, message: "Erro de conexão com o Supabase." };
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
+      return { success: false, message: auth.message };
+    }
+    const supabase = auth.supabase;
 
     const parseNum = (val: any): number | null => {
       if (val === undefined || val === null || val === "") return null;
@@ -1250,8 +1267,11 @@ export async function updateStructuredPrescriptionAction(
       return { success: false, message: "ID da prescrição inválido." };
     }
 
-    const supabase = await createClient();
-    if (!supabase) return { success: false, message: "Erro de conexão com o Supabase." };
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
+      return { success: false, message: auth.message };
+    }
+    const supabase = auth.supabase;
 
     // 1. Localiza a prescrição existente e seus itens atuais (com fallback via prescricao_itens)
     let resolvedPrescriptionId = prescriptionId;
@@ -1569,8 +1589,12 @@ export async function getPatientPrescriptionsWithItemsAction(
   clientId: string
 ): Promise<ActionResponse<any[]>> {
   try {
-    const supabase = getSupabaseAdminClient() || (await createClient());
-    if (!supabase || !clientId) return { success: true, data: [] };
+    if (!clientId) return { success: true, data: [] };
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
+      return { success: false, message: auth.message, data: [] };
+    }
+    const supabase = auth.supabase;
 
     const { data, error } = await supabase
       .from("prescricoes")
@@ -1615,8 +1639,11 @@ export async function getAestheticEvaluationAction(patientId: string): Promise<A
       return { success: false, message: 'ID do paciente inválido.' };
     }
 
-    const supabase = await createClient();
-    if (!supabase) return { success: false, message: 'Falha de conexão com o banco de dados.' };
+    const auth = await verifyProfissionalOrOwnPaciente(cleanId);
+    if (!auth.authorized) {
+      return { success: false, message: auth.message };
+    }
+    const supabase = auth.supabase;
 
     const { data: facialData, error: facialErr } = await supabase
       .from('avaliacoes_faciais')
@@ -1666,8 +1693,11 @@ export async function saveAestheticEvaluationAction(
       return { success: false, message: 'ID do paciente inválido.' };
     }
 
-    const supabase = await createClient();
-    if (!supabase) return { success: false, message: 'Falha de conexão com o banco de dados.' };
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
+      return { success: false, message: auth.message };
+    }
+    const supabase = auth.supabase;
 
     // 1. Salvar ou Atualizar Avaliação Facial
     if (payload.facial) {
@@ -1783,10 +1813,9 @@ export async function getPatientPrescriptionsForEvolutionAction(
 ): Promise<PrescricaoParaEvolucao[]> {
   try {
     if (!clientId) return [];
-    const serverClient = await createClient();
-    const adminClient = getSupabaseAdminClient();
-    const supabase = adminClient || serverClient;
-    if (!supabase) return [];
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) return [];
+    const supabase = auth.supabase;
 
     const { data: prescricoesDb, error } = await supabase
       .from("prescricoes")

@@ -9,15 +9,37 @@ import { AppointmentTableView } from "@/components/appointments/appointment-tabl
 import { PatientClinicalDashboardView } from "@/components/clinical/patient-clinical-dashboard-view";
 import { DeliverablesView } from "@/components/clients/deliverables-view";
 import { PopsView } from "@/components/pops/pops-view";
+import { useAuth } from "@/components/auth/auth-context";
 import { ShieldCheck, CalendarCheck2, FileCode2, Calendar, Stethoscope, Users, ClipboardList } from "lucide-react";
 
+const ADMIN_ALLOWED_TABS: DashboardTab[] = ["agendamentos", "pops"];
+
 export function PatientDashboard({ initialTab = "prontuarios" }: { initialTab?: DashboardTab } = {}) {
-  const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
+  const { user } = useAuth();
+  const rawRole = String(user?.role || (user as any)?.profile?.role || "").toLowerCase().trim();
+  const isProfissional = rawRole === "profissional";
+  const isAdminOnly = rawRole === "administrador" || rawRole === "admin";
+
+  const [requestedTab, setRequestedTab] = useState<DashboardTab>(initialTab);
+
+  const activeTab: DashboardTab = isAdminOnly
+    ? ADMIN_ALLOWED_TABS.includes(requestedTab)
+      ? requestedTab
+      : "agendamentos"
+    : requestedTab;
+
+  const handleTabChange = (tab: DashboardTab) => {
+    if (isAdminOnly && !ADMIN_ALLOWED_TABS.includes(tab)) {
+      setRequestedTab("agendamentos");
+      return;
+    }
+    setRequestedTab(tab);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col box-border w-full max-w-full min-w-0 overflow-x-hidden antialiased lg:pl-64">
       {/* Top Header com navegação por abas */}
-      <AppHeader currentTab={activeTab} onTabChange={setActiveTab} />
+      <AppHeader currentTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Main Content Area Padronizada com Largura Total Fluida e Simetria Perfeita */}
       <main className="md4-main-content flex-1 min-w-0 w-full px-4 sm:px-8 py-4 sm:py-6 lg:px-10 lg:py-8 space-y-4 sm:space-y-6 box-border overflow-x-hidden pb-24 md:pb-8 max-lg:landscape:space-y-3 max-lg:landscape:pt-2 max-lg:landscape:pl-20 max-lg:landscape:pr-5">
@@ -91,17 +113,17 @@ export function PatientDashboard({ initialTab = "prontuarios" }: { initialTab?: 
         {/* Quick Metrics */}
         {activeTab !== "pops" && <StatsOverview activeTab={activeTab} />}
 
-        {/* Views Condicionais por Aba */}
-        {activeTab === "pacientes" && (
+        {/* Views Condicionais por Aba (Restritas ao Profissional para Pacientes/Prontuários) */}
+        {isProfissional && activeTab === "pacientes" && (
           <div className="space-y-4">
             <ClientTableView />
           </div>
         )}
 
-        {activeTab === "prontuarios" && (
+        {isProfissional && activeTab === "prontuarios" && (
           <div className="space-y-4">
             <PatientClinicalDashboardView
-              onOpenAppointments={() => setActiveTab("agendamentos")}
+              onOpenAppointments={() => handleTabChange("agendamentos")}
             />
           </div>
         )}
@@ -118,7 +140,7 @@ export function PatientDashboard({ initialTab = "prontuarios" }: { initialTab?: 
           </div>
         )}
 
-        {activeTab === "deliverables" && (
+        {isProfissional && activeTab === "deliverables" && (
           <div className="space-y-4">
             <DeliverablesView />
           </div>

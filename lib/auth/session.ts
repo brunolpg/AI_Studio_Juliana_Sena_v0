@@ -86,6 +86,8 @@ export async function getSession(): Promise<User | null> {
   }
 }
 
+export const PROFISSIONAL_ONLY_ERROR = "Acesso restrito ao profissional de saúde.";
+
 export async function requireAuth(): Promise<User> {
   const user = await getSession();
   if (!user) {
@@ -93,3 +95,88 @@ export async function requireAuth(): Promise<User> {
   }
   return user;
 }
+
+export async function requireProfissionalAccess(): Promise<
+  | { authorized: true; user: User; supabase: NonNullable<Awaited<ReturnType<typeof createClient>>> }
+  | { authorized: false; message: string }
+> {
+  const supabase = await createClient();
+  if (!supabase) {
+    return { authorized: false, message: "Banco de dados não disponível." };
+  }
+
+  const user = await getSession();
+  if (!user) {
+    return {
+      authorized: false,
+      message: "Acesso não autenticado. Por favor, realize login.",
+    };
+  }
+
+  if (user.role !== "profissional") {
+    return {
+      authorized: false,
+      message: PROFISSIONAL_ONLY_ERROR,
+    };
+  }
+
+  return { authorized: true, user, supabase };
+}
+
+export async function verifyProfissionalOrOwnPaciente(pacienteId: string): Promise<
+  | { authorized: true; user: User; isProfissional: boolean; supabase: NonNullable<Awaited<ReturnType<typeof createClient>>> }
+  | { authorized: false; message: string }
+> {
+  const supabase = await createClient();
+  if (!supabase) {
+    return { authorized: false, message: "Banco de dados não disponível." };
+  }
+
+  const user = await getSession();
+  if (!user) {
+    return {
+      authorized: false,
+      message: "Acesso não autenticado. Por favor, realize login.",
+    };
+  }
+
+  // Bloqueio explícito para perfil administrador
+  if (user.role === "administrador" || (user.role as string) === "admin") {
+    return {
+      authorized: false,
+      message: PROFISSIONAL_ONLY_ERROR,
+    };
+  }
+
+  if (user.role === "profissional") {
+    return { authorized: true, user, isProfissional: true, supabase };
+  }
+
+  if (user.role === "paciente") {
+    const userEmail = (user.email || "").toLowerCase().trim();
+    let query = supabase
+      .from("pacientes")
+      .select("id")
+      .eq("id", pacienteId)
+      .is("deleted_at", null);
+
+    if (user.id && userEmail) {
+      query = query.or(`user_id.eq.${user.id},email.ilike.${userEmail}`);
+    } else if (user.id) {
+      query = query.eq("user_id", user.id);
+    } else if (userEmail) {
+      query = query.ilike("email", userEmail);
+    }
+
+    const { data: ownPatient } = await query.maybeSingle();
+    if (ownPatient?.id === pacienteId) {
+      return { authorized: true, user, isProfissional: false, supabase };
+    }
+  }
+
+  return {
+    authorized: false,
+    message: PROFISSIONAL_ONLY_ERROR,
+  };
+}
+
