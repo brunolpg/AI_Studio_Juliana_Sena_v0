@@ -112,8 +112,6 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
   const { toast } = useToast();
   const { user } = useAuth();
   const isPatient = user?.role === "paciente";
-  const normalizedRole = String(user?.role || "").toLowerCase().trim();
-  const isAdminOnly = normalizedRole === "administrador" || normalizedRole === "admin";
   const [isPending, startTransition] = useTransition();
 
   // Estados de busca e filtros
@@ -610,8 +608,6 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
             placeholder={
               isPatient
                 ? "Buscar por procedimento ou data..."
-                : isAdminOnly
-                ? "Buscar por nome do paciente, procedimento ou data..."
                 : "Buscar por paciente, profissional ou data..."
             }
             value={searchTerm}
@@ -751,11 +747,9 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                 <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
                   PROCEDIMENTO
                 </th>
-                {!isAdminOnly && (
-                  <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
-                    Contato
-                  </th>
-                )}
+                <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
+                  Contato
+                </th>
                 <th className="py-3 px-4 text-left font-bold text-slate-700 dark:text-slate-300">
                   Google Agenda
                 </th>
@@ -773,7 +767,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm">
               {isPending && paginatedData.data.length === 0 ? (
                 <tr>
-                  <td colSpan={isPatient || isAdminOnly ? 7 : 8} className="py-12 text-center text-slate-500">
+                  <td colSpan={isPatient ? 7 : 8} className="py-12 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
                       <span className="text-xs">Sincronizando agendamentos...</span>
@@ -782,7 +776,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                 </tr>
               ) : paginatedData.data.length === 0 ? (
                 <tr>
-                  <td colSpan={isPatient || isAdminOnly ? 7 : 8} className="py-12 text-center">
+                  <td colSpan={isPatient ? 7 : 8} className="py-12 text-center">
                     <div className="max-w-sm mx-auto flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
                       <div className="p-3 bg-teal-50 dark:bg-slate-800 rounded-full mb-3 text-teal-600 dark:text-teal-400">
                         <CalendarDays className="w-6 h-6" />
@@ -886,7 +880,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                         <span className="text-xs font-medium text-slate-800 dark:text-slate-200 block">
                           {appointment.procedimento}
                         </span>
-                        {!isAdminOnly && appointment.observacoes && (
+                        {appointment.observacoes && (
                           <span className="text-[11px] text-slate-400 block truncate max-w-[220px]">
                             {appointment.observacoes}
                           </span>
@@ -894,16 +888,14 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                       </td>
 
                       {/* CONTATO: Telefone e e-mail */}
-                      {!isAdminOnly && (
-                        <td className="py-3 px-4">
-                          <span className="text-xs text-slate-700 dark:text-slate-300 block">
-                            {appointment.client_telefone}
-                          </span>
-                          <span className="text-[11px] text-slate-400 block truncate max-w-[170px]">
-                            {appointment.client_email}
-                          </span>
-                        </td>
-                      )}
+                      <td className="py-3 px-4">
+                        <span className="text-xs text-slate-700 dark:text-slate-300 block">
+                          {appointment.client_telefone}
+                        </span>
+                        <span className="text-[11px] text-slate-400 block truncate max-w-[170px]">
+                          {appointment.client_email}
+                        </span>
+                      </td>
 
                       {/* GOOGLE AGENDA: Badge com ícone indicando status de sincronização */}
                       <td className="py-3 px-4 whitespace-nowrap">
@@ -1521,7 +1513,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
       )}
 
       {/* MODAL DE EXAMES E FOTOS CLÍNICAS */}
-      {!isAdminOnly && attachmentModalAppointment && (
+      {attachmentModalAppointment && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-t-3xl sm:rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[92dvh] sm:max-h-[85dvh] overflow-y-auto flex flex-col">
             {/* Handle indicador para Bottom Sheet no Mobile Vertical */}

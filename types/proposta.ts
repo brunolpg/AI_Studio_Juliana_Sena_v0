@@ -77,5 +77,4 @@ export interface PropostaActionResult<T = Proposta> {
   success: boolean;
   data?: T;
   error?: string;
-  message?: string;
 }

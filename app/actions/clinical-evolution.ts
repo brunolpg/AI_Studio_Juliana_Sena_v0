@@ -1,10 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireProfissionalAccess } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { ClinicalEvolution } from "@/types/clinical-record";
 import type { ActionResponse } from "@/types/client";
 import { assinarPayloadSOAP } from "@/lib/crypto-payload";
+
+async function getSupabaseClients() {
+  const serverClient = await createClient();
+  const adminClient = getSupabaseAdminClient();
+  const adminDb = adminClient || serverClient;
+  return { serverClient, adminClient, adminDb };
+}
 
 /**
  * Atualiza uma evolução clínica existente no Supabase com assinatura digital e sincronização de fotos/prescrições
@@ -24,11 +32,15 @@ export async function updateClinicalEvolutionAction(
       return { success: false, message: "ID de formato inválido." };
     }
 
-    const auth = await requireProfissionalAccess();
-    if (!auth.authorized) {
-      return { success: false, message: auth.message };
+    const { serverClient, adminDb } = await getSupabaseClients();
+    if (!serverClient || !adminDb) {
+      return { success: false, message: "Banco de dados indisponível no momento." };
     }
-    const adminDb = auth.supabase;
+
+    const { data: { user }, error: authErr } = await serverClient.auth.getUser();
+    if (authErr || !user) {
+      return { success: false, message: "Acesso não autorizado. Por favor, realize login novamente." };
+    }
 
     // Calcula IMC se peso e altura foram fornecidos
     let calculatedImc = input.sinaisVitais?.imc;
@@ -248,17 +260,21 @@ export async function updateClinicalEvolutionAction(
 export async function deleteClinicalEvolutionAction(
   id: string,
   clientId: string
-): Promise<{ success: boolean; error?: string; message?: string }> {
+): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) {
-      return { success: false, error: "Identificador da evolução ausente.", message: "Identificador da evolução ausente." };
+      return { success: false, error: "Identificador da evolução ausente." };
     }
 
-    const auth = await requireProfissionalAccess();
-    if (!auth.authorized) {
-      return { success: false, error: auth.message, message: auth.message };
+    const { serverClient, adminDb } = await getSupabaseClients();
+    if (!serverClient || !adminDb) {
+      return { success: false, error: "Banco de dados indisponível." };
     }
-    const adminDb = auth.supabase;
+
+    const { data: { user }, error: authErr } = await serverClient.auth.getUser();
+    if (authErr || !user) {
+      return { success: false, error: "Usuário não autenticado." };
+    }
 
     // 1. Limpa vínculos dependentes na tabela associativa
     await adminDb.from("evolucao_prescricoes").delete().eq("evolucao_id", id);

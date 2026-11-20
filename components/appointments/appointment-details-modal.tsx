@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { Appointment } from "@/types/appointment";
 import { useToast } from "@/components/ui/toast";
-import { useAuth } from "@/components/auth/auth-context";
 import { PatientAvatar } from "@/components/shared/patient-avatar";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
@@ -36,9 +35,6 @@ export function AppointmentDetailsModal({
   onEdit,
 }: AppointmentDetailsModalProps) {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const normalizedRole = String(user?.role || "").toLowerCase().trim();
-  const isAdminOnly = normalizedRole === "administrador" || normalizedRole === "admin";
   const [isGenerating, setIsGenerating] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -225,22 +221,20 @@ export function AppointmentDetailsModal({
                 <p className="text-sm font-bold text-on-surface truncate">
                   {appointment.client_nome}
                 </p>
-                {!isAdminOnly && (
-                  <div className="space-y-1 pt-1 text-xs text-on-surface-variant">
-                    {appointment.client_telefone && (
-                      <p className="flex items-center gap-2 truncate">
-                        <Phone className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span>{appointment.client_telefone}</span>
-                      </p>
-                    )}
-                    {appointment.client_email && (
-                      <p className="flex items-center gap-2 truncate">
-                        <Mail className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span>{appointment.client_email}</span>
-                      </p>
-                    )}
-                  </div>
-                )}
+                <div className="space-y-1 pt-1 text-xs text-on-surface-variant">
+                  {appointment.client_telefone && (
+                    <p className="flex items-center gap-2 truncate">
+                      <Phone className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span>{appointment.client_telefone}</span>
+                    </p>
+                  )}
+                  {appointment.client_email && (
+                    <p className="flex items-center gap-2 truncate">
+                      <Mail className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span>{appointment.client_email}</span>
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -299,7 +293,7 @@ export function AppointmentDetailsModal({
             <p className="text-sm font-bold text-on-surface">
               {appointment.procedimento}
             </p>
-            {!isAdminOnly && appointment.observacoes && (
+            {appointment.observacoes && (
               <p className="text-xs text-on-surface-variant pt-1 border-t border-outline-variant/60 mt-2">
                 {appointment.observacoes}
               </p>
@@ -383,56 +377,54 @@ export function AppointmentDetailsModal({
           )}
 
           {/* Anexos Clínicos (Apenas leitura/consulta) */}
-          {!isAdminOnly && (
-            <div className="space-y-2 pt-1">
-              <div className="flex items-center justify-between p-3 rounded-md-2xl bg-surface-container border border-outline-variant">
-                <span className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
-                  <Paperclip className="w-3.5 h-3.5 text-primary shrink-0" />
-                  Total de ficheiros anexados
-                </span>
-                <span className="text-xs font-bold text-primary">
-                  {attachments.length} de 3 ficheiros
-                </span>
-              </div>
-
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
-                  FICHEIROS NO PRONTUÁRIO
-                </span>
-
-                {attachments.length === 0 ? (
-                  <div className="p-4 rounded-md-2xl border border-outline-variant bg-surface-container text-center text-xs text-on-surface-variant italic">
-                    Nenhum exame ou foto clínica anexada a esta consulta.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {attachments.map((url, idx) => {
-                      const isImage = url.match(/\.(jpeg|jpg|png|webp)($|\?)/i);
-                      return (
-                        <a
-                          key={idx}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 p-2.5 rounded-md-lg border border-outline-variant bg-surface hover:bg-surface-container-high text-xs text-on-surface transition-colors group cursor-pointer min-h-[44px]"
-                        >
-                          {isImage ? (
-                            <ImageIcon className="w-4 h-4 text-secondary shrink-0" />
-                          ) : (
-                            <FileText className="w-4 h-4 text-tertiary shrink-0" />
-                          )}
-                          <span className="truncate flex-1 font-medium group-hover:text-primary">
-                            Anexo {idx + 1} ({isImage ? "Foto" : "Documento"})
-                          </span>
-                          <ExternalLink className="w-3.5 h-3.5 text-on-surface-variant group-hover:text-primary shrink-0" />
-                        </a>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between p-3 rounded-md-2xl bg-surface-container border border-outline-variant">
+              <span className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
+                <Paperclip className="w-3.5 h-3.5 text-primary shrink-0" />
+                Total de ficheiros anexados
+              </span>
+              <span className="text-xs font-bold text-primary">
+                {attachments.length} de 3 ficheiros
+              </span>
             </div>
-          )}
+
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
+                FICHEIROS NO PRONTUÁRIO
+              </span>
+
+              {attachments.length === 0 ? (
+                <div className="p-4 rounded-md-2xl border border-outline-variant bg-surface-container text-center text-xs text-on-surface-variant italic">
+                  Nenhum exame ou foto clínica anexada a esta consulta.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {attachments.map((url, idx) => {
+                    const isImage = url.match(/\.(jpeg|jpg|png|webp)($|\?)/i);
+                    return (
+                      <a
+                        key={idx}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2.5 rounded-md-lg border border-outline-variant bg-surface hover:bg-surface-container-high text-xs text-on-surface transition-colors group cursor-pointer min-h-[44px]"
+                      >
+                        {isImage ? (
+                          <ImageIcon className="w-4 h-4 text-secondary shrink-0" />
+                        ) : (
+                          <FileText className="w-4 h-4 text-tertiary shrink-0" />
+                        )}
+                        <span className="truncate flex-1 font-medium group-hover:text-primary">
+                          Anexo {idx + 1} ({isImage ? "Foto" : "Documento"})
+                        </span>
+                        <ExternalLink className="w-3.5 h-3.5 text-on-surface-variant group-hover:text-primary shrink-0" />
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Integração Google Agenda */}
           {appointment.google_html_link && (

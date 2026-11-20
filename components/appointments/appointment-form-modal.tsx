@@ -155,11 +155,9 @@ function AppointmentFormModalContent({
 }: FormContentProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const normalizedRole = String(user?.role || "").toLowerCase().trim();
-  const isPatient = normalizedRole === "paciente";
-  const isAdminOnly = normalizedRole === "administrador" || normalizedRole === "admin";
+  const isPatient = user?.role === "paciente";
   const isAdminOrProfessional =
-    isAdminOnly || normalizedRole === "profissional";
+    user?.role === "administrador" || user?.role === "profissional";
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -558,23 +556,21 @@ function AppointmentFormModalContent({
     async function fetchPatientsFromSupabase() {
       setIsLoadingPatients(true);
       try {
-        if (!isAdminOnly) {
-          const supabase = getSupabaseClient();
-          if (supabase) {
-            const { data, error } = await supabase
-              .from("pacientes")
-              .select("id, nome, cpf, email, telefone")
-              .is("deleted_at", null)
-              .order("nome", { ascending: true });
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          const { data, error } = await supabase
+            .from("pacientes")
+            .select("id, nome, cpf, email, telefone")
+            .is("deleted_at", null)
+            .order("nome", { ascending: true });
 
-            if (!error && data && isMounted) {
-              setPatients(data as PatientSummary[]);
-              return;
-            }
+          if (!error && data && isMounted) {
+            setPatients(data as PatientSummary[]);
+            return;
           }
         }
 
-        // Fallback seguro (ou caminho padrão para administrador sem PII) via Server Action
+        // Fallback seguro via Server Action
         const res = await getActivePatientsForSchedulingAction();
         if (isMounted) {
           if (res.success && res.data) {
@@ -596,7 +592,7 @@ function AppointmentFormModalContent({
     return () => {
       isMounted = false;
     };
-  }, [isAdminOnly]);
+  }, []);
 
   // 2. CARREGAMENTO DE SLOTS DA GRADE
   useEffect(() => {
@@ -699,8 +695,6 @@ function AppointmentFormModalContent({
 
     return patients.filter((p) => {
       const nomeMatch = p.nome ? p.nome.toLowerCase().includes(q) : false;
-      if (isAdminOnly) return nomeMatch;
-
       const emailMatch = p.email ? p.email.toLowerCase().includes(q) : false;
       const cpfRaw = p.cpf ? p.cpf.toLowerCase() : "";
       const cpfDigits = p.cpf ? p.cpf.replace(/\D/g, "") : "";
@@ -710,7 +704,7 @@ function AppointmentFormModalContent({
 
       return nomeMatch || emailMatch || cpfMatch || telMatch;
     });
-  }, [patientSearch, patients, isAdminOnly]);
+  }, [patientSearch, patients]);
 
   // 4. SUBMISSÃO DO AGENDAMENTO (Execução após aceitação da política)
   const executeSubmit = async () => {
@@ -768,7 +762,7 @@ function AppointmentFormModalContent({
         horario_fim: selectedEndTime,
         procedimento: procedimento.trim(),
         procedimento_id: safeProcedimentoId,
-        observacoes: isAdminOnly ? undefined : observacoes.trim() || undefined,
+        observacoes: observacoes.trim() || undefined,
         sync_google: true,
         status_pagamento: receiptFile ? "Em Análise" : "Pendente",
         metodo_pagamento: "pix_manual",
@@ -991,23 +985,21 @@ function AppointmentFormModalContent({
                       <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                         {selectedPatient.nome}
                       </h4>
-                      {!isAdminOnly && (
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                          <span>CPF: {selectedPatient.cpf || "Não informado"}</span>
-                          {selectedPatient.email && (
-                            <>
-                              <span>•</span>
-                              <span className="truncate">{selectedPatient.email}</span>
-                            </>
-                          )}
-                          {selectedPatient.telefone && (
-                            <>
-                              <span>•</span>
-                              <span>{selectedPatient.telefone}</span>
-                            </>
-                          )}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                        <span>CPF: {selectedPatient.cpf || "Não informado"}</span>
+                        {selectedPatient.email && (
+                          <>
+                            <span>•</span>
+                            <span className="truncate">{selectedPatient.email}</span>
+                          </>
+                        )}
+                        {selectedPatient.telefone && (
+                          <>
+                            <span>•</span>
+                            <span>{selectedPatient.telefone}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 text-[11px] font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-teal-200 dark:border-teal-800 shrink-0 ml-2">
@@ -1021,11 +1013,7 @@ function AppointmentFormModalContent({
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
-                      placeholder={
-                        isAdminOnly
-                          ? "Buscar paciente por nome..."
-                          : "Buscar paciente por nome, CPF ou e-mail..."
-                      }
+                      placeholder="Buscar paciente por nome, CPF ou e-mail..."
                       value={patientSearch}
                       onChange={(e) => {
                         setPatientSearch(e.target.value);
@@ -1101,11 +1089,9 @@ function AppointmentFormModalContent({
                                 <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                                   {p.nome}
                                 </div>
-                                {!isAdminOnly && (
-                                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                                    CPF: {p.cpf || "Sem CPF"} {p.email ? `• ${p.email}` : ""} {p.telefone ? `• ${p.telefone}` : ""}
-                                  </div>
-                                )}
+                                <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                                  CPF: {p.cpf || "Sem CPF"} {p.email ? `• ${p.email}` : ""} {p.telefone ? `• ${p.telefone}` : ""}
+                                </div>
                               </div>
                             </div>
                             <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 shrink-0 ml-2">
@@ -1342,83 +1328,79 @@ function AppointmentFormModalContent({
               </div>
             </div>
 
-            {!isAdminOnly && (
-              <>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                    Observações Clínicas (Opcional)
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Ex: Trazer exames recentes de sangue; queixa de dor lombar..."
-                    value={observacoes}
-                    onChange={(e) => setObservacoes(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 resize-none"
-                  />
-                </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                Observações Clínicas (Opcional)
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Ex: Trazer exames recentes de sangue; queixa de dor lombar..."
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 resize-none"
+              />
+            </div>
 
-                <div className="space-y-2 pt-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                      <Paperclip className="w-3.5 h-3.5 text-teal-600" />
-                      <span>Anexar Exames e/ou Fotos da Região (Opcional)</span>
-                    </label>
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      PDF, PNG ou JPG (até 10MB por arquivo)
-                    </span>
-                  </div>
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Paperclip className="w-3.5 h-3.5 text-teal-600" />
+                  <span>Anexar Exames e/ou Fotos da Região (Opcional)</span>
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  PDF, PNG ou JPG (até 10MB por arquivo)
+                </span>
+              </div>
 
-                  <label className="flex flex-col items-center justify-center p-4 border border-dashed border-teal-300/80 dark:border-teal-700/60 rounded-2xl bg-teal-50/30 dark:bg-slate-800/40 hover:bg-teal-50/60 dark:hover:bg-slate-800 transition-all cursor-pointer">
-                    <UploadCloud className="w-6 h-6 text-teal-600 mb-1.5" />
-                    <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">
-                      Clique para adicionar fotos ou exames
-                    </span>
-                    <span className="text-[10px] text-slate-400 mt-0.5">
-                      Selecione um ou vários arquivos
-                    </span>
-                    <input
-                      type="file"
-                      multiple
-                      accept=".pdf,image/png,image/jpeg,image/jpg"
-                      className="hidden"
-                      onChange={handleAddFiles}
-                    />
-                  </label>
+              <label className="flex flex-col items-center justify-center p-4 border border-dashed border-teal-300/80 dark:border-teal-700/60 rounded-2xl bg-teal-50/30 dark:bg-slate-800/40 hover:bg-teal-50/60 dark:hover:bg-slate-800 transition-all cursor-pointer">
+                <UploadCloud className="w-6 h-6 text-teal-600 mb-1.5" />
+                <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">
+                  Clique para adicionar fotos ou exames
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5">
+                  Selecione um ou vários arquivos
+                </span>
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,image/png,image/jpeg,image/jpg"
+                  className="hidden"
+                  onChange={handleAddFiles}
+                />
+              </label>
 
-                  {clinicalFiles.length > 0 && (
-                    <div className="space-y-1.5 pt-1">
-                      {clinicalFiles.map((file, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
-                        >
-                          <div className="flex items-center gap-2 truncate">
-                            {file.type.startsWith("image/") ? (
-                              <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
-                            ) : (
-                              <FileText className="w-4 h-4 text-rose-600 shrink-0" />
-                            )}
-                            <span className="truncate font-medium text-slate-700 dark:text-slate-200">
-                              {file.name}
-                            </span>
-                            <span className="text-[10px] text-slate-400 shrink-0">
-                              ({(file.size / (1024 * 1024)).toFixed(1)} MB)
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFile(idx)}
-                            className="text-slate-400 hover:text-rose-500 p-1 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
+              {clinicalFiles.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  {clinicalFiles.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        {file.type.startsWith("image/") ? (
+                          <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
+                        ) : (
+                          <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                        )}
+                        <span className="truncate font-medium text-slate-700 dark:text-slate-200">
+                          {file.name}
+                        </span>
+                        <span className="text-[10px] text-slate-400 shrink-0">
+                          ({(file.size / (1024 * 1024)).toFixed(1)} MB)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(idx)}
+                        className="text-slate-400 hover:text-rose-500 p-1 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                  )}
+                  ))}
                 </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
@@ -1656,7 +1638,7 @@ function AppointmentFormModalContent({
                           horario_fim: selectedEndTime,
                           procedimento: procedimento.trim(),
                           procedimento_id: safeProcedimentoId,
-                          observacoes: isAdminOnly ? undefined : observacoes.trim() || undefined,
+                          observacoes: observacoes.trim() || undefined,
                           sync_google: true,
                           status_pagamento: "Pendente",
                           metodo_pagamento: "infinitepay",

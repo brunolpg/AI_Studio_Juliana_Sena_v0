@@ -47,40 +47,31 @@ export async function getAuthenticatedUserContext(): Promise<AuthenticatedUserCo
     .eq("id", authUser.id)
     .maybeSingle();
 
-  const rawRole = String(profile?.role || "").toLowerCase().trim();
-  let role: UserRole;
-  if (rawRole === "profissional") {
-    role = "profissional";
-  } else if (rawRole === "administrador" || rawRole === "admin") {
-    role = "administrador";
-  } else if (rawRole === "paciente") {
-    role = "paciente";
-  } else {
+  let role = profile?.role as UserRole;
+  if (!role) {
     role = authUser.email?.toLowerCase() === "brunolpg@gmail.com" ? "administrador" : "paciente";
   }
 
   let patientId: string | null = null;
-  if (role === "paciente") {
-    const userEmail = (authUser.email || "").toLowerCase().trim();
+  const userEmail = (authUser.email || "").toLowerCase().trim();
 
-    // Identifica o paciente vinculado através de user_id ou email (com deleted_at IS NULL)
-    let patientQuery = supabase
-      .from("pacientes")
-      .select("id")
-      .is("deleted_at", null);
+  // Identifica o paciente vinculado através de user_id ou email (com deleted_at IS NULL)
+  let patientQuery = supabase
+    .from("pacientes")
+    .select("id")
+    .is("deleted_at", null);
 
-    if (authUser.id && userEmail) {
-      patientQuery = patientQuery.or(`user_id.eq.${authUser.id},email.ilike.${userEmail}`);
-    } else if (authUser.id) {
-      patientQuery = patientQuery.eq("user_id", authUser.id);
-    } else if (userEmail) {
-      patientQuery = patientQuery.ilike("email", userEmail);
-    }
+  if (authUser.id && userEmail) {
+    patientQuery = patientQuery.or(`user_id.eq.${authUser.id},email.ilike.${userEmail}`);
+  } else if (authUser.id) {
+    patientQuery = patientQuery.eq("user_id", authUser.id);
+  } else if (userEmail) {
+    patientQuery = patientQuery.ilike("email", userEmail);
+  }
 
-    const { data: patientRow } = await patientQuery.limit(1).maybeSingle();
-    if (patientRow?.id) {
-      patientId = patientRow.id;
-    }
+  const { data: patientRow } = await patientQuery.limit(1).maybeSingle();
+  if (patientRow?.id) {
+    patientId = patientRow.id;
   }
 
   return {
@@ -96,7 +87,11 @@ async function getAuthUserRole(): Promise<UserRole | null> {
 }
 
 function getTodayString(): string {
-  return getTodaySaoPauloDateString();
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -186,15 +181,14 @@ interface RawAppointmentRow {
 
 function mapRowToAppointment(
   row: RawAppointmentRow,
-  profilesMap?: Map<string, string>,
-  maskSensitive = false
+  profilesMap?: Map<string, string>
 ): Appointment {
   const patientData = Array.isArray(row.pacientes)
     ? row.pacientes[0]
     : row.pacientes;
 
   const email = (patientData?.email || "").toLowerCase().trim();
-  const avatarFromProfile = !maskSensitive && email && profilesMap ? profilesMap.get(email) : null;
+  const avatarFromProfile = email && profilesMap ? profilesMap.get(email) : null;
   const resolvedAvatar =
     (patientData as any)?.avatar_url || avatarFromProfile || patientData?.foto_perfil || null;
 
@@ -202,8 +196,8 @@ function mapRowToAppointment(
     id: row.id,
     client_id: row.client_id,
     client_nome: patientData?.nome || "Paciente Cadastrado",
-    client_email: maskSensitive ? "" : patientData?.email || "",
-    client_telefone: maskSensitive ? "" : patientData?.telefone || "",
+    client_email: patientData?.email || "",
+    client_telefone: patientData?.telefone || "",
     avatar_url: resolvedAvatar,
     patientPhoto: resolvedAvatar,
     data: row.data,
@@ -211,8 +205,7 @@ function mapRowToAppointment(
     horario_fim: row.horario_fim,
     procedimento: row.procedimento,
     procedimento_id: row.procedimento_id || null,
-    observacoes: maskSensitive ? null : row.observacoes || null,
-    anexos_clinicos: maskSensitive ? [] : (row as any).anexos_clinicos || [],
+    observacoes: row.observacoes || null,
     status: row.status as Appointment["status"],
     status_pagamento: (row as any).status_pagamento || "Pendente",
     metodo_pagamento: (row as any).metodo_pagamento || null,
@@ -250,21 +243,13 @@ export async function getAppointmentsAction(
     } = filter;
 
     const authCtx = await getAuthenticatedUserContext();
-    if (!authCtx) {
-      return {
-        success: false,
-        message: "Acesso não autorizado. Faça login para visualizar agendamentos.",
-      };
-    }
-
-    const isPatientRole = authCtx.role === "paciente";
-    const isAdminOnly = authCtx.role === "administrador";
+    const isPatientRole = authCtx?.role === "paciente";
 
     // 0. Isolamento Estrito de Segurança por Paciente:
     // Se o usuário autenticado possuir perfil/role 'paciente', nunca permita buscar todos os agendamentos sem essa restrição de ID do paciente.
     let targetClientId: string | null = null;
     if (isPatientRole) {
-      targetClientId = authCtx.patientId || null;
+      targetClientId = authCtx?.patientId || null;
       if (!targetClientId) {
         // Paciente logado sem ficha clínica associada não deve visualizar agendamentos de terceiros
         return {
@@ -285,28 +270,8 @@ export async function getAppointmentsAction(
 
     const todayStr = getTodayString();
 
-    const selectColumns = isAdminOnly
-      ? `
-        id,
-        client_id,
-        data,
-        horario_inicio,
-        horario_fim,
-        procedimento,
-        procedimento_id,
-        status,
-        google_event_id,
-        google_html_link,
-        synced_with_google,
-        created_at,
-        updated_at,
-        pacientes (
-          id,
-          nome,
-          foto_perfil
-        )
+    let query = supabase.from("appointments").select(
       `
-      : `
         id,
         client_id,
         data,
@@ -328,9 +293,9 @@ export async function getAppointmentsAction(
           telefone,
           foto_perfil
         )
-      `;
-
-    let query = supabase.from("appointments").select(selectColumns, { count: "exact" });
+      `,
+      { count: "exact" }
+    );
 
     // Aplica o filtro restritivo de paciente (appointments.client_id = paciente.id)
     if (targetClientId) {
@@ -374,20 +339,6 @@ export async function getAppointmentsAction(
         } else {
           query = query.ilike("procedimento", `%${term}%`);
         }
-      } else if (isAdminOnly) {
-        const { data: matchedPatients } = await supabase
-          .from("pacientes")
-          .select("id")
-          .is("deleted_at", null)
-          .ilike("nome", `%${term}%`);
-
-        const patientIds = matchedPatients?.map((p) => p.id) || [];
-        const conditions: string[] = [`procedimento.ilike.%${term}%`];
-
-        if (validDateIso) conditions.push(`data.eq.${validDateIso}`);
-        if (patientIds.length > 0) conditions.push(`client_id.in.(${patientIds.join(",")})`);
-
-        query = query.or(conditions.join(","));
       } else {
         const { data: matchedPatients } = await supabase
           .from("pacientes")
@@ -441,21 +392,19 @@ export async function getAppointmentsAction(
     const currentPage = Math.max(1, Math.min(page, totalPages));
 
     const rows = (data as unknown as RawAppointmentRow[]) || [];
-    const patientEmails = isAdminOnly
-      ? []
-      : Array.from(
-          new Set(
-            rows
-              .map((row) => {
-                const p = Array.isArray(row.pacientes) ? row.pacientes[0] : row.pacientes;
-                return p?.email?.toLowerCase().trim();
-              })
-              .filter((e): e is string => Boolean(e))
-          )
-        );
+    const patientEmails = Array.from(
+      new Set(
+        rows
+          .map((row) => {
+            const p = Array.isArray(row.pacientes) ? row.pacientes[0] : row.pacientes;
+            return p?.email?.toLowerCase().trim();
+          })
+          .filter((e): e is string => Boolean(e))
+      )
+    );
 
     const profilesMap = new Map<string, string>();
-    if (!isAdminOnly && patientEmails.length > 0) {
+    if (patientEmails.length > 0) {
       try {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -474,7 +423,7 @@ export async function getAppointmentsAction(
       }
     }
 
-    const appointments = rows.map((row) => mapRowToAppointment(row, profilesMap, isAdminOnly));
+    const appointments = rows.map((row) => mapRowToAppointment(row, profilesMap));
 
     return {
       success: true,
@@ -520,19 +469,9 @@ export async function getActivePatientsForSchedulingAction(): Promise<ActionResp
       };
     }
 
-    const authCtx = await getAuthenticatedUserContext();
-    if (!authCtx || authCtx.role === "paciente") {
-      return {
-        success: true,
-        data: [],
-      };
-    }
-
-    const isAdminOnly = authCtx.role === "administrador";
-
     const { data, error } = await supabase
       .from("pacientes")
-      .select(isAdminOnly ? "id, nome, foto_perfil" : "id, nome, cpf, email, telefone, foto_perfil")
+      .select("id, nome, cpf, email, telefone, foto_perfil")
       .is("deleted_at", null)
       .order("nome", { ascending: true });
 
@@ -546,14 +485,12 @@ export async function getActivePatientsForSchedulingAction(): Promise<ActionResp
     }
 
     const patientRows = (data as any[]) || [];
-    const emails = isAdminOnly
-      ? []
-      : Array.from(
-          new Set(patientRows.map((p) => p.email?.toLowerCase().trim()).filter(Boolean))
-        );
+    const emails = Array.from(
+      new Set(patientRows.map((p) => p.email?.toLowerCase().trim()).filter(Boolean))
+    );
 
     const profilesMap = new Map<string, string>();
-    if (!isAdminOnly && emails.length > 0) {
+    if (emails.length > 0) {
       try {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -573,18 +510,6 @@ export async function getActivePatientsForSchedulingAction(): Promise<ActionResp
     }
 
     const enriched = patientRows.map((p) => {
-      if (isAdminOnly) {
-        const avatar = p.avatar_url || p.foto_perfil || null;
-        return {
-          id: p.id,
-          nome: p.nome,
-          cpf: "",
-          email: null,
-          telefone: null,
-          avatar_url: avatar,
-          foto_perfil: p.foto_perfil || avatar,
-        };
-      }
       const pEmail = (p.email || "").toLowerCase().trim();
       const avatar = p.avatar_url || profilesMap.get(pEmail) || p.foto_perfil || null;
       return {
@@ -775,30 +700,11 @@ export async function createAppointmentAction(
 ): Promise<ActionResponse<Appointment>> {
   try {
     const authCtx = await getAuthenticatedUserContext();
-    if (!authCtx) {
-      return {
-        success: false,
-        message: "Acesso não autorizado. Faça login para agendar.",
-      };
-    }
-
-    const userRole = authCtx.role;
-    const isAdminOnly = userRole === "administrador";
-    const isAdmin = isAdminOnly || userRole === "profissional";
-
-    if (userRole === "paciente" && (!authCtx.patientId || input.client_id !== authCtx.patientId)) {
-      return {
-        success: false,
-        message: "Você só pode criar agendamentos para o seu próprio cadastro.",
-      };
-    }
-
-    const sanitizedInput: AppointmentInput = isAdminOnly
-      ? { ...input, observacoes: undefined }
-      : input;
+    const userRole = authCtx?.role || null;
+    const isAdmin = userRole === "administrador" || userRole === "profissional";
 
     // 0. Validação estrita via Zod Schema conforme o perfil autenticado
-    const validationResult = createAppointmentSchema(isAdmin).safeParse(sanitizedInput);
+    const validationResult = createAppointmentSchema(isAdmin).safeParse(input);
     if (!validationResult.success) {
       const firstErrorMessage =
         validationResult.error.issues[0]?.message ||
@@ -905,14 +811,14 @@ export async function createAppointmentAction(
       try {
         const gcalRes = await createGoogleCalendarEvent({
           patientName: input.client_nome,
-          patientEmail: isAdminOnly ? "" : input.client_email || "",
-          patientPhone: isAdminOnly ? "" : input.client_telefone || "",
+          patientEmail: input.client_email || "",
+          patientPhone: input.client_telefone || "",
           procedimento: input.procedimento,
           procedimento_id: input.procedimento_id || null,
           date: input.data,
           startTime: input.horario_inicio,
           endTime: horario_fim,
-          observacoes: sanitizedInput.observacoes,
+          observacoes: input.observacoes,
         });
 
         if (gcalRes) {
@@ -933,13 +839,13 @@ export async function createAppointmentAction(
       try {
         googleHtmlLink = safeGenerateGoogleCalendarTemplateUrl({
           patientName: input.client_nome,
-          patientEmail: isAdminOnly ? "" : input.client_email || "",
-          patientPhone: isAdminOnly ? "" : input.client_telefone || "",
+          patientEmail: input.client_email || "",
+          patientPhone: input.client_telefone || "",
           procedimento: input.procedimento,
           date: input.data,
           startTime: input.horario_inicio,
           endTime: horario_fim,
-          observacoes: sanitizedInput.observacoes,
+          observacoes: input.observacoes,
         });
       } catch (templateError) {
         console.warn("[createAppointmentAction] Falha não-bloqueante ao gerar link de template do Google Agenda:", templateError);
@@ -947,27 +853,27 @@ export async function createAppointmentAction(
       }
     }
 
-    const insertSelectColumns = isAdminOnly
-      ? `
-          id,
-          client_id,
-          data,
-          horario_inicio,
-          horario_fim,
-          procedimento,
-          procedimento_id,
-          status,
-          google_event_id,
-          google_html_link,
-          synced_with_google,
-          created_at,
-          updated_at,
-          pacientes (
-            id,
-            nome
-          )
+    // 5. Inserção definitiva na tabela appointments do Supabase
+    const { data: inserted, error: insertError } = await supabase
+      .from("appointments")
+      .insert({
+        client_id: input.client_id,
+        data: input.data,
+        horario_inicio: input.horario_inicio,
+        horario_fim,
+        procedimento: input.procedimento,
+        procedimento_id: input.procedimento_id || null,
+        observacoes: input.observacoes || null,
+        status: "Confirmado",
+        status_pagamento: input.status_pagamento || "Pendente",
+        metodo_pagamento: input.metodo_pagamento || "pix_manual",
+        comprovante_url: input.comprovante_url || null,
+        google_event_id: googleEventId,
+        google_html_link: googleHtmlLink,
+        synced_with_google: syncedWithGoogle,
+      })
+      .select(
         `
-      : `
           id,
           client_id,
           data,
@@ -988,28 +894,8 @@ export async function createAppointmentAction(
             email,
             telefone
           )
-        `;
-
-    // 5. Inserção definitiva na tabela appointments do Supabase
-    const { data: inserted, error: insertError } = await supabase
-      .from("appointments")
-      .insert({
-        client_id: input.client_id,
-        data: input.data,
-        horario_inicio: input.horario_inicio,
-        horario_fim,
-        procedimento: input.procedimento,
-        procedimento_id: input.procedimento_id || null,
-        observacoes: isAdminOnly ? null : input.observacoes || null,
-        status: "Confirmado",
-        status_pagamento: input.status_pagamento || "Pendente",
-        metodo_pagamento: input.metodo_pagamento || "pix_manual",
-        comprovante_url: input.comprovante_url || null,
-        google_event_id: googleEventId,
-        google_html_link: googleHtmlLink,
-        synced_with_google: syncedWithGoogle,
-      })
-      .select(insertSelectColumns)
+        `
+      )
       .single();
 
     if (insertError) {
@@ -1020,23 +906,19 @@ export async function createAppointmentAction(
       };
     }
 
-    const newAppointment = mapRowToAppointment(
-      inserted as unknown as RawAppointmentRow,
-      undefined,
-      isAdminOnly
-    );
+    const newAppointment = mapRowToAppointment(inserted as unknown as RawAppointmentRow);
 
     // Dispara notificações administrativas em segundo plano (assíncrono / não-bloqueante)
     sendNewAppointmentAdminNotification({
       patientName: newAppointment.client_nome || input.client_nome,
-      patientEmail: isAdminOnly ? undefined : newAppointment.client_email || input.client_email,
-      patientPhone: isAdminOnly ? undefined : newAppointment.client_telefone || input.client_telefone,
+      patientEmail: newAppointment.client_email || input.client_email,
+      patientPhone: newAppointment.client_telefone || input.client_telefone,
       data: input.data,
       horario_inicio: input.horario_inicio,
       horario_fim,
       procedimento: input.procedimento,
       valor: matchedProc?.valor,
-      observacoes: sanitizedInput.observacoes,
+      observacoes: input.observacoes,
     }).catch((err) => {
       console.warn("[actions/appointment-actions] Notificação em 2º plano omitida:", err);
     });
@@ -1065,12 +947,6 @@ export async function cancelAppointmentAction(
 ): Promise<ActionResponse<void>> {
   try {
     const userRole = await getAuthUserRole();
-    if (!userRole) {
-      return {
-        success: false,
-        message: "Acesso não autorizado.",
-      };
-    }
     if (userRole === "paciente") {
       return {
         success: false,
@@ -1153,16 +1029,8 @@ export async function updateAppointmentAction(
 ): Promise<ActionResponse<Appointment>> {
   try {
     const authCtx = await getAuthenticatedUserContext();
-    if (!authCtx) {
-      return {
-        success: false,
-        message: "Acesso não autorizado.",
-      };
-    }
-
-    const userRole = authCtx.role;
-    const isAdminOnly = userRole === "administrador";
-    const isAdmin = isAdminOnly || userRole === "profissional";
+    const userRole = authCtx?.role || null;
+    const isAdmin = userRole === "administrador" || userRole === "profissional";
     if (updates.status === "Cancelado" && userRole === "paciente") {
       return {
         success: false,
@@ -1178,27 +1046,11 @@ export async function updateAppointmentAction(
       };
     }
 
-    const currentSelectColumns = isAdminOnly
-      ? `
-          id,
-          client_id,
-          data,
-          horario_inicio,
-          horario_fim,
-          procedimento,
-          procedimento_id,
-          status,
-          google_event_id,
-          google_html_link,
-          synced_with_google,
-          created_at,
-          updated_at,
-          pacientes (
-            id,
-            nome
-          )
+    // 1. Busca registro atual
+    const { data: current, error: getError } = await supabase
+      .from("appointments")
+      .select(
         `
-      : `
           id,
           client_id,
           data,
@@ -1219,28 +1071,15 @@ export async function updateAppointmentAction(
             email,
             telefone
           )
-        `;
-
-    // 1. Busca registro atual
-    const { data: currentRaw, error: getError } = await supabase
-      .from("appointments")
-      .select(currentSelectColumns)
+        `
+      )
       .eq("id", appointmentId)
       .single();
-
-    const current = currentRaw as unknown as RawAppointmentRow | null;
 
     if (getError || !current) {
       return {
         success: false,
         message: "Agendamento não encontrado no banco de dados.",
-      };
-    }
-
-    if (userRole === "paciente" && current.client_id !== authCtx.patientId) {
-      return {
-        success: false,
-        message: "Acesso negado a este agendamento.",
       };
     }
 
@@ -1318,24 +1157,18 @@ export async function updateAppointmentAction(
       targetEnd = calculateEndTime(startSlot, duracaoMinutos);
     }
 
-    const safeUpdates = { ...updates };
-    if (isAdminOnly) {
-      delete safeUpdates.observacoes;
-      delete safeUpdates.anexos_clinicos;
-    }
-
     const payloadToUpdate: Record<string, unknown> = {
-      ...safeUpdates,
+      ...updates,
       horario_fim: targetEnd,
       updated_at: new Date().toISOString(),
     };
 
-    if (!isAdminOnly && safeUpdates.anexos_clinicos !== undefined) {
-      payloadToUpdate.anexos_clinicos = safeUpdates.anexos_clinicos;
+    if (updates.anexos_clinicos !== undefined) {
+      payloadToUpdate.anexos_clinicos = updates.anexos_clinicos;
     }
 
-    if ((safeUpdates as any).status_pagamento !== undefined) {
-      payloadToUpdate.status_pagamento = (safeUpdates as any).status_pagamento;
+    if ((updates as any).status_pagamento !== undefined) {
+      payloadToUpdate.status_pagamento = (updates as any).status_pagamento;
     }
 
     // 3. Atualiza no Supabase
@@ -1343,7 +1176,30 @@ export async function updateAppointmentAction(
       .from("appointments")
       .update(payloadToUpdate)
       .eq("id", appointmentId)
-      .select(currentSelectColumns)
+      .select(
+        `
+          id,
+          client_id,
+          data,
+          horario_inicio,
+          horario_fim,
+          procedimento,
+          procedimento_id,
+          observacoes,
+          status,
+          google_event_id,
+          google_html_link,
+          synced_with_google,
+          created_at,
+          updated_at,
+          pacientes (
+            id,
+            nome,
+            email,
+            telefone
+          )
+        `
+      )
       .single();
 
     if (updateError) {
@@ -1354,11 +1210,7 @@ export async function updateAppointmentAction(
       };
     }
 
-    const mapped = mapRowToAppointment(
-      updated as unknown as RawAppointmentRow,
-      undefined,
-      isAdminOnly
-    );
+    const mapped = mapRowToAppointment(updated as unknown as RawAppointmentRow);
 
     // 4. Sincroniza atualização no Google Calendar se houver evento vinculado
     if (current.google_event_id) {
@@ -1369,17 +1221,13 @@ export async function updateAppointmentAction(
 
         const syncResult = await updateGoogleCalendarEvent(current.google_event_id, {
           patientName: patientData?.nome || "Paciente",
-          patientEmail: isAdminOnly ? "" : patientData?.email || "",
-          patientPhone: isAdminOnly ? "" : patientData?.telefone || "",
-          procedimento: safeUpdates.procedimento || current.procedimento,
+          patientEmail: patientData?.email || "",
+          patientPhone: patientData?.telefone || "",
+          procedimento: updates.procedimento || current.procedimento,
           date: targetDate,
           startTime: targetStart,
           endTime: targetEnd,
-          observacoes: isAdminOnly
-            ? null
-            : safeUpdates.observacoes !== undefined
-            ? safeUpdates.observacoes
-            : current.observacoes,
+          observacoes: updates.observacoes !== undefined ? updates.observacoes : current.observacoes,
         });
 
         // Atualiza o status de sincronização com base no resultado da API do Google Calendar
@@ -1505,29 +1353,17 @@ export async function addAppointmentAttachmentsAction({
   appointmentId: string;
   newAttachmentUrls: string[];
 }) {
-  const authCtx = await getAuthenticatedUserContext();
-  if (!authCtx) {
-    return { success: false, message: "Acesso não autorizado." };
-  }
-  if (authCtx.role === "administrador" || (authCtx.role as string) === "admin") {
-    return { success: false, message: "Acesso restrito ao profissional de saúde." };
-  }
-
   const supabase = await createClient();
   if (!supabase) return { success: false, message: 'Supabase não conectado.' };
 
   // 1. Busca os anexos atuais
   const { data: current, error: fetchErr } = await supabase
     .from('appointments')
-    .select('client_id, anexos_clinicos')
+    .select('anexos_clinicos')
     .eq('id', appointmentId)
     .single();
 
   if (fetchErr) return { success: false, message: fetchErr.message };
-
-  if (authCtx.role === "paciente" && current?.client_id !== authCtx.patientId) {
-    return { success: false, message: "Acesso negado a este agendamento." };
-  }
 
   const currentList: string[] = current?.anexos_clinicos || [];
   if (currentList.length + newAttachmentUrls.length > 3) {

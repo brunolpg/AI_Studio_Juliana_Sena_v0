@@ -15,11 +15,9 @@ export default function DashboardPage() {
       if (!user) {
         router.push("/");
       } else {
-        const rawRole = String(user.role || (user as any).profile?.role || "").toLowerCase().trim();
+        const rawRole = String(user.role || (user as any).profile?.role || "").toLowerCase();
         if (rawRole === "paciente") {
           router.push("/");
-        } else if (rawRole === "administrador" || rawRole === "admin") {
-          router.replace("/appointments");
         }
       }
     }
@@ -27,13 +25,13 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-dvh bg-surface flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="relative flex items-center justify-center">
-            <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-            <HeartPulse className="w-6 h-6 text-primary absolute animate-pulse" />
+            <div className="w-16 h-16 rounded-full border-4 border-teal-500/20 border-t-teal-600 animate-spin" />
+            <HeartPulse className="w-6 h-6 text-teal-600 absolute animate-pulse" />
           </div>
-          <p className="text-sm font-semibold text-on-surface-variant">
+          <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
             Acessando ambiente clínico seguro...
           </p>
         </div>
@@ -41,8 +39,7 @@ export default function DashboardPage() {
     );
   }
 
-  const rawRole = String(user?.role || (user as any)?.profile?.role || "").toLowerCase().trim();
-  if (!user || rawRole !== "profissional") {
+  if (!user) {
     return null; // Will redirect via useEffect
   }
 

@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { clientSchema, clientFilterSchema } from "@/lib/validations/client-schema";
 import { calculateAge } from "@/lib/brazil-data";
-import { requireProfissionalAccess } from "@/lib/auth/session";
+import { getSession } from "@/lib/auth/session";
 import type {
   Client,
   ClientInput,
@@ -38,14 +40,6 @@ export async function getClientsAction(
   rawFilters: Partial<ClientFilter>
 ): Promise<ActionResponse<PaginatedResult<Client>>> {
   try {
-    const auth = await requireProfissionalAccess();
-    if (!auth.authorized) {
-      return {
-        success: false,
-        message: auth.message,
-      };
-    }
-
     const filterParsed = clientFilterSchema.safeParse(rawFilters);
     if (!filterParsed.success) {
       return {
@@ -56,7 +50,14 @@ export async function getClientsAction(
     }
 
     const { search, status, page, pageSize, sortBy, sortOrder } = filterParsed.data;
-    const supabase = auth.supabase;
+    const supabase = getSupabaseAdminClient() || (await createClient());
+
+    if (!supabase) {
+      return {
+        success: false,
+        message: "Banco de dados não disponível.",
+      };
+    }
 
     let query = supabase.from("pacientes").select("*", { count: "exact" });
 
@@ -157,21 +158,19 @@ export async function getClientsAction(
  */
 export async function getClientByIdAction(id: string): Promise<ActionResponse<Client>> {
   try {
-    const auth = await requireProfissionalAccess();
-    if (!auth.authorized) {
+    const supabase = getSupabaseAdminClient() || (await createClient());
+
+    if (!supabase) {
       return {
         success: false,
-        message: auth.message,
+        message: "Banco de dados não disponível.",
       };
     }
-
-    const supabase = auth.supabase;
 
     const { data, error } = await supabase
       .from("pacientes")
       .select("*")
       .eq("id", id)
-      .is("deleted_at", null)
       .single();
 
     if (error || !data) {
@@ -197,12 +196,12 @@ export async function createClientAction(
   rawInput: unknown
 ): Promise<ActionResponse<Client>> {
   try {
-    // 0. Verificação estrita de acesso exclusivo ao profissional de saúde
-    const auth = await requireProfissionalAccess();
-    if (!auth.authorized) {
+    // 0. Verificação de autorização baseada em sessão JWT
+    const sessionUser = await getSession();
+    if (!sessionUser) {
       return {
         success: false,
-        message: auth.message,
+        message: "Acesso não autorizado. É necessário fazer login para cadastrar pacientes.",
       };
     }
 
@@ -229,7 +228,14 @@ export async function createClientAction(
     }
     validData.idade = calculatedAge;
 
-    const supabase = auth.supabase;
+    const supabase = getSupabaseAdminClient() || (await createClient());
+
+    if (!supabase) {
+      return {
+        success: false,
+        message: "Banco de dados não disponível.",
+      };
+    }
 
     // Verifica duplicidade de CPF ativo
     const { data: existingCpf } = await supabase
@@ -293,12 +299,12 @@ export async function updateClientAction(
       return { success: false, message: "ID do paciente é obrigatório." };
     }
 
-    // 0. Verificação estrita de acesso exclusivo ao profissional de saúde
-    const auth = await requireProfissionalAccess();
-    if (!auth.authorized) {
+    // 0. Verificação de autorização baseada em sessão JWT
+    const sessionUser = await getSession();
+    if (!sessionUser) {
       return {
         success: false,
-        message: auth.message,
+        message: "Acesso não autorizado. É necessário fazer login para editar dados de pacientes.",
       };
     }
 
@@ -325,7 +331,14 @@ export async function updateClientAction(
     }
     validData.idade = calculatedAge;
 
-    const supabase = auth.supabase;
+    const supabase = getSupabaseAdminClient() || (await createClient());
+
+    if (!supabase) {
+      return {
+        success: false,
+        message: "Banco de dados não disponível.",
+      };
+    }
 
     // Verifica duplicidade de CPF com outro paciente ativo
     const { data: existingCpf } = await supabase
@@ -386,16 +399,23 @@ export async function softDeleteClientAction(id: string): Promise<ActionResponse
       return { success: false, message: "ID do paciente é obrigatório." };
     }
 
-    // 0. Verificação estrita de acesso exclusivo ao profissional de saúde
-    const auth = await requireProfissionalAccess();
-    if (!auth.authorized) {
+    // 0. Verificação de autorização baseada em sessão JWT
+    const sessionUser = await getSession();
+    if (!sessionUser) {
       return {
         success: false,
-        message: auth.message,
+        message: "Acesso não autorizado. É necessário fazer login para mover pacientes para a lixeira.",
       };
     }
 
-    const supabase = auth.supabase;
+    const supabase = getSupabaseAdminClient() || (await createClient());
+
+    if (!supabase) {
+      return {
+        success: false,
+        message: "Banco de dados não disponível.",
+      };
+    }
 
     const now = new Date().toISOString();
     const { error } = await supabase
@@ -432,16 +452,23 @@ export async function softDeleteClientAction(id: string): Promise<ActionResponse
  */
 export async function restoreClientAction(id: string): Promise<ActionResponse<void>> {
   try {
-    // 0. Verificação estrita de acesso exclusivo ao profissional de saúde
-    const auth = await requireProfissionalAccess();
-    if (!auth.authorized) {
+    // 0. Verificação de autorização baseada em sessão JWT
+    const sessionUser = await getSession();
+    if (!sessionUser) {
       return {
         success: false,
-        message: auth.message,
+        message: "Acesso não autorizado. É necessário fazer login para restaurar pacientes.",
       };
     }
 
-    const supabase = auth.supabase;
+    const supabase = getSupabaseAdminClient() || (await createClient());
+
+    if (!supabase) {
+      return {
+        success: false,
+        message: "Banco de dados não disponível.",
+      };
+    }
 
     const now = new Date().toISOString();
     const { error } = await supabase
@@ -478,16 +505,23 @@ export async function restoreClientAction(id: string): Promise<ActionResponse<vo
  */
 export async function permanentDeleteClientAction(id: string): Promise<ActionResponse<void>> {
   try {
-    // 0. Verificação estrita de acesso exclusivo ao profissional de saúde
-    const auth = await requireProfissionalAccess();
-    if (!auth.authorized) {
+    // 0. Verificação de autorização baseada em sessão JWT
+    const sessionUser = await getSession();
+    if (!sessionUser) {
       return {
         success: false,
-        message: auth.message,
+        message: "Acesso não autorizado. É necessário fazer login para excluir registros permanentemente.",
       };
     }
 
-    const supabase = auth.supabase;
+    const supabase = getSupabaseAdminClient() || (await createClient());
+
+    if (!supabase) {
+      return {
+        success: false,
+        message: "Banco de dados não disponível.",
+      };
+    }
 
     const { error } = await supabase.from("pacientes").delete().eq("id", id);
     if (error) {

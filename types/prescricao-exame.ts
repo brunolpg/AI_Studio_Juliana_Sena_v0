@@ -53,7 +53,6 @@ export interface PrescricaoExameActionResult<T = PrescricaoExame> {
   success: boolean;
   data?: T;
   error?: string;
-  message?: string;
 }
 
 export interface CatalogoExamesPreCadastrados {
