@@ -218,7 +218,7 @@ export function ClientTableView() {
       )}
 
       {/* Barra Superior com Busca e Filtros MD4 */}
-      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 w-full">
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-outline shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 w-full">
         {/* Campo de Busca em Tempo Real (MD4 Search Pill) */}
         <div className="relative flex-1 min-w-0">
           <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -326,7 +326,7 @@ export function ClientTableView() {
       </div>
 
       {/* Tabela de pacientes MD4 */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-outline shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse table-auto">
             <thead>

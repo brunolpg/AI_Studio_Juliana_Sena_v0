@@ -148,7 +148,7 @@ export function FormulaCatalogView({
         
         {/* KPI Cards Padronizados (Grid Equilibrado 2 Colunas no Desktop) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-6 max-lg:landscape:grid-cols-2 max-lg:landscape:gap-3 box-border min-w-0">
-          <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
+          <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-outline shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
             <div className="flex items-center justify-between gap-1">
               <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
                 Fórmulas Cadastradas
@@ -165,7 +165,7 @@ export function FormulaCatalogView({
             </div>
           </div>
 
-          <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
+          <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-outline shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
             <div className="flex items-center justify-between gap-1">
               <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
                 Componentes Ativos
@@ -184,7 +184,7 @@ export function FormulaCatalogView({
         </div>
 
         {/* Barra Superior de Controle, Busca MD4 e Ações */}
-        <div className="bg-white dark:bg-slate-900 p-5 lg:p-6 max-lg:landscape:p-3 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 max-lg:landscape:gap-2.5 w-full min-w-0 box-border">
+        <div className="bg-white dark:bg-slate-900 p-5 lg:p-6 max-lg:landscape:p-3 rounded-3xl border border-outline shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 max-lg:landscape:gap-2.5 w-full min-w-0 box-border">
           
           {/* Campo de Busca Amplo MD4 Search Pill */}
           <div className="relative flex-1 min-w-0 w-full">
@@ -252,7 +252,7 @@ export function FormulaCatalogView({
 
         {/* Listagem em Grid Responsiva (1 col mobile retrato, 2 col landscape/sm, 3 col desktop) */}
         {filteredFormulas.length === 0 ? (
-          <div className="py-16 text-center max-w-sm mx-auto bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-8 shadow-2xs">
+          <div className="py-16 text-center max-w-sm mx-auto bg-white dark:bg-slate-900 rounded-3xl border border-outline p-8 shadow-2xs">
             <div className="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 flex items-center justify-center mx-auto mb-3">
               <BookOpen className="w-7 h-7" />
             </div>
@@ -271,7 +271,7 @@ export function FormulaCatalogView({
               return (
                 <div
                   key={f.id}
-                  className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between"
+                  className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-outline shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between"
                 >
                   <div>
                     {/* Cabeçalho do Card */}

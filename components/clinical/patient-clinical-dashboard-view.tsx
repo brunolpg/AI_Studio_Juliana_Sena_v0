@@ -155,7 +155,7 @@ export function PatientClinicalDashboardView({
   return (
     <div className="space-y-5">
       {/* Barra de Seleção de Paciente com Autocomplete & Troca Rápida */}
-      <div className="w-full p-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm font-['Plus_Jakarta_Sans',sans-serif]">
+      <div className="w-full p-4 bg-white dark:bg-slate-900 rounded-3xl border border-outline shadow-sm font-['Plus_Jakarta_Sans',sans-serif]">
         <div className="flex flex-col landscape:max-md:flex-row landscape:max-md:items-center landscape:max-md:flex-wrap md:flex-row md:items-center justify-between gap-3 w-full">
           {/* Dropdown do Paciente */}
           <div className="flex-1 min-w-[240px] w-full min-w-0">
@@ -314,7 +314,7 @@ export function PatientClinicalDashboardView({
           onTabChange={setActiveTab}
         />
       ) : (
-        <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 text-slate-500">
+        <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-outline text-slate-500">
           Nenhum paciente cadastrado.
         </div>
       )}

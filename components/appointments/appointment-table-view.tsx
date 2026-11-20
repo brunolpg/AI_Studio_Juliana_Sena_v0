@@ -598,7 +598,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
       )}
 
       {/* A. Barra Superior de Controle e Busca MD4 */}
-      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 w-full">
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-outline shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 w-full">
         {/* Campo de Busca Amplo MD4 Search Pill */}
         <div className="relative flex-1 min-w-0">
           <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -731,7 +731,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
       </div>
 
       {/* C. Lista / Tabela de Agendamentos */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-outline shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse table-auto">
             <thead>
@@ -1105,7 +1105,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
 
       {/* Card de Integração e Sincronização do Google Agenda (Posicionado abaixo da listagem/tabela) */}
       {!isPatient && (
-        <div className="w-full min-w-0 box-border mt-6 sm:mt-8 p-4 sm:p-5 rounded-3xl border transition-all text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border-slate-200/90 dark:border-slate-800 shadow-xs">
+        <div className="w-full min-w-0 box-border mt-6 sm:mt-8 p-4 sm:p-5 rounded-3xl border border-outline transition-all text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 shadow-xs">
           <div className="flex items-center gap-3">
             <div
               className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${

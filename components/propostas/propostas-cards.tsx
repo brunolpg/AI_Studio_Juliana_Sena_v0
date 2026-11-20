@@ -148,7 +148,7 @@ export function PropostasCards({
     return (
       <div
         key={proposta.id}
-        className={`p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between min-w-0 w-full ${
+        className={`p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-outline shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between min-w-0 w-full ${
           isSuspended ? "opacity-85 hover:opacity-100" : ""
         }`}
       >
@@ -392,7 +392,7 @@ export function PropostasCards({
             {activePropostas.map((prop) => renderCard(prop, false))}
           </div>
         ) : (
-          <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-center space-y-2">
+          <div className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-outline text-center space-y-2">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Nenhuma proposta ativa registrada para este paciente.
             </p>
@@ -411,7 +411,7 @@ export function PropostasCards({
 
         {/* Seção Colapsável de Propostas Suspensas */}
         {suspendedPropostas.length > 0 && !isPatientView && (
-          <div className="mt-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 overflow-hidden shadow-2xs transition-all">
+          <div className="mt-4 rounded-2xl border border-outline bg-slate-50/80 dark:bg-slate-900/50 overflow-hidden shadow-2xs transition-all">
             <button
               type="button"
               onClick={() => setIsSuspendedSectionOpen(!isSuspendedSectionOpen)}

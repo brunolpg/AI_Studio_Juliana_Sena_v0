@@ -33,7 +33,7 @@
   - Superfícies: `bg-surface`, `bg-surface-container-lowest`, `bg-surface-container`, `bg-surface-container-high`.
   - Textos: `text-on-surface` (principal), `text-on-surface-variant` (secundário/muted/placeholder).
   - Ações & Destaques: `bg-primary`, `text-on-primary`, `bg-primary-container`, `text-on-primary-container`.
-  - Bordas & Status: `border-outline`, `border-outline-variant`, `error`/`on-error-container`, `success`/`on-success-container`, `warning`/`on-warning-container`.
+  - Bordas & Status: Bordas externas dos cards com `border border-outline` (`1px` com cor de alto contraste), divisores internos com `border-outline-variant`, status com `error`/`on-error-container`, `success`/`on-success-container`, `warning`/`on-warning-container`.
 - **Tema e Dark Mode:** Proibido `dark:bg-*` ou `dark:text-*` manuais onde há token semântico (o chaveamento é automático via CSS).
 - **Responsividade, Dispositivos e Orientações (Mobile, Tablet Retrato/Paisagem, Desktop):**
   - **Grids e Flex:** Mobile/Smartphone retrato (`grid-cols-1`); Tablet retrato (`md:grid-cols-2`); Tablet paisagem / Desktop (`lg:grid-cols-3` ou `xl:grid-cols-4`).

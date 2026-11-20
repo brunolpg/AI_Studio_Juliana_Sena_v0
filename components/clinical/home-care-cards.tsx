@@ -99,7 +99,7 @@ export function HomeCareCards({
             return (
               <div
                 key={ficha.id}
-                className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between min-w-0 w-full"
+                className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-outline shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between min-w-0 w-full"
               >
                 <div className="min-w-0 w-full">
                   {/* Cabeçalho do Card */}

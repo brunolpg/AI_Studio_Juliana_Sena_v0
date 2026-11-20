@@ -149,7 +149,7 @@ export function PropostasChipsSection({
       </div>
 
       {/* Conteúdo Principal */}
-      <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-3">
+      <div className="p-3.5 rounded-2xl border border-outline bg-slate-50/70 dark:bg-slate-800/40 space-y-3">
         {isLoading ? (
           <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-500">
             <Loader2 className="w-4 h-4 animate-spin text-teal-600" />

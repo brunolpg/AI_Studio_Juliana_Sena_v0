@@ -118,8 +118,8 @@
   --md-sys-color-warning-container: #fef3c7;
   --md-sys-color-on-warning-container: #78350f;
 
-  --md-sys-color-outline: #cbd5e1;
-  --md-sys-color-outline-variant: #e2e8f0;
+  --md-sys-color-outline: #94a3b8;
+  --md-sys-color-outline-variant: #cbd5e1;
 }
 
 /* ==========================================================================
@@ -170,8 +170,8 @@ html.dark,
   --md-sys-color-warning-container: #78350f;
   --md-sys-color-on-warning-container: #fde68a;
 
-  --md-sys-color-outline: #475569;
-  --md-sys-color-outline-variant: #334155;
+  --md-sys-color-outline: #64748b;
+  --md-sys-color-outline-variant: #475569;
 }
 
 /* ==========================================================================
@@ -368,7 +368,7 @@ html, body, button, input, select, textarea {
 }
 
 .md-outline {
-  border: 1px solid var(--md-sys-color-outline-variant);
+  border: 1px solid var(--md-sys-color-outline);
 }
 
 .md-outline-focus {

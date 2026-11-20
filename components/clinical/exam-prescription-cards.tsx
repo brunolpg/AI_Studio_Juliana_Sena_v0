@@ -127,23 +127,19 @@ export function ExamPrescriptionCards({
 
         <div className="grid grid-cols-1 gap-3.5 min-w-0 w-full">
           {activePrescricoes.map((presc) => {
-            const gruposCount = presc.grupos_exames?.length || 0;
-            const examesCount = (presc.grupos_exames || []).reduce(
-              (acc, g) => acc + (g.exames?.length || 0),
-              0
-            );
-            const truncatedHash = presc.payload_hash
-              ? `${presc.payload_hash.substring(0, 8)}...${presc.payload_hash.substring(presc.payload_hash.length - 8)}`
-              : null;
+            const todosExames = (presc.grupos_exames || [])
+              .flatMap((grp) => grp.exames || [])
+              .map((ex) => (typeof ex === "string" ? ex.trim() : ""))
+              .filter(Boolean);
 
             return (
               <div
                 key={presc.id}
-                className="bg-surface-container-low border border-outline-variant rounded-md-2xl p-4 sm:p-5 transition-all hover:border-outline shadow-2xs flex flex-col justify-between min-w-0 w-full"
+                className="bg-surface-container-lowest border border-outline rounded-md-2xl p-4 sm:p-5 transition-all hover:border-primary/30 shadow-2xs flex flex-col justify-between min-w-0 w-full"
               >
                 <div className="min-w-0 w-full">
                   {/* Cabeçalho do Card */}
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 w-full flex-wrap">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 w-full flex-wrap mb-3 pb-3 border-b border-outline-variant/70">
                     <div className="flex-1 min-w-[200px]">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md-full bg-primary-container text-on-primary-container">
@@ -152,29 +148,17 @@ export function ExamPrescriptionCards({
                         <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-md-full bg-success-container text-on-success-container">
                           {presc.status}
                         </span>
-                        {truncatedHash && (
-                          <span
-                            className="text-[10px] font-mono px-2.5 py-0.5 rounded-md-full bg-surface-container text-on-surface/85 border border-outline-variant"
-                            title={`Hash SHA-256: ${presc.payload_hash}`}
-                          >
-                            SHA-256: {truncatedHash}
-                          </span>
-                        )}
                       </div>
 
                       <h4 className="text-base font-bold text-on-surface leading-snug mt-1.5">
                         {presc.titulo}
                       </h4>
 
-                      <div className="flex items-center gap-2 text-xs text-on-surface/80 mt-1.5 flex-wrap">
-                        <span className="flex items-center gap-1 text-on-surface font-medium">
+                      <div className="flex items-center gap-2 text-xs text-on-surface-variant mt-1.5 flex-wrap">
+                        <span className="flex items-center gap-1 text-on-surface-variant font-medium">
                           <Calendar className="w-3.5 h-3.5 text-primary" />
                           <span>Emissão: {formatDateBR(presc.data)}</span>
                         </span>
-                        <span>•</span>
-                        <span>{gruposCount} {gruposCount === 1 ? "grupo" : "grupos"}</span>
-                        <span>•</span>
-                        <span className="text-primary font-semibold">{examesCount} {examesCount === 1 ? "exame" : "exames"}</span>
                       </div>
                     </div>
 
@@ -228,25 +212,12 @@ export function ExamPrescriptionCards({
                     </div>
                   </div>
 
-                  {/* Resumo dos Grupos e Exames */}
-                  <div className="mt-3 p-3.5 rounded-md-xl bg-surface-container border border-outline-variant space-y-2.5">
-                    {presc.descricao && (
-                      <p className="text-xs text-on-surface leading-relaxed">
-                        {presc.descricao}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-1.5">
-                      {presc.grupos_exames?.map((grp, idx) => (
-                        <span
-                          key={grp.id || idx}
-                          className="text-xs px-2.5 py-1 rounded-md-lg bg-primary-container/60 text-on-primary-container border border-primary/25 font-medium"
-                        >
-                          <strong className="font-semibold">{grp.nome_grupo}:</strong>{" "}
-                          <span>{grp.exames.length} {grp.exames.length === 1 ? "exame" : "exames"}</span>
-                        </span>
-                      ))}
+                  {/* Sequência dos Exames Prescritos */}
+                  {todosExames.length > 0 && (
+                    <div className="p-3.5 rounded-md-xl bg-primary-container/35 border border-primary/25 text-xs text-on-surface font-medium leading-relaxed">
+                      {todosExames.join(" + ")}
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             );

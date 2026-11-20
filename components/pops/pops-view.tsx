@@ -220,7 +220,7 @@ export function PopsView() {
       {/* 1. Métricas Institucionais (Ativos, Em Revisão, Cancelados) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 w-full mb-6 max-lg:landscape:grid-cols-3 max-lg:landscape:gap-3 box-border">
         {/* Card: Ativos */}
-        <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
+        <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-outline shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
           <div className="flex items-center justify-between gap-1">
             <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
               Ativos
@@ -244,7 +244,7 @@ export function PopsView() {
         </div>
 
         {/* Card: Em Revisão */}
-        <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
+        <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-outline shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
           <div className="flex items-center justify-between gap-1">
             <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
               Em Revisão
@@ -268,7 +268,7 @@ export function PopsView() {
         </div>
 
         {/* Card: Cancelados */}
-        <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
+        <div className="p-5 lg:p-6 max-lg:landscape:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-outline shadow-xs transition-all duration-200 hover:shadow-md hover:border-teal-500/30 min-w-0 box-border overflow-hidden">
           <div className="flex items-center justify-between gap-1">
             <span className="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0 flex-1">
               Cancelados
@@ -293,7 +293,7 @@ export function PopsView() {
       </div>
 
       {/* 2. Barra de Busca e Ação de Cadastro */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-outline shadow-2xs">
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           <input
@@ -338,7 +338,7 @@ export function PopsView() {
             {[1, 2, 3].map((n) => (
               <div
                 key={n}
-                className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs animate-pulse space-y-4"
+                className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-outline shadow-2xs animate-pulse space-y-4"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
                   <div className="space-y-2.5 flex-1">
@@ -421,7 +421,7 @@ export function PopsView() {
               return (
                 <div
                   key={pop.id}
-                  className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs hover:border-[#004d40]/40 transition-all flex flex-col justify-between"
+                  className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-outline shadow-2xs hover:border-[#004d40]/40 transition-all flex flex-col justify-between"
                 >
                   <div>
                     {/* Topo do Card */}

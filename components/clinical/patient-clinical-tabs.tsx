@@ -863,7 +863,7 @@ export function PatientClinicalTabs({
   const prescriptions = activePrescriptions;
 
   return (
-    <div className={isPatient ? "space-y-6" : "bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-xs overflow-hidden transition-all duration-200"}>
+    <div className={isPatient ? "space-y-6" : "bg-white dark:bg-slate-900 rounded-3xl border border-outline shadow-xs overflow-hidden transition-all duration-200"}>
       {/* Barra de Navegação Interna das Abas Clínicas (Apenas para Administrador / Profissional) */}
       {!isPatient && (
         <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 gap-3">
@@ -1098,7 +1098,7 @@ export function PatientClinicalTabs({
                       return (
                         <div
                           key={evo.id}
-                          className="relative group bg-white dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-5 shadow-2xs hover:shadow-xs transition-all"
+                          className="relative group bg-white dark:bg-slate-800/60 rounded-2xl border border-outline p-5 shadow-2xs hover:shadow-xs transition-all"
                         >
                           {/* Marcador na Timeline */}
                           <div className="absolute -left-[27px] sm:-left-[35px] top-6 w-5 h-5 rounded-full bg-teal-600 border-4 border-white dark:border-slate-900 text-white flex items-center justify-center shadow-xs" />
@@ -1733,7 +1733,7 @@ export function PatientClinicalTabs({
                   {/* Grade com 2 Cartões: Facial e Corporal */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* Card Facial */}
-                    <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850/60 shadow-2xs space-y-3">
+                    <div className="p-4 rounded-2xl border border-outline bg-white dark:bg-slate-850/60 shadow-2xs space-y-3">
                       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
                         <span className="text-xs font-bold text-teal-700 dark:text-teal-300">Avaliação Facial</span>
                         {aestheticData?.facial?.fototipo && (
@@ -1805,7 +1805,7 @@ export function PatientClinicalTabs({
                     </div>
 
                     {/* Card Corporal */}
-                    <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850/60 shadow-2xs space-y-3">
+                    <div className="p-4 rounded-2xl border border-outline bg-white dark:bg-slate-850/60 shadow-2xs space-y-3">
                       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
                         <span className="text-xs font-bold text-teal-700 dark:text-teal-300">Avaliação Corporal</span>
                         {aestheticData?.corporal?.fototipo && (
@@ -1972,7 +1972,7 @@ export function PatientClinicalTabs({
                       return (
                         <div
                           key={rx.id}
-                          className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between min-w-0 w-full"
+                          className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-outline shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between min-w-0 w-full"
                         >
                           <div className="min-w-0 w-full">
                             {/* Cabeçalho do Card: Empilha ou quebra fluidamente com min-w-[200px] */}
@@ -2171,7 +2171,7 @@ export function PatientClinicalTabs({
                     })}
                         </div>
                       ) : (
-                        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-center">
+                        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-outline text-center">
                           <p className="text-xs text-slate-400 italic">
                             Nenhuma prescrição ativa no momento.
                           </p>
@@ -2183,7 +2183,7 @@ export function PatientClinicalTabs({
                         <div
                           id="secao-prescricoes-suspensas"
                           ref={suspendedSectionRef}
-                          className="mt-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 overflow-hidden shadow-2xs transition-all"
+                          className="mt-2 rounded-2xl border border-outline bg-slate-50/80 dark:bg-slate-900/50 overflow-hidden shadow-2xs transition-all"
                         >
                           <button
                             type="button"
@@ -2244,7 +2244,7 @@ export function PatientClinicalTabs({
                                 return (
                                   <div
                                     key={rx.id}
-                                    className="p-4 rounded-xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-2xs opacity-90 hover:opacity-100 transition-opacity"
+                                    className="p-4 rounded-xl bg-white dark:bg-slate-900/40 border border-outline shadow-2xs opacity-90 hover:opacity-100 transition-opacity"
                                   >
                                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 flex-wrap pb-3 border-b border-slate-200/60 dark:border-slate-800/70">
                                       <div className="flex-1 min-w-[200px]">
@@ -2368,7 +2368,7 @@ export function PatientClinicalTabs({
                                 return (
                                   <div
                                     key={`susp_exam_${ex.id}`}
-                                    className="p-4 rounded-xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-2xs opacity-90 hover:opacity-100 transition-opacity"
+                                    className="p-4 rounded-xl bg-white dark:bg-slate-900/40 border border-outline shadow-2xs opacity-90 hover:opacity-100 transition-opacity"
                                   >
                                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 flex-wrap pb-3 border-b border-slate-200/60 dark:border-slate-800/70">
                                       <div className="flex-1 min-w-[200px]">
@@ -2458,7 +2458,7 @@ export function PatientClinicalTabs({
                               </div>
                             </div>
                           </div>
-                          <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 text-center">
+                          <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-outline text-center">
                             <p className="text-xs text-slate-400 italic">
                               Nenhuma ficha de home care ou orientação domiciliar registrada.
                             </p>

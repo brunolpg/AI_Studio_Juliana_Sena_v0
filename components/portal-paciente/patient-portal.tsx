@@ -627,7 +627,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
             {activeTab === "ficha" && (
               <div className="space-y-6">
                 {/* 1. DADOS CADASTRAIS DO PACIENTE */}
-                <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xs space-y-6">
+                <div className="bg-white dark:bg-slate-900 rounded-3xl border border-outline p-6 shadow-2xs space-y-6">
                   {/* Card Informativo Padronizado (Espelhando o Card de Aviso da Agenda) */}
                   <div className="flex items-center justify-between gap-3 p-4 rounded-2xl md:rounded-3xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 w-full shadow-sm">
                     <div className="flex items-center gap-3">
@@ -753,7 +753,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
                 </div>
 
                 {/* 2. CARD COMPLETO: HISTÓRICO CLÍNICO & ANAMNESE */}
-                <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-2xs space-y-6">
+                <div className="bg-white dark:bg-slate-900 rounded-3xl border border-outline p-6 shadow-2xs space-y-6">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-2xl bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
@@ -1038,7 +1038,7 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
 
             {/* ABA: AGENDAMENTOS */}
             {activeTab === "agendamentos" && (
-              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-2xs">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-outline p-4 sm:p-6 shadow-2xs">
                 <AppointmentTableView clientId={patientData?.id} patientData={patientData} />
               </div>
             )}
