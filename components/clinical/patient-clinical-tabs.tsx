@@ -1988,52 +1988,53 @@ export function PatientClinicalTabs({
                       return (
                         <div
                           key={rx.id}
-                          className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-outline shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between min-w-0 w-full"
+                          className="p-4 sm:p-5 rounded-md-2xl bg-surface-container-lowest border border-outline shadow-2xs hover:border-primary/30 transition-all flex flex-col justify-between min-w-0 w-full"
                         >
                           <div className="min-w-0 w-full">
-                            {/* Cabeçalho do Card: Empilha ou quebra fluidamente com min-w-[200px] */}
-                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 w-full flex-wrap mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70">
+                            {/* Cabeçalho do Card */}
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 w-full flex-wrap mb-3 pb-3 border-b border-outline-variant">
                               
-                              {/* Título Principal, Subtítulo (Nome da Fórmula) e Metadados */}
+                              {/* Chips, Título Principal (Nome da Fórmula) e Emissão */}
                               <div className="flex-1 min-w-[200px]">
-                                <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-snug">
-                                  Fórmula Magistral
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md-full bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                                    Fórmula Magistral
+                                  </span>
+                                  {rx.ativo || rx.status === "Ativo" ? (
+                                    <span className="px-2.5 py-0.5 text-[10px] font-bold rounded-md-full select-none bg-success-container text-on-success-container">
+                                      Ativo
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className="px-2.5 py-0.5 text-[10px] font-bold rounded-md-full select-none bg-surface-container-high text-on-surface-variant"
+                                      title="Receita suspensa"
+                                    >
+                                      Suspenso
+                                    </span>
+                                  )}
+                                </div>
+
+                                <h4 className="text-base font-bold text-on-surface leading-snug mt-1.5">
+                                  {formulaName || "Fórmula Magistral"}
                                 </h4>
 
-                                {/* Subtítulo em Destaque Sutil: Nome da Fórmula */}
-                                {formulaName && (
-                                  <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mt-0.5 leading-snug">
-                                    {formulaName}
-                                  </p>
-                                )}
-
-                                {/* Metadados: Via + Data + Dose */}
-                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex-wrap">
-                                  <span className="font-medium text-slate-600 dark:text-slate-300 shrink-0">
-                                    (Uso {viaLabel})
-                                  </span>
-                                  <span>•</span>
-                                  <span className="shrink-0">Prescrito em {dateFormatted}</span>
-                                  {rx.item?.dosagem && (
-                                    <>
-                                      <span>•</span>
-                                      <span>Dose: {rx.item.dosagem} {rx.item.tipo_veiculo || ""}</span>
-                                    </>
-                                  )}
+                                <div className="flex items-center gap-1.5 text-xs text-on-surface-variant mt-1">
+                                  <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                                  <span>Emissão: {dateFormatted} (Uso {viaLabel})</span>
                                 </div>
                               </div>
 
-                              {/* Ações e Badges (Container Flexível com flex-wrap) */}
+                              {/* Ações Rápidas */}
                               <div className="flex items-center flex-wrap gap-2 shrink-0 self-start">
                                 {!isPatient && (
                                   <>
                                     <button
                                       type="button"
                                       onClick={() => setSelectedRxForPrint(rx)}
-                                      className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 hover:bg-teal-50/70 dark:hover:bg-slate-800/80 rounded-full cursor-pointer transition-colors shadow-2xs md-state-layer"
+                                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-primary bg-primary-container/50 border border-primary/40 hover:bg-primary-container/80 rounded-full cursor-pointer transition-colors"
                                       title="Visualizar e imprimir relatório da receita"
                                     >
-                                      <Printer className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                                      <Printer className="w-3.5 h-3.5 text-primary" />
                                       <span>Gerar Relatório</span>
                                     </button>
 
@@ -2042,18 +2043,18 @@ export function PatientClinicalTabs({
                                         href={rx.pdf_assinado_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 rounded-full transition-colors shadow-2xs md-state-layer"
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-on-success-container bg-success-container/70 border border-success/30 hover:bg-success-container rounded-full transition-colors"
                                         title="Ver receita assinada digitalmente"
                                       >
-                                        <FileCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                        <FileCheck className="w-3.5 h-3.5 text-success" />
                                         <span>PDF Assinado</span>
-                                        <ExternalLink className="w-3 h-3 text-emerald-500" />
+                                        <ExternalLink className="w-3 h-3 text-success" />
                                       </a>
                                     ) : (
                                       <button
                                         type="button"
                                         onClick={() => openSigningModal(rx)}
-                                        className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 hover:bg-blue-100/70 rounded-full transition-colors cursor-pointer shadow-2xs md-state-layer"
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 hover:bg-blue-100/70 rounded-full transition-colors cursor-pointer"
                                         title="Assinar com certificado digital VIDaaS"
                                       >
                                         <FileCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -2069,10 +2070,10 @@ export function PatientClinicalTabs({
                                       href={rx.pdf_assinado_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-full transition-all shadow-2xs md-state-layer"
+                                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-on-success-container bg-success-container/70 border border-success/30 hover:bg-success-container rounded-full transition-all"
                                       title="Baixar receituário assinado digitalmente"
                                     >
-                                      <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                      <Download className="w-3.5 h-3.5 text-success" />
                                       <span>Baixar Receita Assinada</span>
                                     </a>
                                   ) : (
@@ -2086,95 +2087,83 @@ export function PatientClinicalTabs({
                                             "Este documento ainda está aguardando a assinatura digital qualificada. Por favor, solicite a liberação à profissional.",
                                         })
                                       }
-                                      className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-full cursor-pointer hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors shadow-2xs md-state-layer"
+                                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium text-on-surface-variant bg-surface-container border border-outline-variant rounded-full cursor-pointer hover:bg-surface-container-high transition-colors"
                                       title="Documento pendente de assinatura"
                                     >
-                                      <Download className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                                      <Download className="w-3.5 h-3.5 text-on-surface-variant" />
                                       <span>Receita Assinada (Pendente)</span>
                                     </button>
                                   )
                                 )}
 
-                                {rx.ativo || rx.status === "Ativo" ? (
-                                  isPatient ? (
-                                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold bg-success-container text-on-success-container border border-success/30 cursor-default select-none shadow-2xs">
-                                      Em Uso (Ativo)
-                                    </span>
-                                  ) : (
+                                {!isPatient && (
+                                  <div className="flex items-center gap-1.5">
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        setSelectedRxForSuspension(rx.prescricao_id ?? rx.id);
-                                        setJustificativaTexto("");
-                                        setIsSuspensionModalOpen(true);
-                                      }}
-                                      className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer bg-success-container text-on-success-container border border-success/30 hover:bg-error-container hover:text-on-error-container hover:border-error shadow-2xs md-state-layer"
-                                      title="Clique para suspender esta receita"
+                                      onClick={() =>
+                                        handleOpenEditPrescription({
+                                          ...rx,
+                                          id: rx.prescricao_id ?? rx.id,
+                                          prescricao_id: rx.prescricao_id ?? rx.id,
+                                        })
+                                      }
+                                      className="w-8 h-8 rounded-full border border-outline-variant bg-surface-container-low text-on-surface hover:text-primary hover:bg-surface-container transition-colors cursor-pointer flex items-center justify-center"
+                                      title="Editar receita"
+                                      aria-label="Editar receita"
                                     >
-                                      Em Uso (Ativo)
+                                      <Pencil className="w-3.5 h-3.5" />
                                     </button>
-                                  )
-                                ) : (
-                                  <span
-                                    className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 cursor-default shadow-2xs"
-                                    title="Receita suspensa"
-                                  >
-                                    Suspenso
-                                  </span>
-                                )}
 
-                                {!isPatient && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleOpenEditPrescription({
-                                        ...rx,
-                                        id: rx.prescricao_id ?? rx.id,
-                                        prescricao_id: rx.prescricao_id ?? rx.id,
-                                      })
-                                    }
-                                    className="p-1.5 rounded-full text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer"
-                                    title="Editar receita"
-                                    aria-label="Editar receita"
-                                  >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                  </button>
+                                    {(rx.ativo || rx.status === "Ativo") && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedRxForSuspension(rx.prescricao_id ?? rx.id);
+                                          setJustificativaTexto("");
+                                          setIsSuspensionModalOpen(true);
+                                        }}
+                                        className="w-8 h-8 rounded-full border border-outline-variant bg-surface-container-low text-on-surface hover:text-error hover:bg-error-container/30 transition-colors cursor-pointer flex items-center justify-center"
+                                        title="Suspender esta receita"
+                                        aria-label="Suspender esta receita"
+                                      >
+                                        <Archive className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </div>
 
                             {/* Bloco em Destaque: Dosagem e Veículo (Composição / Apresentação) */}
                             {(rx.dosagem || rx.item?.dosagem) && (
-                              <div className="mb-3 p-3 rounded-xl bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200/60 dark:border-teal-900/50">
-                                <p className="text-xs font-semibold text-teal-950 dark:text-teal-200 leading-snug">
-                                  {rx.dosagem || rx.item?.dosagem}
-                                </p>
+                              <div className="mb-3 p-3.5 rounded-xl bg-primary-container/35 border border-primary/25 text-xs text-on-surface font-medium leading-relaxed">
+                                {rx.dosagem || rx.item?.dosagem}
                               </div>
                             )}
 
                             {/* Detalhes da Prescrição: Posologia, Duração e Observações */}
                             <div className="space-y-2.5">
                               {rx.componentes && rx.componentes.length > 0 && (
-                                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 font-medium">
-                                  <strong className="text-slate-900 dark:text-white block mb-1">Composição:</strong>
+                                <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/70 text-xs text-on-surface-variant font-medium">
+                                  <strong className="text-on-surface block mb-1">Composição:</strong>
                                   {rx.componentes.map((c: any) => `${c.nome}: ${c.quantidade}${c.unidade || ""}`).join(" | ")}
                                 </div>
                               )}
 
                               {(rx.posologia || rx.item?.posologia || rx.duracao || rx.item?.duracao || rx.orient_paciente || rx.item?.orient_paciente) && (
-                                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs space-y-1.5">
+                                <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/70 text-xs space-y-1.5">
                                   {(rx.posologia || rx.item?.posologia) && (
-                                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
-                                      <strong className="text-slate-900 dark:text-white">Posologia:</strong> {rx.posologia || rx.item?.posologia}
+                                    <p className="text-on-surface-variant leading-relaxed">
+                                      <strong className="text-on-surface">Posologia:</strong> {rx.posologia || rx.item?.posologia}
                                     </p>
                                   )}
                                   {(rx.duracao || rx.item?.duracao) && (
-                                    <p className="text-slate-600 dark:text-slate-400">
-                                      <strong className="text-slate-800 dark:text-slate-200">Duração:</strong> {rx.duracao || rx.item?.duracao}
+                                    <p className="text-on-surface-variant">
+                                      <strong className="text-on-surface">Duração:</strong> {rx.duracao || rx.item?.duracao}
                                     </p>
                                   )}
                                   {(rx.orient_paciente || rx.item?.orient_paciente) && (
-                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 italic pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
+                                    <p className="text-[11px] text-on-surface-variant italic pt-1 border-t border-outline-variant">
                                       <strong>Obs:</strong> {rx.orient_paciente || rx.item?.orient_paciente}
                                     </p>
                                   )}
