@@ -15,7 +15,7 @@ import {
   type AppointmentFilter,
   type TimeSlot,
 } from "@/types/appointment";
-import { appointmentSchema, appointmentUpdateSchema } from "@/lib/validations/appointment-schema";
+import { createAppointmentSchema } from "@/lib/validations/appointment-schema";
 import {
   createGoogleCalendarEvent,
   deleteGoogleCalendarEvent,
@@ -556,17 +556,23 @@ function hasOverlap(start1: string, end1: string, start2: string, end2: string):
 export async function getTimeSlotsForDateAction(
   dateStr: string
 ): Promise<ActionResponse<TimeSlot[]>> {
+  let isAdmin = false;
   try {
-    if (!dateStr || !isAllowedAppointmentDay(dateStr)) {
-      const schedule = getDayScheduleDescription(dateStr);
+    const authCtx = await getAuthenticatedUserContext();
+    isAdmin = authCtx?.role === "administrador" || authCtx?.role === "profissional";
+
+    if (!dateStr || !isAllowedAppointmentDay(dateStr, isAdmin)) {
+      const schedule = getDayScheduleDescription(dateStr, isAdmin);
       return {
         success: true,
         data: [],
-        message: `Sem expediente na ${schedule.dayName}. Atendimentos ocorrem exclusivamente às segundas, quintas (09h às 16h) e sábados (13h às 18h).`,
+        message: isAdmin
+          ? `Sem expediente (${schedule.dayName}). Atendimentos ocorrem de segunda a sexta (09h às 19h) e aos sábados (13h às 18h).`
+          : `Sem expediente na ${schedule.dayName}. Atendimentos ocorrem exclusivamente às segundas, quintas (09h às 16h) e sábados (13h às 18h).`,
       };
     }
 
-    const standardDaySlots = getAllowedSlotsForDate(dateStr);
+    const standardDaySlots = getAllowedSlotsForDate(dateStr, isAdmin);
 
     const supabase = await createClient();
     let activeDbList: RawAppointmentRow[] = [];
@@ -654,7 +660,7 @@ export async function getTimeSlotsForDateAction(
   } catch (error) {
     console.error("Erro ao calcular time slots:", error);
     // Em caso de erro transitório, devolve a grade padrão desocupada para não bloquear a UI
-    const fallbackSlots = getAllowedSlotsForDate(dateStr).map((s) => ({
+    const fallbackSlots = getAllowedSlotsForDate(dateStr, isAdmin).map((s) => ({
       ...s,
       isOccupied: false,
     }));
@@ -693,8 +699,12 @@ export async function createAppointmentAction(
   input: AppointmentInput
 ): Promise<ActionResponse<Appointment>> {
   try {
-    // 0. Validação estrita via Zod Schema
-    const validationResult = appointmentSchema.safeParse(input);
+    const authCtx = await getAuthenticatedUserContext();
+    const userRole = authCtx?.role || null;
+    const isAdmin = userRole === "administrador" || userRole === "profissional";
+
+    // 0. Validação estrita via Zod Schema conforme o perfil autenticado
+    const validationResult = createAppointmentSchema(isAdmin).safeParse(input);
     if (!validationResult.success) {
       const firstErrorMessage =
         validationResult.error.issues[0]?.message ||
@@ -706,7 +716,6 @@ export async function createAppointmentAction(
     }
 
     // Validação estrita de antecedência mínima de 2 dias corridos apenas para o perfil "paciente"
-    const userRole = await getAuthUserRole();
     if (userRole === "paciente") {
       const todayStr = getTodaySaoPauloDateString();
       const partsToday = todayStr.split("-").map(Number);
@@ -726,20 +735,23 @@ export async function createAppointmentAction(
       }
     }
 
-    // 1. Validação rígida do dia da semana (Segunda, Quinta ou Sábado)
-    if (!isAllowedAppointmentDay(input.data)) {
+    // 1. Validação rígida do dia da semana conforme o perfil
+    if (!isAllowedAppointmentDay(input.data, isAdmin)) {
       return {
         success: false,
-        message: "Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.",
+        message: isAdmin
+          ? "Atendimentos disponíveis de segunda-feira a sábado (sem expediente aos domingos)."
+          : "Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.",
       };
     }
 
-    // 2. Validação rígida do horário conforme o dia
-    const allowedTimes = getAllowedStartTimesForDate(input.data);
+    // 2. Validação rígida do horário conforme o dia e perfil
+    const allowedTimes = getAllowedStartTimesForDate(input.data, isAdmin);
     if (!allowedTimes.includes(input.horario_inicio)) {
+      const schedule = getDayScheduleDescription(input.data, isAdmin);
       return {
         success: false,
-        message: "Horário fora da grade de atendimento permitida para este dia.",
+        message: `Horário fora da grade de atendimento permitida para ${schedule.dayName} (${schedule.hoursDescription}).`,
       };
     }
 
@@ -767,10 +779,11 @@ export async function createAppointmentAction(
       }
     }
 
-    // Calcula horário fim com base na duração real do procedimento
-    const startHour = Number(input.horario_inicio.split(":")[0]);
-    const endHour = String(startHour + duracaoHoras).padStart(2, "0");
-    const calculated_horario_fim = `${endHour}:00`;
+    // Calcula horário fim com base na duração real do procedimento (suporte a slots de 30m)
+    const calculated_horario_fim = calculateEndTime(
+      input.horario_inicio,
+      getDurationInMinutes(duracaoHoras)
+    );
     const horario_fim = input.horario_fim || calculated_horario_fim;
 
     // 3. Verificação de conflito no Supabase (horário já reservado na data com status != Cancelado)
@@ -1015,7 +1028,9 @@ export async function updateAppointmentAction(
   updates: Partial<Pick<Appointment, "data" | "horario_inicio" | "procedimento" | "observacoes" | "status" | "anexos_clinicos" | "status_pagamento">>
 ): Promise<ActionResponse<Appointment>> {
   try {
-    const userRole = await getAuthUserRole();
+    const authCtx = await getAuthenticatedUserContext();
+    const userRole = authCtx?.role || null;
+    const isAdmin = userRole === "administrador" || userRole === "profissional";
     if (updates.status === "Cancelado" && userRole === "paciente") {
       return {
         success: false,
@@ -1092,18 +1107,24 @@ export async function updateAppointmentAction(
     }
 
     // Validação rígida de dia permitido na edição/reagendamento
-    if (updates.data && !isAllowedAppointmentDay(targetDate)) {
+    if (updates.data && !isAllowedAppointmentDay(targetDate, isAdmin)) {
       return {
         success: false,
-        message: "Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.",
+        message: isAdmin
+          ? "Atendimentos disponíveis de segunda-feira a sábado (sem expediente aos domingos)."
+          : "Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.",
       };
     }
 
     // Validação rígida de horário permitido na edição/reagendamento
-    if ((updates.data || updates.horario_inicio) && !getAllowedStartTimesForDate(targetDate).includes(targetStart)) {
+    if (
+      (updates.data || updates.horario_inicio) &&
+      !getAllowedStartTimesForDate(targetDate, isAdmin).includes(targetStart)
+    ) {
+      const schedule = getDayScheduleDescription(targetDate, isAdmin);
       return {
         success: false,
-        message: "Horário fora da grade de atendimento permitida para este dia.",
+        message: `Horário fora da grade de atendimento permitida para ${schedule.dayName} (${schedule.hoursDescription}).`,
       };
     }
 

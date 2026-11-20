@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle, Info } from "lucide-react";
 import {
   ALLOWED_APPOINTMENT_DAYS,
-  getDayOfWeekFromDateString,
+  ALLOWED_ADMIN_APPOINTMENT_DAYS,
   isAllowedAppointmentDay,
 } from "@/types/appointment";
 
@@ -99,7 +99,13 @@ export function AppointmentCalendarPicker({
     onSelectDate(formatted);
   };
 
-  const isCurrentSelectionAllowed = selectedDate ? isAllowedAppointmentDay(selectedDate) : true;
+  const allowedDays: readonly number[] = isAdminOrProfessional
+    ? ALLOWED_ADMIN_APPOINTMENT_DAYS
+    : ALLOWED_APPOINTMENT_DAYS;
+
+  const isCurrentSelectionAllowed = selectedDate
+    ? isAllowedAppointmentDay(selectedDate, isAdminOrProfessional)
+    : true;
 
   return (
     <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/90 dark:border-slate-800/80 select-none space-y-3 shadow-2xs">
@@ -138,19 +144,22 @@ export function AppointmentCalendarPicker({
 
       {/* Dias da semana com destaque visual para os dias de expediente */}
       <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold mb-1">
-        {WEEKDAY_CONFIG.map((w) => (
-          <div
-            key={w.day}
-            className={`py-1 rounded-full transition-colors ${
-              w.isAllowed
-                ? "text-teal-700 dark:text-teal-300 font-bold bg-teal-50 dark:bg-teal-950/40"
-                : "text-slate-400 dark:text-slate-500"
-            }`}
-            title={w.isAllowed ? "Dia com expediente clínico ativo" : "Sem atendimento"}
-          >
-            {w.label}
-          </div>
-        ))}
+        {WEEKDAY_CONFIG.map((w) => {
+          const isDayAllowed = allowedDays.includes(w.day);
+          return (
+            <div
+              key={w.day}
+              className={`py-1 rounded-full transition-colors ${
+                isDayAllowed
+                  ? "text-teal-700 dark:text-teal-300 font-bold bg-teal-50 dark:bg-teal-950/40"
+                  : "text-slate-400 dark:text-slate-500"
+              }`}
+              title={isDayAllowed ? "Dia com expediente clínico ativo" : "Sem atendimento"}
+            >
+              {w.label}
+            </div>
+          );
+        })}
       </div>
 
       {/* Grade de dias */}
@@ -177,7 +186,7 @@ export function AppointmentCalendarPicker({
 
           const dayDate = new Date(currentYear, currentMonth, day, 12, 0, 0);
           const dayOfWeek = dayDate.getDay();
-          const isAllowedDay = ALLOWED_APPOINTMENT_DAYS.includes(dayOfWeek as 1 | 4 | 6);
+          const isAllowedDay = allowedDays.includes(dayOfWeek);
 
           const isSelected = selectedDate === dayStr;
           const isToday = todayStr === dayStr;
@@ -192,7 +201,9 @@ export function AppointmentCalendarPicker({
               onClick={() => handleSelectDay(day)}
               title={
                 !isAllowedDay
-                  ? "Atendimentos ocorrem apenas às segundas, quintas e sábados."
+                  ? isAdminOrProfessional
+                    ? "Atendimentos ocorrem de segunda a sábado."
+                    : "Atendimentos ocorrem apenas às segundas, quintas e sábados."
                   : isPast
                   ? "Data retroativa não permitida."
                   : isSelected
@@ -222,14 +233,22 @@ export function AppointmentCalendarPicker({
       {!isCurrentSelectionAllowed && (
         <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2 shadow-2xs">
           <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-          <span>A Dra. Juliana atende apenas às segundas, quintas (09h-16h) e sábados (13h-18h).</span>
+          <span>
+            {isAdminOrProfessional
+              ? "A Dra. Juliana atende de segunda a sexta (09h-19h) e aos sábados (13h-18h)."
+              : "A Dra. Juliana atende apenas às segundas, quintas (09h-16h) e sábados (13h-18h)."}
+          </span>
         </div>
       )}
 
       {/* Legenda de expediente */}
       <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
         <Info className="w-3 h-3 text-teal-600 dark:text-teal-400 shrink-0" />
-        <span>Expediente: Seg e Qui (09h às 16h) • Sáb (13h às 18h)</span>
+        <span>
+          {isAdminOrProfessional
+            ? "Expediente: Seg a Sex (09h às 19h) • Sáb (13h às 18h)"
+            : "Expediente: Seg e Qui (09h às 16h) • Sáb (13h às 18h)"}
+        </span>
       </div>
     </div>
   );

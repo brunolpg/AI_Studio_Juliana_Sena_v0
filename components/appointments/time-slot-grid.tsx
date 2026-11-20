@@ -17,6 +17,7 @@ interface TimeSlotGridProps {
   isLoading?: boolean;
   dateStr?: string;
   duracao?: number;
+  isAdminOrProfessional?: boolean;
 }
 
 export function TimeSlotGrid({
@@ -26,9 +27,14 @@ export function TimeSlotGrid({
   isLoading = false,
   dateStr,
   duracao = 0.5,
+  isAdminOrProfessional = false,
 }: TimeSlotGridProps) {
-  const scheduleInfo = dateStr ? getDayScheduleDescription(dateStr) : null;
-  const isAllowedDay = dateStr ? isAllowedAppointmentDay(dateStr) : slots.length > 0;
+  const scheduleInfo = dateStr
+    ? getDayScheduleDescription(dateStr, isAdminOrProfessional)
+    : null;
+  const isAllowedDay = dateStr
+    ? isAllowedAppointmentDay(dateStr, isAdminOrProfessional)
+    : slots.length > 0;
 
   const durationMinutes = getDurationInMinutes(duracao);
   const durationLabel = formatDurationLabel(durationMinutes);
@@ -62,7 +68,15 @@ export function TimeSlotGrid({
             Sem expediente neste dia da semana
           </h4>
           <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-1 leading-relaxed">
-            A Dra. Juliana atende apenas às <strong>segundas</strong> e <strong>quintas</strong> (09h às 16h) e aos <strong>sábados</strong> (13h às 18h). Selecione um dia válido no calendário ao lado.
+            {isAdminOrProfessional ? (
+              <>
+                A Dra. Juliana atende de <strong>segunda a sexta</strong> (09h às 19h) e aos <strong>sábados</strong> (13h às 18h). Selecione um dia válido no calendário ao lado.
+              </>
+            ) : (
+              <>
+                A Dra. Juliana atende apenas às <strong>segundas</strong> e <strong>quintas</strong> (09h às 16h) e aos <strong>sábados</strong> (13h às 18h). Selecione um dia válido no calendário ao lado.
+              </>
+            )}
           </p>
         </div>
       </div>

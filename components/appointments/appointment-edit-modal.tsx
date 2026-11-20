@@ -50,6 +50,8 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
   const { toast } = useToast();
   const { user } = useAuth();
   const isPatient = user?.role === "paciente";
+  const isAdminOrProfessional =
+    user?.role === "administrador" || user?.role === "profissional";
 
   const availableStatusOptions = isPatient
     ? STATUS_OPTIONS.filter((opt) => opt !== "Cancelado")
@@ -185,8 +187,12 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
       }
     }
 
-    if (!isAllowedAppointmentDay(date)) {
-      setErrorMsg("Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.");
+    if (!isAllowedAppointmentDay(date, isAdminOrProfessional)) {
+      setErrorMsg(
+        isAdminOrProfessional
+          ? "Atendimentos disponíveis de segunda-feira a sábado (sem expediente aos domingos)."
+          : "Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados."
+      );
       return;
     }
 
@@ -195,7 +201,7 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
       return;
     }
 
-    if (!getAllowedStartTimesForDate(date).includes(selectedSlot)) {
+    if (!getAllowedStartTimesForDate(date, isAdminOrProfessional).includes(selectedSlot)) {
       setErrorMsg("Horário fora da grade de atendimento permitida para este dia.");
       return;
     }
@@ -341,7 +347,8 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
             <AppointmentCalendarPicker
               selectedDate={date}
               onSelectDate={(d) => setDate(d)}
-              minDate={getMinSelectableAppointmentDateString()}
+              minDate={isPatient ? getMinSelectableAppointmentDateString() : undefined}
+              isAdminOrProfessional={isAdminOrProfessional}
             />
           </div>
 
@@ -356,6 +363,7 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
               onSelectSlot={(s) => setSelectedSlot(s)}
               isLoading={isLoadingSlots}
               dateStr={date}
+              isAdminOrProfessional={isAdminOrProfessional}
             />
           </div>
         </div>

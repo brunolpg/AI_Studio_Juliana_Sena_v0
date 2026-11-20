@@ -156,6 +156,8 @@ function AppointmentFormModalContent({
   const { toast } = useToast();
   const { user } = useAuth();
   const isPatient = user?.role === "paciente";
+  const isAdminOrProfessional =
+    user?.role === "administrador" || user?.role === "profissional";
   const dropdownRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -166,8 +168,8 @@ function AppointmentFormModalContent({
 
   // Data padrão: próximo dia de atendimento permitido a partir da data mínima
   const defaultDate = useMemo(() => {
-    return getNextAllowedAppointmentDate(minDate);
-  }, [minDate]);
+    return getNextAllowedAppointmentDate(minDate, isAdminOrProfessional);
+  }, [minDate, isAdminOrProfessional]);
 
   useEffect(() => {
     if (defaultDate) {
@@ -512,8 +514,8 @@ function AppointmentFormModalContent({
   };
 
   const scheduleInfo = useMemo(() => {
-    return selectedDate ? getDayScheduleDescription(selectedDate) : null;
-  }, [selectedDate]);
+    return selectedDate ? getDayScheduleDescription(selectedDate, isAdminOrProfessional) : null;
+  }, [selectedDate, isAdminOrProfessional]);
 
   // Garante que o scroll comece no topo ao abrir o modal
   useEffect(() => {
@@ -799,9 +801,13 @@ function AppointmentFormModalContent({
       }
     }
 
-    // Validação de dias permitidos (Segunda, Quinta ou Sábado)
-    if (!isAllowedAppointmentDay(selectedDate)) {
-      setErrorMsg("A Dra. Juliana atende apenas às segundas, quintas (09h-16h) e sábados (13h-18h).");
+    // Validação de dias permitidos conforme perfil
+    if (!isAllowedAppointmentDay(selectedDate, isAdminOrProfessional)) {
+      setErrorMsg(
+        isAdminOrProfessional
+          ? "A Dra. Juliana atende de segunda a sexta (09h-19h) e aos sábados (13h-18h)."
+          : "A Dra. Juliana atende apenas às segundas, quintas (09h-16h) e sábados (13h-18h)."
+      );
       return;
     }
 
@@ -810,8 +816,8 @@ function AppointmentFormModalContent({
       return;
     }
 
-    // Validação de horário permitido para o dia
-    const allowedTimes = getAllowedStartTimesForDate(selectedDate);
+    // Validação de horário permitido para o dia conforme perfil
+    const allowedTimes = getAllowedStartTimesForDate(selectedDate, isAdminOrProfessional);
     if (!allowedTimes.includes(selectedSlot)) {
       setErrorMsg("Horário fora da grade de atendimento permitida para este dia.");
       return;
@@ -1120,7 +1126,7 @@ function AppointmentFormModalContent({
                 selectedDate={selectedDate}
                 onSelectDate={(d) => setSelectedDate(d)}
                 minDate={minDate}
-                isAdminOrProfessional={!isPatient}
+                isAdminOrProfessional={isAdminOrProfessional}
               />
 
               <div className="flex items-center justify-between text-[11px] px-1">
@@ -1155,6 +1161,7 @@ function AppointmentFormModalContent({
                 isLoading={isLoadingSlots}
                 dateStr={selectedDate}
                 duracao={selectedDurationMinutes}
+                isAdminOrProfessional={isAdminOrProfessional}
               />
             </div>
           </div>

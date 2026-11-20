@@ -50,26 +50,32 @@ const appointmentBaseSchema = z
     sync_google: z.boolean().default(false),
   });
 
-export const appointmentSchema = appointmentBaseSchema
-  .refine(
-    (val) => isAllowedAppointmentDay(val.data),
-    {
-      message: "Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.",
-      path: ["data"],
-    }
-  )
-  .refine(
-    (val) => {
-      const allowedTimes = getAllowedStartTimesForDate(val.data);
-      return allowedTimes.includes(val.horario_inicio);
-    },
-    {
-      message: "Horário fora da grade de atendimento permitida para este dia.",
-      path: ["horario_inicio"],
-    }
-  );
+export function createAppointmentSchema(isAdminOrProfessional = false) {
+  return appointmentBaseSchema
+    .refine(
+      (val) => isAllowedAppointmentDay(val.data, isAdminOrProfessional),
+      {
+        message: isAdminOrProfessional
+          ? "Atendimentos disponíveis de segunda-feira a sábado."
+          : "Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.",
+        path: ["data"],
+      }
+    )
+    .refine(
+      (val) => {
+        const allowedTimes = getAllowedStartTimesForDate(val.data, isAdminOrProfessional);
+        return allowedTimes.includes(val.horario_inicio);
+      },
+      {
+        message: "Horário fora da grade de atendimento permitida para este dia.",
+        path: ["horario_inicio"],
+      }
+    );
+}
 
-export type AppointmentSchemaInput = z.infer<typeof appointmentSchema>;
+export const appointmentSchema = createAppointmentSchema(false);
+
+export type AppointmentSchemaInput = z.infer<typeof appointmentBaseSchema>;
 
 const appointmentUpdateBaseSchema = z
   .object({
@@ -95,29 +101,35 @@ const appointmentUpdateBaseSchema = z
     status: z.enum(["Confirmado", "Pendente", "Concluído", "Cancelado"]).optional(),
   });
 
-export const appointmentUpdateSchema = appointmentUpdateBaseSchema
-  .refine(
-    (val) => {
-      if (val.data) {
-        return isAllowedAppointmentDay(val.data);
+export function createAppointmentUpdateSchema(isAdminOrProfessional = false) {
+  return appointmentUpdateBaseSchema
+    .refine(
+      (val) => {
+        if (val.data) {
+          return isAllowedAppointmentDay(val.data, isAdminOrProfessional);
+        }
+        return true;
+      },
+      {
+        message: isAdminOrProfessional
+          ? "Atendimentos disponíveis de segunda-feira a sábado."
+          : "Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.",
+        path: ["data"],
       }
-      return true;
-    },
-    {
-      message: "Atendimentos disponíveis apenas às segundas-feiras, quintas-feiras e sábados.",
-      path: ["data"],
-    }
-  )
-  .refine(
-    (val) => {
-      if (val.data && val.horario_inicio) {
-        const allowedTimes = getAllowedStartTimesForDate(val.data);
-        return allowedTimes.includes(val.horario_inicio);
+    )
+    .refine(
+      (val) => {
+        if (val.data && val.horario_inicio) {
+          const allowedTimes = getAllowedStartTimesForDate(val.data, isAdminOrProfessional);
+          return allowedTimes.includes(val.horario_inicio);
+        }
+        return true;
+      },
+      {
+        message: "Horário fora da grade de atendimento permitida para este dia.",
+        path: ["horario_inicio"],
       }
-      return true;
-    },
-    {
-      message: "Horário fora da grade de atendimento permitida para este dia.",
-      path: ["horario_inicio"],
-    }
-  );
+    );
+}
+
+export const appointmentUpdateSchema = createAppointmentUpdateSchema(false);

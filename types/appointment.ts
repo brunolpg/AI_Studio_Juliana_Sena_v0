@@ -73,7 +73,15 @@ export const ALLOWED_APPOINTMENT_DAYS = [1, 4, 6] as const;
 export type AllowedDayOfWeek = typeof ALLOWED_APPOINTMENT_DAYS[number];
 
 /**
- * Grade de Segundas e Quintas-feiras: 09:00 às 16:00 (intervalos de 30m)
+ * Dias da semana permitidos para agendamento administrativo/profissional:
+ * 1 = Segunda a 5 = Sexta (09:00 às 19:00, sessões de 30m)
+ * 6 = Sábado (13:00 às 18:00, sessões de 30m)
+ */
+export const ALLOWED_ADMIN_APPOINTMENT_DAYS = [1, 2, 3, 4, 5, 6] as const;
+export type AllowedAdminDayOfWeek = typeof ALLOWED_ADMIN_APPOINTMENT_DAYS[number];
+
+/**
+ * Grade de Segundas e Quintas-feiras (Portal do Paciente): 09:00 às 16:00 (intervalos de 30m)
  */
 export const MONDAY_THURSDAY_SLOTS: Array<{ slot: string; endSlot: string; label: string }> = [
   { slot: "09:00", endSlot: "09:30", label: "09:00 - 09:30" },
@@ -88,6 +96,19 @@ export const MONDAY_THURSDAY_SLOTS: Array<{ slot: string; endSlot: string; label
   { slot: "14:30", endSlot: "15:00", label: "14:30 - 15:00" },
   { slot: "15:00", endSlot: "15:30", label: "15:00 - 15:30" },
   { slot: "15:30", endSlot: "16:00", label: "15:30 - 16:00" },
+];
+
+/**
+ * Grade de Segunda a Sexta-feira (Administrador/Profissional): 09:00 às 19:00 (intervalos de 30m, pausa 12:00-13:00)
+ */
+export const WEEKDAY_ADMIN_SLOTS: Array<{ slot: string; endSlot: string; label: string }> = [
+  ...MONDAY_THURSDAY_SLOTS,
+  { slot: "16:00", endSlot: "16:30", label: "16:00 - 16:30" },
+  { slot: "16:30", endSlot: "17:00", label: "16:30 - 17:00" },
+  { slot: "17:00", endSlot: "17:30", label: "17:00 - 17:30" },
+  { slot: "17:30", endSlot: "18:00", label: "17:30 - 18:00" },
+  { slot: "18:00", endSlot: "18:30", label: "18:00 - 18:30" },
+  { slot: "18:30", endSlot: "19:00", label: "18:30 - 19:00" },
 ];
 
 /**
@@ -188,10 +209,18 @@ export function getDayOfWeekFromDateString(dateStr: string): number {
 }
 
 /**
- * Verifica se a data informada cai em um dia de atendimento permitido (Segunda, Quinta ou Sábado)
+ * Verifica se a data informada cai em um dia de atendimento permitido
+ * - Paciente (padrão): Segunda, Quinta ou Sábado
+ * - Administrador/Profissional: Segunda a Sábado
  */
-export function isAllowedAppointmentDay(dateStr: string): boolean {
+export function isAllowedAppointmentDay(
+  dateStr: string,
+  isAdminOrProfessional = false
+): boolean {
   const dayOfWeek = getDayOfWeekFromDateString(dateStr);
+  if (isAdminOrProfessional) {
+    return ALLOWED_ADMIN_APPOINTMENT_DAYS.includes(dayOfWeek as AllowedAdminDayOfWeek);
+  }
   return ALLOWED_APPOINTMENT_DAYS.includes(dayOfWeek as AllowedDayOfWeek);
 }
 
@@ -199,8 +228,18 @@ export function isAllowedAppointmentDay(dateStr: string): boolean {
  * Retorna a grade de slots configurada para o dia da semana
  */
 export function getTimeSlotsForDayOfWeek(
-  dayOfWeek: number
+  dayOfWeek: number,
+  isAdminOrProfessional = false
 ): Array<{ slot: string; endSlot: string; label: string }> {
+  if (isAdminOrProfessional) {
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      return WEEKDAY_ADMIN_SLOTS;
+    }
+    if (dayOfWeek === 6) {
+      return SATURDAY_SLOTS;
+    }
+    return [];
+  }
   if (dayOfWeek === 1 || dayOfWeek === 4) {
     return MONDAY_THURSDAY_SLOTS;
   }
@@ -214,29 +253,39 @@ export function getTimeSlotsForDayOfWeek(
  * Retorna os slots padrão permitidos para uma data específica YYYY-MM-DD
  */
 export function getAllowedSlotsForDate(
-  dateStr: string
+  dateStr: string,
+  isAdminOrProfessional = false
 ): Array<{ slot: string; endSlot: string; label: string }> {
   const dayOfWeek = getDayOfWeekFromDateString(dateStr);
-  return getTimeSlotsForDayOfWeek(dayOfWeek);
+  return getTimeSlotsForDayOfWeek(dayOfWeek, isAdminOrProfessional);
 }
 
 /**
- * Retorna a lista de horários de início válidos para a data (ex: ["09:00", "10:00", ...])
+ * Retorna a lista de horários de início válidos para a data (ex: ["09:00", "09:30", ...])
  */
-export function getAllowedStartTimesForDate(dateStr: string): string[] {
-  return getAllowedSlotsForDate(dateStr).map((s) => s.slot);
+export function getAllowedStartTimesForDate(
+  dateStr: string,
+  isAdminOrProfessional = false
+): string[] {
+  return getAllowedSlotsForDate(dateStr, isAdminOrProfessional).map((s) => s.slot);
 }
 
 /**
- * Retorna a próxima data válida (Segunda, Quinta ou Sábado) a partir de uma data de referência
+ * Retorna a próxima data válida a partir de uma data de referência
  */
-export function getNextAllowedAppointmentDate(startDateStr?: string): string {
+export function getNextAllowedAppointmentDate(
+  startDateStr?: string,
+  isAdminOrProfessional = false
+): string {
   const now = startDateStr ? new Date(startDateStr + "T12:00:00") : new Date();
   let cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
 
   for (let i = 0; i < 14; i++) {
     const dayOfWeek = cursor.getDay();
-    if (ALLOWED_APPOINTMENT_DAYS.includes(dayOfWeek as AllowedDayOfWeek)) {
+    const isAllowed = isAdminOrProfessional
+      ? ALLOWED_ADMIN_APPOINTMENT_DAYS.includes(dayOfWeek as AllowedAdminDayOfWeek)
+      : ALLOWED_APPOINTMENT_DAYS.includes(dayOfWeek as AllowedDayOfWeek);
+    if (isAllowed) {
       const year = cursor.getFullYear();
       const month = String(cursor.getMonth() + 1).padStart(2, "0");
       const day = String(cursor.getDate()).padStart(2, "0");
@@ -251,12 +300,48 @@ export function getNextAllowedAppointmentDate(startDateStr?: string): string {
 /**
  * Fornece metadados informativos para a interface sobre o expediente do dia
  */
-export function getDayScheduleDescription(dateStr: string): {
+export function getDayScheduleDescription(
+  dateStr: string,
+  isAdminOrProfessional = false
+): {
   isOpen: boolean;
   dayName: string;
   hoursDescription: string;
 } {
   const dayOfWeek = getDayOfWeekFromDateString(dateStr);
+  const dayNames = [
+    "Domingo",
+    "Segunda-feira",
+    "Terça-feira",
+    "Quarta-feira",
+    "Quinta-feira",
+    "Sexta-feira",
+    "Sábado",
+  ];
+
+  if (isAdminOrProfessional) {
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      return {
+        isOpen: true,
+        dayName: dayNames[dayOfWeek],
+        hoursDescription: "09:00 às 19:00 (sessões de 30 em 30 min)",
+      };
+    }
+    if (dayOfWeek === 6) {
+      return {
+        isOpen: true,
+        dayName: "Sábado",
+        hoursDescription: "13:00 às 18:00 (sessões de 30 em 30 min)",
+      };
+    }
+    return {
+      isOpen: false,
+      dayName: dayNames[dayOfWeek] || "Dia",
+      hoursDescription:
+        "Sem expediente aos domingos. Atendimentos de segunda a sexta (09h às 19h) e sábados (13h às 18h).",
+    };
+  }
+
   switch (dayOfWeek) {
     case 1:
       return {
@@ -279,7 +364,7 @@ export function getDayScheduleDescription(dateStr: string): {
     default:
       return {
         isOpen: false,
-        dayName: ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"][dayOfWeek] || "Dia",
+        dayName: dayNames[dayOfWeek] || "Dia",
         hoursDescription: "Sem expediente. Atendimentos apenas segundas, quintas e sábados.",
       };
   }
