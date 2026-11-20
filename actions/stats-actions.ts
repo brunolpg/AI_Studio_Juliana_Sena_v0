@@ -17,7 +17,6 @@ export interface DashboardStats {
  * Retorna as estatísticas consolidadas para os cards do Dashboard de Atendimento
  * Consulta diretamente o Supabase com agregações otimizadas (head: true)
  * e possui fallback automático em memória/actions para alta disponibilidade.
- * Contagens de pacientes são estritamente restritas ao perfil 'profissional'.
  */
 export async function getDashboardStatsAction(): Promise<ActionResponse<DashboardStats>> {
   try {
@@ -35,7 +34,6 @@ export async function getDashboardStatsAction(): Promise<ActionResponse<Dashboar
       };
     }
 
-    const isProfissional = user.role === "profissional";
     const supabase = await createClient();
 
     if (supabase) {
@@ -49,19 +47,15 @@ export async function getDashboardStatsAction(): Promise<ActionResponse<Dashboar
         consultasHojeRes,
         proximosAtendimentosRes,
       ] = await Promise.all([
-        isProfissional
-          ? supabase
-              .from("pacientes")
-              .select("*", { count: "exact", head: true })
-              .is("deleted_at", null)
-          : Promise.resolve({ count: 0, error: null }),
-        isProfissional
-          ? supabase
-              .from("pacientes")
-              .select("*", { count: "exact", head: true })
-              .is("deleted_at", null)
-              .eq("status", "Ativo")
-          : Promise.resolve({ count: 0, error: null }),
+        supabase
+          .from("pacientes")
+          .select("*", { count: "exact", head: true })
+          .is("deleted_at", null),
+        supabase
+          .from("pacientes")
+          .select("*", { count: "exact", head: true })
+          .is("deleted_at", null)
+          .eq("status", "Ativo"),
         supabase
           .from("appointments")
           .select("*", { count: "exact", head: true })
@@ -84,8 +78,8 @@ export async function getDashboardStatsAction(): Promise<ActionResponse<Dashboar
         return {
           success: true,
           data: {
-            totalPacientes: isProfissional ? (totalPacientesRes.count ?? 0) : 0,
-            pacientesAtivos: isProfissional ? (pacientesAtivosRes.count ?? 0) : 0,
+            totalPacientes: totalPacientesRes.count ?? 0,
+            pacientesAtivos: pacientesAtivosRes.count ?? 0,
             consultasHoje: consultasHojeRes.count ?? 0,
             proximosAtendimentos: proximosAtendimentosRes.count ?? 0,
           },
@@ -100,8 +94,8 @@ export async function getDashboardStatsAction(): Promise<ActionResponse<Dashboar
 
     // Fallback através das actions consolidadas
     const [allClientsRes, activeClientsRes, todayAptsRes, upcomingAptsRes] = await Promise.all([
-      isProfissional ? getClientsAction({ status: "todos", pageSize: 1 }) : Promise.resolve(null),
-      isProfissional ? getClientsAction({ status: "Ativo", pageSize: 1 }) : Promise.resolve(null),
+      getClientsAction({ status: "todos", pageSize: 1 }),
+      getClientsAction({ status: "Ativo", pageSize: 1 }),
       getAppointmentsAction({ tab: "hoje", pageSize: 1 }),
       getAppointmentsAction({ tab: "proximos", pageSize: 1 }),
     ]);
@@ -109,8 +103,8 @@ export async function getDashboardStatsAction(): Promise<ActionResponse<Dashboar
     return {
       success: true,
       data: {
-        totalPacientes: isProfissional ? (allClientsRes?.data?.total ?? 0) : 0,
-        pacientesAtivos: isProfissional ? (activeClientsRes?.data?.total ?? 0) : 0,
+        totalPacientes: allClientsRes?.data?.total ?? 0,
+        pacientesAtivos: activeClientsRes?.data?.total ?? 0,
         consultasHoje: todayAptsRes.data?.total ?? 0,
         proximosAtendimentos: upcomingAptsRes.data?.total ?? 0,
       },

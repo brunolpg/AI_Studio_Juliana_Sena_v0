@@ -12,28 +12,18 @@ import { PopsView } from "@/components/pops/pops-view";
 import { useAuth } from "@/components/auth/auth-context";
 import { ShieldCheck, CalendarCheck2, FileCode2, Calendar, Stethoscope, Users, ClipboardList } from "lucide-react";
 
-const ADMIN_ALLOWED_TABS: DashboardTab[] = ["agendamentos", "pops"];
-
 export function PatientDashboard({ initialTab = "prontuarios" }: { initialTab?: DashboardTab } = {}) {
   const { user } = useAuth();
   const rawRole = String(user?.role || (user as any)?.profile?.role || "").toLowerCase().trim();
-  const isProfissional = rawRole === "profissional";
-  const isAdminOnly = rawRole === "administrador" || rawRole === "admin";
+  const isStaff =
+    rawRole === "profissional" ||
+    rawRole === "administrador" ||
+    rawRole === "admin";
 
-  const [requestedTab, setRequestedTab] = useState<DashboardTab>(initialTab);
-
-  const activeTab: DashboardTab = isAdminOnly
-    ? ADMIN_ALLOWED_TABS.includes(requestedTab)
-      ? requestedTab
-      : "agendamentos"
-    : requestedTab;
+  const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
 
   const handleTabChange = (tab: DashboardTab) => {
-    if (isAdminOnly && !ADMIN_ALLOWED_TABS.includes(tab)) {
-      setRequestedTab("agendamentos");
-      return;
-    }
-    setRequestedTab(tab);
+    setActiveTab(tab);
   };
 
   return (
@@ -113,14 +103,14 @@ export function PatientDashboard({ initialTab = "prontuarios" }: { initialTab?: 
         {/* Quick Metrics */}
         {activeTab !== "pops" && <StatsOverview activeTab={activeTab} />}
 
-        {/* Views Condicionais por Aba (Restritas ao Profissional para Pacientes/Prontuários) */}
-        {isProfissional && activeTab === "pacientes" && (
+        {/* Views Condicionais por Aba (Disponíveis para Profissional e Administrador) */}
+        {isStaff && activeTab === "pacientes" && (
           <div className="space-y-4">
             <ClientTableView />
           </div>
         )}
 
-        {isProfissional && activeTab === "prontuarios" && (
+        {isStaff && activeTab === "prontuarios" && (
           <div className="space-y-4">
             <PatientClinicalDashboardView
               onOpenAppointments={() => handleTabChange("agendamentos")}
@@ -140,7 +130,7 @@ export function PatientDashboard({ initialTab = "prontuarios" }: { initialTab?: 
           </div>
         )}
 
-        {isProfissional && activeTab === "deliverables" && (
+        {isStaff && activeTab === "deliverables" && (
           <div className="space-y-4">
             <DeliverablesView />
           </div>

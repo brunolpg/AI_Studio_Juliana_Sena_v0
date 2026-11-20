@@ -64,17 +64,6 @@ export async function middleware(request: NextRequest) {
         : "paciente";
   }
 
-  // Bloqueio estrito: administrador não acessa listagem/detalhes de pacientes nem prontuário/evoluções
-  if (role === "administrador" || role === "admin") {
-    if (
-      pathname.startsWith("/patients") ||
-      pathname.startsWith("/clinical") ||
-      pathname === "/dashboard"
-    ) {
-      return NextResponse.redirect(new URL("/appointments", request.url));
-    }
-  }
-
   // Paciente autenticado é mantido no portal inicial (/)
   if (role === "paciente") {
     if (

@@ -35,7 +35,7 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
     href: string;
   }> = [];
 
-  if (isProfissional) {
+  if (isStaff) {
     navItems.push(
       {
         id: "pacientes" as DashboardTab,
@@ -77,7 +77,7 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
   }
 
   const handleItemClick = (item: (typeof navItems)[0]) => {
-    const fallbackUrl = isProfissional ? "/dashboard" : "/appointments";
+    const fallbackUrl = isStaff ? "/dashboard" : "/appointments";
     if (pathname && pathname.startsWith("/formulas")) {
       router.push(item.href || fallbackUrl);
       return;

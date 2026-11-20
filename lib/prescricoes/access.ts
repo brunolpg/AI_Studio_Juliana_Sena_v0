@@ -8,13 +8,14 @@ export function jsonError(status: number, message: string) {
 }
 
 /**
- * Receitas (baixar PDF / anexar assinada / notificar) são restritas ao profissional de saúde.
- * Bloqueia explicitamente 'administrador' e 'paciente'.
+ * Receitas (baixar PDF / anexar assinada / notificar) são permitidas ao profissional de saúde e ao administrador.
  */
 export async function denyUnlessStaff(): Promise<NextResponse | null> {
   const user = await getSession();
   if (!user) return jsonError(401, "Sessão expirada. Faça login novamente.");
-  if (user.role !== "profissional") return jsonError(403, "Acesso restrito ao profissional de saúde.");
+  if (user.role !== "profissional" && user.role !== "administrador") {
+    return jsonError(403, "Acesso restrito ao profissional de saúde ou administrador.");
+  }
   return null;
 }
 

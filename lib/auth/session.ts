@@ -86,7 +86,7 @@ export async function getSession(): Promise<User | null> {
   }
 }
 
-export const PROFISSIONAL_ONLY_ERROR = "Acesso restrito ao profissional de saúde.";
+export const PROFISSIONAL_ONLY_ERROR = "Acesso restrito ao profissional de saúde ou administrador.";
 
 export async function requireAuth(): Promise<User> {
   const user = await getSession();
@@ -113,7 +113,8 @@ export async function requireProfissionalAccess(): Promise<
     };
   }
 
-  if (user.role !== "profissional") {
+  const normalizedRole = String(user.role || "").toLowerCase().trim();
+  if (normalizedRole !== "profissional" && normalizedRole !== "administrador" && normalizedRole !== "admin") {
     return {
       authorized: false,
       message: PROFISSIONAL_ONLY_ERROR,
@@ -140,15 +141,8 @@ export async function verifyProfissionalOrOwnPaciente(pacienteId: string): Promi
     };
   }
 
-  // Bloqueio explícito para perfil administrador
-  if (user.role === "administrador" || (user.role as string) === "admin") {
-    return {
-      authorized: false,
-      message: PROFISSIONAL_ONLY_ERROR,
-    };
-  }
-
-  if (user.role === "profissional") {
+  const normalizedRole = String(user.role || "").toLowerCase().trim();
+  if (normalizedRole === "profissional" || normalizedRole === "administrador" || normalizedRole === "admin") {
     return { authorized: true, user, isProfissional: true, supabase };
   }
 

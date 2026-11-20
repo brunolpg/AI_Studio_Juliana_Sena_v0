@@ -3145,7 +3145,7 @@ export function PatientClinicalTabs({
           onClose={() => setSelectedExamForPrint(null)}
           prescricao={selectedExamForPrint}
           client={client}
-          userRole={isPatient ? "paciente" : "profissional"}
+          userRole={isPatient ? "paciente" : (user?.role || "profissional")}
           onEdit={(ex) => {
             setSelectedExamForPrint(null);
             setSelectedExamForEdit(ex);

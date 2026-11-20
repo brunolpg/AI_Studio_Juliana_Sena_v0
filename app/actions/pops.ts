@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getSession, PROFISSIONAL_ONLY_ERROR } from "@/lib/auth/session";
+import { getSession } from "@/lib/auth/session";
 import { canonicalizeJson, gerarHashSha256, assinarHash } from "@/lib/crypto-payload";
 import type { PopFormData, PopProtocoloCompleto, PopBloco, PopStatus } from "@/types/pop";
 
@@ -137,7 +137,7 @@ export async function getPopsAction(): Promise<PopProtocoloCompleto[]> {
 export async function getPopCompletoAction(popId: string): Promise<PopProtocoloCompleto | null> {
   try {
     if (!popId) return null;
-    const { adminDb, isProfissional } = await checkAuthAndRole();
+    const { adminDb } = await checkAuthAndRole();
 
     const { data: proto, error: protoErr } = await adminDb
       .from("pops_protocolos")
@@ -155,9 +155,9 @@ export async function getPopCompletoAction(popId: string): Promise<PopProtocoloC
       .order("ordem", { ascending: true });
 
     const blocoIds = (blocosDb || []).map((b: any) => b.id);
-    const prescricaoIds = isProfissional
-      ? Array.from(new Set((blocosDb || []).map((b: any) => b.prescricao_id).filter(Boolean)))
-      : [];
+    const prescricaoIds = Array.from(
+      new Set((blocosDb || []).map((b: any) => b.prescricao_id).filter(Boolean))
+    );
     const formulaIds = Array.from(
       new Set((blocosDb || []).map((b: any) => b.formula_id).filter(Boolean))
     );
@@ -171,7 +171,7 @@ export async function getPopCompletoAction(popId: string): Promise<PopProtocoloC
             .in("bloco_id", blocoIds)
             .order("ordem", { ascending: true })
         : Promise.resolve({ data: [] }),
-      isProfissional && prescricaoIds.length > 0
+      prescricaoIds.length > 0
         ? adminDb
             .from("prescricoes")
             .select(`
@@ -283,11 +283,7 @@ export async function getFormulasCatalogoAction() {
  */
 export async function getPrescricoesDisponiveis() {
   try {
-    const { adminDb, isProfissional } = await checkAuthAndRole();
-    if (!isProfissional) {
-      console.warn(PROFISSIONAL_ONLY_ERROR);
-      return [];
-    }
+    const { adminDb } = await checkAuthAndRole();
 
     const { data, error } = await adminDb
       .from("prescricoes")

@@ -18,8 +18,6 @@ export default function PatientsPage() {
         const rawRole = String(user.role || (user as any).profile?.role || "").toLowerCase().trim();
         if (rawRole === "paciente") {
           router.push("/");
-        } else if (rawRole === "administrador" || rawRole === "admin") {
-          router.replace("/appointments");
         }
       }
     }
@@ -42,7 +40,8 @@ export default function PatientsPage() {
   }
 
   const rawRole = String(user?.role || (user as any)?.profile?.role || "").toLowerCase().trim();
-  if (!user || rawRole !== "profissional") {
+  const isAuthorizedStaff = rawRole === "profissional" || rawRole === "administrador" || rawRole === "admin";
+  if (!user || !isAuthorizedStaff) {
     return null;
   }
 

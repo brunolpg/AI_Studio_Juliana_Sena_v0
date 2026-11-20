@@ -1,15 +1,16 @@
 -- ==============================================================================
--- MIGRATION RLS: RESTRIÇÃO ESTRITA DE RBAC PARA DADOS DE PACIENTES E PRONTUÁRIOS
+-- MIGRATION RLS: RBAC PARA DADOS DE PACIENTES E PRONTUÁRIOS (PROFISSIONAL E ADMIN)
 -- Dra. Juliana Sena - Gestão Clínica & Prontuário
 -- ==============================================================================
 -- Objetivo:
---   Bloquear explicitamente o acesso de usuários com perfil 'administrador'
---   (ou qualquer perfil não autorizado) às tabelas de pacientes e registros
---   clínicos, restringindo o acesso a:
---     1. Usuários com role = 'profissional' na tabela public.profiles;
+--   Autorizar o acesso completo às tabelas de pacientes e registros clínicos para:
+--     1. Usuários com role = 'profissional' ou role IN ('administrador', 'admin')
+--        na tabela public.profiles;
 --     2. O próprio paciente autenticado (user_id = auth.uid()), apenas para
 --        leitura de seus próprios registros (e edição da própria anamnese em
 --        historico_clinico, quando aplicável no Portal do Paciente).
+--   Obs.: A restrição de privacidade para fotos de pacientes no Supabase Storage
+--         permanece estritamente ativa em sql/supabase-patient-photos-privacy-rls.sql.
 --
 -- Tabelas protegidas (SELECT, INSERT, UPDATE, DELETE):
 --   - public.pacientes (respeitando soft delete: deleted_at IS NULL)
@@ -47,6 +48,21 @@ AS $$
   );
 $$;
 
+CREATE OR REPLACE FUNCTION public.is_profissional_ou_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.profiles p
+    WHERE p.id = auth.uid()
+      AND LOWER(TRIM(p.role::text)) IN ('profissional', 'administrador', 'admin')
+  );
+$$;
+
 CREATE OR REPLACE FUNCTION public.is_paciente_owner(p_paciente_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -68,6 +84,9 @@ $$;
 
 REVOKE ALL ON FUNCTION public.is_profissional() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_profissional() TO authenticated;
+
+REVOKE ALL ON FUNCTION public.is_profissional_ou_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_profissional_ou_admin() TO authenticated;
 
 REVOKE ALL ON FUNCTION public.is_paciente_owner(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_paciente_owner(UUID) TO authenticated;
@@ -111,10 +130,9 @@ END $$;
 
 -- ==============================================================================
 -- 4. POLÍTICAS RLS: public.pacientes
---    - SELECT: profissional (apenas pacientes ativos: deleted_at IS NULL)
+--    - SELECT: profissional/administrador (apenas pacientes ativos: deleted_at IS NULL)
 --              ou o próprio paciente (user_id = auth.uid() e deleted_at IS NULL)
---    - INSERT / UPDATE / DELETE: exclusivo para profissional
---    - Bloqueio total para 'administrador'
+--    - INSERT / UPDATE / DELETE: profissional ou administrador
 -- ==============================================================================
 CREATE POLICY "pacientes_select_profissional_ou_proprio"
 ON public.pacientes
@@ -123,7 +141,7 @@ TO authenticated
 USING (
   deleted_at IS NULL
   AND (
-    public.is_profissional()
+    public.is_profissional_ou_admin()
     OR user_id = auth.uid()
     OR LOWER(TRIM(email)) = LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', '')))
   )
@@ -133,20 +151,20 @@ CREATE POLICY "pacientes_insert_profissional"
 ON public.pacientes
 FOR INSERT
 TO authenticated
-WITH CHECK (public.is_profissional());
+WITH CHECK (public.is_profissional_ou_admin());
 
 CREATE POLICY "pacientes_update_profissional"
 ON public.pacientes
 FOR UPDATE
 TO authenticated
-USING (public.is_profissional())
-WITH CHECK (public.is_profissional());
+USING (public.is_profissional_ou_admin())
+WITH CHECK (public.is_profissional_ou_admin());
 
 CREATE POLICY "pacientes_delete_profissional"
 ON public.pacientes
 FOR DELETE
 TO authenticated
-USING (public.is_profissional());
+USING (public.is_profissional_ou_admin());
 
 -- ==============================================================================
 -- 5. POLÍTICAS RLS: public.historico_clinico
@@ -161,7 +179,7 @@ BEGIN
     FOR SELECT
     TO authenticated
     USING (
-      public.is_profissional()
+      public.is_profissional_ou_admin()
       OR public.is_paciente_owner(paciente_id)
     );
 
@@ -170,7 +188,7 @@ BEGIN
     FOR INSERT
     TO authenticated
     WITH CHECK (
-      public.is_profissional()
+      public.is_profissional_ou_admin()
       OR public.is_paciente_owner(paciente_id)
     );
 
@@ -179,11 +197,11 @@ BEGIN
     FOR UPDATE
     TO authenticated
     USING (
-      public.is_profissional()
+      public.is_profissional_ou_admin()
       OR public.is_paciente_owner(paciente_id)
     )
     WITH CHECK (
-      public.is_profissional()
+      public.is_profissional_ou_admin()
       OR public.is_paciente_owner(paciente_id)
     );
 
@@ -191,7 +209,7 @@ BEGIN
     ON public.historico_clinico
     FOR DELETE
     TO authenticated
-    USING (public.is_profissional());
+    USING (public.is_profissional_ou_admin());
   END IF;
 END $$;
 
@@ -220,34 +238,34 @@ BEGIN
       EXECUTE '
         CREATE POLICY "clinical_records_select_profissional_ou_proprio"
         ON public.clinical_records FOR SELECT TO authenticated
-        USING (public.is_profissional() OR public.is_paciente_owner(paciente_id))
+        USING (public.is_profissional_ou_admin() OR public.is_paciente_owner(paciente_id))
       ';
     ELSIF v_has_client_id THEN
       EXECUTE '
         CREATE POLICY "clinical_records_select_profissional_ou_proprio"
         ON public.clinical_records FOR SELECT TO authenticated
-        USING (public.is_profissional() OR public.is_paciente_owner(client_id))
+        USING (public.is_profissional_ou_admin() OR public.is_paciente_owner(client_id))
       ';
     ELSE
       EXECUTE '
         CREATE POLICY "clinical_records_select_profissional"
         ON public.clinical_records FOR SELECT TO authenticated
-        USING (public.is_profissional())
+        USING (public.is_profissional_ou_admin())
       ';
     END IF;
 
     CREATE POLICY "clinical_records_insert_profissional"
     ON public.clinical_records FOR INSERT TO authenticated
-    WITH CHECK (public.is_profissional());
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "clinical_records_update_profissional"
     ON public.clinical_records FOR UPDATE TO authenticated
-    USING (public.is_profissional())
-    WITH CHECK (public.is_profissional());
+    USING (public.is_profissional_ou_admin())
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "clinical_records_delete_profissional"
     ON public.clinical_records FOR DELETE TO authenticated
-    USING (public.is_profissional());
+    USING (public.is_profissional_ou_admin());
   END IF;
 
   IF to_regclass('public.evolucoes_clinicas') IS NOT NULL THEN
@@ -256,7 +274,7 @@ BEGIN
     FOR SELECT
     TO authenticated
     USING (
-      public.is_profissional()
+      public.is_profissional_ou_admin()
       OR public.is_paciente_owner(paciente_id)
     );
 
@@ -264,20 +282,20 @@ BEGIN
     ON public.evolucoes_clinicas
     FOR INSERT
     TO authenticated
-    WITH CHECK (public.is_profissional());
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "evolucoes_clinicas_update_profissional"
     ON public.evolucoes_clinicas
     FOR UPDATE
     TO authenticated
-    USING (public.is_profissional())
-    WITH CHECK (public.is_profissional());
+    USING (public.is_profissional_ou_admin())
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "evolucoes_clinicas_delete_profissional"
     ON public.evolucoes_clinicas
     FOR DELETE
     TO authenticated
-    USING (public.is_profissional());
+    USING (public.is_profissional_ou_admin());
   END IF;
 END $$;
 
@@ -294,7 +312,7 @@ BEGIN
     FOR SELECT
     TO authenticated
     USING (
-      public.is_profissional()
+      public.is_profissional_ou_admin()
       OR public.is_paciente_owner(paciente_id)
     );
 
@@ -302,20 +320,20 @@ BEGIN
     ON public.prescricoes
     FOR INSERT
     TO authenticated
-    WITH CHECK (public.is_profissional());
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "prescricoes_update_profissional"
     ON public.prescricoes
     FOR UPDATE
     TO authenticated
-    USING (public.is_profissional())
-    WITH CHECK (public.is_profissional());
+    USING (public.is_profissional_ou_admin())
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "prescricoes_delete_profissional"
     ON public.prescricoes
     FOR DELETE
     TO authenticated
-    USING (public.is_profissional());
+    USING (public.is_profissional_ou_admin());
   END IF;
 
   IF to_regclass('public.prescricao_itens') IS NOT NULL THEN
@@ -324,7 +342,7 @@ BEGIN
     FOR SELECT
     TO authenticated
     USING (
-      public.is_profissional()
+      public.is_profissional_ou_admin()
       OR EXISTS (
         SELECT 1
         FROM public.prescricoes pr
@@ -337,20 +355,20 @@ BEGIN
     ON public.prescricao_itens
     FOR INSERT
     TO authenticated
-    WITH CHECK (public.is_profissional());
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "prescricao_itens_update_profissional"
     ON public.prescricao_itens
     FOR UPDATE
     TO authenticated
-    USING (public.is_profissional())
-    WITH CHECK (public.is_profissional());
+    USING (public.is_profissional_ou_admin())
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "prescricao_itens_delete_profissional"
     ON public.prescricao_itens
     FOR DELETE
     TO authenticated
-    USING (public.is_profissional());
+    USING (public.is_profissional_ou_admin());
   END IF;
 END $$;
 
@@ -367,7 +385,7 @@ BEGIN
     FOR SELECT
     TO authenticated
     USING (
-      public.is_profissional()
+      public.is_profissional_ou_admin()
       OR public.is_paciente_owner(paciente_id)
     );
 
@@ -375,20 +393,20 @@ BEGIN
     ON public.prescricoes_exames
     FOR INSERT
     TO authenticated
-    WITH CHECK (public.is_profissional());
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "prescricoes_exames_update_profissional"
     ON public.prescricoes_exames
     FOR UPDATE
     TO authenticated
-    USING (public.is_profissional())
-    WITH CHECK (public.is_profissional());
+    USING (public.is_profissional_ou_admin())
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "prescricoes_exames_delete_profissional"
     ON public.prescricoes_exames
     FOR DELETE
     TO authenticated
-    USING (public.is_profissional());
+    USING (public.is_profissional_ou_admin());
   END IF;
 END $$;
 
@@ -405,7 +423,7 @@ BEGIN
     FOR SELECT
     TO authenticated
     USING (
-      public.is_profissional()
+      public.is_profissional_ou_admin()
       OR public.is_paciente_owner(paciente_id)
     );
 
@@ -413,20 +431,20 @@ BEGIN
     ON public.propostas
     FOR INSERT
     TO authenticated
-    WITH CHECK (public.is_profissional());
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "propostas_update_profissional"
     ON public.propostas
     FOR UPDATE
     TO authenticated
-    USING (public.is_profissional())
-    WITH CHECK (public.is_profissional());
+    USING (public.is_profissional_ou_admin())
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "propostas_delete_profissional"
     ON public.propostas
     FOR DELETE
     TO authenticated
-    USING (public.is_profissional());
+    USING (public.is_profissional_ou_admin());
   END IF;
 END $$;
 
@@ -438,65 +456,65 @@ BEGIN
   IF to_regclass('public.avaliacoes_faciais') IS NOT NULL THEN
     CREATE POLICY "avaliacoes_faciais_select_profissional_ou_proprio"
     ON public.avaliacoes_faciais FOR SELECT TO authenticated
-    USING (public.is_profissional() OR public.is_paciente_owner(paciente_id));
+    USING (public.is_profissional_ou_admin() OR public.is_paciente_owner(paciente_id));
 
     CREATE POLICY "avaliacoes_faciais_insert_profissional"
     ON public.avaliacoes_faciais FOR INSERT TO authenticated
-    WITH CHECK (public.is_profissional());
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "avaliacoes_faciais_update_profissional"
     ON public.avaliacoes_faciais FOR UPDATE TO authenticated
-    USING (public.is_profissional())
-    WITH CHECK (public.is_profissional());
+    USING (public.is_profissional_ou_admin())
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "avaliacoes_faciais_delete_profissional"
     ON public.avaliacoes_faciais FOR DELETE TO authenticated
-    USING (public.is_profissional());
+    USING (public.is_profissional_ou_admin());
   END IF;
 
   IF to_regclass('public.avaliacoes_corporais') IS NOT NULL THEN
     CREATE POLICY "avaliacoes_corporais_select_profissional_ou_proprio"
     ON public.avaliacoes_corporais FOR SELECT TO authenticated
-    USING (public.is_profissional() OR public.is_paciente_owner(paciente_id));
+    USING (public.is_profissional_ou_admin() OR public.is_paciente_owner(paciente_id));
 
     CREATE POLICY "avaliacoes_corporais_insert_profissional"
     ON public.avaliacoes_corporais FOR INSERT TO authenticated
-    WITH CHECK (public.is_profissional());
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "avaliacoes_corporais_update_profissional"
     ON public.avaliacoes_corporais FOR UPDATE TO authenticated
-    USING (public.is_profissional())
-    WITH CHECK (public.is_profissional());
+    USING (public.is_profissional_ou_admin())
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "avaliacoes_corporais_delete_profissional"
     ON public.avaliacoes_corporais FOR DELETE TO authenticated
-    USING (public.is_profissional());
+    USING (public.is_profissional_ou_admin());
   END IF;
 
   IF to_regclass('public.home_care_fichas') IS NOT NULL THEN
     CREATE POLICY "home_care_fichas_select_profissional_ou_proprio"
     ON public.home_care_fichas FOR SELECT TO authenticated
-    USING (public.is_profissional() OR public.is_paciente_owner(paciente_id));
+    USING (public.is_profissional_ou_admin() OR public.is_paciente_owner(paciente_id));
 
     CREATE POLICY "home_care_fichas_insert_profissional"
     ON public.home_care_fichas FOR INSERT TO authenticated
-    WITH CHECK (public.is_profissional());
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "home_care_fichas_update_profissional"
     ON public.home_care_fichas FOR UPDATE TO authenticated
-    USING (public.is_profissional())
-    WITH CHECK (public.is_profissional());
+    USING (public.is_profissional_ou_admin())
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "home_care_fichas_delete_profissional"
     ON public.home_care_fichas FOR DELETE TO authenticated
-    USING (public.is_profissional());
+    USING (public.is_profissional_ou_admin());
   END IF;
 
   IF to_regclass('public.home_care_ficha_topicos') IS NOT NULL THEN
     CREATE POLICY "home_care_ficha_topicos_select_profissional_ou_proprio"
     ON public.home_care_ficha_topicos FOR SELECT TO authenticated
     USING (
-      public.is_profissional()
+      public.is_profissional_ou_admin()
       OR EXISTS (
         SELECT 1
         FROM public.home_care_fichas hcf
@@ -507,23 +525,23 @@ BEGIN
 
     CREATE POLICY "home_care_ficha_topicos_insert_profissional"
     ON public.home_care_ficha_topicos FOR INSERT TO authenticated
-    WITH CHECK (public.is_profissional());
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "home_care_ficha_topicos_update_profissional"
     ON public.home_care_ficha_topicos FOR UPDATE TO authenticated
-    USING (public.is_profissional())
-    WITH CHECK (public.is_profissional());
+    USING (public.is_profissional_ou_admin())
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "home_care_ficha_topicos_delete_profissional"
     ON public.home_care_ficha_topicos FOR DELETE TO authenticated
-    USING (public.is_profissional());
+    USING (public.is_profissional_ou_admin());
   END IF;
 
   IF to_regclass('public.home_care_cronograma') IS NOT NULL THEN
     CREATE POLICY "home_care_cronograma_select_profissional_ou_proprio"
     ON public.home_care_cronograma FOR SELECT TO authenticated
     USING (
-      public.is_profissional()
+      public.is_profissional_ou_admin()
       OR EXISTS (
         SELECT 1
         FROM public.home_care_fichas hcf
@@ -534,15 +552,15 @@ BEGIN
 
     CREATE POLICY "home_care_cronograma_insert_profissional"
     ON public.home_care_cronograma FOR INSERT TO authenticated
-    WITH CHECK (public.is_profissional());
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "home_care_cronograma_update_profissional"
     ON public.home_care_cronograma FOR UPDATE TO authenticated
-    USING (public.is_profissional())
-    WITH CHECK (public.is_profissional());
+    USING (public.is_profissional_ou_admin())
+    WITH CHECK (public.is_profissional_ou_admin());
 
     CREATE POLICY "home_care_cronograma_delete_profissional"
     ON public.home_care_cronograma FOR DELETE TO authenticated
-    USING (public.is_profissional());
+    USING (public.is_profissional_ou_admin());
   END IF;
 END $$;
