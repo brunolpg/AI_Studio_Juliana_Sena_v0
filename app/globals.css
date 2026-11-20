@@ -129,6 +129,7 @@ html.dark,
 .dark {
   --md-sys-color-surface: #0b1320;
   --md-sys-color-on-surface: #f1f5f9;
+  --md-sys-color-on-surface-variant: #94a3b8;
   --md-sys-color-surface-dim: #070d17;
   --md-sys-color-surface-bright: #1b263b;
   --md-sys-color-surface-container-lowest: #040810;
