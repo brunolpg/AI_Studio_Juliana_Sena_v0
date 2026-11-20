@@ -482,8 +482,22 @@ function AppointmentFormModalContent({
     if (!confirmedAppointment) return;
     const phoneDigits = confirmedAppointment.client_telefone ? confirmedAppointment.client_telefone.replace(/\D/g, "") : "";
     const formattedDate = confirmedAppointment.data.split("-").reverse().join("/");
+    const formattedTimeRange = confirmedAppointment.horario_fim
+      ? `${confirmedAppointment.horario_inicio} - ${confirmedAppointment.horario_fim}`
+      : confirmedAppointment.horario_inicio;
+    const detailsLines = [
+      `Profissional: Juliana Sena`,
+      `Telefone: (71) 98661-2878`,
+      `E-mail: julianasevieira@gmail.com`,
+      `Procedimento: ${confirmedAppointment.procedimento}`,
+      `Data: ${formattedDate} às ${formattedTimeRange}`,
+      `Local: Clínica Dra. Juliana Sena - Salvador/BA`,
+      confirmedAppointment.observacoes ? `Observações: ${confirmedAppointment.observacoes}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
     const text = encodeURIComponent(
-      `Olá ${confirmedAppointment.client_nome}! Seu agendamento na Clínica Dra. Juliana Sena para *${confirmedAppointment.procedimento}* foi confirmado para o dia *${formattedDate}* às *${confirmedAppointment.horario_inicio}*.\n\nAdicionar ao Google Agenda:\n${calendarUrl}`
+      `*Agendamento Confirmado!*\n\n${detailsLines}\n\nAdicionar ao Google Agenda:\n${calendarUrl}`
     );
     const waUrl = phoneDigits ? `https://wa.me/55${phoneDigits}?text=${text}` : `https://wa.me/?text=${text}`;
     window.open(waUrl, "_blank", "noopener,noreferrer");

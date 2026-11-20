@@ -126,9 +126,9 @@ function safeGenerateGoogleCalendarTemplateUrl(options: {
 
     const summary = `Consulta: ${options.procedimento} - Dra. Juliana Sena`;
     const details = [
-      `Paciente: ${options.patientName}`,
-      options.patientPhone ? `Telefone: ${options.patientPhone}` : "",
-      options.patientEmail ? `E-mail: ${options.patientEmail}` : "",
+      `Profissional: Juliana Sena`,
+      `Telefone: (71) 98661-2878`,
+      `E-mail: julianasevieira@gmail.com`,
       `Procedimento: ${options.procedimento}`,
       options.observacoes ? `Observações: ${options.observacoes}` : "",
     ]

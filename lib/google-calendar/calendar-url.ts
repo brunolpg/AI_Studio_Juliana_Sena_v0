@@ -29,9 +29,9 @@ export function generateGoogleCalendarTemplateUrl(input: GoogleCalendarEventInpu
 
   const summary = `Consulta: ${input.procedimento} - Dra. Juliana Sena`;
   const details = [
-    `Paciente: ${input.patientName}`,
-    `Telefone: ${input.patientPhone || "Não informado"}`,
-    `E-mail: ${input.patientEmail || "Não informado"}`,
+    `Profissional: Juliana Sena`,
+    `Telefone: (71) 98661-2878`,
+    `E-mail: julianasevieira@gmail.com`,
     `Procedimento: ${input.procedimento}`,
     input.observacoes ? `Observações: ${input.observacoes}` : "",
   ]
