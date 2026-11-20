@@ -16,7 +16,7 @@ import type { Client } from "@/types/client";
 interface PrescriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (newPrescriptionId?: string) => void;
+  onSuccess: (newPrescriptionId?: string, savedData?: any) => void;
   client: Client;
   zIndex?: string;
   initialData?: any | null;
@@ -498,7 +498,7 @@ export function PrescriptionModal({
             : `Receita gerada e salva com sucesso para ${client.nome}.`,
         });
         const createdPrescriptionId = res.data?.prescricao_id || res.data?.id;
-        onSuccess(createdPrescriptionId);
+        onSuccess(createdPrescriptionId, res.data);
         onClose();
       } else {
         setErrorMsg(res.message || "Erro ao salvar receita.");

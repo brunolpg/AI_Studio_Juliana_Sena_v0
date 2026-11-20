@@ -32,6 +32,7 @@ interface ExamPrescriptionNotificationModalProps {
     status?: string;
   };
   isEdit?: boolean;
+  isReactivation?: boolean;
 }
 
 interface FeedbackState {
@@ -45,6 +46,7 @@ export function ExamPrescriptionNotificationModal({
   prescricao,
   patientData,
   isEdit = false,
+  isReactivation = false,
 }: ExamPrescriptionNotificationModalProps) {
   const { toast } = useToast();
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
@@ -235,7 +237,11 @@ export function ExamPrescriptionNotificationModal({
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-bold text-on-surface">
-                {isEdit ? "Prescrição de Exames Atualizada!" : "Prescrição de Exames Salva!"}
+                {isReactivation
+                  ? "Prescrição de Exames Reativada!"
+                  : isEdit
+                  ? "Prescrição de Exames Atualizada!"
+                  : "Prescrição de Exames Salva!"}
               </h3>
               <p className="text-xs text-on-surface-variant">
                 Deseja enviar o PDF e notificar o paciente agora?

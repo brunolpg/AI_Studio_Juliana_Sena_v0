@@ -837,6 +837,84 @@ export async function suspenderPrescricaoExame(
 }
 
 /**
+ * 4b. reativarPrescricaoExame
+ * Reativa uma prescrição de exames suspensa, restaurando o status para 'Ativo' e limpando justificativa/data de suspensão.
+ */
+export async function reativarPrescricaoExame(
+  id: string
+): Promise<PrescricaoExameActionResult<PrescricaoExame>> {
+  try {
+    if (!id) {
+      return {
+        success: false,
+        error: "Identificador da prescrição de exames não informado.",
+      };
+    }
+
+    const serverClient = await createClient();
+    const adminClient = getSupabaseAdminClient();
+    const db = adminClient || serverClient;
+
+    if (!db) {
+      return {
+        success: false,
+        error: "Banco de dados indisponível no momento.",
+      };
+    }
+
+    // Valida permissão do usuário
+    if (serverClient) {
+      const authCheck = await verifyProfissionalOrAdmin(serverClient, db);
+      if (!authCheck.authorized) {
+        return {
+          success: false,
+          error: authCheck.error || "Acesso não autorizado.",
+        };
+      }
+    }
+
+    const now = new Date().toISOString();
+
+    const { data, error } = await db
+      .from("prescricoes_exames")
+      .update({
+        status: "Ativo",
+        justificativa_suspensao: null,
+        data_suspensao: null,
+        updated_at: now,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      return {
+        success: false,
+        error: error.message || "Erro ao reativar prescrição de exames.",
+      };
+    }
+
+    try {
+      revalidatePath("/clinical");
+      revalidatePath("/patients");
+      revalidatePath("/portal-paciente");
+    } catch {
+      // Revalidação segura
+    }
+
+    return {
+      success: true,
+      data: data as PrescricaoExame,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Erro inesperado ao reativar prescrição de exames.",
+    };
+  }
+}
+
+/**
  * 5. getModelosPrescricaoExames
  * Busca todos os modelos reutilizáveis ativos (ativo = true) ordenados por titulo ASC.
  */
