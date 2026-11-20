@@ -70,7 +70,7 @@ export function TimeSlotGrid({
           <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-1 leading-relaxed">
             {isAdminOrProfessional ? (
               <>
-                A Dra. Juliana atende de <strong>segunda a sexta</strong> (09h às 19h) e aos <strong>sábados</strong> (13h às 18h). Selecione um dia válido no calendário ao lado.
+                A Dra. Juliana atende de <strong>segunda a sexta</strong> (09h às 20h) e aos <strong>sábados</strong> (13h às 18h). Selecione um dia válido no calendário ao lado.
               </>
             ) : (
               <>

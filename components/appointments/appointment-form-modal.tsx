@@ -805,7 +805,7 @@ function AppointmentFormModalContent({
     if (!isAllowedAppointmentDay(selectedDate, isAdminOrProfessional)) {
       setErrorMsg(
         isAdminOrProfessional
-          ? "A Dra. Juliana atende de segunda a sexta (09h-19h) e aos sábados (13h-18h)."
+          ? "A Dra. Juliana atende de segunda a sexta (09h-20h) e aos sábados (13h-18h)."
           : "A Dra. Juliana atende apenas às segundas, quintas (09h-16h) e sábados (13h-18h)."
       );
       return;

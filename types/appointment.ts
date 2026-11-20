@@ -74,7 +74,7 @@ export type AllowedDayOfWeek = typeof ALLOWED_APPOINTMENT_DAYS[number];
 
 /**
  * Dias da semana permitidos para agendamento administrativo/profissional:
- * 1 = Segunda a 5 = Sexta (09:00 às 19:00, sessões de 30m)
+ * 1 = Segunda a 5 = Sexta (09:00 às 20:00, sessões de 30m)
  * 6 = Sábado (13:00 às 18:00, sessões de 30m)
  */
 export const ALLOWED_ADMIN_APPOINTMENT_DAYS = [1, 2, 3, 4, 5, 6] as const;
@@ -99,7 +99,7 @@ export const MONDAY_THURSDAY_SLOTS: Array<{ slot: string; endSlot: string; label
 ];
 
 /**
- * Grade de Segunda a Sexta-feira (Administrador/Profissional): 09:00 às 19:00 (intervalos de 30m, pausa 12:00-13:00)
+ * Grade de Segunda a Sexta-feira (Administrador/Profissional): 09:00 às 20:00 (intervalos de 30m, pausa 12:00-13:00)
  */
 export const WEEKDAY_ADMIN_SLOTS: Array<{ slot: string; endSlot: string; label: string }> = [
   ...MONDAY_THURSDAY_SLOTS,
@@ -109,6 +109,8 @@ export const WEEKDAY_ADMIN_SLOTS: Array<{ slot: string; endSlot: string; label: 
   { slot: "17:30", endSlot: "18:00", label: "17:30 - 18:00" },
   { slot: "18:00", endSlot: "18:30", label: "18:00 - 18:30" },
   { slot: "18:30", endSlot: "19:00", label: "18:30 - 19:00" },
+  { slot: "19:00", endSlot: "19:30", label: "19:00 - 19:30" },
+  { slot: "19:30", endSlot: "20:00", label: "19:30 - 20:00" },
 ];
 
 /**
@@ -324,7 +326,7 @@ export function getDayScheduleDescription(
       return {
         isOpen: true,
         dayName: dayNames[dayOfWeek],
-        hoursDescription: "09:00 às 19:00 (sessões de 30 em 30 min)",
+        hoursDescription: "09:00 às 20:00 (sessões de 30 em 30 min)",
       };
     }
     if (dayOfWeek === 6) {
@@ -338,7 +340,7 @@ export function getDayScheduleDescription(
       isOpen: false,
       dayName: dayNames[dayOfWeek] || "Dia",
       hoursDescription:
-        "Sem expediente aos domingos. Atendimentos de segunda a sexta (09h às 19h) e sábados (13h às 18h).",
+        "Sem expediente aos domingos. Atendimentos de segunda a sexta (09h às 20h) e sábados (13h às 18h).",
     };
   }
 

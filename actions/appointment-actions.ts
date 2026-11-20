@@ -567,7 +567,7 @@ export async function getTimeSlotsForDateAction(
         success: true,
         data: [],
         message: isAdmin
-          ? `Sem expediente (${schedule.dayName}). Atendimentos ocorrem de segunda a sexta (09h às 19h) e aos sábados (13h às 18h).`
+          ? `Sem expediente (${schedule.dayName}). Atendimentos ocorrem de segunda a sexta (09h às 20h) e aos sábados (13h às 18h).`
           : `Sem expediente na ${schedule.dayName}. Atendimentos ocorrem exclusivamente às segundas, quintas (09h às 16h) e sábados (13h às 18h).`,
       };
     }

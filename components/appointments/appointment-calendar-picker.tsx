@@ -235,7 +235,7 @@ export function AppointmentCalendarPicker({
           <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
           <span>
             {isAdminOrProfessional
-              ? "A Dra. Juliana atende de segunda a sexta (09h-19h) e aos sábados (13h-18h)."
+              ? "A Dra. Juliana atende de segunda a sexta (09h-20h) e aos sábados (13h-18h)."
               : "A Dra. Juliana atende apenas às segundas, quintas (09h-16h) e sábados (13h-18h)."}
           </span>
         </div>
@@ -246,7 +246,7 @@ export function AppointmentCalendarPicker({
         <Info className="w-3 h-3 text-teal-600 dark:text-teal-400 shrink-0" />
         <span>
           {isAdminOrProfessional
-            ? "Expediente: Seg a Sex (09h às 19h) • Sáb (13h às 18h)"
+            ? "Expediente: Seg a Sex (09h às 20h) • Sáb (13h às 18h)"
             : "Expediente: Seg e Qui (09h às 16h) • Sáb (13h às 18h)"}
         </span>
       </div>
