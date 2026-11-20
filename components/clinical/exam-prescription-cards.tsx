@@ -139,7 +139,7 @@ export function ExamPrescriptionCards({
             return (
               <div
                 key={presc.id}
-                className="bg-surface-container-lowest border border-outline-variant rounded-md-2xl p-4 sm:p-5 transition-all hover:border-outline shadow-2xs flex flex-col justify-between min-w-0 w-full"
+                className="bg-surface-container-low border border-outline-variant rounded-md-2xl p-4 sm:p-5 transition-all hover:border-outline shadow-2xs flex flex-col justify-between min-w-0 w-full"
               >
                 <div className="min-w-0 w-full">
                   {/* Cabeçalho do Card */}
@@ -183,7 +183,7 @@ export function ExamPrescriptionCards({
                       <button
                         type="button"
                         onClick={() => setSelectedForPrint(presc)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary bg-surface-container-lowest border border-outline-variant hover:bg-surface-container rounded-md-full cursor-pointer transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary bg-surface-container border border-outline-variant hover:bg-surface-container-high rounded-md-full cursor-pointer transition-colors"
                         title="Visualizar e imprimir guia de exames"
                       >
                         <Printer className="w-3.5 h-3.5 text-primary" />
@@ -229,7 +229,7 @@ export function ExamPrescriptionCards({
                   </div>
 
                   {/* Resumo dos Grupos e Exames */}
-                  <div className="mt-3 p-3.5 rounded-md-xl bg-surface-container/50 border border-outline-variant space-y-2.5">
+                  <div className="mt-3 p-3.5 rounded-md-xl bg-surface-container border border-outline-variant space-y-2.5">
                     {presc.descricao && (
                       <p className="text-xs text-on-surface leading-relaxed">
                         {presc.descricao}
