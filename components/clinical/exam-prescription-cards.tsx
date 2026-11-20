@@ -111,8 +111,8 @@ export function ExamPrescriptionCards({
       <div className="space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-md-xl bg-primary-container text-on-primary-container border border-primary/20 flex items-center justify-center shrink-0">
-              <FlaskConical className="w-5 h-5 text-primary" />
+            <div className="w-10 h-10 rounded-md-xl bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
+              <FlaskConical className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-on-surface">
@@ -139,22 +139,22 @@ export function ExamPrescriptionCards({
             return (
               <div
                 key={presc.id}
-                className="p-4 sm:p-5 rounded-md-2xl bg-surface-container-lowest border border-outline-variant shadow-2xs hover:border-primary/40 transition-all flex flex-col justify-between min-w-0 w-full"
+                className="bg-surface-container-lowest border border-outline-variant rounded-md-2xl p-4 sm:p-5 transition-all hover:border-outline shadow-2xs flex flex-col justify-between min-w-0 w-full"
               >
                 <div className="min-w-0 w-full">
                   {/* Cabeçalho do Card */}
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 w-full flex-wrap mb-3 pb-3 border-b border-outline-variant">
                     <div className="flex-1 min-w-[200px]">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md-full bg-primary-container text-on-primary-container border border-primary/20">
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md-full bg-primary-container text-on-primary-container">
                           Exames Laboratoriais
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md-full bg-success-container text-on-success-container border border-success/30">
+                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-md-full bg-success-container text-on-success-container">
                           {presc.status}
                         </span>
                         {truncatedHash && (
                           <span
-                            className="text-[10px] font-mono px-2 py-0.5 rounded-md-full bg-surface-container text-on-surface-variant border border-outline-variant"
+                            className="bg-surface-container text-on-surface-variant border border-outline-variant font-mono text-[11px] px-2.5 py-0.5 rounded-md-md"
                             title={`Hash SHA-256: ${presc.payload_hash}`}
                           >
                             SHA-256: {truncatedHash}
@@ -162,12 +162,12 @@ export function ExamPrescriptionCards({
                         )}
                       </div>
 
-                      <h4 className="text-base font-bold text-on-surface leading-snug mt-1.5">
+                      <h4 className="text-base font-semibold text-on-surface leading-snug mt-1.5">
                         {presc.titulo}
                       </h4>
 
                       <div className="flex items-center gap-2 text-xs text-on-surface-variant mt-1.5 flex-wrap">
-                        <span className="flex items-center gap-1 font-medium text-on-surface">
+                        <span className="flex items-center gap-1 font-medium text-on-surface-variant">
                           <Calendar className="w-3.5 h-3.5 text-primary" />
                           <span>Emissão: {formatDateBR(presc.data)}</span>
                         </span>
@@ -183,7 +183,7 @@ export function ExamPrescriptionCards({
                       <button
                         type="button"
                         onClick={() => setSelectedForPrint(presc)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary bg-surface-container-lowest border border-outline-variant hover:bg-surface-container rounded-md-full cursor-pointer transition-colors shadow-2xs"
+                        className="flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] text-xs font-semibold text-primary bg-surface-container-low border border-outline-variant hover:bg-surface-container rounded-md-full cursor-pointer transition-colors shadow-2xs"
                         title="Visualizar e imprimir guia de exames"
                       >
                         <Printer className="w-3.5 h-3.5 text-primary" />
@@ -196,7 +196,7 @@ export function ExamPrescriptionCards({
                             <button
                               type="button"
                               onClick={() => onEdit(presc)}
-                              className="p-2 min-h-[44px] min-w-[44px] rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer flex items-center justify-center"
+                              className="p-2 min-h-[44px] min-w-[44px] rounded-md-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer flex items-center justify-center"
                               title="Editar solicitação de exames"
                             >
                               <Edit2 className="w-4 h-4" />
@@ -207,7 +207,7 @@ export function ExamPrescriptionCards({
                             <button
                               type="button"
                               onClick={() => onNotify(presc)}
-                              className="p-2 min-h-[44px] min-w-[44px] rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer flex items-center justify-center"
+                              className="p-2 min-h-[44px] min-w-[44px] rounded-md-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer flex items-center justify-center"
                               title="Notificar paciente via WhatsApp ou E-mail"
                             >
                               <Share2 className="w-4 h-4" />
@@ -218,7 +218,7 @@ export function ExamPrescriptionCards({
                             type="button"
                             onClick={() => handleSuspend(presc)}
                             disabled={suspendingId === presc.id}
-                            className="p-2 min-h-[44px] min-w-[44px] rounded-full text-on-surface-variant hover:text-error hover:bg-error-container/40 transition-colors cursor-pointer flex items-center justify-center"
+                            className="p-2 min-h-[44px] min-w-[44px] rounded-md-full text-on-surface-variant hover:text-error hover:bg-error-container/20 transition-colors cursor-pointer flex items-center justify-center disabled:opacity-50"
                             title="Suspender esta solicitação"
                           >
                             <Archive className="w-4 h-4" />
@@ -236,13 +236,16 @@ export function ExamPrescriptionCards({
                       </p>
                     )}
 
-                    <div className="flex flex-wrap gap-1.5 pt-1">
+                    <div className="flex flex-wrap gap-2 pt-1">
                       {presc.grupos_exames?.map((grp, idx) => (
                         <span
                           key={grp.id || idx}
-                          className="text-[11px] px-2.5 py-1 rounded-md-lg bg-surface-container text-on-surface border border-outline-variant font-medium"
+                          className="bg-surface-container-low border border-outline-variant text-on-surface text-xs px-3 py-1 rounded-md-full"
                         >
-                          <strong>{grp.nome_grupo}:</strong> {grp.exames.length} exames
+                          <strong className="font-semibold">{grp.nome_grupo}:</strong>{" "}
+                          <span className="text-primary font-medium">
+                            {grp.exames.length} {grp.exames.length === 1 ? "exame" : "exames"}
+                          </span>
                         </span>
                       ))}
                     </div>

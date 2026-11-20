@@ -13,11 +13,14 @@ import {
   AlertTriangle,
   Archive,
   Sparkles,
+  Share2,
+  Loader2,
 } from "lucide-react";
 import type { PrescricaoExame } from "@/types/prescricao-exame";
 import type { Client } from "@/types/client";
 import { suspenderPrescricaoExame } from "@/app/actions/prescricoes-exames-actions";
 import { useToast } from "@/components/ui/toast";
+import { ExamPrescriptionNotificationModal } from "./exam-prescription-notification-modal";
 
 interface PrintExamPrescriptionModalProps {
   isOpen: boolean;
@@ -61,6 +64,7 @@ export function PrintExamPrescriptionModal({
   const [isSuspending, setIsSuspending] = useState(false);
   const [showSuspendPrompt, setShowSuspendPrompt] = useState(false);
   const [justificativa, setJustificativa] = useState("Solicitação de exames substituída ou ajustada");
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
 
   if (!isOpen || !prescricao) return null;
 
@@ -129,7 +133,8 @@ export function PrintExamPrescriptionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-on-surface/50 backdrop-blur-xs animate-in fade-in duration-200 print:p-0 print:bg-white print:fixed print:inset-0">
+    <>
+      <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-on-surface/50 backdrop-blur-xs animate-in fade-in duration-200 print:p-0 print:bg-white print:fixed print:inset-0">
       <div className="w-full max-w-4xl max-h-[85dvh] bg-surface rounded-md-2xl sm:rounded-md-3xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:border-none print:shadow-none print:max-h-none print:rounded-none">
         {/* Barra Superior de Ações (Oculta na Impressão) */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-container-low shrink-0 print:hidden flex-wrap gap-3">
@@ -184,6 +189,17 @@ export function PrintExamPrescriptionModal({
               </>
             )}
 
+            {/* Botão Compartilhar (Disponível para todos os perfis) */}
+            <button
+              type="button"
+              onClick={() => setIsNotificationModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] text-xs font-semibold rounded-md-full border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+              title="Compartilhar relatório em PDF"
+            >
+              <Share2 className="w-3.5 h-3.5 text-primary" />
+              <span>Compartilhar</span>
+            </button>
+
             {/* Botão Imprimir */}
             <button
               type="button"
@@ -236,9 +252,16 @@ export function PrintExamPrescriptionModal({
                 type="button"
                 onClick={handleConfirmSuspend}
                 disabled={isSuspending}
-                className="px-4 py-1.5 min-h-[44px] rounded-md-md bg-error text-on-error text-xs font-semibold hover:brightness-110 transition-all cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 min-h-[44px] rounded-md-md bg-error text-on-error text-xs font-semibold hover:brightness-110 transition-all cursor-pointer shadow-sm"
               >
-                {isSuspending ? "Suspendendo..." : "Confirmar Suspensão"}
+                {isSuspending ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Suspendendo...</span>
+                  </>
+                ) : (
+                  "Confirmar Suspensão"
+                )}
               </button>
             </div>
           </div>
@@ -421,6 +444,24 @@ export function PrintExamPrescriptionModal({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+
+      {/* Modal de Compartilhamento (WhatsApp e E-mail com PDF oficial) */}
+      <div className="print:hidden">
+        <ExamPrescriptionNotificationModal
+          isOpen={isNotificationModalOpen}
+          onClose={() => setIsNotificationModalOpen(false)}
+          prescricao={prescricao}
+          patientData={{
+            nome: client?.nome || prescricao.paciente?.nome,
+            email: client?.email || prescricao.paciente?.email,
+            telefone: client?.telefone || prescricao.paciente?.telefone,
+            cpf: client?.cpf || prescricao.paciente?.cpf,
+            idade: client?.idade,
+            status: prescricao.status,
+          }}
+        />
+      </div>
+    </>
   );
 }
