@@ -179,18 +179,25 @@ interface RawAppointmentRow {
   }> | null;
 }
 
+function isImageAttachmentUrl(url: string): boolean {
+  const cleanUrl = url.split("?")[0].split("#")[0].toLowerCase();
+  return /\.(png|jpe?g|bmp|webp|gif)$/i.test(cleanUrl);
+}
+
 function mapRowToAppointment(
   row: RawAppointmentRow,
-  profilesMap?: Map<string, string>
+  profilesMap?: Map<string, string>,
+  hidePatientPhotos = false
 ): Appointment {
   const patientData = Array.isArray(row.pacientes)
     ? row.pacientes[0]
     : row.pacientes;
 
   const email = (patientData?.email || "").toLowerCase().trim();
-  const avatarFromProfile = email && profilesMap ? profilesMap.get(email) : null;
-  const resolvedAvatar =
-    (patientData as any)?.avatar_url || avatarFromProfile || patientData?.foto_perfil || null;
+  const avatarFromProfile = !hidePatientPhotos && email && profilesMap ? profilesMap.get(email) : null;
+  const resolvedAvatar = hidePatientPhotos
+    ? null
+    : (patientData as any)?.avatar_url || avatarFromProfile || patientData?.foto_perfil || null;
 
   return {
     id: row.id,
@@ -391,6 +398,7 @@ export async function getAppointmentsAction(
     const totalPages = Math.ceil(total / pageSize) || 1;
     const currentPage = Math.max(1, Math.min(page, totalPages));
 
+    const isAdminRole = authCtx?.role === "administrador";
     const rows = (data as unknown as RawAppointmentRow[]) || [];
     const patientEmails = Array.from(
       new Set(
@@ -404,7 +412,7 @@ export async function getAppointmentsAction(
     );
 
     const profilesMap = new Map<string, string>();
-    if (patientEmails.length > 0) {
+    if (!isAdminRole && patientEmails.length > 0) {
       try {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -423,7 +431,7 @@ export async function getAppointmentsAction(
       }
     }
 
-    const appointments = rows.map((row) => mapRowToAppointment(row, profilesMap));
+    const appointments = rows.map((row) => mapRowToAppointment(row, profilesMap, isAdminRole));
 
     return {
       success: true,
@@ -484,13 +492,16 @@ export async function getActivePatientsForSchedulingAction(): Promise<ActionResp
       };
     }
 
+    const authCtx = await getAuthenticatedUserContext();
+    const isAdminRole = authCtx?.role === "administrador";
+
     const patientRows = (data as any[]) || [];
     const emails = Array.from(
       new Set(patientRows.map((p) => p.email?.toLowerCase().trim()).filter(Boolean))
     );
 
     const profilesMap = new Map<string, string>();
-    if (emails.length > 0) {
+    if (!isAdminRole && emails.length > 0) {
       try {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -510,6 +521,13 @@ export async function getActivePatientsForSchedulingAction(): Promise<ActionResp
     }
 
     const enriched = patientRows.map((p) => {
+      if (isAdminRole) {
+        return {
+          ...p,
+          avatar_url: null,
+          foto_perfil: null,
+        };
+      }
       const pEmail = (p.email || "").toLowerCase().trim();
       const avatar = p.avatar_url || profilesMap.get(pEmail) || p.foto_perfil || null;
       return {
@@ -906,7 +924,11 @@ export async function createAppointmentAction(
       };
     }
 
-    const newAppointment = mapRowToAppointment(inserted as unknown as RawAppointmentRow);
+    const newAppointment = mapRowToAppointment(
+      inserted as unknown as RawAppointmentRow,
+      undefined,
+      userRole === "administrador"
+    );
 
     // Dispara notificações administrativas em segundo plano (assíncrono / não-bloqueante)
     sendNewAppointmentAdminNotification({
@@ -1060,6 +1082,7 @@ export async function updateAppointmentAction(
           procedimento_id,
           observacoes,
           status,
+          anexos_clinicos,
           google_event_id,
           google_html_link,
           synced_with_google,
@@ -1164,7 +1187,18 @@ export async function updateAppointmentAction(
     };
 
     if (updates.anexos_clinicos !== undefined) {
-      payloadToUpdate.anexos_clinicos = updates.anexos_clinicos;
+      if (userRole === "administrador") {
+        // Preserva fotos clínicas já anexadas e permite apenas documentos não-imagem pelo perfil administrador
+        const existingImages = Array.isArray((current as any).anexos_clinicos)
+          ? (current as any).anexos_clinicos.filter((u: string) => isImageAttachmentUrl(u))
+          : [];
+        const safeNonImageUpdates = updates.anexos_clinicos.filter(
+          (u: string) => !isImageAttachmentUrl(u)
+        );
+        payloadToUpdate.anexos_clinicos = [...existingImages, ...safeNonImageUpdates];
+      } else {
+        payloadToUpdate.anexos_clinicos = updates.anexos_clinicos;
+      }
     }
 
     if ((updates as any).status_pagamento !== undefined) {
@@ -1210,7 +1244,11 @@ export async function updateAppointmentAction(
       };
     }
 
-    const mapped = mapRowToAppointment(updated as unknown as RawAppointmentRow);
+    const mapped = mapRowToAppointment(
+      updated as unknown as RawAppointmentRow,
+      undefined,
+      userRole === "administrador"
+    );
 
     // 4. Sincroniza atualização no Google Calendar se houver evento vinculado
     if (current.google_event_id) {
@@ -1365,12 +1403,22 @@ export async function addAppointmentAttachmentsAction({
 
   if (fetchErr) return { success: false, message: fetchErr.message };
 
+  const authCtx = await getAuthenticatedUserContext();
+  const filteredAttachmentUrls =
+    authCtx?.role === "administrador"
+      ? newAttachmentUrls.filter((u) => !isImageAttachmentUrl(u))
+      : newAttachmentUrls;
+
+  if (authCtx?.role === "administrador" && filteredAttachmentUrls.length === 0 && newAttachmentUrls.length > 0) {
+    return { success: false, message: 'Acesso às fotos de pacientes restrito ao profissional de saúde.' };
+  }
+
   const currentList: string[] = current?.anexos_clinicos || [];
-  if (currentList.length + newAttachmentUrls.length > 3) {
+  if (currentList.length + filteredAttachmentUrls.length > 3) {
     return { success: false, message: 'O limite máximo é de 3 arquivos por agendamento.' };
   }
 
-  const updatedList = [...currentList, ...newAttachmentUrls];
+  const updatedList = [...currentList, ...filteredAttachmentUrls];
 
   const { error: updateErr } = await supabase
     .from('appointments')

@@ -9,7 +9,9 @@ import {
   ExternalLink,
   AlertCircle,
   Image as ImageIcon,
+  Lock,
 } from "lucide-react";
+import { useAuth } from "@/components/auth/auth-context";
 
 interface EvolutionPhotosModalProps {
   isOpen: boolean;
@@ -229,6 +231,8 @@ export function EvolutionPhotosModal({
   procedimento,
   data,
 }: EvolutionPhotosModalProps) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "administrador";
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
 
   // Fecha ou reseta ao fechar o modal
@@ -240,7 +244,7 @@ export function EvolutionPhotosModal({
 
   // Navegação por teclado (Esc para voltar à grade ou fechar, Setas para navegar)
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isAdmin) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -262,9 +266,38 @@ export function EvolutionPhotosModal({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, selectedPhotoIndex, fotos.length, onClose]);
+  }, [isOpen, isAdmin, selectedPhotoIndex, fotos.length, onClose]);
 
-  if (!isOpen || !fotos || fotos.length === 0) return null;
+  if (!isOpen) return null;
+  if (!isAdmin && (!fotos || fotos.length === 0)) return null;
+
+  if (isAdmin) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface/80 backdrop-blur-xs">
+        <div className="w-full max-w-md rounded-md-2xl bg-surface-container-lowest border border-outline-variant shadow-xl p-5 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-on-surface">
+              <div className="w-10 h-10 rounded-md-lg bg-surface-container flex items-center justify-center text-on-surface-variant border border-outline-variant">
+                <Lock className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm sm:text-base font-bold">Acesso Restrito</h3>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
+              title="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <p className="text-xs sm:text-sm text-on-surface-variant bg-surface-container p-4 rounded-md-lg border border-outline-variant">
+            A visualização e manipulação de fotos clínicas de pacientes é restrita exclusivamente ao profissional de saúde.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Formatação segura de data (YYYY-MM-DD -> DD/MM/YYYY)
   const formatDateBR = (val?: string) => {

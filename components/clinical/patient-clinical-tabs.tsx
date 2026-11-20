@@ -42,6 +42,7 @@ import {
   Trash2,
   RotateCcw,
   FlaskConical,
+  Lock,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import {
@@ -101,6 +102,7 @@ export function PatientClinicalTabs({
   const { toast } = useToast();
   const { user } = useAuth();
   const isPatient = isPatientView || user?.role === "paciente";
+  const isAdmin = user?.role === "administrador";
 
   const [internalSubTab, setInternalSubTab] = useState<ClinicalSubTab>(
     isPatient ? "prescricoes" : "evolucoes"
@@ -1148,7 +1150,7 @@ export function PatientClinicalTabs({
 
                             {/* Ações da Evolução MD4 */}
                             <div className="flex items-center flex-wrap gap-2 shrink-0 self-start sm:self-center">
-                              {hasValidClinicalPhoto(evo.fotos_paciente) && (
+                              {!isAdmin && hasValidClinicalPhoto(evo.fotos_paciente) && (
                                 <button
                                   type="button"
                                   onClick={() => setSelectedEvolutionForPhotos(evo)}
@@ -1685,30 +1687,44 @@ export function PatientClinicalTabs({
                 )}
 
                 {/* Fotos da Área a Ser Tratada */}
-                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-teal-600" />
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                      Fotos da Área a Ser Tratada
-                    </span>
-                  </div>
-                  {history?.fotosAreaTratada && history.fotosAreaTratada.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {history.fotosAreaTratada.map((url, idx) => (
-                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 group">
-                          <img
-                            src={url}
-                            alt={`Área tratada ${idx + 1}`}
-                            className="w-full h-full object-cover cursor-zoom-in group-hover:scale-105 transition-transform"
-                            onClick={() => setLightboxUrl(url)}
-                          />
-                        </div>
-                      ))}
+                {isAdmin ? (
+                  <div className="p-4 rounded-md-lg border border-outline-variant bg-surface-container space-y-2">
+                    <div className="flex items-center gap-2 text-on-surface">
+                      <Lock className="w-4 h-4 text-on-surface-variant shrink-0" />
+                      <span className="text-xs font-bold uppercase tracking-wider">
+                        Fotos da Área a Ser Tratada
+                      </span>
                     </div>
-                  ) : (
-                    <p className="text-xs text-slate-400 italic">Nenhuma foto anexada ao histórico.</p>
-                  )}
-                </div>
+                    <p className="text-xs text-on-surface-variant">
+                      Acesso restrito ao profissional de saúde. O perfil administrador não possui permissão para visualizar ou manipular fotografias clínicas de pacientes.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-teal-600" />
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                        Fotos da Área a Ser Tratada
+                      </span>
+                    </div>
+                    {history?.fotosAreaTratada && history.fotosAreaTratada.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {history.fotosAreaTratada.map((url, idx) => (
+                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 group">
+                            <img
+                              src={url}
+                              alt={`Área tratada ${idx + 1}`}
+                              className="w-full h-full object-cover cursor-zoom-in group-hover:scale-105 transition-transform"
+                              onClick={() => setLightboxUrl(url)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">Nenhuma foto anexada ao histórico.</p>
+                    )}
+                  </div>
+                )}
 
                 {/* ========================================================
                     SEÇÃO: AVALIAÇÃO ESTÉTICA (FACIAL & CORPORAL)
@@ -2723,7 +2739,7 @@ export function PatientClinicalTabs({
         />
       )}
 
-      {selectedEvolutionForPhotos && (
+      {!isAdmin && selectedEvolutionForPhotos && (
         <EvolutionPhotosModal
           isOpen={true}
           onClose={() => setSelectedEvolutionForPhotos(null)}
@@ -3038,7 +3054,7 @@ export function PatientClinicalTabs({
       )}
 
       {/* Lightbox para fotos da área tratada */}
-      {lightboxUrl && (
+      {!isAdmin && lightboxUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
           <div className="relative max-w-4xl w-full max-h-screen flex flex-col items-center">
             <button

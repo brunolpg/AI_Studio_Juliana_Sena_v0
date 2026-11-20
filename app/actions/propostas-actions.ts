@@ -1,87 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { requireProfissionalAccess, verifyProfissionalOrOwnPaciente } from "@/lib/auth/session";
 import { generatePropostaHash } from "@/lib/hash-proposta";
 import type {
   Proposta,
   PropostaInput,
   PropostaActionResult,
 } from "@/types/proposta";
-
-/**
- * Obtém os clientes Supabase para execução segura e fallback administrativo.
- */
-async function getSupabaseClients() {
-  const serverClient = await createClient();
-  const adminClient = getSupabaseAdminClient();
-  const db = serverClient || adminClient;
-  return { serverClient, adminClient, db };
-}
-
-/**
- * Valida se o usuário autenticado possui role de 'administrador' ou 'profissional'
- * checando metadados da sessão e a tabela public.profiles.
- */
-async function verifyProfissionalOrAdmin(serverClient: any, adminDb: any) {
-  const {
-    data: { user },
-    error: authError,
-  } = await serverClient.auth.getUser();
-
-  if (authError || !user) {
-    return {
-      authorized: false,
-      error: "Acesso não autenticado. Por favor, realize login.",
-    };
-  }
-
-  const rawRole = (
-    user.user_metadata?.role ||
-    user.app_metadata?.role ||
-    ""
-  )
-    .toLowerCase()
-    .trim();
-
-  const isEmailAdmin =
-    user.email?.toLowerCase().includes("juliana") ||
-    user.email?.toLowerCase().includes("admin");
-
-  if (
-    rawRole === "administrador" ||
-    rawRole === "admin" ||
-    rawRole === "profissional" ||
-    isEmailAdmin
-  ) {
-    return { authorized: true, user, role: rawRole || "administrador" };
-  }
-
-  // Consulta papel do usuário na tabela profiles
-  const targetDb = adminDb || serverClient;
-  const { data: profile } = await targetDb
-    .from("profiles")
-    .select("role, nome")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const roleFromDb = (profile?.role || "").toLowerCase().trim();
-  const isAuthorized =
-    roleFromDb === "administrador" ||
-    roleFromDb === "admin" ||
-    roleFromDb === "profissional";
-
-  if (!isAuthorized) {
-    return {
-      authorized: false,
-      error:
-        "Acesso não autorizado. Apenas administradores e profissionais podem gerenciar propostas.",
-    };
-  }
-
-  return { authorized: true, user, role: roleFromDb, profile };
-}
 
 /**
  * 1. getPropostasByPaciente
@@ -98,15 +24,16 @@ export async function getPropostasByPaciente(
       };
     }
 
-    const { serverClient, adminClient, db } = await getSupabaseClients();
-    if (!db) {
+    const auth = await verifyProfissionalOrOwnPaciente(pacienteId);
+    if (!auth.authorized) {
       return {
         success: false,
-        error: "Banco de dados indisponível no momento.",
+        error: auth.message,
+        message: auth.message,
       };
     }
 
-    const activeDb = serverClient || adminClient || db;
+    const activeDb = auth.supabase;
 
     // 1. Valida se o paciente existe e está ativo (soft-delete filter)
     const { data: paciente, error: pacError } = await activeDb
@@ -165,26 +92,17 @@ export async function saveProposta(
       };
     }
 
-    const { serverClient, adminClient } = await getSupabaseClients();
-    if (!serverClient && !adminClient) {
+    // 1. Valida permissão estrita para perfil profissional
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
       return {
         success: false,
-        error: "Banco de dados indisponível no momento.",
+        error: auth.message,
+        message: auth.message,
       };
     }
 
-    const db = adminClient || serverClient;
-
-    // 1. Valida permissão do usuário autenticado
-    if (serverClient) {
-      const authCheck = await verifyProfissionalOrAdmin(serverClient, db);
-      if (!authCheck.authorized) {
-        return {
-          success: false,
-          error: authCheck.error || "Acesso não autorizado.",
-        };
-      }
-    }
+    const db = auth.supabase;
 
     // 2. Valida paciente ativo (deleted_at IS NULL)
     const { data: paciente, error: pacError } = await db
@@ -317,26 +235,17 @@ export async function suspenderProposta(
       };
     }
 
-    const { serverClient, adminClient } = await getSupabaseClients();
-    if (!serverClient && !adminClient) {
+    // 1. Valida permissão estrita para perfil profissional
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
       return {
         success: false,
-        error: "Banco de dados indisponível no momento.",
+        error: auth.message,
+        message: auth.message,
       };
     }
 
-    const db = adminClient || serverClient;
-
-    // 1. Valida permissão do usuário
-    if (serverClient) {
-      const authCheck = await verifyProfissionalOrAdmin(serverClient, db);
-      if (!authCheck.authorized) {
-        return {
-          success: false,
-          error: authCheck.error || "Acesso não autorizado.",
-        };
-      }
-    }
+    const db = auth.supabase;
 
     const now = new Date().toISOString();
 

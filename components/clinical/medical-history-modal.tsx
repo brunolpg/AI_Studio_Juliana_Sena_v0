@@ -12,9 +12,11 @@ import {
   Pill,
   Stethoscope,
   Image as ImageIcon,
+  Lock,
 } from "lucide-react";
 import { updateMedicalHistoryAction } from "@/actions/clinical-actions";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/auth/auth-context";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { validateMultipleFiles } from "@/lib/validations/file-upload";
 import type { Client } from "@/types/client";
@@ -48,6 +50,8 @@ export function MedicalHistoryModal({
   initialHistory,
 }: MedicalHistoryModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "administrador";
 
   const [alergias, setAlergias] = useState<string[]>(initialHistory.alergias || []);
   const [novaAlergia, setNovaAlergia] = useState("");
@@ -95,9 +99,11 @@ export function MedicalHistoryModal({
     initialHistory.observacoesGerais || ""
   );
 
-  // Fotos da Área a Ser Tratada
+  // Fotos da Área a Ser Tratada (bloqueado para administrador)
   const [fotosFiles, setFotosFiles] = useState<File[]>([]);
-  const [fotosUrls, setFotosUrls] = useState<string[]>(initialHistory.fotosAreaTratada || []);
+  const [fotosUrls, setFotosUrls] = useState<string[]>(
+    isAdmin ? [] : (initialHistory.fotosAreaTratada || [])
+  );
   const [fotosPreviews, setFotosPreviews] = useState<{ file?: File; url: string }[]>([]);
 
   useEffect(() => {
@@ -210,11 +216,13 @@ export function MedicalHistoryModal({
 
     try {
       // Upload de novas fotos da área tratada para o Supabase Storage (bucket prontuarios-fotos)
-      const finalFotosUrls: string[] = [...fotosUrls];
-      for (const file of fotosFiles) {
-        if (finalFotosUrls.length >= 3) break;
-        const url = await uploadToSupabase("prontuarios-fotos", client.id, file);
-        finalFotosUrls.push(url);
+      const finalFotosUrls: string[] = isAdmin ? [] : [...fotosUrls];
+      if (!isAdmin) {
+        for (const file of fotosFiles) {
+          if (finalFotosUrls.length >= 3) break;
+          const url = await uploadToSupabase("prontuarios-fotos", client.id, file);
+          finalFotosUrls.push(url);
+        }
       }
 
       const payload: MedicalHistory = {
@@ -747,83 +755,97 @@ export function MedicalHistoryModal({
           </div>
 
           {/* 8. Fotos da Área a Ser Tratada (Até 3 fotos) - Abaixo de Observações Gerais */}
-          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
-              Fotos da Área a Ser Tratada (Até 3 fotos)
-            </label>
-            <div className="border border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 rounded-xl p-4 bg-slate-50 dark:bg-slate-800/40 text-center relative transition-colors">
-              <input
-                type="file"
-                multiple
-                accept=".png,.jpg,.jpeg,.bmp,image/*"
-                onChange={(e) => {
-                  if (e.target.files) {
-                    const newFiles = Array.from(e.target.files);
-                    const check = validateMultipleFiles(newFiles);
-                    if (!check.valid) {
-                      toast({
-                        type: 'error',
-                        title: 'Foto excede o limite',
-                        description: check.error,
-                      });
-                      e.target.value = '';
-                      return;
-                    }
-                    const totalAllowed = 3 - (fotosUrls.length + fotosFiles.length);
-                    const filesToAdd = newFiles.slice(0, totalAllowed);
-                    if (filesToAdd.length > 0) {
-                      setFotosFiles((prev) => [...prev, ...filesToAdd]);
-                    }
-                  }
-                }}
-                disabled={fotosUrls.length + fotosFiles.length >= 3}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 disabled:cursor-not-allowed"
-              />
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {fotosUrls.length + fotosFiles.length >= 3
-                    ? "Limite máximo de 3 fotos atingido"
-                    : "Selecionar fotos da área a tratar"}
-                </p>
-                <p className="text-[10px] text-slate-400">
-                  Formatos aceitos: PNG, JPG, JPEG, BMP (Máximo de 3 imagens)
-                </p>
+          {isAdmin ? (
+            <div className="space-y-2 pt-2 border-t border-outline-variant">
+              <label className="text-xs font-bold text-on-surface block">
+                Fotos da Área a Ser Tratada (Até 3 fotos)
+              </label>
+              <div className="p-4 rounded-md-lg border border-outline-variant bg-surface-container flex items-start gap-2.5 text-on-surface-variant text-xs">
+                <Lock className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  Acesso restrito ao profissional de saúde. O perfil administrador não pode visualizar ou enviar fotografias clínicas de pacientes.
+                </span>
               </div>
             </div>
-
-            {/* Grid de Thumbnails */}
-            {fotosPreviews.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                {fotosPreviews.map((preview, idx) => (
-                  <div
-                    key={idx}
-                    className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100"
-                  >
-                    <img
-                      src={preview.url}
-                      alt={`Área tratada ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (idx < fotosUrls.length) {
-                          setFotosUrls(fotosUrls.filter((_, i) => i !== idx));
-                        } else {
-                          const fileIdx = idx - fotosUrls.length;
-                          setFotosFiles(fotosFiles.filter((_, i) => i !== fileIdx));
-                        }
-                      }}
-                      className="absolute top-1 right-1 p-1 bg-error text-on-error hover:opacity-90 rounded-full opacity-90 transition-colors cursor-pointer"
-                      title="Remover foto"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
+          ) : (
+            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
+                Fotos da Área a Ser Tratada (Até 3 fotos)
+              </label>
+              <div className="border border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 rounded-xl p-4 bg-slate-50 dark:bg-slate-800/40 text-center relative transition-colors">
+                <input
+                  type="file"
+                  multiple
+                  accept=".png,.jpg,.jpeg,.bmp,image/*"
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      const newFiles = Array.from(e.target.files);
+                      const check = validateMultipleFiles(newFiles);
+                      if (!check.valid) {
+                        toast({
+                          type: 'error',
+                          title: 'Foto excede o limite',
+                          description: check.error,
+                        });
+                        e.target.value = '';
+                        return;
+                      }
+                      const totalAllowed = 3 - (fotosUrls.length + fotosFiles.length);
+                      const filesToAdd = newFiles.slice(0, totalAllowed);
+                      if (filesToAdd.length > 0) {
+                        setFotosFiles((prev) => [...prev, ...filesToAdd]);
+                      }
+                    }
+                  }}
+                  disabled={fotosUrls.length + fotosFiles.length >= 3}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 disabled:cursor-not-allowed"
+                />
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {fotosUrls.length + fotosFiles.length >= 3
+                      ? "Limite máximo de 3 fotos atingido"
+                      : "Selecionar fotos da área a tratar"}
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    Formatos aceitos: PNG, JPG, JPEG, BMP (Máximo de 3 imagens)
+                  </p>
+                </div>
               </div>
-            )}
-          </div>
+
+              {/* Grid de Thumbnails */}
+              {fotosPreviews.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  {fotosPreviews.map((preview, idx) => (
+                    <div
+                      key={idx}
+                      className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100"
+                    >
+                      <img
+                        src={preview.url}
+                        alt={`Área tratada ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (idx < fotosUrls.length) {
+                            setFotosUrls(fotosUrls.filter((_, i) => i !== idx));
+                          } else {
+                            const fileIdx = idx - fotosUrls.length;
+                            setFotosFiles(fotosFiles.filter((_, i) => i !== fileIdx));
+                          }
+                        }}
+                        className="absolute top-1 right-1 p-1 bg-error text-on-error hover:opacity-90 rounded-full opacity-90 transition-colors cursor-pointer"
+                        title="Remover foto"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Footer MD4 */}
           <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800 shrink-0">

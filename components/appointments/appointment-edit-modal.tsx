@@ -12,6 +12,7 @@ import {
   FileText,
   Trash2,
   UploadCloud,
+  Lock,
 } from "lucide-react";
 import { AppointmentCalendarPicker } from "./appointment-calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
@@ -50,8 +51,11 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
   const { toast } = useToast();
   const { user } = useAuth();
   const isPatient = user?.role === "paciente";
+  const isAdmin = user?.role === "administrador";
   const isAdminOrProfessional =
     user?.role === "administrador" || user?.role === "profissional";
+  const isImageAttachment = (nameOrUrl: string) =>
+    /\.(jpeg|jpg|png|webp|bmp|gif)($|\?)/i.test(nameOrUrl);
 
   const availableStatusOptions = isPatient
     ? STATUS_OPTIONS.filter((opt) => opt !== "Cancelado")
@@ -107,6 +111,15 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
   const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (isAdmin && (file.type.startsWith("image/") || isImageAttachment(file.name))) {
+      toast({
+        type: "error",
+        title: "Acesso restrito",
+        description: "O envio de fotos de pacientes é restrito ao profissional de saúde.",
+      });
+      e.target.value = "";
+      return;
+    }
     if (clinicalAttachments.length >= 3) {
       toast({ type: "error", title: "Limite atingido", description: "Máximo de 3 anexos por agendamento." });
       return;
@@ -152,6 +165,10 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
   };
 
   const handleDeleteAttachment = async (indexToRemove: number) => {
+    const targetUrl = clinicalAttachments[indexToRemove] || "";
+    if (isAdmin && isImageAttachment(targetUrl)) {
+      return;
+    }
     const updated = clinicalAttachments.filter((_, idx) => idx !== indexToRemove);
     setClinicalAttachments(updated);
     try {
@@ -396,38 +413,62 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
         </div>
 
         {/* Exames e Fotos da Região */}
-        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <div className="space-y-2 pt-2 border-t border-outline-variant">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-              <Paperclip className="w-3.5 h-3.5 text-teal-600" />
-              <span>Exames e Fotos da Região</span>
+            <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+              <Paperclip className="w-3.5 h-3.5 text-primary" />
+              <span>{isAdmin ? "Exames e Documentos (PDF)" : "Exames e Fotos da Região"}</span>
             </label>
-            <span className="text-[10px] text-slate-400 font-medium">
+            <span className="text-[10px] text-on-surface-variant font-medium">
               {clinicalAttachments.length}/3 arquivos anexados
             </span>
           </div>
+
+          {isAdmin && (
+            <div className="p-2.5 rounded-md-lg bg-surface-container border border-outline-variant text-on-surface-variant text-[11px] flex items-center gap-2">
+              <Lock className="w-3.5 h-3.5 shrink-0 text-on-surface-variant" />
+              <span>
+                A visualização e o envio de fotos clínicas de pacientes são restritos ao profissional de saúde.
+              </span>
+            </div>
+          )}
 
           {/* Lista de anexos existentes */}
           {clinicalAttachments.length > 0 && (
             <div className="space-y-1.5">
               {clinicalAttachments.map((url, idx) => {
-                const isImage = url.match(/\.(jpeg|jpg|png|webp)($|\?)/i);
+                const isImage = isImageAttachment(url);
+                if (isAdmin && isImage) {
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2.5 rounded-md-lg bg-surface-container border border-outline-variant text-on-surface-variant text-xs min-h-[44px]"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <Lock className="w-4 h-4 text-on-surface-variant shrink-0" />
+                        <span className="truncate font-medium">
+                          Anexo {idx + 1} (Foto restrita ao profissional)
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
                 return (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                    className="flex items-center justify-between p-2 rounded-md-lg bg-surface-container border border-outline-variant text-xs min-h-[44px]"
                   >
                     <div className="flex items-center gap-2 truncate">
                       {isImage ? (
-                        <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
+                        <ImageIcon className="w-4 h-4 text-secondary shrink-0" />
                       ) : (
-                        <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                        <FileText className="w-4 h-4 text-tertiary shrink-0" />
                       )}
                       <a
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="truncate text-teal-700 dark:text-teal-300 hover:underline font-medium"
+                        className="truncate text-primary hover:underline font-medium"
                       >
                         Anexo {idx + 1} ({isImage ? "Foto" : "Documento"})
                       </a>
@@ -435,7 +476,7 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
                     <button
                       type="button"
                       onClick={() => handleDeleteAttachment(idx)}
-                      className="text-slate-400 hover:text-error p-1 rounded-lg transition-colors cursor-pointer"
+                      className="text-on-surface-variant hover:text-error p-1.5 rounded-md-sm transition-colors cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
                       title="Excluir anexo"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -448,17 +489,19 @@ function AppointmentEditModalContent({ appointment, onClose, onSuccess }: EditCo
 
           {/* Botão de Upload se restarem vagas */}
           {clinicalAttachments.length < 3 && (
-            <label className="flex items-center justify-center gap-2 p-3 border border-dashed border-teal-300 dark:border-teal-700 rounded-xl bg-teal-50/30 dark:bg-slate-800/40 hover:bg-teal-50/60 dark:hover:bg-slate-800 transition-all cursor-pointer">
-              <UploadCloud className="w-4 h-4 text-teal-600 shrink-0" />
-              <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">
+            <label className="flex items-center justify-center gap-2 p-3 border border-dashed border-outline rounded-md-lg bg-surface-container hover:bg-surface-container-high transition-all cursor-pointer min-h-[44px]">
+              <UploadCloud className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-xs font-semibold text-on-surface">
                 {isUploadingAttachment
                   ? "Enviando arquivo..."
+                  : isAdmin
+                  ? `Adicionar documento PDF - Restam ${3 - clinicalAttachments.length}`
                   : `Adicionar arquivo (PDF, PNG ou JPG) - Restam ${3 - clinicalAttachments.length}`}
               </span>
               <input
                 type="file"
                 disabled={isUploadingAttachment}
-                accept=".pdf,image/png,image/jpeg,image/jpg,image/webp"
+                accept={isAdmin ? ".pdf,application/pdf" : ".pdf,image/png,image/jpeg,image/jpg,image/webp"}
                 className="hidden"
                 onChange={handleUploadFile}
               />

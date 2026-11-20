@@ -6,6 +6,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { ClinicalEvolution } from "@/types/clinical-record";
 import type { ActionResponse } from "@/types/client";
 import { assinarPayloadSOAP } from "@/lib/crypto-payload";
+import { getSession } from "@/lib/auth/session";
 
 async function getSupabaseClients() {
   const serverClient = await createClient();
@@ -40,6 +41,19 @@ export async function updateClinicalEvolutionAction(
     const { data: { user }, error: authErr } = await serverClient.auth.getUser();
     if (authErr || !user) {
       return { success: false, message: "Acesso não autorizado. Por favor, realize login novamente." };
+    }
+
+    const sessionUser = await getSession();
+    const isAdminRole = sessionUser?.role === "administrador";
+
+    let preservedFotosPaciente = input.fotos_paciente || [];
+    if (isAdminRole) {
+      const { data: existingEvo } = await adminDb
+        .from("evolucoes_clinicas")
+        .select("fotos_paciente")
+        .eq("id", id)
+        .maybeSingle();
+      preservedFotosPaciente = existingEvo?.fotos_paciente || [];
     }
 
     // Calcula IMC se peso e altura foram fornecidos
@@ -109,7 +123,7 @@ export async function updateClinicalEvolutionAction(
           }
         : null,
       exames_anexos: input.exames_anexos || [],
-      fotos_paciente: input.fotos_paciente || [],
+      fotos_paciente: preservedFotosPaciente,
       profissional: input.profissional || "Dra. Juliana Sena",
       especialidade: input.especialidade || "Clínica Geral",
       assinado_em: assinadoEmServer,
@@ -222,7 +236,7 @@ export async function updateClinicalEvolutionAction(
       procedimento_id: updatedRecord.procedimento_id,
       appointment_id: updatedRecord.appointment_id,
       exames_anexos: updatedRecord.exames_anexos || [],
-      fotos_paciente: updatedRecord.fotos_paciente || [],
+      fotos_paciente: isAdminRole ? [] : (updatedRecord.fotos_paciente || []),
       profissional: updatedRecord.profissional,
       especialidade: updatedRecord.especialidade,
       subjetivo: updatedRecord.subjetivo,

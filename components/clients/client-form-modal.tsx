@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { X, UserCheck, AlertCircle, CheckCircle2, Calendar, MapPin, Phone, Mail, FileText, Search, Loader2 } from "lucide-react";
+import { X, UserCheck, AlertCircle, CheckCircle2, Calendar, MapPin, Phone, Mail, FileText, Search, Loader2, Lock } from "lucide-react";
 import { BRAZILIAN_STATES, CITIES_BY_STATE, formatCPF, formatPhone, formatCEP, isValidCPF, calculateAge, fetchAddressByCEP } from "@/lib/brazil-data";
 import { createClientAction, updateClientAction } from "@/actions/client-actions";
 import { clientSchema } from "@/lib/validations/client-schema";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/auth/auth-context";
 import { validateFileSize } from "@/lib/validations/file-upload";
 import type { Client } from "@/types/client";
 
@@ -24,6 +25,8 @@ interface ClientFormContentProps {
 
 function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormContentProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "administrador";
   const [isPending, startTransition] = useTransition();
 
   // Estados inicializados a partir das props (resetados automaticamente via key)
@@ -45,8 +48,10 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
   const [status, setStatus] = useState<"Ativo" | "Inativo">(clientToEdit?.status ?? "Ativo");
   const [observacoes, setObservacoes] = useState(clientToEdit?.observacoes ?? "");
 
-  // Foto de Perfil & Corte (Crop 1:1)
-  const [fotoPerfil, setFotoPerfil] = useState<string | null>(clientToEdit?.foto_perfil ?? null);
+  // Foto de Perfil & Corte (Crop 1:1) - bloqueado para administrador
+  const [fotoPerfil, setFotoPerfil] = useState<string | null>(
+    isAdmin ? null : (clientToEdit?.foto_perfil ?? null)
+  );
   const [tempImgSrc, setTempImgSrc] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [baseScale, setBaseScale] = useState(1);
@@ -174,6 +179,10 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
 
   // Upload e Crop 1:1 handlers
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isAdmin) {
+      e.target.value = "";
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -302,7 +311,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
       profissao: profissao.trim() || null,
       status,
       observacoes: observacoes.trim() || null,
-      foto_perfil: fotoPerfil || null,
+      foto_perfil: isAdmin ? null : (fotoPerfil || null),
     };
 
     // Validação preliminar com Zod no cliente para feedback instantâneo
@@ -398,46 +407,65 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
           </h4>
 
           {/* Área do Avatar */}
-          <div className="mb-5 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col sm:flex-row items-center gap-4">
-            <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-teal-500/10 border border-teal-500/20 shadow-xs flex items-center justify-center shrink-0">
-              {fotoPerfil ? (
-                <img src={fotoPerfil} alt="Prévia" className="w-full h-full object-cover rounded-2xl" />
-              ) : (
-                <div className="text-teal-600 dark:text-teal-400 font-bold text-2xl uppercase">
+          {isAdmin ? (
+            <div className="mb-5 p-4 rounded-md-lg border border-outline-variant bg-surface-container flex flex-col sm:flex-row items-center gap-4">
+              <div className="relative w-20 h-20 rounded-md-lg overflow-hidden bg-primary-container border border-outline-variant shadow-xs flex items-center justify-center shrink-0">
+                <span className="text-on-primary-container font-bold text-2xl uppercase">
                   {nome ? nome.charAt(0).toUpperCase() : "P"}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1.5 w-full sm:w-auto text-center sm:text-left">
+                <span className="text-xs font-semibold text-on-surface">
+                  Foto de Perfil do Paciente
+                </span>
+                <div className="inline-flex items-center justify-center sm:justify-start gap-2 px-3 py-2 rounded-md-md bg-surface-container-high border border-outline-variant text-on-surface-variant text-xs">
+                  <Lock className="w-3.5 h-3.5 shrink-0" />
+                  <span>Acesso às fotos do paciente restrito ao profissional de saúde.</span>
                 </div>
-              )}
+              </div>
             </div>
-
-            <div className="flex flex-col gap-1 w-full sm:w-auto">
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 text-center sm:text-left">
-                Foto de Perfil do Paciente
-              </span>
-              <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-                <label className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap">
-                  <span>+ Foto</span>
-                  <input
-                    type="file"
-                    accept="image/png, image/jpeg, image/jpg"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </label>
-                {fotoPerfil && (
-                  <button
-                    type="button"
-                    onClick={() => setFotoPerfil(null)}
-                    className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-error-container text-on-error-container hover:bg-error-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
-                  >
-                    Remover foto
-                  </button>
+          ) : (
+            <div className="mb-5 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 flex flex-col sm:flex-row items-center gap-4">
+              <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-teal-500/10 border border-teal-500/20 shadow-xs flex items-center justify-center shrink-0">
+                {fotoPerfil ? (
+                  <img src={fotoPerfil} alt="Prévia" className="w-full h-full object-cover rounded-2xl" />
+                ) : (
+                  <div className="text-teal-600 dark:text-teal-400 font-bold text-2xl uppercase">
+                    {nome ? nome.charAt(0).toUpperCase() : "P"}
+                  </div>
                 )}
               </div>
-              <p className="text-[10px] text-slate-400 text-center sm:text-left mt-0.5">
-                PNG ou JPG de até 5 MB (crop 1:1 automático).
-              </p>
+
+              <div className="flex flex-col gap-1 w-full sm:w-auto">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 text-center sm:text-left">
+                  Foto de Perfil do Paciente
+                </span>
+                <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                  <label className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary text-on-primary hover:bg-primary/90 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap">
+                    <span>+ Foto</span>
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/jpg"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                  {fotoPerfil && (
+                    <button
+                      type="button"
+                      onClick={() => setFotoPerfil(null)}
+                      className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-error-container text-on-error-container hover:bg-error-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
+                    >
+                      Remover foto
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 text-center sm:text-left mt-0.5">
+                  PNG ou JPG de até 5 MB (crop 1:1 automático).
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             {/* Nome */}

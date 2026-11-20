@@ -20,6 +20,7 @@ import {
   Square,
   Plus,
   Trash2,
+  Lock,
 } from "lucide-react";
 import {
   addClinicalEvolutionAction,
@@ -34,6 +35,7 @@ import { PrescriptionModal } from "./prescription-modal";
 import { HomeCareModal } from "./home-care-modal";
 import { ElasticityScalePicker } from "./elasticity-scale-picker";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/auth/auth-context";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { validateMultipleFiles } from "@/lib/validations/file-upload";
 import type { Client } from "@/types/client";
@@ -58,6 +60,8 @@ export function EvolutionFormModal({
   initialData,
 }: EvolutionFormModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "administrador";
 
   const isInitializedRef = React.useRef(false);
 
@@ -310,7 +314,7 @@ export function EvolutionFormModal({
           setSelectedAppointmentId(initialData.appointment_id || "");
           setSelectedPrescricoesIds(initialData.prescricoes_ids || []);
           setSelectedHomeCareFichaId(initialData.home_care_ficha_id || "");
-          setExistingFotosUrls(initialData.fotos_paciente || []);
+          setExistingFotosUrls(isAdmin ? [] : (initialData.fotos_paciente || []));
           setFotosFiles([]);
           setExamesFiles([]);
         } else {
@@ -458,11 +462,13 @@ export function EvolutionFormModal({
         examesUrls.push(url);
       }
 
-      // 2. Upload das fotos do paciente para o bucket prontuarios-fotos
+      // 2. Upload das fotos do paciente para o bucket prontuarios-fotos (bloqueado para administrador)
       const fotosUrls: string[] = [];
-      for (const file of fotosFiles) {
-        const url = await uploadToSupabase("prontuarios-fotos", client.id, file);
-        fotosUrls.push(url);
+      if (!isAdmin) {
+        for (const file of fotosFiles) {
+          const url = await uploadToSupabase("prontuarios-fotos", client.id, file);
+          fotosUrls.push(url);
+        }
       }
 
       // 3. Sanitização e Resolução de UUID para procedimento_id (evita erro com IDs de mock como "p8")
@@ -490,7 +496,7 @@ export function EvolutionFormModal({
         }
       }
 
-      const finalFotosList = [...existingFotosUrls, ...fotosUrls];
+      const finalFotosList = isAdmin ? [] : [...existingFotosUrls, ...fotosUrls];
       const finalExamesList = initialData?.id
         ? [...(initialData.exames_anexos || []), ...examesUrls]
         : examesUrls;
@@ -1223,130 +1229,144 @@ export function EvolutionFormModal({
               </div>
 
               {/* 2. Fotos do Paciente */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
+              {isAdmin ? (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-on-surface block">
                     Fotos do Paciente (Antes/Depois ou Lesões)
                   </label>
-                  {(existingFotosUrls.length > 0 || fotosPreviews.length > 0) && (
-                    <span className="text-[11px] font-semibold text-teal-700 dark:text-teal-400">
-                      Total: {existingFotosUrls.length + fotosPreviews.length} foto(s)
+                  <div className="p-4 rounded-md-lg border border-outline-variant bg-surface-container flex items-start gap-2.5 text-on-surface-variant text-xs">
+                    <Lock className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      Acesso restrito ao profissional de saúde. O perfil administrador não pode visualizar ou enviar fotografias clínicas de pacientes.
                     </span>
-                  )}
+                  </div>
                 </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
+                      Fotos do Paciente (Antes/Depois ou Lesões)
+                    </label>
+                    {(existingFotosUrls.length > 0 || fotosPreviews.length > 0) && (
+                      <span className="text-[11px] font-semibold text-teal-700 dark:text-teal-400">
+                        Total: {existingFotosUrls.length + fotosPreviews.length} foto(s)
+                      </span>
+                    )}
+                  </div>
 
-                {/* Galeria de Fotos Já Existentes (com remoção individual) */}
-                {existingFotosUrls.length > 0 && (
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 space-y-2">
-                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                      <span>Fotografias Registradas no Prontuário ({existingFotosUrls.length})</span>
-                    </span>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {existingFotosUrls.map((url, idx) => {
-                        const resolved = resolvePhotoUrl(url) || url;
-                        return (
+                  {/* Galeria de Fotos Já Existentes (com remoção individual) */}
+                  {existingFotosUrls.length > 0 && (
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 space-y-2">
+                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <span>Fotografias Registradas no Prontuário ({existingFotosUrls.length})</span>
+                      </span>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        {existingFotosUrls.map((url, idx) => {
+                          const resolved = resolvePhotoUrl(url) || url;
+                          return (
+                            <div
+                              key={idx}
+                              className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900"
+                            >
+                              <img
+                                src={resolved}
+                                alt={`Foto existente ${idx + 1}`}
+                                className="w-full h-full object-cover cursor-zoom-in hover:scale-105 transition-transform"
+                                onClick={() => setLightboxUrl(resolved)}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setExistingFotosUrls((prev) => prev.filter((_, i) => i !== idx))}
+                                className="absolute top-1 right-1 p-1 bg-error text-on-error hover:opacity-90 rounded-full opacity-90 hover:opacity-100 transition-colors shadow-xs cursor-pointer z-10"
+                                title="Remover esta fotografia da evolução"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                              <div className="absolute bottom-1 left-1 px-1.5 py-0.2 rounded bg-black/60 text-white text-[9px] font-medium pointer-events-none">
+                                #{idx + 1}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upload para Inclusão de Novas Fotos */}
+                  <div className="border border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 rounded-xl p-4 bg-slate-50 dark:bg-slate-800/40 text-center relative transition-colors">
+                    <input
+                      type="file"
+                      multiple
+                      accept=".png,.jpg,.jpeg,.bmp,image/png,image/jpeg,image/bmp"
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          const selectedFiles = Array.from(e.target.files);
+                          const validation = validateMultipleFiles(selectedFiles);
+                          if (!validation.valid) {
+                            toast({
+                              type: 'error',
+                              title: 'Anexos acima de 5MB',
+                              description: validation.error,
+                            });
+                            e.target.value = '';
+                            return;
+                          }
+                          setFotosFiles((prev) => [...prev, ...selectedFiles]);
+                        }
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Adicionar novas fotos do paciente
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        PNG, JPG, JPEG, BMP (upload direto para o Supabase Storage)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Grid de thumbnails das NOVAS fotos selecionadas */}
+                  {fotosPreviews.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                        Novas fotos para envio ({fotosPreviews.length}):
+                      </span>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        {fotosPreviews.map((preview, idx) => (
                           <div
                             key={idx}
-                            className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900"
+                            className="relative group aspect-square rounded-xl overflow-hidden border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/20"
                           >
                             <img
-                              src={resolved}
-                              alt={`Foto existente ${idx + 1}`}
+                              src={preview.url}
+                              alt={`Nova foto ${idx + 1}`}
                               className="w-full h-full object-cover cursor-zoom-in hover:scale-105 transition-transform"
-                              onClick={() => setLightboxUrl(resolved)}
+                              onClick={() => setLightboxUrl(preview.url)}
                             />
                             <button
                               type="button"
-                              onClick={() => setExistingFotosUrls((prev) => prev.filter((_, i) => i !== idx))}
+                              onClick={() => setFotosFiles((prev) => prev.filter((_, i) => i !== idx))}
                               className="absolute top-1 right-1 p-1 bg-error text-on-error hover:opacity-90 rounded-full opacity-90 hover:opacity-100 transition-colors shadow-xs cursor-pointer z-10"
-                              title="Remover esta fotografia da evolução"
+                              title="Remover esta nova foto"
                             >
                               <X className="w-3.5 h-3.5" />
                             </button>
-                            <div className="absolute bottom-1 left-1 px-1.5 py-0.2 rounded bg-black/60 text-white text-[9px] font-medium pointer-events-none">
-                              #{idx + 1}
+                            <div className="absolute bottom-1 left-1 px-1.5 py-0.2 rounded bg-emerald-700/80 text-white text-[9px] font-medium pointer-events-none">
+                              Nova
                             </div>
                           </div>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Upload para Inclusão de Novas Fotos */}
-                <div className="border border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 rounded-xl p-4 bg-slate-50 dark:bg-slate-800/40 text-center relative transition-colors">
-                  <input
-                    type="file"
-                    multiple
-                    accept=".png,.jpg,.jpeg,.bmp,image/png,image/jpeg,image/bmp"
-                    onChange={(e) => {
-                      if (e.target.files) {
-                        const selectedFiles = Array.from(e.target.files);
-                        const validation = validateMultipleFiles(selectedFiles);
-                        if (!validation.valid) {
-                          toast({
-                            type: 'error',
-                            title: 'Anexos acima de 5MB',
-                            description: validation.error,
-                          });
-                          e.target.value = '';
-                          return;
-                        }
-                        setFotosFiles((prev) => [...prev, ...selectedFiles]);
-                      }
-                    }}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  />
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Adicionar novas fotos do paciente
-                    </p>
-                    <p className="text-[10px] text-slate-400">
-                      PNG, JPG, JPEG, BMP (upload direto para o Supabase Storage)
-                    </p>
-                  </div>
+                  )}
                 </div>
-
-                {/* Grid de thumbnails das NOVAS fotos selecionadas */}
-                {fotosPreviews.length > 0 && (
-                  <div className="space-y-1.5 pt-1">
-                    <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                      Novas fotos para envio ({fotosPreviews.length}):
-                    </span>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {fotosPreviews.map((preview, idx) => (
-                        <div
-                          key={idx}
-                          className="relative group aspect-square rounded-xl overflow-hidden border border-emerald-300 dark:border-emerald-700/60 bg-emerald-50/20"
-                        >
-                          <img
-                            src={preview.url}
-                            alt={`Nova foto ${idx + 1}`}
-                            className="w-full h-full object-cover cursor-zoom-in hover:scale-105 transition-transform"
-                            onClick={() => setLightboxUrl(preview.url)}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setFotosFiles((prev) => prev.filter((_, i) => i !== idx))}
-                            className="absolute top-1 right-1 p-1 bg-error text-on-error hover:opacity-90 rounded-full opacity-90 hover:opacity-100 transition-colors shadow-xs cursor-pointer z-10"
-                            title="Remover esta nova foto"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                          <div className="absolute bottom-1 left-1 px-1.5 py-0.2 rounded bg-emerald-700/80 text-white text-[9px] font-medium pointer-events-none">
-                            Nova
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
 
           {/* Lightbox para fotos em tamanho ampliado */}
-          {lightboxUrl && (
+          {!isAdmin && lightboxUrl && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4">
               <div className="relative max-w-4xl w-full max-h-screen flex flex-col items-center">
                 <button

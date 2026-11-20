@@ -26,6 +26,7 @@ import {
   Image as ImageIcon,
   Trash2,
   RefreshCw,
+  Lock,
 } from "lucide-react";
 import { AppointmentCalendarPicker } from "./appointment-calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
@@ -156,6 +157,7 @@ function AppointmentFormModalContent({
   const { toast } = useToast();
   const { user } = useAuth();
   const isPatient = user?.role === "paciente";
+  const isAdmin = user?.role === "administrador";
   const isAdminOrProfessional =
     user?.role === "administrador" || user?.role === "profissional";
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -250,7 +252,26 @@ function AppointmentFormModalContent({
   const [clinicalFiles, setClinicalFiles] = useState<File[]>([]);
 
   const handleAddFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const rawFiles = Array.from(e.target.files || []);
+    const files = isAdmin
+      ? rawFiles.filter(
+          (f) => !f.type.startsWith("image/") && !/\.(png|jpe?g|webp|bmp|gif)$/i.test(f.name)
+        )
+      : rawFiles;
+
+    if (isAdmin && files.length !== rawFiles.length) {
+      toast({
+        type: "error",
+        title: "Acesso restrito",
+        description: "O envio de fotos de pacientes é restrito ao profissional de saúde. Apenas documentos PDF são permitidos.",
+      });
+    }
+
+    if (files.length === 0) {
+      e.target.value = "";
+      return;
+    }
+
     const validation = validateMultipleFiles(files);
     if (!validation.valid) {
       toast({
@@ -1342,28 +1363,41 @@ function AppointmentFormModalContent({
             </div>
 
             <div className="space-y-2 pt-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Paperclip className="w-3.5 h-3.5 text-teal-600" />
-                  <span>Anexar Exames e/ou Fotos da Região (Opcional)</span>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                  <Paperclip className="w-3.5 h-3.5 text-primary" />
+                  <span>
+                    {isAdmin
+                      ? "Anexar Exames / Documentos em PDF (Opcional)"
+                      : "Anexar Exames e/ou Fotos da Região (Opcional)"}
+                  </span>
                 </label>
-                <span className="text-[10px] text-slate-400 font-medium">
-                  PDF, PNG ou JPG (até 10MB por arquivo)
+                <span className="text-[10px] text-on-surface-variant font-medium">
+                  {isAdmin ? "Apenas PDF (até 10MB por arquivo)" : "PDF, PNG ou JPG (até 10MB por arquivo)"}
                 </span>
               </div>
 
-              <label className="flex flex-col items-center justify-center p-4 border border-dashed border-teal-300/80 dark:border-teal-700/60 rounded-2xl bg-teal-50/30 dark:bg-slate-800/40 hover:bg-teal-50/60 dark:hover:bg-slate-800 transition-all cursor-pointer">
-                <UploadCloud className="w-6 h-6 text-teal-600 mb-1.5" />
-                <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">
-                  Clique para adicionar fotos ou exames
+              {isAdmin && (
+                <div className="p-2.5 rounded-md-lg bg-surface-container border border-outline-variant text-on-surface-variant text-[11px] flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5 shrink-0 text-on-surface-variant" />
+                  <span>
+                    O envio de fotos clínicas ou da região tratada é restrito ao profissional de saúde.
+                  </span>
+                </div>
+              )}
+
+              <label className="flex flex-col items-center justify-center p-4 border border-dashed border-outline rounded-md-2xl bg-surface-container hover:bg-surface-container-high transition-all cursor-pointer min-h-[44px]">
+                <UploadCloud className="w-6 h-6 text-primary mb-1.5" />
+                <span className="text-xs font-semibold text-on-surface">
+                  {isAdmin ? "Clique para adicionar exames em PDF" : "Clique para adicionar fotos ou exames"}
                 </span>
-                <span className="text-[10px] text-slate-400 mt-0.5">
+                <span className="text-[10px] text-on-surface-variant mt-0.5">
                   Selecione um ou vários arquivos
                 </span>
                 <input
                   type="file"
                   multiple
-                  accept=".pdf,image/png,image/jpeg,image/jpg"
+                  accept={isAdmin ? ".pdf,application/pdf" : ".pdf,image/png,image/jpeg,image/jpg"}
                   className="hidden"
                   onChange={handleAddFiles}
                 />
@@ -1374,25 +1408,25 @@ function AppointmentFormModalContent({
                   {clinicalFiles.map((file, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs"
+                      className="flex items-center justify-between p-2 rounded-md-lg bg-surface-container border border-outline-variant text-xs min-h-[44px]"
                     >
                       <div className="flex items-center gap-2 truncate">
                         {file.type.startsWith("image/") ? (
-                          <ImageIcon className="w-4 h-4 text-sky-600 shrink-0" />
+                          <ImageIcon className="w-4 h-4 text-secondary shrink-0" />
                         ) : (
-                          <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                          <FileText className="w-4 h-4 text-tertiary shrink-0" />
                         )}
-                        <span className="truncate font-medium text-slate-700 dark:text-slate-200">
+                        <span className="truncate font-medium text-on-surface">
                           {file.name}
                         </span>
-                        <span className="text-[10px] text-slate-400 shrink-0">
+                        <span className="text-[10px] text-on-surface-variant shrink-0">
                           ({(file.size / (1024 * 1024)).toFixed(1)} MB)
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveFile(idx)}
-                        className="text-slate-400 hover:text-rose-500 p-1 rounded-lg transition-colors cursor-pointer"
+                        className="text-on-surface-variant hover:text-error p-1.5 rounded-md-sm transition-colors cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

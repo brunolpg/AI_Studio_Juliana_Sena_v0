@@ -20,43 +20,52 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
   const { user } = useAuth();
 
   const rawRole = String(user?.role || (user as any)?.profile?.role || "").toLowerCase().trim();
-  const isEmailAdmin =
-    user?.email?.toLowerCase() === "brunolpg@gmail.com" ||
-    user?.email?.toLowerCase().includes("admin");
-  const isAuthorized =
+  const isProfissional = rawRole === "profissional";
+  const isStaff =
+    isProfissional ||
     rawRole === "administrador" ||
-    rawRole === "admin" ||
-    rawRole === "profissional" ||
-    isEmailAdmin;
+    rawRole === "admin";
 
-  const navItems = [
-    {
-      id: "pacientes" as DashboardTab,
-      label: "Pacientes",
-      shortLabel: "Pacientes",
-      icon: Users,
-      badge: null,
-      href: "/dashboard",
-    },
-    {
-      id: "prontuarios" as DashboardTab,
-      label: "Prontuários & Evoluções",
-      shortLabel: "Prontuários",
-      icon: Stethoscope,
-      badge: null,
-      href: "/clinical",
-    },
-    {
-      id: "agendamentos" as DashboardTab,
-      label: "Agendamentos",
-      shortLabel: "Agenda",
-      icon: Calendar,
-      badge: "Ativo",
-      href: "/appointments",
-    },
-  ];
+  const navItems: Array<{
+    id: DashboardTab;
+    label: string;
+    shortLabel: string;
+    icon: typeof Users;
+    badge: string | null;
+    href: string;
+  }> = [];
 
-  if (isAuthorized) {
+  if (isProfissional) {
+    navItems.push(
+      {
+        id: "pacientes" as DashboardTab,
+        label: "Pacientes",
+        shortLabel: "Pacientes",
+        icon: Users,
+        badge: null,
+        href: "/dashboard",
+      },
+      {
+        id: "prontuarios" as DashboardTab,
+        label: "Prontuários & Evoluções",
+        shortLabel: "Prontuários",
+        icon: Stethoscope,
+        badge: null,
+        href: "/clinical",
+      }
+    );
+  }
+
+  navItems.push({
+    id: "agendamentos" as DashboardTab,
+    label: "Agendamentos",
+    shortLabel: "Agenda",
+    icon: Calendar,
+    badge: "Ativo",
+    href: "/appointments",
+  });
+
+  if (isStaff) {
     navItems.push({
       id: "pops" as DashboardTab,
       label: "Procedimento Operacional Padrão",
@@ -68,15 +77,16 @@ export function Sidebar({ currentTab, onTabChange, className = "" }: SidebarProp
   }
 
   const handleItemClick = (item: (typeof navItems)[0]) => {
+    const fallbackUrl = isProfissional ? "/dashboard" : "/appointments";
     if (pathname && pathname.startsWith("/formulas")) {
-      router.push(item.href || "/dashboard");
+      router.push(item.href || fallbackUrl);
       return;
     }
 
     onTabChange(item.id);
 
     if (typeof window !== "undefined" && window.history && window.history.pushState) {
-      const targetUrl = item.id === "pacientes" ? "/dashboard" : item.href || "/dashboard";
+      const targetUrl = item.id === "pacientes" ? "/dashboard" : item.href || fallbackUrl;
       if (window.location.pathname !== targetUrl && window.location.pathname !== "/") {
         window.history.pushState(null, "", targetUrl);
       }

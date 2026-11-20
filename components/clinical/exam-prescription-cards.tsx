@@ -167,7 +167,7 @@ export function ExamPrescriptionCards({
                       <button
                         type="button"
                         onClick={() => setSelectedForPrint(presc)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary bg-surface-container border border-outline-variant hover:bg-surface-container-high rounded-md-full cursor-pointer transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-primary bg-primary-container/50 border border-primary/40 hover:bg-primary-container/80 rounded-full cursor-pointer transition-colors"
                         title="Visualizar e imprimir guia de exames"
                       >
                         <Printer className="w-3.5 h-3.5 text-primary" />
@@ -214,7 +214,7 @@ export function ExamPrescriptionCards({
 
                   {/* Sequência dos Exames Prescritos */}
                   {todosExames.length > 0 && (
-                    <div className="p-3.5 rounded-md-xl bg-primary-container/35 border border-primary/25 text-xs text-on-surface font-medium leading-relaxed">
+                    <div className="p-3.5 rounded-xl bg-primary-container/35 border border-primary/25 text-xs text-on-surface font-medium leading-relaxed">
                       {todosExames.join(" + ")}
                     </div>
                   )}

@@ -15,9 +15,11 @@ import {
   Copy,
   Check,
   Loader2,
+  Lock,
 } from "lucide-react";
 import { Appointment } from "@/types/appointment";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/components/auth/auth-context";
 import { PatientAvatar } from "@/components/shared/patient-avatar";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
@@ -35,6 +37,8 @@ export function AppointmentDetailsModal({
   onEdit,
 }: AppointmentDetailsModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "administrador";
   const [isGenerating, setIsGenerating] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -166,10 +170,12 @@ export function AppointmentDetailsModal({
             <PatientAvatar
               name={appointment.client_nome}
               avatarUrl={
-                appointment.avatar_url ||
-                appointment.patientPhoto ||
-                (appointment as any).foto_url ||
-                (appointment as any).foto_perfil
+                isAdmin
+                  ? null
+                  : appointment.avatar_url ||
+                    appointment.patientPhoto ||
+                    (appointment as any).foto_url ||
+                    (appointment as any).foto_perfil
               }
               sizeClassName="w-10 h-10"
               textClassName="text-sm font-bold"
@@ -208,10 +214,12 @@ export function AppointmentDetailsModal({
               <PatientAvatar
                 name={appointment.client_nome}
                 avatarUrl={
-                  appointment.avatar_url ||
-                  appointment.patientPhoto ||
-                  (appointment as any).foto_url ||
-                  (appointment as any).foto_perfil
+                  isAdmin
+                    ? null
+                    : appointment.avatar_url ||
+                      appointment.patientPhoto ||
+                      (appointment as any).foto_url ||
+                      (appointment as any).foto_perfil
                 }
                 sizeClassName="w-12 h-12"
                 textClassName="text-base font-bold"
@@ -395,12 +403,28 @@ export function AppointmentDetailsModal({
 
               {attachments.length === 0 ? (
                 <div className="p-4 rounded-md-2xl border border-outline-variant bg-surface-container text-center text-xs text-on-surface-variant italic">
-                  Nenhum exame ou foto clínica anexada a esta consulta.
+                  {isAdmin
+                    ? "Nenhum documento ou exame anexado a esta consulta."
+                    : "Nenhum exame ou foto clínica anexada a esta consulta."}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {attachments.map((url, idx) => {
-                    const isImage = url.match(/\.(jpeg|jpg|png|webp)($|\?)/i);
+                    const isImage = /\.(jpeg|jpg|png|webp|bmp|gif)($|\?)/i.test(url);
+                    if (isAdmin && isImage) {
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 p-2.5 rounded-md-lg border border-outline-variant bg-surface-container text-xs text-on-surface-variant min-h-[44px]"
+                          title="Foto clínica restrita ao profissional de saúde"
+                        >
+                          <Lock className="w-4 h-4 text-on-surface-variant shrink-0" />
+                          <span className="truncate flex-1 font-medium">
+                            Anexo {idx + 1} (Foto restrita ao profissional)
+                          </span>
+                        </div>
+                      );
+                    }
                     return (
                       <a
                         key={idx}

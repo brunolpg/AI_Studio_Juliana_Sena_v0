@@ -19,6 +19,7 @@ import { PatientClinicalTabs, type ClinicalSubTab } from "./patient-clinical-tab
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Client } from "@/types/client";
 import { PatientAvatar } from "@/components/shared/patient-avatar";
+import { useAuth } from "@/components/auth/auth-context";
 
 interface PatientClinicalDashboardViewProps {
   initialClientId?: string;
@@ -31,6 +32,8 @@ export function PatientClinicalDashboardView({
   onOpenAppointments,
   initialTab = "evolucoes",
 }: PatientClinicalDashboardViewProps) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "administrador";
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
     initialClientId || null
@@ -84,7 +87,7 @@ export function PatientClinicalDashboardView({
           );
 
           const profilesMap = new Map<string, string>();
-          if (emails.length > 0) {
+          if (!isAdmin && emails.length > 0) {
             try {
               const { data: profiles } = await supabase
                 .from("profiles")
@@ -104,6 +107,13 @@ export function PatientClinicalDashboardView({
           }
 
           const enriched = pacientes.map((p: any) => {
+            if (isAdmin) {
+              return {
+                ...p,
+                avatar_url: null,
+                foto_perfil: null,
+              };
+            }
             const pEmail = (p.email || "").toLowerCase().trim();
             const avatar = p.avatar_url || profilesMap.get(pEmail) || p.foto_perfil || null;
             return {
@@ -131,7 +141,7 @@ export function PatientClinicalDashboardView({
       }
     }
     loadPatients();
-  }, [selectedPatientId]);
+  }, [selectedPatientId, isAdmin]);
 
   // Paciente selecionado
   const selectedPatient = useMemo(() => {
@@ -173,7 +183,7 @@ export function PatientClinicalDashboardView({
                   {/* Foto de Perfil (avatar_url) ou Inicial */}
                   <PatientAvatar
                     name={selectedPatient?.nome || "Paciente"}
-                    avatarUrl={selectedPatient?.avatar_url || selectedPatient?.foto_perfil}
+                    avatarUrl={isAdmin ? null : (selectedPatient?.avatar_url || selectedPatient?.foto_perfil)}
                     sizeClassName="w-8 h-8"
                     textClassName="text-xs"
                     fallbackClassName="bg-emerald-700 dark:bg-emerald-500 text-white dark:text-slate-950"
@@ -246,7 +256,7 @@ export function PatientClinicalDashboardView({
                           {/* Foto de Perfil (avatar_url) ou Inicial */}
                           <PatientAvatar
                             name={client.nome || "Paciente"}
-                            avatarUrl={client.avatar_url || client.foto_perfil}
+                            avatarUrl={isAdmin ? null : (client.avatar_url || client.foto_perfil)}
                             sizeClassName="w-7 h-7"
                             textClassName="text-xs"
                             fallbackClassName="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
@@ -309,7 +319,7 @@ export function PatientClinicalDashboardView({
       {/* Renderiza o Subcomponente de Abas do Prontuário */}
       {selectedPatient ? (
         <PatientClinicalTabs
-          client={selectedPatient}
+          client={isAdmin ? { ...selectedPatient, avatar_url: null, foto_perfil: null } : selectedPatient}
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />

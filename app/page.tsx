@@ -50,6 +50,10 @@ export default function HomePage() {
       return <PatientPortal user={user} onLogout={logout} />;
     }
 
+    if (rawRole === "administrador" || rawRole === "admin") {
+      return <PatientDashboard initialTab="agendamentos" />;
+    }
+
     return <PatientDashboard />;
   }
 

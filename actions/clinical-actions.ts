@@ -11,6 +11,7 @@ import type {
 } from "@/types/clinical-record";
 import type { ActionResponse } from "@/types/client";
 import { assinarPayloadSOAP } from "@/lib/crypto-payload";
+import { getSession } from "@/lib/auth/session";
 
 /**
  * Consulta Prontuário e Histórico Clínico do Paciente
@@ -32,6 +33,9 @@ export async function getPatientClinicalRecordAction(
     if (!supabase) {
       return { success: false, message: "Banco de dados não disponível." };
     }
+
+    const sessionUser = await getSession();
+    const isAdminRole = sessionUser?.role === "administrador";
 
     // 1. Carrega histórico clínico
     const defaultHistory: MedicalHistory = {
@@ -77,7 +81,7 @@ export async function getPatientClinicalRecordAction(
         ingestaoAgua: dbHistory.ingestao_agua || "",
         qualidadeSono: dbHistory.qualidade_sono || "",
         funcionamentoIntestino: dbHistory.funcionamento_intestino || "",
-        fotosAreaTratada: dbHistory.fotos_area_tratada || [],
+        fotosAreaTratada: isAdminRole ? [] : (dbHistory.fotos_area_tratada || []),
         tipoSanguineo: dbHistory.tipo_sanguineo || dbHistory.tipoSanguineo || "Não informado",
         historicoCirurgico: dbHistory.historico_cirurgico || dbHistory.historicoCirurgico || "",
         historicoFamiliar: dbHistory.historico_familiar || dbHistory.historicoFamiliar || "",
@@ -202,7 +206,7 @@ export async function getPatientClinicalRecordAction(
             procedimento_id: e.procedimento_id,
             appointment_id: e.appointment_id,
             exames_anexos: e.exames_anexos || [],
-            fotos_paciente: e.fotos_paciente || [],
+            fotos_paciente: isAdminRole ? [] : (e.fotos_paciente || []),
             profissional: e.profissional,
             especialidade: e.especialidade,
             subjetivo: e.subjetivo,
@@ -285,6 +289,8 @@ export async function addClinicalEvolutionAction(
       return { success: false, message: "Acesso não autorizado. Por favor, realize login novamente." };
     }
 
+    const sessionUser = await getSession();
+    const isAdminRole = sessionUser?.role === "administrador";
     const supabase = getSupabaseAdminClient() || serverClient;
 
     // Sanitiza o procedimento_id: aceita apenas se for UUID legítimo, caso contrário grava null
@@ -339,7 +345,7 @@ export async function addClinicalEvolutionAction(
           }
         : null,
       exames_anexos: input.exames_anexos || [],
-      fotos_paciente: input.fotos_paciente || [],
+      fotos_paciente: isAdminRole ? [] : (input.fotos_paciente || []),
       profissional: input.profissional || "Dra. Juliana Sena",
       especialidade: input.especialidade || "Clínica Geral",
       assinado_em: assinadoEmServer,
@@ -581,6 +587,19 @@ export async function updateMedicalHistoryAction(
       return { success: false, message: "Banco de dados não disponível." };
     }
 
+    const sessionUser = await getSession();
+    const isAdminRole = sessionUser?.role === "administrador";
+
+    let fotosParaPersistir = history.fotosAreaTratada || [];
+    if (isAdminRole) {
+      const { data: existingHistory } = await supabase
+        .from("historico_clinico")
+        .select("fotos_area_tratada")
+        .eq("paciente_id", clientId)
+        .maybeSingle();
+      fotosParaPersistir = existingHistory?.fotos_area_tratada || [];
+    }
+
     // Gravar na tabela historico_clinico do Supabase (upsert)
     const { error } = await supabase.from("historico_clinico").upsert(
       {
@@ -595,7 +614,7 @@ export async function updateMedicalHistoryAction(
         ingestao_agua: history.ingestaoAgua || null,
         qualidade_sono: history.qualidadeSono || null,
         funcionamento_intestino: history.funcionamentoIntestino || null,
-        fotos_area_tratada: history.fotosAreaTratada || [],
+        fotos_area_tratada: fotosParaPersistir,
         tipo_sanguineo: history.tipoSanguineo,
         historico_familiar: history.historicoFamiliar,
         tabagismo: history.habitosVida?.tabagismo || "Não fuma",
@@ -617,7 +636,7 @@ export async function updateMedicalHistoryAction(
     return {
       success: true,
       message: "Histórico clínico atualizado com sucesso!",
-      data: history,
+      data: isAdminRole ? { ...history, fotosAreaTratada: [] } : history,
     };
   } catch (error) {
     console.error("Erro ao atualizar histórico clínico:", error);

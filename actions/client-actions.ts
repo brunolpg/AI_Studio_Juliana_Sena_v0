@@ -98,13 +98,16 @@ export async function getClientsAction(
     const total = count ?? 0;
     const totalPages = Math.ceil(total / pageSize);
 
+    const sessionUser = await getSession();
+    const isAdminRole = sessionUser?.role === "administrador";
+
     const clientRows = (data as Client[]) || [];
     const clientEmails = Array.from(
       new Set(clientRows.map((c) => c.email?.toLowerCase().trim()).filter(Boolean))
     );
 
     const profilesMap = new Map<string, string>();
-    if (clientEmails.length > 0) {
+    if (!isAdminRole && clientEmails.length > 0) {
       try {
         const { data: profiles } = await supabase
           .from("profiles")
@@ -124,6 +127,13 @@ export async function getClientsAction(
     }
 
     const enrichedClients = clientRows.map((c) => {
+      if (isAdminRole) {
+        return {
+          ...c,
+          avatar_url: null,
+          foto_perfil: null,
+        };
+      }
       const email = (c.email || "").toLowerCase().trim();
       const avatar = c.avatar_url || profilesMap.get(email) || c.foto_perfil || null;
       return {
@@ -180,7 +190,16 @@ export async function getClientByIdAction(id: string): Promise<ActionResponse<Cl
       };
     }
 
-    return { success: true, data: data as Client };
+    const sessionUser = await getSession();
+    const isAdminRole = sessionUser?.role === "administrador";
+    const clientData = data as Client;
+
+    return {
+      success: true,
+      data: isAdminRole
+        ? { ...clientData, avatar_url: null, foto_perfil: null }
+        : clientData,
+    };
   } catch (error) {
     return {
       success: false,
@@ -253,14 +272,14 @@ export async function createClientAction(
       };
     }
 
+    const isAdminRole = sessionUser.role === "administrador";
+    const insertPayload = isAdminRole
+      ? { ...validData, foto_perfil: null, deleted_at: null }
+      : { ...validData, deleted_at: null };
+
     const { data, error } = await supabase
       .from("pacientes")
-      .insert([
-        {
-          ...validData,
-          deleted_at: null,
-        },
-      ])
+      .insert([insertPayload])
       .select()
       .single();
 
@@ -273,10 +292,13 @@ export async function createClientAction(
     }
 
     revalidatePath("/");
+    const createdClient = data as Client;
     return {
       success: true,
       message: "Paciente cadastrado com sucesso!",
-      data: data as Client,
+      data: isAdminRole
+        ? { ...createdClient, avatar_url: null, foto_perfil: null }
+        : createdClient,
     };
   } catch (error) {
     console.error("Erro em createClientAction:", error);
@@ -357,12 +379,15 @@ export async function updateClientAction(
       };
     }
 
+    const isAdminRole = sessionUser.role === "administrador";
+    const { foto_perfil: _ignoredFotoPerfil, ...validDataWithoutPhoto } = validData;
+    const updatePayload = isAdminRole
+      ? { ...validDataWithoutPhoto, updated_at: new Date().toISOString() }
+      : { ...validData, updated_at: new Date().toISOString() };
+
     const { data, error } = await supabase
       .from("pacientes")
-      .update({
-        ...validData,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", id)
       .select()
       .single();
@@ -375,10 +400,13 @@ export async function updateClientAction(
     }
 
     revalidatePath("/");
+    const updatedClient = data as Client;
     return {
       success: true,
       message: "Dados do paciente atualizados com sucesso!",
-      data: data as Client,
+      data: isAdminRole
+        ? { ...updatedClient, avatar_url: null, foto_perfil: null }
+        : updatedClient,
     };
   } catch (error) {
     return {

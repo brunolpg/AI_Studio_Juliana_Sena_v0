@@ -21,6 +21,10 @@ export function ClientDetailsModal({
 }: ClientDetailsModalProps) {
   const { user } = useAuth();
   if (!isOpen || !client) return null;
+  const isAdmin = user?.role === "administrador";
+  const sanitizedClient: Client = isAdmin
+    ? { ...client, avatar_url: null, foto_perfil: null }
+    : client;
 
   const formattedBirthDate = new Date(client.data_nascimento + "T00:00:00").toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -172,7 +176,7 @@ export function ClientDetailsModal({
                 Prontuário Médico & Evoluções Clínicas
               </h4>
             </div>
-            <PatientClinicalTabs client={client} />
+            <PatientClinicalTabs client={sanitizedClient} />
           </div>
 
           {/* Audit Trail */}

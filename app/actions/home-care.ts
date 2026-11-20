@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getSession, requireProfissionalAccess, verifyProfissionalOrOwnPaciente } from "@/lib/auth/session";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { canonicalizeJson, gerarHashSha256, assinarHash } from "@/lib/crypto-payload";
 import { homeCareFichaSchema } from "@/lib/validations/home-care";
@@ -11,18 +11,6 @@ import type {
   HomeCareFichaCompleta,
   SaveHomeCareFichaInput,
 } from "@/types/home-care";
-
-/**
- * Obtém o cliente Supabase administrativo com service_role para operações administrativas
- * nas tabelas de Home Care (evitando erros de 'permission denied' por RLS)
- * e o cliente com sessão de cookies para validação de autenticação do usuário.
- */
-async function getSupabaseClients() {
-  const serverClient = await createClient();
-  const adminClient = getSupabaseAdminClient();
-  const adminDb = adminClient || serverClient;
-  return { serverClient, adminClient, adminDb };
-}
 
 /**
  * Cadastra ou atualiza um tópico de Home Care no catálogo central:
@@ -115,10 +103,11 @@ export async function getHomeCareCatalogAndFormulas(): Promise<{
   formulas: Array<{ id: string; nome: string; posologia?: string | null; via?: string }>;
 }> {
   try {
-    const { adminDb } = await getSupabaseClients();
-    if (!adminDb) {
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
       return { topicos: [], formulas: [] };
     }
+    const adminDb = auth.supabase;
 
     // Busca tópicos de catálogo com o cliente administrativo
     const { data: topicosData, error: topicosError } = await adminDb
@@ -156,8 +145,10 @@ export async function getHomeCareCatalogAndFormulas(): Promise<{
  */
 export async function getPatientAppointments(pacienteId: string) {
   try {
-    const { adminDb } = await getSupabaseClients();
-    if (!adminDb || !pacienteId) return [];
+    if (!pacienteId) return [];
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) return [];
+    const adminDb = auth.supabase;
 
     const { data, error } = await adminDb
       .from("appointments")
@@ -183,8 +174,9 @@ export async function getActivePatients(): Promise<
   Array<{ id: string; nome: string; cpf?: string | null }>
 > {
   try {
-    const { adminDb } = await getSupabaseClients();
-    if (!adminDb) return [];
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) return [];
+    const adminDb = auth.supabase;
 
     const { data, error } = await adminDb
       .from("pacientes")
@@ -209,13 +201,11 @@ export async function getActivePatients(): Promise<
  */
 export async function updateCatalogTopic(id: string, titulo: string, texto: string) {
   try {
-    const { serverClient, adminDb } = await getSupabaseClients();
-    if (!serverClient || !adminDb) throw new Error("Banco de dados indisponível");
-
-    const { data: { user }, error: authError } = await serverClient.auth.getUser();
-    if (authError || !user) {
-      return { error: "Usuário não autenticado." };
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
+      return { error: auth.message };
     }
+    const adminDb = auth.supabase;
 
     const { error } = await adminDb
       .from("home_care_topicos")
@@ -251,16 +241,11 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
     }
 
     const validData = parsed.data;
-    const { serverClient, adminDb } = await getSupabaseClients();
-    if (!serverClient || !adminDb) {
-      return { error: "Serviço de banco de dados não configurado." };
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
+      return { error: auth.message };
     }
-
-    // 1. Validação obrigatória da autenticação do usuário
-    const { data: { user }, error: authError } = await serverClient.auth.getUser();
-    if (authError || !user) {
-      return { error: "Acesso não autorizado. Por favor, realize login novamente." };
-    }
+    const adminDb = auth.supabase;
 
     // Identificar profissional responsável oficial
     let profissionalNome = validData.profissional;
@@ -473,13 +458,11 @@ export async function saveHomeCareFicha(input: SaveHomeCareFichaInput): Promise<
  */
 export async function deleteHomeCareFicha(id: string): Promise<{ success?: boolean; error?: string }> {
   try {
-    const { serverClient, adminDb } = await getSupabaseClients();
-    if (!serverClient || !adminDb) throw new Error("Banco de dados indisponível");
-
-    const { data: { user }, error: authError } = await serverClient.auth.getUser();
-    if (authError || !user) {
-      return { error: "Usuário não autenticado." };
+    const auth = await requireProfissionalAccess();
+    if (!auth.authorized) {
+      return { error: auth.message };
     }
+    const adminDb = auth.supabase;
 
     // Limpar relacionamentos dependentes com adminDb
     await adminDb.from("home_care_ficha_topicos").delete().eq("ficha_id", id);
@@ -504,8 +487,10 @@ export async function deleteHomeCareFicha(id: string): Promise<{ success?: boole
  */
 export async function getPatientHomeCareFichas(pacienteId: string): Promise<HomeCareFichaCompleta[]> {
   try {
-    const { adminDb } = await getSupabaseClients();
-    if (!adminDb || !pacienteId) return [];
+    if (!pacienteId) return [];
+    const auth = await verifyProfissionalOrOwnPaciente(pacienteId);
+    if (!auth.authorized) return [];
+    const adminDb = auth.supabase;
 
     // Busca as fichas do paciente
     const { data: fichas, error: fichasError } = await adminDb
@@ -601,16 +586,16 @@ export async function getPatientHomeCareFichas(pacienteId: string): Promise<Home
  */
 export async function getLoggedInPatientHomeCareFichas(): Promise<HomeCareFichaCompleta[]> {
   try {
-    const { serverClient, adminDb } = await getSupabaseClients();
-    if (!serverClient || !adminDb) return [];
+    const user = await getSession();
+    if (!user || user.role === "administrador") return [];
 
-    const { data: { user }, error: userError } = await serverClient.auth.getUser();
-    if (userError || !user) return [];
+    const serverClient = await createClient();
+    if (!serverClient) return [];
 
     // Localizar cadastro na tabela pacientes por user_id ou email (não deletado)
     let pacienteId: string | null = null;
 
-    const { data: pacByUserId } = await adminDb
+    const { data: pacByUserId } = await serverClient
       .from("pacientes")
       .select("id")
       .eq("user_id", user.id)
@@ -620,7 +605,7 @@ export async function getLoggedInPatientHomeCareFichas(): Promise<HomeCareFichaC
     if (pacByUserId?.id) {
       pacienteId = pacByUserId.id;
     } else if (user.email) {
-      const { data: pacByEmail } = await adminDb
+      const { data: pacByEmail } = await serverClient
         .from("pacientes")
         .select("id")
         .eq("email", user.email)

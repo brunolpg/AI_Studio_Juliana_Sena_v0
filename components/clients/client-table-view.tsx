@@ -36,6 +36,7 @@ import type { Client, ClientFilter, PaginatedResult } from "@/types/client";
 export function ClientTableView() {
   const { toast } = useToast();
   const { user, requireAuth, openAuthModal } = useAuth();
+  const isAdmin = user?.role === "administrador";
 
   // Estados de dados e filtros
   const [isPending, startTransition] = useTransition();
@@ -444,7 +445,7 @@ export function ClientTableView() {
                         <div className="flex items-center gap-3">
                           <PatientAvatar
                             name={client.nome}
-                            avatarUrl={client.avatar_url || client.foto_perfil}
+                            avatarUrl={isAdmin ? null : client.avatar_url || client.foto_perfil}
                             sizeClassName="w-9 h-9"
                             textClassName="text-xs"
                             fallbackClassName="bg-teal-500/10 text-teal-600 dark:text-teal-400"

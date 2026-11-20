@@ -4,13 +4,9 @@ import React, { useState } from "react";
 import {
   HeartHandshake,
   Printer,
-  ShieldCheck,
   Calendar,
-  Clock,
-  Pill,
   Edit2,
   Trash2,
-  Sparkles,
   ChevronRight,
   AlertCircle,
 } from "lucide-react";
@@ -76,14 +72,14 @@ export function HomeCareCards({
       <div className="space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/50 flex items-center justify-center shrink-0">
-              <HeartHandshake className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="w-10 h-10 rounded-md-xl bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
+              <HeartHandshake className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              <h3 className="text-base font-semibold text-on-surface">
                 Fichas de Home Care & Orientações ({fichas.length})
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] text-on-surface-variant">
                 Protocolos e cronogramas de cuidados domiciliares assinados digitalmente
               </p>
             </div>
@@ -99,74 +95,58 @@ export function HomeCareCards({
             return (
               <div
                 key={ficha.id}
-                className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-outline shadow-2xs hover:border-teal-500/30 transition-all flex flex-col justify-between min-w-0 w-full"
+                className="p-4 sm:p-5 rounded-md-2xl bg-surface-container-lowest border border-outline shadow-2xs hover:border-primary/30 transition-all flex flex-col justify-between min-w-0 w-full"
               >
                 <div className="min-w-0 w-full">
                   {/* Cabeçalho do Card */}
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 w-full flex-wrap mb-3 pb-3 border-b border-slate-100 dark:border-slate-800/70">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 w-full flex-wrap mb-3 pb-3 border-b border-outline-variant">
                     <div className="flex-1 min-w-[200px]">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60 uppercase tracking-wider">
+                        <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md-full bg-primary-container text-on-primary-container">
                           HOME CARE
                         </span>
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
-                          <ShieldCheck className="w-3 h-3" />
-                          SHA-256: {ficha.payload_hash ? ficha.payload_hash.substring(0, 8) : "ASSINADO"}...
+                        <span
+                          className={`px-2.5 py-0.5 text-[10px] font-bold rounded-md-full select-none ${
+                            ficha.status === "Ativo"
+                              ? "bg-success-container text-on-success-container"
+                              : ficha.status === "Concluído"
+                              ? "bg-secondary-container text-on-secondary-container"
+                              : "bg-surface-container-high text-on-surface-variant"
+                          }`}
+                        >
+                          {ficha.status}
                         </span>
                       </div>
 
-                      <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 mt-1 leading-snug">
+                      <h4 className="text-base font-bold text-on-surface mt-1.5 leading-snug">
                         {ficha.titulo_protocolo}
                       </h4>
 
-                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1 flex-wrap">
-                        <span className="font-medium text-slate-600 dark:text-slate-300">
-                          Emitido em {formatDateBR(ficha.data_home_care)}
-                        </span>
-                        <span>•</span>
-                        <span>{ficha.profissional || "Dra. Juliana Sena"}</span>
-                        {ficha.appointment && (
-                          <>
-                            <span>•</span>
-                            <span className="text-teal-600 dark:text-teal-400">
-                              Consulta ({ficha.appointment.procedimento})
-                            </span>
-                          </>
-                        )}
+                      <div className="flex items-center gap-1.5 text-xs text-on-surface-variant mt-1">
+                        <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span>Emissão: {formatDateBR(ficha.data_home_care)}</span>
                       </div>
                     </div>
 
-                    {/* Ações e Badges MD4 */}
+                    {/* Ações Rápidas */}
                     <div className="flex items-center flex-wrap gap-2 shrink-0 self-start">
                       <button
                         type="button"
                         onClick={() => setSelectedFichaForPrint(ficha)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-white dark:bg-slate-800 border border-teal-200 dark:border-slate-700 hover:bg-teal-50/70 dark:hover:bg-slate-800/80 rounded-full cursor-pointer transition-colors shadow-2xs md-state-layer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary bg-surface-container border border-outline-variant hover:bg-surface-container-high rounded-md-full cursor-pointer transition-colors"
                         title="Visualizar e imprimir relatório oficial"
                       >
-                        <Printer className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                        <Printer className="w-3.5 h-3.5 text-primary" />
                         <span>Gerar Relatório</span>
                       </button>
 
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold select-none shadow-2xs ${
-                          ficha.status === "Ativo"
-                            ? "bg-success-container text-on-success-container border border-success/30"
-                            : ficha.status === "Concluído"
-                            ? "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
-                        }`}
-                      >
-                        {ficha.status}
-                      </span>
-
                       {!isPatientView && (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                           {onEdit && (
                             <button
                               type="button"
                               onClick={() => onEdit(ficha)}
-                              className="p-1.5 rounded-full text-slate-400 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer md-state-layer"
+                              className="w-8 h-8 rounded-full border border-outline-variant bg-surface-container-low text-on-surface hover:text-primary hover:bg-surface-container transition-colors cursor-pointer flex items-center justify-center"
                               title="Editar ficha"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -176,7 +156,7 @@ export function HomeCareCards({
                             type="button"
                             onClick={() => handleDelete(ficha.id)}
                             disabled={deletingId === ficha.id}
-                            className="p-1.5 rounded-full text-slate-400 hover:text-error hover:bg-error-container transition-colors cursor-pointer md-state-layer"
+                            className="w-8 h-8 rounded-full border border-outline-variant bg-surface-container-low text-on-surface hover:text-error hover:bg-error-container/30 transition-colors cursor-pointer flex items-center justify-center disabled:opacity-50"
                             title="Excluir ficha"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -189,20 +169,20 @@ export function HomeCareCards({
                   {/* Resumo de Cuidados e Cronograma */}
                   <div className="space-y-2 text-xs">
                     {/* Cuidados */}
-                    <div className="p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                        <span className="uppercase tracking-wider">Cuidados Diários ({cuidadosCount})</span>
+                    <div className="p-3.5 rounded-md-xl bg-surface-container-low border border-outline-variant/70">
+                      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-on-surface mb-1.5">
+                        <span>Cuidados Diários ({cuidadosCount})</span>
                       </div>
                       <div className="space-y-1">
                         {ficha.cuidados?.slice(0, 2).map((c, i) => (
-                          <div key={i} className="flex items-baseline gap-1.5 text-slate-600 dark:text-slate-300">
-                            <span className="font-bold text-teal-600 dark:text-teal-400 shrink-0">{i + 1}.</span>
-                            <span className="font-medium text-slate-800 dark:text-slate-200">{c.titulo}:</span>
-                            <span className="truncate text-slate-500 dark:text-slate-400">{c.texto}</span>
+                          <div key={i} className="flex items-baseline gap-1.5 text-on-surface-variant">
+                            <span className="font-bold text-primary shrink-0">{i + 1}.</span>
+                            <span className="font-medium text-on-surface">{c.titulo}:</span>
+                            <span className="truncate text-on-surface-variant">{c.texto}</span>
                           </div>
                         ))}
                         {cuidadosCount > 2 && (
-                          <span className="text-[10px] text-slate-400 italic block pt-0.5">
+                          <span className="text-[10px] text-on-surface-variant italic block pt-0.5">
                             + {cuidadosCount - 2} outro(s) cuidado(s) no relatório
                           </span>
                         )}
@@ -211,17 +191,17 @@ export function HomeCareCards({
 
                     {/* Cronograma (se incluído) */}
                     {cronoCount > 0 && (
-                      <div className="bg-slate-50 border border-slate-200/80 text-slate-800 dark:bg-slate-900/90 dark:border-slate-800 dark:text-slate-100 rounded-xl p-3.5">
-                        <div className="flex items-center justify-between text-xs font-semibold tracking-wide text-slate-600 dark:text-slate-400 mb-2">
-                          <span className="uppercase tracking-wider">Cronograma ({cronoCount} {cronoCount === 1 ? "etapa" : "etapas"})</span>
+                      <div className="p-3.5 rounded-md-xl bg-surface-container-low border border-outline-variant/70 text-on-surface">
+                        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-on-surface mb-2">
+                          <span>Cronograma ({cronoCount} {cronoCount === 1 ? "etapa" : "etapas"})</span>
                         </div>
                         <div className="space-y-1.5">
                           {ficha.cronograma?.map((cr, idx) => (
                             <div key={idx} className="grid grid-cols-[88px_1fr] items-baseline gap-2 text-left">
-                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0 text-left">
+                              <span className="text-xs font-semibold text-primary shrink-0 text-left">
                                 Dias {cr.dia_inicio} ao {cr.dia_fim}
                               </span>
-                              <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate text-left">
+                              <span className="text-xs font-medium text-on-surface truncate text-left">
                                 {cr.nome_formula}
                               </span>
                             </div>
@@ -238,7 +218,7 @@ export function HomeCareCards({
                     )}
 
                     {recCount > 0 && (
-                      <div className="px-2 pt-0.5 flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400 font-medium">
+                      <div className="px-2 pt-0.5 flex items-center justify-between text-[10px] text-on-surface-variant font-medium">
                         <span>{recCount} recomendação(ões) complementar(es) inclusa(s)</span>
                       </div>
                     )}
@@ -246,12 +226,11 @@ export function HomeCareCards({
                 </div>
 
                 {/* Rodapé com botão de acesso ao relatório completo */}
-                <div className="mt-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>Assinado por {ficha.profissional || "Juliana Sena"}</span>
+                <div className="mt-3.5 pt-2.5 border-t border-outline-variant flex items-center justify-end">
                   <button
                     type="button"
                     onClick={() => setSelectedFichaForPrint(ficha)}
-                    className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
+                    className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container border border-outline-variant hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap"
                   >
                     <span>Ver Orientações Completas</span>
                     <ChevronRight className="w-3.5 h-3.5 shrink-0" />

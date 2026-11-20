@@ -28,6 +28,7 @@ import {
   X,
   Paperclip,
   Loader2,
+  Lock,
 } from "lucide-react";
 import {
   getAppointmentsAction,
@@ -112,6 +113,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
   const { toast } = useToast();
   const { user } = useAuth();
   const isPatient = user?.role === "paciente";
+  const isAdmin = user?.role === "administrador";
   const [isPending, startTransition] = useTransition();
 
   // Estados de busca e filtros
@@ -227,6 +229,14 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
       const uploadedUrls: string[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        if (isAdmin && (file.type.startsWith("image/") || /\.(png|jpe?g|webp|bmp|gif)$/i.test(file.name))) {
+          toast({
+            type: "error",
+            title: "Acesso restrito",
+            description: "O envio de fotos de pacientes é restrito ao profissional de saúde.",
+          });
+          continue;
+        }
         if (file.size > 10 * 1024 * 1024) {
           toast({ type: "error", title: "Arquivo muito grande", description: `O arquivo ${file.name} excede 10MB.` });
           continue;
@@ -841,10 +851,10 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                             {/* Foto de Perfil (avatar_url) ou Inicial */}
                             <PatientAvatar
                               name={appointment.client_nome || "Paciente"}
-                              avatarUrl={appointment.avatar_url || appointment.patientPhoto}
+                              avatarUrl={isAdmin ? null : (appointment.avatar_url || appointment.patientPhoto)}
                               sizeClassName="w-8 h-8"
                               textClassName="text-xs"
-                              fallbackClassName="bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300"
+                              fallbackClassName="bg-primary-container text-on-primary-container"
                               borderClassName="border-outline-variant"
                             />
 
@@ -1564,18 +1574,34 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {attachmentModalAppointment.anexos_clinicos.map((url: string, idx: number) => {
                     const isPdf = url.toLowerCase().endsWith('.pdf');
+                    const isImage = /\.(jpeg|jpg|png|webp|bmp|gif)($|\?)/i.test(url);
+                    if (isAdmin && isImage) {
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-2.5 rounded-md-lg bg-surface-container border border-outline-variant text-xs text-on-surface-variant min-h-[44px]"
+                        >
+                          <div className="flex items-center gap-2.5 truncate pr-2">
+                            <Lock className="w-4 h-4 text-on-surface-variant shrink-0" />
+                            <span className="font-medium truncate">
+                              Arquivo Clínico {idx + 1} (Foto restrita ao profissional)
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
                     return (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs"
+                        className="flex items-center justify-between p-2.5 rounded-md-lg bg-surface-container border border-outline-variant text-xs min-h-[44px]"
                       >
                         <div className="flex items-center gap-2.5 truncate pr-2">
                           {isPdf ? (
-                            <FileText className="w-4 h-4 text-rose-500 shrink-0" />
+                            <FileText className="w-4 h-4 text-tertiary shrink-0" />
                           ) : (
-                            <FileText className="w-4 h-4 text-teal-600 shrink-0" />
+                            <FileText className="w-4 h-4 text-primary shrink-0" />
                           )}
-                          <span className="font-medium text-slate-800 dark:text-slate-200 truncate">
+                          <span className="font-medium text-on-surface truncate">
                             Arquivo Clínico {idx + 1}
                           </span>
                         </div>
@@ -1594,35 +1620,38 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
                   })}
                 </div>
               ) : (
-                <p className="text-xs text-slate-500 dark:text-slate-400 italic p-3 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
-                  Nenhum exame ou foto clínica anexado a esta consulta ainda.
+                <p className="text-xs text-on-surface-variant italic p-3 text-center bg-surface-container rounded-md-lg border border-outline-variant">
+                  {isAdmin
+                    ? "Nenhum documento ou exame anexado a esta consulta."
+                    : "Nenhum exame ou foto clínica anexado a esta consulta ainda."}
                 </p>
               )}
             </div>
 
             {/* Área de Upload ou Aviso de Limite */}
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="pt-2 border-t border-outline-variant">
               {(attachmentModalAppointment.anexos_clinicos?.length || 0) < 3 ? (
                 <div className="space-y-2">
-                  <label className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 hover:bg-teal-50/50 dark:bg-slate-800/50 dark:hover:bg-slate-800/80 border-2 border-dashed border-teal-200 dark:border-slate-700 cursor-pointer transition-all text-center">
+                  <label className="flex flex-col items-center justify-center p-4 rounded-md-2xl bg-surface-container hover:bg-surface-container-high border-2 border-dashed border-outline-variant cursor-pointer transition-all text-center min-h-[44px]">
                     {isUploadingClinical ? (
-                      <div className="flex items-center gap-2 text-xs font-semibold text-teal-600 dark:text-teal-400 py-2">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-primary py-2">
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>Enviando arquivos...</span>
                       </div>
                     ) : (
                       <>
-                        <Upload className="w-6 h-6 text-teal-600 dark:text-teal-400 mb-1" />
-                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                          Clique para adicionar fotos ou exames
+                        <Upload className="w-6 h-6 text-primary mb-1" />
+                        <span className="text-xs font-semibold text-on-surface">
+                          {isAdmin ? "Clique para adicionar exames (PDF)" : "Clique para adicionar fotos ou exames"}
                         </span>
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          Selecione até {3 - (attachmentModalAppointment.anexos_clinicos?.length || 0)} arquivo(s) (PDF, PNG, JPG até 10MB)
+                        <span className="text-[10px] text-on-surface-variant mt-0.5">
+                          Selecione até {3 - (attachmentModalAppointment.anexos_clinicos?.length || 0)} arquivo(s) (
+                          {isAdmin ? "PDF até 10MB" : "PDF, PNG, JPG até 10MB"})
                         </span>
                         <input
                           type="file"
                           multiple
-                          accept="image/*,application/pdf"
+                          accept={isAdmin ? ".pdf,application/pdf" : "image/*,application/pdf"}
                           disabled={isUploadingClinical}
                           onChange={handleUploadClinicalAttachments}
                           className="hidden"
