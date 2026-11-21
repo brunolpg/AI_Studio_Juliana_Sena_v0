@@ -812,13 +812,21 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
       leading: 13,
     });
 
-    // Linha 1 - Coluna 2: DOSAGEM (Q.S.P.) / DOSE / APRESENTAÇÃO
-    text(dosagemLabel, rightColX, row1Top - 7, { font: bold, size: 7, color: C.faint });
+    // Linha 1 - Coluna 2: DOSAGEM (Q.S.P.) / DOSE / APRESENTAÇÃO (alinhado à direita)
+    text(dosagemLabel, rightColX, row1Top - 7, {
+      font: bold,
+      size: 7,
+      color: C.faint,
+      align: "right",
+      width: halfColW,
+    });
     drawLines(dosagemLines, rightColX, row1Top - 11, {
       font: bold,
       size: 9.5,
       color: C.slate800,
       leading: 13,
+      align: "right",
+      width: halfColW,
     });
 
     // Linha 2 - Largura total: QUANTIDADE TOTAL

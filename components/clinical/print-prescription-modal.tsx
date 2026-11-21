@@ -432,14 +432,14 @@ export function PrintPrescriptionModal({
                       <span className="font-semibold text-slate-800">{rxDetails.veiculo}</span>
                     </div>
                     {prescription.via.toLowerCase() === "oral" ? (
-                      <div>
+                      <div className="text-right">
                         <span className="text-[10px] font-bold text-slate-400 block uppercase">Dose / Apresentação</span>
                         <span className="font-semibold text-slate-800">
                           {rxDetails.dosagem ? `${rxDetails.dosagem} dose(s)` : "Cápsula vegetal"}
                         </span>
                       </div>
                     ) : (
-                      <div>
+                      <div className="text-right">
                         <span className="text-[10px] font-bold text-slate-400 block uppercase">Dosagem (Q.S.P.)</span>
                         <span className="font-semibold text-slate-800">{rxDetails.dosagem || "q.s.p."}</span>
                       </div>

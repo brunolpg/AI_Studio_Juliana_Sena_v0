@@ -994,8 +994,21 @@ export async function generatePrescriptionPdfClient(
     doc.text("VEÍCULO BASE", lx, r1Top - 7, { font: doc.bold, size: 7, color: PALETTE.slate400 });
     doc.lines(vLines, lx, r1Top - 11, { font: doc.bold, size: 9.5, color: PALETTE.slate800, leading: 13 });
 
-    doc.text(dosagemLabel, rx, r1Top - 7, { font: doc.bold, size: 7, color: PALETTE.slate400 });
-    doc.lines(dLines, rx, r1Top - 11, { font: doc.bold, size: 9.5, color: PALETTE.slate800, leading: 13 });
+    doc.text(dosagemLabel, rx, r1Top - 7, {
+      font: doc.bold,
+      size: 7,
+      color: PALETTE.slate400,
+      align: "right",
+      width: halfW,
+    });
+    doc.lines(dLines, rx, r1Top - 11, {
+      font: doc.bold,
+      size: 9.5,
+      color: PALETTE.slate800,
+      leading: 13,
+      align: "right",
+      width: halfW,
+    });
 
     if (totalStr) {
       const divY = r1Top - r1H - 6;
