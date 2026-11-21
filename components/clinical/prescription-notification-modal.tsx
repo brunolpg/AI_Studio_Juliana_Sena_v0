@@ -19,6 +19,7 @@ import {
   sanitizePdfFileName,
   sharePdfViaWhatsApp,
 } from "@/lib/utils/whatsapp-share-pdf";
+import { parsePrescriptionDetails } from "@/lib/prescricoes/format";
 
 export type NotifiablePrescription = PrescriptionItem & {
   nome_formula?: string;
@@ -70,79 +71,7 @@ function formatDateBR(dateStr?: string | null): string {
 }
 
 function parseRxDetails(rx: NotifiablePrescription) {
-  const dosagemStr = rx.dosagem || "";
-  let componentes: { nome: string; qtd: string }[] = [];
-  let veiculoInfo = rx.item?.veiculo || "";
-  let dosagemInfo = rx.item?.dosagem != null ? String(rx.item.dosagem) : "";
-  let totalInfo = "";
-
-  if (Array.isArray(rx.componentes) && rx.componentes.length > 0) {
-    componentes = rx.componentes.map((c) => ({
-      nome: c.nome,
-      qtd: `${c.quantidade ?? ""}${c.unidade || ""}`.trim(),
-    }));
-  } else {
-    try {
-      const emIndex = dosagemStr.indexOf(" em ");
-      if (emIndex !== -1) {
-        const assetsPart = dosagemStr.substring(0, emIndex);
-        componentes = assetsPart.split(" + ").map((a) => {
-          const colonIdx = a.indexOf(": ");
-          if (colonIdx !== -1) {
-            return {
-              nome: a.substring(0, colonIdx).trim(),
-              qtd: a.substring(colonIdx + 2).trim(),
-            };
-          }
-          return { nome: a.trim(), qtd: "" };
-        });
-
-        const remaining = dosagemStr.substring(emIndex + 4);
-        const parenthesIndex = remaining.indexOf(" (");
-        if (parenthesIndex !== -1) {
-          veiculoInfo = veiculoInfo || remaining.substring(0, parenthesIndex).trim();
-          const insideParentheses = remaining.substring(parenthesIndex + 2, remaining.length - 1);
-          if (insideParentheses.includes(" | ")) {
-            const parts = insideParentheses.split(" | ");
-            dosagemInfo = dosagemInfo || parts[0].replace("Dose: ", "").trim();
-            totalInfo = parts[1].replace("Total: ", "").trim();
-          } else {
-            totalInfo = insideParentheses.replace("Total: ", "").trim();
-          }
-        } else {
-          veiculoInfo = veiculoInfo || remaining;
-        }
-      } else {
-        componentes = [{ nome: rx.medicamento, qtd: dosagemStr }];
-      }
-    } catch {
-      componentes = [{ nome: rx.medicamento, qtd: dosagemStr }];
-    }
-  }
-
-  let orientPaciente = rx.orient_paciente || rx.item?.orient_paciente || "";
-  let orientFarmacia = rx.orient_farmacia || rx.item?.orient_farmacia || "";
-
-  if (!orientPaciente && !orientFarmacia && rx.instrucoes) {
-    if (rx.instrucoes.includes("[Observações à Farmácia Magistral]\n")) {
-      const parts = rx.instrucoes.split("[Observações à Farmácia Magistral]\n");
-      orientPaciente = parts[0].replace("[Orientações ao Paciente]\n", "").trim();
-      if (parts.length > 1) {
-        orientFarmacia = parts[1].trim();
-      }
-    } else {
-      orientPaciente = rx.instrucoes.replace("[Orientações ao Paciente]\n", "").trim();
-    }
-  }
-
-  return {
-    componentes: componentes.length > 0 ? componentes : [{ nome: rx.medicamento, qtd: dosagemStr }],
-    veiculo: veiculoInfo || "Veículo base adequado",
-    dosagem: dosagemInfo,
-    total: totalInfo || rx.duracao,
-    orientPaciente,
-    orientFarmacia,
-  };
+  return parsePrescriptionDetails(rx);
 }
 
 export function PrescriptionNotificationModal({

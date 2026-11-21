@@ -6,6 +6,11 @@ import type { ClinicalEvolution, PrescriptionItem } from "@/types/clinical-recor
 import type { HomeCareFichaCompleta } from "@/types/home-care";
 import type { Proposta } from "@/types/proposta";
 import type { PopProtocoloCompleto } from "@/types/pop";
+import {
+  sanitizeVehicleText,
+  formatPrescriptionDosage,
+  formatPrescriptionTotal,
+} from "@/lib/prescricoes/format";
 
 /**
  * Sanitiza o nome do arquivo PDF seguindo o padrão exigido:
@@ -953,19 +958,17 @@ export async function generatePrescriptionPdfClient(
     const halfW = (CONTENT_W - padX * 2 - colGap) / 2;
     const fullW = CONTENT_W - padX * 2;
 
-    const veiculoStr = input.veiculo?.trim() || "Veículo base adequado";
+    const veiculoStr = sanitizeVehicleText(input.veiculo) || "Veículo base adequado";
     const dosagemLabel = isOral ? "DOSE / APRESENTAÇÃO" : "DOSAGEM (Q.S.P.)";
-    const dosagemRaw = input.dosagem?.trim() || "";
-    const dosagemStr = dosagemRaw
-      ? isOral
-        ? /dose/i.test(dosagemRaw)
-          ? dosagemRaw
-          : `${dosagemRaw} dose(s)`
-        : dosagemRaw
-      : isOral
-        ? "Cápsula vegetal"
-        : "q.s.p.";
-    const totalStr = input.total?.trim() || "";
+    const dosagemStr = formatPrescriptionDosage({
+      via: input.via,
+      dosagem: input.dosagem,
+    });
+    const totalStr = formatPrescriptionTotal({
+      via: input.via,
+      duracao: input.total,
+      dosagem: input.dosagem,
+    });
 
     const vLines = wrapText(veiculoStr, halfW, doc.bold, 9.5);
     const dLines = wrapText(dosagemStr, halfW, doc.bold, 9.5);

@@ -3,6 +3,11 @@ import path from "path";
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 // @ts-expect-error @pdf-lib/fontkit não possui declarações completas para ESM/CJS
 import fontkit from "@pdf-lib/fontkit";
+import {
+  sanitizeVehicleText,
+  formatPrescriptionDosage,
+  formatPrescriptionTotal,
+} from "@/lib/prescricoes/format";
 
 let regularFontBytesCache: Uint8Array | null = null;
 let boldFontBytesCache: Uint8Array | null = null;
@@ -753,27 +758,20 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
     const halfColW = (CONTENT_W - padX * 2 - colGap) / 2;
     const fullInnerW = CONTENT_W - padX * 2;
 
-    const veiculoText = present(item.veiculo) ? String(item.veiculo).trim() : "Veículo base adequado";
+    const veiculoText = sanitizeVehicleText(item.veiculo) || "Veículo base adequado";
     const dosagemLabel = isOral ? "DOSE / APRESENTAÇÃO" : "DOSAGEM (Q.S.P.)";
-    const dosagemRaw = present(item.dosagem) ? String(item.dosagem).trim() : "";
-    const dosagemText = dosagemRaw
-      ? isOral
-        ? /dose/i.test(dosagemRaw)
-          ? dosagemRaw
-          : `${dosagemRaw} dose(s)`
-        : /^\d+([.,]\d+)?$/.test(dosagemRaw)
-          ? `${dosagemRaw} g`
-          : dosagemRaw
-      : isOral
-        ? "Cápsula vegetal"
-        : "q.s.p.";
+    const dosagemText = formatPrescriptionDosage({
+      via: item.via,
+      dosagem: item.dosagem,
+    });
 
-    const hasTotalRow = present(item.duracao);
-    const totalText = hasTotalRow
-      ? isOral
-        ? `${item.duracao} ${item.tipo_veiculo || ""}`.trim()
-        : `${item.duracao}${item.tipo_veiculo || "un"}`.trim()
-      : "";
+    const totalText = formatPrescriptionTotal({
+      via: item.via,
+      duracao: item.duracao,
+      tipoVeiculo: item.tipo_veiculo,
+      dosagem: item.dosagem,
+    });
+    const hasTotalRow = Boolean(totalText);
 
     const veiculoLines = wrapText(veiculoText, bold, 9.5, halfColW);
     const dosagemLines = wrapText(dosagemText, bold, 9.5, halfColW);

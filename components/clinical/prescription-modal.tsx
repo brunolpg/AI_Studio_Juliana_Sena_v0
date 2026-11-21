@@ -12,6 +12,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Client } from "@/types/client";
+import { sanitizeVehicleText } from "@/lib/prescricoes/format";
 
 interface PrescriptionModalProps {
   isOpen: boolean;
@@ -155,7 +156,7 @@ export function PrescriptionModal({
       const formulaNome = item.nome_formula || initialData.medicamento || initialData.nome_formula || "";
       const rawVia = (item.via || initialData.via || "tópico").toLowerCase();
       const normalizedVia: "oral" | "tópico" = rawVia === "oral" ? "oral" : "tópico";
-      const veiculoVal = item.veiculo || initialData.veiculo || "";
+      const veiculoVal = sanitizeVehicleText(item.veiculo || initialData.veiculo || "");
       const dosagemVal = item.dosagem != null ? String(item.dosagem).replace(".", ",") : (initialData.dosagem_valor || "");
       const totalVeiculoVal = item.duracao != null ? String(item.duracao) : (initialData.total_veiculo || "");
       const tipoVeiculoVal = item.tipo_veiculo || initialData.tipo_veiculo || (normalizedVia === "oral" ? "dose(s)" : "un");
@@ -462,7 +463,7 @@ export function PrescriptionModal({
         descricao: finalDescricao.trim() || undefined,
         via,
         componentes: componentesPayload,
-        veiculo: finalVeiculo.trim(),
+        veiculo: sanitizeVehicleText(finalVeiculo),
         dosagem_valor: String(parseBrNumberToFloat(dosagemValor)),
         dosagem_unidade: via === "tópico" ? dosagemUnidade : undefined,
         total_veiculo: parseBrNumberToFloat(totalVeiculo),

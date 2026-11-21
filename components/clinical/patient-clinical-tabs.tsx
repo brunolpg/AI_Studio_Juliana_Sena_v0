@@ -85,6 +85,7 @@ import type {
   ClinicalEvolution,
   PrescriptionItem,
 } from "@/types/clinical-record";
+import { sanitizeVehicleText, formatPrescriptionSummaryString } from "@/lib/prescricoes/format";
 
 interface PatientClinicalTabsProps {
   client: Client;
@@ -553,15 +554,21 @@ export function PatientClinicalTabs({
                 const mappedPrescriptions: PrescriptionItem[] = dbPrescs.map((p: any) => {
                   const item = p.prescricao_itens && p.prescricao_itens[0];
                   const componentsList = item?.componentes_snapshot || [];
-                  
-                  // Reconstrução da dosagem formatada
+
+                  // Reconstrução da dosagem formatada com veículo sanitizado e parênteses balanceados
                   const listAtivos = Array.isArray(componentsList)
                     ? componentsList.map((c: any) => `${toSentenceCase(c.nome)}: ${c.quantidade}${c.unidade || ""}`).join(" + ")
                     : "";
-                  
-                  const formattedDosagem = item?.via?.toLowerCase() === "oral"
-                    ? `${listAtivos} em ${item?.veiculo} (Dose: ${item?.dosagem} | Total: ${item?.duracao} ${item?.tipo_veiculo})`
-                    : `${listAtivos} em ${item?.veiculo} q.s.p. ${item?.dosagem}g (Total: ${item?.duracao}${item?.tipo_veiculo || "un"})`;
+
+                  const cleanVeiculo = sanitizeVehicleText(item?.veiculo);
+                  const formattedDosagem = formatPrescriptionSummaryString({
+                    ativos: listAtivos,
+                    via: item?.via,
+                    veiculo: cleanVeiculo,
+                    dosagem: item?.dosagem,
+                    duracao: item?.duracao,
+                    tipoVeiculo: item?.tipo_veiculo,
+                  });
 
                   const combinedInstrucoes = [
                     item?.orient_paciente ? `[Orientações ao Paciente]\n${item.orient_paciente}` : "",
@@ -570,6 +577,14 @@ export function PatientClinicalTabs({
                     .filter(Boolean)
                     .join("\n\n");
 
+                  const mappedComponents = Array.isArray(componentsList)
+                    ? componentsList.map((c: any) => ({
+                        nome: toSentenceCase(c.nome),
+                        quantidade: c.quantidade,
+                        unidade: c.unidade,
+                      }))
+                    : [];
+
                   return {
                     id: p.id,
                     prescricao_id: p.id,
@@ -577,24 +592,35 @@ export function PatientClinicalTabs({
                     client_id: p.paciente_id,
                     data: p.data_prescricao,
                     medicamento: item?.nome_formula || "Fórmula Magistral",
-                    dosagem: formattedDosagem || item?.dosagem || "",
+                    nome_formula: item?.nome_formula || "Fórmula Magistral",
+                    dosagem: formattedDosagem || String(item?.dosagem ?? ""),
                     via: item?.via === "oral" ? "Oral" : "Tópico",
                     posologia: item?.posologia || "",
-                    duracao: item?.via === "oral" ? `${item?.duracao} ${item?.tipo_veiculo}` : "Uso recomendado",
+                    duracao: item?.via === "oral" ? `${item?.duracao} ${item?.tipo_veiculo || "dose(s)"}` : "Uso recomendado",
                     ativo: p.status === "Ativo",
                     instrucoes: combinedInstrucoes || undefined,
+                    orient_paciente: item?.orient_paciente || undefined,
+                    orient_farmacia: item?.orient_farmacia || undefined,
                     status: p.status,
                     justificativa_suspensao: p.justificativa_suspensao,
                     data_suspensao: p.data_suspensao,
                     pdf_assinado_url: p.pdf_assinado_url ?? null,
                     data_assinatura: p.data_assinatura ?? null,
-                    componentes: Array.isArray(componentsList)
-                      ? componentsList.map((c: any) => ({
-                          nome: toSentenceCase(c.nome),
-                          quantidade: c.quantidade,
-                          unidade: c.unidade,
-                        }))
-                      : [],
+                    componentes: mappedComponents,
+                    item: item
+                      ? {
+                          nome_formula: item.nome_formula,
+                          via: item.via,
+                          veiculo: cleanVeiculo || null,
+                          dosagem: item.dosagem,
+                          tipo_veiculo: item.tipo_veiculo,
+                          posologia: item.posologia,
+                          duracao: item.duracao,
+                          orient_paciente: item.orient_paciente,
+                          orient_farmacia: item.orient_farmacia,
+                          componentes_snapshot: mappedComponents,
+                        }
+                      : undefined,
                   };
                 });
 

@@ -81,19 +81,50 @@ export interface MedicalHistory {
   updated_at?: string;
 }
 
+export interface PrescriptionItemSnapshot {
+  nome_formula?: string;
+  via?: string;
+  veiculo?: string | null;
+  dosagem?: number | string | null;
+  dosagem_unidade?: string | null;
+  tipo_veiculo?: string | null;
+  posologia?: string | null;
+  duracao?: string | number | null;
+  orient_paciente?: string | null;
+  orient_farmacia?: string | null;
+  componentes_snapshot?: Array<{
+    nome: string;
+    quantidade?: number | string;
+    unidade?: string;
+  }>;
+}
+
 export interface PrescriptionItem {
   id: string; // ID da tabela prescricoes
   prescricao_id?: string;
   item_id?: string;
   client_id: string;
   data: string;
+  data_prescricao?: string;
   medicamento: string;
+  nome_formula?: string;
   dosagem: string;
-  via: "Oral" | "Tópico";
+  via: "Oral" | "Tópico" | "oral" | "tópico";
   posologia: string;
   duracao: string;
   ativo: boolean;
+  status?: string;
+  justificativa_suspensao?: string | null;
+  data_suspensao?: string | null;
   instrucoes?: string;
+  orient_paciente?: string;
+  orient_farmacia?: string;
+  componentes?: Array<{
+    nome: string;
+    quantidade?: number | string;
+    unidade?: string;
+  }>;
+  item?: PrescriptionItemSnapshot;
   /** URL do PDF assinado (ICP-Brasil), quando já anexado */
   pdf_assinado_url?: string | null;
   data_assinatura?: string | null;

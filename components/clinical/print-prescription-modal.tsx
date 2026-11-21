@@ -11,6 +11,7 @@ import {
   generatePrescriptionPdfClient,
 } from "@/lib/utils/whatsapp-share-pdf";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
+import { parsePrescriptionDetails } from "@/lib/prescricoes/format";
 
 interface PrintPrescriptionModalProps {
   isOpen: boolean;
@@ -52,82 +53,7 @@ export function PrintPrescriptionModal({
 
   if (!isOpen) return null;
 
-  // Função para parsear a dosagem formatada e obter os detalhes estruturados
-  const parseRxDetails = (rx: PrescriptionItem) => {
-    const dosagemStr = rx.dosagem;
-    
-    let componentes: { nome: string; qtd: string }[] = [];
-    let veiculoInfo = "";
-    let dosagemInfo = "";
-    let totalInfo = "";
-    
-    try {
-      const emIndex = dosagemStr.indexOf(" em ");
-      if (emIndex !== -1) {
-        const assetsPart = dosagemStr.substring(0, emIndex);
-        componentes = assetsPart.split(" + ").map(a => {
-          const colonIdx = a.indexOf(": ");
-          if (colonIdx !== -1) {
-            return {
-              nome: a.substring(0, colonIdx).trim(),
-              qtd: a.substring(colonIdx + 2).trim()
-            };
-          }
-          return { nome: a.trim(), qtd: "" };
-        });
-        
-        const remaining = dosagemStr.substring(emIndex + 4);
-        const parenthesIndex = remaining.indexOf(" (");
-        
-        if (parenthesIndex !== -1) {
-          veiculoInfo = remaining.substring(0, parenthesIndex).trim();
-          const insideParentheses = remaining.substring(parenthesIndex + 2, remaining.length - 1);
-          
-          if (insideParentheses.includes(" | ")) {
-            const parts = insideParentheses.split(" | ");
-            dosagemInfo = parts[0].replace("Dose: ", "").trim();
-            totalInfo = parts[1].replace("Total: ", "").trim();
-          } else {
-            totalInfo = insideParentheses.replace("Total: ", "").trim();
-          }
-        } else {
-          veiculoInfo = remaining;
-        }
-      } else {
-        componentes = [{ nome: rx.medicamento, qtd: rx.dosagem }];
-      }
-    } catch (e) {
-      console.warn("Falha ao parsear dosagem", e);
-      componentes = [{ nome: rx.medicamento, qtd: rx.dosagem }];
-    }
-    
-    // Parse de orientações e farmácia
-    let orientPaciente = "";
-    let orientFarmacia = "";
-    
-    if (rx.instrucoes) {
-      if (rx.instrucoes.includes("[Observações à Farmácia Magistral]\n")) {
-        const parts = rx.instrucoes.split("[Observações à Farmácia Magistral]\n");
-        orientPaciente = parts[0].replace("[Orientações ao Paciente]\n", "").trim();
-        if (parts.length > 1) {
-          orientFarmacia = parts[1].trim();
-        }
-      } else {
-        orientPaciente = rx.instrucoes.replace("[Orientações ao Paciente]\n", "").trim();
-      }
-    }
-    
-    return {
-      componentes: componentes.length > 0 ? componentes : [{ nome: rx.medicamento, qtd: rx.dosagem }],
-      veiculo: veiculoInfo || "Veículo base adequado",
-      dosagem: dosagemInfo,
-      total: totalInfo || rx.duracao,
-      orientPaciente,
-      orientFarmacia
-    };
-  };
-
-  const rxDetails = parseRxDetails(prescription);
+  const rxDetails = parsePrescriptionDetails(prescription);
 
   const buildPrescriptionPdfFile = async (): Promise<File> => {
     const fileName = sanitizePdfFileName("Receituario", client.nome);
@@ -431,25 +357,20 @@ export function PrintPrescriptionModal({
                       <span className="text-[10px] font-bold text-slate-400 block uppercase">Veículo Base</span>
                       <span className="font-semibold text-slate-800">{rxDetails.veiculo}</span>
                     </div>
-                    {prescription.via.toLowerCase() === "oral" ? (
-                      <div className="text-right">
-                        <span className="text-[10px] font-bold text-slate-400 block uppercase">Dose / Apresentação</span>
-                        <span className="font-semibold text-slate-800">
-                          {rxDetails.dosagem ? `${rxDetails.dosagem} dose(s)` : "Cápsula vegetal"}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="text-right">
-                        <span className="text-[10px] font-bold text-slate-400 block uppercase">Dosagem (Q.S.P.)</span>
-                        <span className="font-semibold text-slate-800">{rxDetails.dosagem || "q.s.p."}</span>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                        {prescription.via.toLowerCase() === "oral" ? "Dose / Apresentação" : "Dosagem (Q.S.P.)"}
+                      </span>
+                      <span className="font-semibold text-slate-800">{rxDetails.dosagem}</span>
+                    </div>
+                    {rxDetails.total && (
+                      <div className="col-span-2 border-t border-slate-100 pt-2 flex justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 block uppercase">Quantidade Total</span>
+                          <span className="font-bold text-slate-800">{rxDetails.total}</span>
+                        </div>
                       </div>
                     )}
-                    <div className="col-span-2 border-t border-slate-100 pt-2 flex justify-between">
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400 block uppercase">Quantidade Total</span>
-                        <span className="font-bold text-slate-800">{rxDetails.total}</span>
-                      </div>
-                    </div>
                   </div>
                 )}
 

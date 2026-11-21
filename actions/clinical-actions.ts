@@ -12,6 +12,7 @@ import type {
 import type { ActionResponse } from "@/types/client";
 import { assinarPayloadSOAP } from "@/lib/crypto-payload";
 import { getSession } from "@/lib/auth/session";
+import { sanitizeVehicleText, formatPrescriptionSummaryString } from "@/lib/prescricoes/format";
 
 /**
  * Consulta Prontuário e Histórico Clínico do Paciente
@@ -133,10 +134,16 @@ export async function getPatientClinicalRecordAction(
             .map((c: any) => `${c.nome}: ${c.quantidade}${c.unidade || "%"}`)
             .join(" + ");
 
+          const cleanVeiculo = sanitizeVehicleText(item.veiculo);
           const sanitizedTipoVeiculo = item.tipo_veiculo;
-          const formattedDosagem = item.via === "oral"
-            ? `${listAtivos} em ${item.veiculo} (Dose: ${item.dosagem} | Total: ${item.duracao} ${sanitizedTipoVeiculo || "un"})`
-            : `${listAtivos} em ${item.veiculo} q.s.p. ${item.dosagem}g (Total: ${item.duracao} un)`;
+          const formattedDosagem = formatPrescriptionSummaryString({
+            ativos: listAtivos,
+            via: item.via,
+            veiculo: cleanVeiculo,
+            dosagem: item.dosagem,
+            duracao: item.duracao,
+            tipoVeiculo: sanitizedTipoVeiculo,
+          });
 
           const combinedInstrucoes = [
             item.orient_paciente ? `[Orientações ao Paciente]\n${item.orient_paciente}` : "",
@@ -150,12 +157,33 @@ export async function getPatientClinicalRecordAction(
             client_id: clientId,
             data: p.data_prescricao || new Date().toISOString().split("T")[0],
             medicamento: item.nome_formula,
+            nome_formula: item.nome_formula,
             dosagem: formattedDosagem,
             via: item.via === "oral" ? "Oral" : "Tópico",
             posologia: item.posologia || "",
-            duracao: item.via === "oral" ? `${item.duracao} ${sanitizedTipoVeiculo || "un"}` : "Uso recomendado",
+            duracao: item.via === "oral" ? `${item.duracao} ${sanitizedTipoVeiculo || "dose(s)"}` : "Uso recomendado",
             ativo: p.status === "Ativo",
+            status: p.status,
             instrucoes: combinedInstrucoes || undefined,
+            orient_paciente: item.orient_paciente || undefined,
+            orient_farmacia: item.orient_farmacia || undefined,
+            componentes: snap.map((c: any) => ({
+              nome: c.nome,
+              quantidade: c.quantidade,
+              unidade: c.unidade || "%",
+            })),
+            item: {
+              nome_formula: item.nome_formula,
+              via: item.via,
+              veiculo: cleanVeiculo || null,
+              dosagem: item.dosagem,
+              tipo_veiculo: sanitizedTipoVeiculo,
+              posologia: item.posologia,
+              duracao: item.duracao,
+              orient_paciente: item.orient_paciente,
+              orient_farmacia: item.orient_farmacia,
+              componentes_snapshot: snap,
+            },
             pdf_assinado_url: p.pdf_assinado_url ?? null,
             data_assinatura: p.data_assinatura ?? null,
           });
@@ -955,7 +983,7 @@ export async function addStructuredPrescriptionAction(
     };
 
     const cleanFormulaName = input.nome_formula.trim();
-    const cleanVeiculo = input.veiculo ? input.veiculo.trim() : "";
+    const cleanVeiculo = sanitizeVehicleText(input.veiculo);
     const normalizedVia = (input.via?.toLowerCase() === "oral" ? "oral" : "tópico") as "oral" | "tópico";
 
     const validTiposVeiculo = ["dose(s)", "sachê(s)", "comprimido(s)"];
@@ -1206,10 +1234,15 @@ export async function addStructuredPrescriptionAction(
       .map((c) => `${c.nome}: ${c.quantidade}${c.unidade_sigla || "%"}`)
       .join(" + ");
 
-    const formattedDosagem =
-      normalizedVia === "oral"
-        ? `${listAtivos} em ${cleanVeiculo} (Dose: ${input.dosagem_valor} | Total: ${input.total_veiculo} ${sanitizedTipoVeiculo || "un"})`
-        : `${listAtivos} em ${cleanVeiculo} q.s.p. ${input.dosagem_valor}${input.dosagem_unidade || "g"} (Total: ${input.total_veiculo} un)`;
+    const formattedDosagem = formatPrescriptionSummaryString({
+      ativos: listAtivos,
+      via: normalizedVia,
+      veiculo: cleanVeiculo,
+      dosagem: input.dosagem_valor,
+      dosagemUnidade: input.dosagem_unidade || "g",
+      duracao: input.total_veiculo,
+      tipoVeiculo: sanitizedTipoVeiculo,
+    });
 
     const combinedInstrucoes = [
       input.orient_paciente ? `[Orientações ao Paciente]\n${input.orient_paciente}` : "",
@@ -1225,12 +1258,30 @@ export async function addStructuredPrescriptionAction(
       client_id: clientId,
       data: new Date().toISOString().split("T")[0],
       medicamento: cleanFormulaName,
+      nome_formula: cleanFormulaName,
       dosagem: formattedDosagem,
       via: normalizedVia === "oral" ? "Oral" : "Tópico",
       posologia: input.posologia.trim(),
-      duracao: normalizedVia === "oral" ? `${input.total_veiculo} ${sanitizedTipoVeiculo || "un"}` : "Uso recomendado",
+      duracao: normalizedVia === "oral" ? `${input.total_veiculo} ${sanitizedTipoVeiculo || "dose(s)"}` : "Uso recomendado",
       ativo: true,
+      status: "Ativo",
       instrucoes: combinedInstrucoes || undefined,
+      orient_paciente: input.orient_paciente || undefined,
+      orient_farmacia: input.orient_farmacia || undefined,
+      componentes: componentsSnapshot,
+      item: {
+        nome_formula: cleanFormulaName,
+        via: normalizedVia,
+        veiculo: cleanVeiculo || null,
+        dosagem: numDosagem,
+        dosagem_unidade: normalizedVia === "tópico" ? (input.dosagem_unidade || "g") : null,
+        tipo_veiculo: sanitizedTipoVeiculo,
+        posologia: input.posologia.trim(),
+        duracao: String(numTotalVeiculo),
+        orient_paciente: input.orient_paciente || null,
+        orient_farmacia: input.orient_farmacia || null,
+        componentes_snapshot: componentsSnapshot,
+      },
     };
 
     revalidatePath("/");
@@ -1406,7 +1457,7 @@ export async function updateStructuredPrescriptionAction(
     };
 
     const cleanFormulaName = input.nome_formula.trim();
-    const cleanVeiculo = input.veiculo ? input.veiculo.trim() : "";
+    const cleanVeiculo = sanitizeVehicleText(input.veiculo);
     const normalizedVia = (input.via?.toLowerCase() === "oral" ? "oral" : "tópico") as "oral" | "tópico";
     const validTiposVeiculo = ["dose(s)", "sachê(s)", "comprimido(s)"];
     const sanitizedTipoVeiculo = validTiposVeiculo.includes(input.tipo_veiculo) ? input.tipo_veiculo : null;
