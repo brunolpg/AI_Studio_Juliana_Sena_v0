@@ -198,7 +198,7 @@ export function PrintExamPrescriptionModal({
                       onEdit(prescricao);
                       onClose();
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] text-xs font-semibold rounded-md-full border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-full border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
                   >
                     <Edit2 className="w-3.5 h-3.5 text-primary" />
                     <span>Editar Prescrição</span>
@@ -208,7 +208,7 @@ export function PrintExamPrescriptionModal({
                 <button
                   type="button"
                   onClick={() => setShowSuspendPrompt(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] text-xs font-semibold rounded-md-full border border-error/30 bg-error-container/60 text-on-error-container hover:bg-error-container transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-full border border-error/30 bg-error-container/60 text-on-error-container hover:bg-error-container transition-colors cursor-pointer"
                 >
                   <Archive className="w-3.5 h-3.5 text-error" />
                   <span>Suspender</span>
@@ -220,7 +220,7 @@ export function PrintExamPrescriptionModal({
             <button
               type="button"
               onClick={() => setIsNotificationModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 min-h-[44px] text-xs font-semibold rounded-md-full border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-full border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
               title="Compartilhar relatório em PDF"
             >
               <Share2 className="w-3.5 h-3.5 text-primary" />
@@ -232,12 +232,12 @@ export function PrintExamPrescriptionModal({
               type="button"
               onClick={handlePrint}
               disabled={isGeneratingPdf}
-              className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold rounded-md-full bg-primary text-on-primary hover:brightness-105 transition-all shadow-sm cursor-pointer disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-full border border-transparent bg-primary text-on-primary hover:brightness-105 transition-all shadow-sm cursor-pointer disabled:opacity-60"
             >
               {isGeneratingPdf ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <Printer className="w-4 h-4" />
+                <Printer className="w-3.5 h-3.5" />
               )}
               <span>{isGeneratingPdf ? "Gerando PDF..." : "Imprimir / Gerar PDF"}</span>
             </button>
