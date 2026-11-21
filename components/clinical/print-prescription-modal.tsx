@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { X, Printer, FileText, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { X, Printer, FileText, PanelLeftClose, PanelLeftOpen, Loader2 } from "lucide-react";
 import type { PrescriptionItem } from "@/types/clinical-record";
 import type { Client } from "@/types/client";
 import {
   sanitizePdfFileName,
   sharePdfViaWhatsApp,
-  generateGenericClinicalPdf,
+  downloadPdfFile,
+  generatePrescriptionPdfClient,
 } from "@/lib/utils/whatsapp-share-pdf";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
@@ -26,15 +27,16 @@ function formatCPF(cpf?: string): string {
 }
 
 function formatDateToPortuguese(dateStr?: string): string {
-  const date = dateStr ? new Date(dateStr + "T12:00:00") : new Date();
-  const months = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-  ];
-  const day = date.getDate();
-  const month = months[date.getMonth()];
-  const year = date.getFullYear();
-  return `Salvador - BA, ${day} de ${month} de ${year}`;
+  const clean = dateStr ? dateStr.split("T")[0] : null;
+  const date = clean ? new Date(`${clean}T12:00:00-03:00`) : new Date();
+  const formatted = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(Number.isNaN(date.getTime()) ? new Date() : date);
+  const capitalized = formatted.replace(/ de ([a-zç])/i, (_, ch: string) => ` de ${ch.toUpperCase()}`);
+  return `Salvador - BA, ${capitalized}`;
 }
 
 export function PrintPrescriptionModal({
@@ -46,6 +48,7 @@ export function PrintPrescriptionModal({
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   if (!isOpen) return null;
 
@@ -126,69 +129,46 @@ export function PrintPrescriptionModal({
 
   const rxDetails = parseRxDetails(prescription);
 
+  const buildPrescriptionPdfFile = async (): Promise<File> => {
+    const fileName = sanitizePdfFileName("Receituario", client.nome);
+    const targetId = (prescription as any).prescricao_id || prescription.id;
+
+    if (targetId) {
+      try {
+        const res = await fetch(`/api/prescricoes/${targetId}/pdf`, {
+          credentials: "same-origin",
+        });
+        if (res.ok) {
+          const blob = await res.blob();
+          return new File([blob], fileName, { type: "application/pdf" });
+        }
+      } catch (e) {
+        console.warn("Falha ao obter PDF do servidor, gerando em memória via pdf-lib:", e);
+      }
+    }
+
+    return generatePrescriptionPdfClient({
+      fileName,
+      id: targetId,
+      patientName: client.nome,
+      patientCpf: client.cpf,
+      dataPrescricao: prescription.data || (prescription as any).data_prescricao || undefined,
+      medicamento: prescription.medicamento,
+      via: prescription.via,
+      componentes: rxDetails.componentes,
+      veiculo: rxDetails.veiculo,
+      dosagem: rxDetails.dosagem,
+      total: rxDetails.total,
+      posologia: prescription.posologia,
+      orientPaciente: rxDetails.orientPaciente,
+      orientFarmacia: rxDetails.orientFarmacia,
+    });
+  };
+
   const handleShareWhatsApp = async () => {
     try {
       setIsSharingWhatsApp(true);
-      const fileName = sanitizePdfFileName("Receituario", client.nome);
-
-      let pdfFile: File | null = null;
-      const targetId = (prescription as any).prescricao_id || prescription.id;
-
-      if (targetId) {
-        try {
-          const res = await fetch(`/api/prescricoes/${targetId}/pdf`);
-          if (res.ok) {
-            const blob = await res.blob();
-            pdfFile = new File([blob], fileName, { type: "application/pdf" });
-          }
-        } catch (e) {
-          console.warn("Falha ao obter PDF do servidor, gerando em memória via pdf-lib:", e);
-        }
-      }
-
-      if (!pdfFile) {
-        pdfFile = await generateGenericClinicalPdf({
-          fileName,
-          title: "Receituário & Prescrição Clínica",
-          subtitle: `Prescrição: ${prescription.medicamento} (Uso ${prescription.via})`,
-          patientName: client.nome,
-          patientCpf: formatCPF(client.cpf),
-          patientPhone: client.telefone || (client as any).whatsapp,
-          dateStr: prescription.data_prescricao || undefined,
-          sections: [
-            {
-              title: "Medicamento / Fórmula Magistral",
-              badge: `Uso ${prescription.via}`,
-              paragraph: prescription.medicamento,
-            },
-            {
-              title: "Composição & Dosagem",
-              items: rxDetails.componentes.map((c) => `${c.nome}: ${c.qtd}`),
-              paragraph: `Veículo: ${rxDetails.veiculo}${rxDetails.total ? ` | Quantidade Total: ${rxDetails.total}` : ""}`,
-            },
-            {
-              title: "Posologia & Modo de Uso",
-              paragraph: prescription.posologia || "Conforme orientação profissional.",
-            },
-            ...(rxDetails.orientPaciente
-              ? [
-                  {
-                    title: "Orientações ao Paciente",
-                    paragraph: rxDetails.orientPaciente,
-                  },
-                ]
-              : []),
-            ...(rxDetails.orientFarmacia
-              ? [
-                  {
-                    title: "Observações à Farmácia Magistral",
-                    paragraph: rxDetails.orientFarmacia,
-                  },
-                ]
-              : []),
-          ],
-        });
-      }
+      const pdfFile = await buildPrescriptionPdfFile();
 
       await sharePdfViaWhatsApp({
         file: pdfFile,
@@ -203,118 +183,16 @@ export function PrintPrescriptionModal({
     }
   };
 
-  const handlePrint = () => {
-    const printContent = printAreaRef.current;
-    if (!printContent) return;
-
-    // Cria um iframe invisível no DOM
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-    iframe.style.zIndex = "-9999";
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) return;
-
-    // Clona folhas de estilos e fontes da página principal
-    const styles = Array.from(document.querySelectorAll("link[rel='stylesheet'], style"))
-      .map((style) => style.outerHTML)
-      .join("\n");
-
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-        <head>
-          <meta charset="utf-8" />
-          <title></title>
-          ${styles}
-          <style>
-            /* Margens físicas oficiais aplicadas de forma uniforme em TODAS as páginas */
-            @page {
-              size: A4 portrait;
-              margin: 16mm 14mm 16mm 14mm;
-            }
-
-            *, *::before, *::after {
-              box-sizing: border-box;
-            }
-
-            html, body {
-              margin: 0 !important;
-              padding: 0 !important;
-              background: #ffffff !important;
-              color: #0f172a !important;
-              font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              width: 100% !important;
-              height: auto !important;
-              overflow: visible !important;
-            }
-
-            /* O container interno não deve ter padding extra para não somar com o @page */
-            .print-wrapper {
-              width: 100% !important;
-              max-width: 100% !important;
-              padding: 0 !important;
-              margin: 0 !important;
-              background: #ffffff !important;
-            }
-
-            /* Evita corte no meio de cards, linhas de tabelas e tópicos */
-            .print-avoid-break {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-
-            table, tr, td, th {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-
-            thead {
-              display: table-header-group !important;
-            }
-
-            /* Margem de segurança acima de seções na quebra de página */
-            h3, .section-title {
-              break-after: avoid !important;
-              page-break-after: avoid !important;
-            }
-
-            /* Bloco de assinatura e data */
-            .print-footer {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-              margin-top: 28px !important;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="print-wrapper">
-            ${printContent.innerHTML}
-          </div>
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    // Dispara a impressão a partir do iframe após o carregamento dos recursos
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      }, 1200);
-    }, 400);
+  const handlePrint = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const pdfFile = await buildPrescriptionPdfFile();
+      downloadPdfFile(pdfFile);
+    } catch (err) {
+      console.error("Erro ao gerar PDF do receituário:", err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   return (
@@ -383,19 +261,28 @@ export function PrintPrescriptionModal({
             <button
               type="button"
               onClick={handleShareWhatsApp}
-              disabled={isSharingWhatsApp}
+              disabled={isSharingWhatsApp || isGeneratingPdf}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
-              <WhatsAppIcon className="w-4 h-4 shrink-0" />
+              {isSharingWhatsApp ? (
+                <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+              ) : (
+                <WhatsAppIcon className="w-4 h-4 shrink-0" />
+              )}
               <span>{isSharingWhatsApp ? "Preparando envio..." : "Enviar pelo WhatsApp"}</span>
             </button>
             <button
               type="button"
               onClick={handlePrint}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all shadow-xs cursor-pointer"
+              disabled={isGeneratingPdf || isSharingWhatsApp}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
-              <Printer className="w-4 h-4" />
-              <span>Imprimir / Gerar PDF</span>
+              {isGeneratingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Printer className="w-4 h-4" />
+              )}
+              <span>{isGeneratingPdf ? "Gerando PDF..." : "Imprimir / Gerar PDF"}</span>
             </button>
             <button
               type="button"
@@ -440,7 +327,7 @@ export function PrintPrescriptionModal({
           >
             <div>
               {/* Cabeçalho do Relatório */}
-              <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-6 w-full">
+              <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-6 w-full print-avoid-break break-inside-avoid">
                 {/* Lado Esquerdo: Logo + Coluna com Título, Nome e Especialidade */}
                 <div className="flex items-center gap-4">
                   {/* Logo da Clínica */}
@@ -479,7 +366,7 @@ export function PrintPrescriptionModal({
               </div>
 
               {/* Identificação do Paciente */}
-              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6 print-avoid-break">
+              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6 print-avoid-break break-inside-avoid">
                 <div>
                   <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
                     PACIENTE
@@ -500,44 +387,46 @@ export function PrintPrescriptionModal({
 
               {/* Corpo da Prescrição */}
               <div className="mt-8 space-y-6">
-                <div>
-                  <div className="flex items-baseline justify-between">
-                    <h3 className="text-base font-black text-slate-900">{prescription.medicamento}</h3>
-                    <span className="text-xs font-bold text-slate-500">Uso {prescription.via}</span>
+                <div className="space-y-4 print-avoid-break break-inside-avoid">
+                  <div>
+                    <div className="flex items-baseline justify-between">
+                      <h3 className="text-base font-black text-slate-900">{prescription.medicamento}</h3>
+                      <span className="text-xs font-bold text-slate-500">Uso {prescription.via}</span>
+                    </div>
+                    {prescription.dosagem && !rxDetails.veiculo && (
+                      <p className="text-xs text-slate-500 mt-1">{prescription.dosagem}</p>
+                    )}
                   </div>
-                  {prescription.dosagem && !rxDetails.veiculo && (
-                    <p className="text-xs text-slate-500 mt-1">{prescription.dosagem}</p>
+
+                  {/* Composição / Componentes */}
+                  {rxDetails.componentes && rxDetails.componentes.length > 0 && (
+                    <div className="space-y-2 print-avoid-break break-inside-avoid">
+                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fórmula Ativa</h4>
+                      <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                            <tr>
+                              <th className="px-4 py-2">Componente / Ativo</th>
+                              <th className="px-4 py-2 text-right">Concentração</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 bg-white">
+                            {rxDetails.componentes.map((comp, idx) => (
+                              <tr key={idx}>
+                                <td className="px-4 py-2 font-medium text-slate-800">{comp.nome}</td>
+                                <td className="px-4 py-2 text-right font-bold text-slate-700">{comp.qtd}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   )}
                 </div>
 
-                {/* Composição / Componentes */}
-                {rxDetails.componentes && rxDetails.componentes.length > 0 && (
-                  <div className="space-y-2 print-avoid-break">
-                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fórmula Ativa</h4>
-                    <div className="border border-slate-200 rounded-lg overflow-hidden">
-                      <table className="w-full text-xs text-left">
-                        <thead className="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
-                          <tr>
-                            <th className="px-4 py-2">Componente / Ativo</th>
-                            <th className="px-4 py-2 text-right">Concentração</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                          {rxDetails.componentes.map((comp, idx) => (
-                            <tr key={idx}>
-                              <td className="px-4 py-2 font-medium text-slate-800">{comp.nome}</td>
-                              <td className="px-4 py-2 text-right font-bold text-slate-700">{comp.qtd}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
                 {/* Veículo & Apresentação */}
                 {rxDetails.veiculo && (
-                  <div className="grid grid-cols-2 gap-4 border border-slate-200 rounded-lg p-3 bg-white text-xs print-avoid-break">
+                  <div className="grid grid-cols-2 gap-4 border border-slate-200 rounded-lg p-3 bg-white text-xs print-avoid-break break-inside-avoid">
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 block uppercase">Veículo Base</span>
                       <span className="font-semibold text-slate-800">{rxDetails.veiculo}</span>
@@ -565,7 +454,7 @@ export function PrintPrescriptionModal({
                 )}
 
                 {/* Posologia */}
-                <div className="border-l-4 border-slate-800 bg-slate-50 p-4 rounded-r-xl print-avoid-break">
+                <div className="border-l-4 border-slate-800 bg-slate-50 p-4 rounded-r-xl print-avoid-break break-inside-avoid">
                   <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1.5">
                     POSOLOGIA (Frequência & Horários)
                   </h4>
@@ -576,7 +465,7 @@ export function PrintPrescriptionModal({
 
                 {/* Orientações ao Paciente */}
                 {rxDetails.orientPaciente && (
-                  <div className="space-y-1.5 print-avoid-break">
+                  <div className="space-y-1.5 print-avoid-break break-inside-avoid">
                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       Orientações ao Paciente / Instruções Especiais
                     </h4>
@@ -588,7 +477,7 @@ export function PrintPrescriptionModal({
 
                 {/* Observações à Farmácia */}
                 {rxDetails.orientFarmacia && (
-                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 print-avoid-break">
+                  <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 print-avoid-break break-inside-avoid">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                       Observações Técnicas à Farmácia Magistral
                     </span>
@@ -601,13 +490,13 @@ export function PrintPrescriptionModal({
             </div>
 
             {/* Rodapé e Bloco de Assinatura */}
-            <div className="mt-auto pt-6 border-t border-slate-200 space-y-4 print-footer">
+            <div className="mt-auto pt-6 border-t border-slate-200 space-y-4 print-footer print-avoid-break break-inside-avoid">
               <div className="text-center text-xs text-slate-700">
                 <span>{formatDateToPortuguese(prescription.data)}</span>
               </div>
 
               {/* Bloco de Assinatura Digital VIDaaS */}
-              <div className="flex flex-col items-center justify-center p-3 border-2 border-dashed border-teal-600/40 rounded-xl bg-teal-50/20 max-w-sm mx-auto text-center">
+              <div className="flex flex-col items-center justify-center p-3 border-2 border-dashed border-teal-600/40 rounded-xl bg-white max-w-sm mx-auto text-center">
                 <span className="text-[11px] font-bold text-slate-900">
                   Juliana Sena de Souza Vieira
                 </span>

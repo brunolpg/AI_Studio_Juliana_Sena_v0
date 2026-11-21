@@ -1,4 +1,6 @@
-import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, PDFFont, PDFImage, PDFPage, StandardFonts, rgb } from "pdf-lib";
+// @ts-expect-error @pdf-lib/fontkit não possui declarações completas para ESM/CJS
+import fontkit from "@pdf-lib/fontkit";
 import type { PrescricaoExame } from "@/types/prescricao-exame";
 
 export interface ExamPrescriptionPatientInfo {
@@ -10,10 +12,10 @@ export interface ExamPrescriptionPatientInfo {
 
 const CLINIC_INFO = {
   profissional: "Dra. Juliana Sena",
-  subtitulo: "Biomedicina Estética & Práticas Integrativas em Saúde • COREN-BA 366.344",
+  subtitulo: "Biomedicina Estética & Práticas Integrativas em Saúde",
   local: "Salvador - Bahia • Atendimento Personalizado",
   rodape:
-    "Dra. Juliana Sena • Biomedicina Estética & Práticas Integrativas em Saúde • COREN-BA 366.344 • Salvador - BA • (71) 98661-2878",
+    "Dra. Juliana Sena • Biomedicina Estética & Práticas Integrativas em Saúde • Salvador - BA • Telefone: (71) 98661-2878 • COREN-BA 366.344",
 } as const;
 
 const PAGE_W = 595.28;
@@ -21,21 +23,27 @@ const PAGE_H = 841.89;
 const MARGIN = 40;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 const FOOTER_RESERVED = 44;
+const MAX_USABLE_PAGE_H = PAGE_H - MARGIN * 2 - FOOTER_RESERVED;
 
+// Paleta 1:1 com tokens MD4 (app/globals.css) e print-exam-prescription-modal.tsx
 const C = {
-  primary: rgb(0, 0.302, 0.251), // #004d40
-  primarySoftBg: rgb(0.925, 0.976, 0.965),
-  primaryBorder: rgb(0.745, 0.906, 0.875),
-  ink: rgb(0.06, 0.09, 0.16),
-  text: rgb(0.2, 0.25, 0.33),
-  muted: rgb(0.39, 0.45, 0.55),
-  faint: rgb(0.55, 0.61, 0.69),
-  line: rgb(0.87, 0.9, 0.93),
-  panel: rgb(0.973, 0.98, 0.988),
-  white: rgb(1, 1, 1),
-  error: rgb(0.72, 0.11, 0.11),
-  errorBg: rgb(0.996, 0.945, 0.945),
-  errorBorder: rgb(0.945, 0.78, 0.78),
+  primary: rgb(0.051, 0.58, 0.533), // #0d9488
+  primaryContainer: rgb(0.8, 0.984, 0.945), // #ccfbf1
+  onPrimaryContainer: rgb(0.067, 0.369, 0.349), // #115e59
+  primaryBorderSoft: rgb(0.698, 0.875, 0.859), // primary/30 blended
+  primaryHeaderLine: rgb(0.812, 0.918, 0.906), // primary/20 blended
+  ink: rgb(0.059, 0.09, 0.165), // #0f172a (on-surface)
+  text: rgb(0.2, 0.255, 0.333), // #334155
+  muted: rgb(0.278, 0.333, 0.412), // #475569 (on-surface-variant)
+  faint: rgb(0.58, 0.639, 0.722), // #94a3b8
+  line: rgb(0.796, 0.835, 0.882), // #cbd5e1 (outline-variant)
+  panelLow: rgb(0.973, 0.98, 0.988), // #f8fafc (surface-container-low)
+  panel: rgb(0.945, 0.961, 0.976), // #f1f5f9 (surface-container)
+  white: rgb(1, 1, 1), // #ffffff (surface-container-lowest)
+  error: rgb(0.863, 0.149, 0.149), // #dc2626
+  onErrorContainer: rgb(0.498, 0.114, 0.114), // #7f1d1d
+  errorBg: rgb(0.996, 0.886, 0.886), // #fee2e2
+  errorBorder: rgb(0.945, 0.722, 0.722), // error/30
 };
 
 const CHAR_REPLACEMENTS: Record<string, string> = {
@@ -54,6 +62,49 @@ const CHAR_REPLACEMENTS: Record<string, string> = {
   "…": "...",
   "•": "•",
 };
+
+let regularFontBytesCache: Uint8Array | null | undefined;
+let boldFontBytesCache: Uint8Array | null | undefined;
+let logoBytesCache: Uint8Array | null | undefined;
+
+async function loadPublicAssetBytes(relativePath: string): Promise<Uint8Array | null> {
+  try {
+    if (typeof window !== "undefined") {
+      const res = await fetch(`/${relativePath}`);
+      if (!res.ok) return null;
+      return new Uint8Array(await res.arrayBuffer());
+    }
+    const fs = await import(/* webpackIgnore: true */ "node:fs");
+    const path = await import(/* webpackIgnore: true */ "node:path");
+    const fullPath = path.join(process.cwd(), "public", ...relativePath.split("/"));
+    if (!fs.existsSync(fullPath)) return null;
+    return new Uint8Array(fs.readFileSync(fullPath));
+  } catch {
+    return null;
+  }
+}
+
+async function loadPlusJakartaFonts(): Promise<{ regular: Uint8Array; bold: Uint8Array } | null> {
+  if (regularFontBytesCache === undefined || boldFontBytesCache === undefined) {
+    const [reg, bld] = await Promise.all([
+      loadPublicAssetBytes("fonts/PlusJakartaSans-Regular.ttf"),
+      loadPublicAssetBytes("fonts/PlusJakartaSans-Bold.ttf"),
+    ]);
+    regularFontBytesCache = reg;
+    boldFontBytesCache = bld;
+  }
+  if (regularFontBytesCache && boldFontBytesCache) {
+    return { regular: regularFontBytesCache, bold: boldFontBytesCache };
+  }
+  return null;
+}
+
+async function loadClinicLogoBytes(): Promise<Uint8Array | null> {
+  if (logoBytesCache === undefined) {
+    logoBytesCache = await loadPublicAssetBytes("logo-clinica.png");
+  }
+  return logoBytesCache;
+}
 
 function getTodayIsoSaoPaulo(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -76,7 +127,7 @@ function formatDateBR(dateStr?: string | null): string {
     return `${parts[2].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[0]}`;
   }
   const parsed = new Date(dateStr);
-  if (!isNaN(parsed.getTime())) {
+  if (!Number.isNaN(parsed.getTime())) {
     return new Intl.DateTimeFormat("pt-BR", {
       timeZone: "America/Sao_Paulo",
       day: "2-digit",
@@ -90,7 +141,7 @@ function formatDateBR(dateStr?: string | null): string {
 function formatDateTimeBR(isoStr?: string | null, fallbackDate?: string | null): string {
   if (isoStr) {
     const parsed = new Date(isoStr);
-    if (!isNaN(parsed.getTime())) {
+    if (!Number.isNaN(parsed.getTime())) {
       return new Intl.DateTimeFormat("pt-BR", {
         timeZone: "America/Sao_Paulo",
         day: "2-digit",
@@ -115,7 +166,7 @@ function formatCpf(cpf?: string | null): string {
 function sanitizeText(font: PDFFont, input: string): string {
   const supported = new Set(font.getCharacterSet());
   let out = "";
-  for (const ch of String(input).normalize("NFC")) {
+  for (const ch of String(input || "").normalize("NFC")) {
     const cp = ch.codePointAt(0);
     if (cp === undefined) continue;
     if (ch === "\n") {
@@ -267,9 +318,35 @@ export async function buildExamPrescriptionPdf(
   paciente?: ExamPrescriptionPatientInfo
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  const regular = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  pdf.registerFontkit(fontkit);
+
+  let regular: PDFFont;
+  let bold: PDFFont;
   const mono = await pdf.embedFont(StandardFonts.Courier);
+
+  const fontBytes = await loadPlusJakartaFonts();
+  if (fontBytes) {
+    try {
+      regular = await pdf.embedFont(fontBytes.regular);
+      bold = await pdf.embedFont(fontBytes.bold);
+    } catch {
+      regular = await pdf.embedFont(StandardFonts.Helvetica);
+      bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+    }
+  } else {
+    regular = await pdf.embedFont(StandardFonts.Helvetica);
+    bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  }
+
+  let embeddedLogo: PDFImage | null = null;
+  const logoBytes = await loadClinicLogoBytes();
+  if (logoBytes) {
+    try {
+      embeddedLogo = await pdf.embedPng(logoBytes);
+    } catch {
+      embeddedLogo = null;
+    }
+  }
 
   const patientName =
     paciente?.nome?.trim() ||
@@ -290,10 +367,20 @@ export async function buildExamPrescriptionPdf(
   let page: PDFPage = pdf.addPage([PAGE_W, PAGE_H]);
   let y = PAGE_H - MARGIN;
 
-  const ensureSpace = (neededHeight: number) => {
+  const addPage = () => {
+    page = pdf.addPage([PAGE_W, PAGE_H]);
+    y = PAGE_H - MARGIN;
+  };
+
+  const ensureGroup = (neededHeight: number) => {
+    if (neededHeight <= MAX_USABLE_PAGE_H && y - neededHeight < MARGIN + FOOTER_RESERVED) {
+      addPage();
+    }
+  };
+
+  const ensureLine = (neededHeight: number) => {
     if (y - neededHeight < MARGIN + FOOTER_RESERVED) {
-      page = pdf.addPage([PAGE_W, PAGE_H]);
-      y = PAGE_H - MARGIN;
+      addPage();
     }
   };
 
@@ -330,6 +417,8 @@ export async function buildExamPrescriptionPdf(
       size?: number;
       color?: ReturnType<typeof rgb>;
       leading?: number;
+      align?: "left" | "right" | "center";
+      width?: number;
     } = {}
   ) => {
     const font = opts.font ?? regular;
@@ -341,6 +430,8 @@ export async function buildExamPrescriptionPdf(
           font,
           size,
           color: opts.color ?? C.text,
+          align: opts.align,
+          width: opts.width,
         });
       }
     });
@@ -348,90 +439,108 @@ export async function buildExamPrescriptionPdf(
   };
 
   // ============================================================================
-  // 1. CABEÇALHO INSTITUCIONAL
+  // 1. CABEÇALHO INSTITUCIONAL (1:1 com print-exam-prescription-modal.tsx)
   // ============================================================================
   const headerTopY = y;
+  let leftTextX = MARGIN;
 
-  // Lado esquerdo: Identidade da Profissional
-  drawText(CLINIC_INFO.profissional, MARGIN, headerTopY - 16, {
+  if (embeddedLogo) {
+    const logoH = 42;
+    const scale = logoH / embeddedLogo.height;
+    const logoW = embeddedLogo.width * scale;
+    page.drawImage(embeddedLogo, {
+      x: MARGIN,
+      y: headerTopY - logoH,
+      width: logoW,
+      height: logoH,
+    });
+    leftTextX = MARGIN + logoW + 12;
+  }
+
+  // Lado direito: Badge dinâmico com prescricao.titulo + Emissão
+  const badgeLabel = (prescricao.titulo?.trim() || "Prescrição de Exames").toUpperCase();
+  const badgeFontSize = 7.4;
+  const badgeMaxInnerW = 190;
+  const badgeLines = wrapText(badgeLabel, bold, badgeFontSize, badgeMaxInnerW);
+  const badgeLongestLineW = Math.max(
+    ...badgeLines.map((ln) => bold.widthOfTextAtSize(sanitizeText(bold, ln), badgeFontSize)),
+    70
+  );
+  const badgeW = Math.min(badgeMaxInnerW + 18, badgeLongestLineW + 18);
+  const badgeH = Math.max(18, badgeLines.length * 10 + 8);
+  const badgeX = PAGE_W - MARGIN - badgeW;
+  const badgeY = headerTopY - badgeH - 2;
+
+  const leftColMaxW = Math.max(140, badgeX - leftTextX - 12);
+  const subtitleLines = wrapText(CLINIC_INFO.subtitulo, regular, 8.2, leftColMaxW);
+  const localLines = wrapText(CLINIC_INFO.local, regular, 7.8, leftColMaxW);
+
+  drawText(CLINIC_INFO.profissional, leftTextX, headerTopY - 14, {
     font: bold,
-    size: 18,
+    size: 15,
     color: C.primary,
   });
-  drawText(CLINIC_INFO.subtitulo, MARGIN, headerTopY - 30, {
-    font: bold,
-    size: 8.2,
-    color: C.text,
-  });
-  drawText(CLINIC_INFO.local, MARGIN, headerTopY - 42, {
-    font: regular,
-    size: 8,
-    color: C.muted,
-  });
-
-  // Lado direito: Badge SOLICITAÇÃO DE EXAMES LABORATORIAIS + Emissão
-  const badgeLabel = "SOLICITAÇÃO DE EXAMES LABORATORIAIS";
-  const badgeFontSize = 7.2;
-  const badgeTextW = bold.widthOfTextAtSize(sanitizeText(bold, badgeLabel), badgeFontSize);
-  const badgeW = badgeTextW + 16;
-  const badgeH = 18;
-  const badgeX = PAGE_W - MARGIN - badgeW;
-  const badgeY = headerTopY - 20;
+  const afterSubY =
+    headerTopY - 19 - drawLines(subtitleLines, leftTextX, headerTopY - 19, {
+      font: regular,
+      size: 8.2,
+      color: C.muted,
+      leading: 11,
+    });
+  const afterLocalY =
+    afterSubY -
+    drawLines(localLines, leftTextX, afterSubY - 1, {
+      font: regular,
+      size: 7.8,
+      color: C.muted,
+      leading: 10.5,
+    });
 
   drawRoundedRectangle(page, {
     x: badgeX,
     y: badgeY,
     width: badgeW,
     height: badgeH,
-    borderRadius: 9,
-    color: C.primarySoftBg,
-    borderColor: C.primaryBorder,
+    borderRadius: Math.min(9, badgeH / 2),
+    color: C.primaryContainer,
+    borderColor: C.primaryBorderSoft,
     borderWidth: 0.8,
   });
 
-  drawText(badgeLabel, badgeX, badgeY + 6.2, {
+  drawLines(badgeLines, badgeX + 9, badgeY + badgeH - 4, {
     font: bold,
     size: badgeFontSize,
-    color: C.primary,
+    color: C.onPrimaryContainer,
+    leading: 10,
     align: "center",
-    width: badgeW,
+    width: badgeW - 18,
   });
 
-  drawText(`Emissão: ${emissionDateBR}`, MARGIN, headerTopY - 34, {
-    font: bold,
-    size: 8.5,
+  const emissionBaselineY = badgeY - 12;
+  drawText(`Emissão: ${emissionDateBR}`, MARGIN, emissionBaselineY, {
+    font: regular,
+    size: 8.2,
     color: C.muted,
     align: "right",
     width: CONTENT_W,
   });
 
-  if (
-    prescricao.titulo &&
-    prescricao.titulo.trim().toLowerCase() !== "solicitação de exames laboratoriais"
-  ) {
-    const titleRightLines = wrapText(prescricao.titulo.trim(), regular, 7.8, 195);
-    drawText(titleRightLines[0], MARGIN, headerTopY - 45, {
-      font: regular,
-      size: 7.8,
-      color: C.text,
-      align: "right",
-      width: CONTENT_W,
-    });
-  }
+  const leftBottomY = Math.min(headerTopY - 44, afterLocalY - 4);
+  const rightBottomY = emissionBaselineY - 6;
+  y = Math.min(leftBottomY, rightBottomY) - 6;
 
-  y = headerTopY - 56;
   page.drawLine({
     start: { x: MARGIN, y },
     end: { x: PAGE_W - MARGIN, y },
     thickness: 1.5,
-    color: C.primary,
+    color: C.primaryHeaderLine,
   });
-  y -= 14;
+  y -= 16;
 
   // ============================================================================
-  // 2. QUADRO IDENTIFICAÇÃO DO PACIENTE
+  // 2. IDENTIFICAÇÃO DO PACIENTE (Card indivisível 1:1 com modal)
   // ============================================================================
-  const col1W = CONTENT_W * 0.48 - 14;
+  const col1W = CONTENT_W * 0.46 - 14;
   const col3W = CONTENT_W * 0.28 - 14;
   const nameLines = wrapText(patientName, bold, 10, col1W);
   const ageText =
@@ -442,14 +551,14 @@ export async function buildExamPrescriptionPdf(
   const maxPatientLines = Math.max(nameLines.length, ageStatusLines.length, 1);
   const patientBoxH = 38 + maxPatientLines * 13;
 
-  ensureSpace(patientBoxH + 12);
+  ensureGroup(patientBoxH + 14);
   drawRoundedRectangle(page, {
     x: MARGIN,
     y: y - patientBoxH,
     width: CONTENT_W,
     height: patientBoxH,
-    borderRadius: 7,
-    color: C.panel,
+    borderRadius: 8,
+    color: C.panelLow,
     borderColor: C.line,
     borderWidth: 0.8,
   });
@@ -461,7 +570,7 @@ export async function buildExamPrescriptionPdf(
   });
 
   const col1X = MARGIN + 12;
-  const col2X = MARGIN + CONTENT_W * 0.48;
+  const col2X = MARGIN + CONTENT_W * 0.46;
   const col3X = MARGIN + CONTENT_W * 0.72;
 
   drawText("Nome Completo:", col1X, y - 27, { font: regular, size: 7.5, color: C.muted });
@@ -477,7 +586,7 @@ export async function buildExamPrescriptionPdf(
   drawText("Idade / Status:", col3X, y - 27, { font: regular, size: 7.5, color: C.muted });
   drawLines(ageStatusLines, col3X, y - 31, { font: regular, size: 9, color: C.ink, leading: 13 });
 
-  y -= patientBoxH + 12;
+  y -= patientBoxH + 14;
 
   // ============================================================================
   // 2.1 ALERTA DE PRESCRIÇÃO SUSPENSA (SE APLICÁVEL)
@@ -493,15 +602,15 @@ export async function buildExamPrescriptionPdf(
         : "",
     ].filter(Boolean);
     const alertLines = wrapText(alertParts.join("\n"), regular, 8.5, CONTENT_W - 24);
-    const alertH = 16 + alertLines.length * 12;
-    ensureSpace(alertH + 10);
+    const alertH = 16 + alertLines.length * 12.5;
+    ensureGroup(alertH + 12);
 
     drawRoundedRectangle(page, {
       x: MARGIN,
       y: y - alertH,
       width: CONTENT_W,
       height: alertH,
-      borderRadius: 6,
+      borderRadius: 7,
       color: C.errorBg,
       borderColor: C.errorBorder,
       borderWidth: 0.8,
@@ -510,61 +619,104 @@ export async function buildExamPrescriptionPdf(
     drawLines(alertLines, MARGIN + 12, y - 8, {
       font: bold,
       size: 8.5,
-      color: C.error,
-      leading: 12,
+      color: C.onErrorContainer,
+      leading: 12.5,
     });
 
-    y -= alertH + 12;
+    y -= alertH + 14;
   }
 
   // ============================================================================
-  // 3. DESCRIÇÃO / INDICAÇÃO CLÍNICA
+  // 3. DESCRIÇÃO / MENSAGEM AO LABORATÓRIO (1:1 com modal)
   // ============================================================================
   if (prescricao.descricao && prescricao.descricao.trim()) {
-    const descW = CONTENT_W - 26;
+    const descW = CONTENT_W - 24;
     const descLines = wrapText(prescricao.descricao.trim(), regular, 9, descW);
-    const descH = 26 + descLines.length * 13;
-    ensureSpace(descH + 12);
+    const descLeading = 13.5;
+    const descH = 16 + descLines.length * descLeading;
 
-    drawRoundedRectangle(page, {
-      x: MARGIN,
-      y: y - descH,
-      width: CONTENT_W,
-      height: descH,
-      borderRadius: 6,
-      color: C.panel,
-      borderColor: C.line,
-      borderWidth: 0.8,
-    });
+    if (descH <= MAX_USABLE_PAGE_H) {
+      ensureGroup(descH + 14);
+      drawRoundedRectangle(page, {
+        x: MARGIN,
+        y: y - descH,
+        width: CONTENT_W,
+        height: descH,
+        borderRadius: 7,
+        color: C.panel,
+        borderColor: C.line,
+        borderWidth: 0.8,
+      });
 
-    page.drawRectangle({
-      x: MARGIN,
-      y: y - descH + 3,
-      width: 3,
-      height: descH - 6,
-      color: C.primary,
-    });
+      drawLines(descLines, MARGIN + 12, y - 8, {
+        font: regular,
+        size: 9,
+        color: C.ink,
+        leading: descLeading,
+      });
 
-    drawText("DESCRIÇÃO / INDICAÇÃO CLÍNICA", MARGIN + 14, y - 14, {
-      font: bold,
-      size: 7.5,
-      color: C.primary,
-    });
-
-    drawLines(descLines, MARGIN + 14, y - 19, {
-      font: regular,
-      size: 9,
-      color: C.text,
-      leading: 13,
-    });
-
-    y -= descH + 14;
+      y -= descH + 14;
+    } else {
+      for (const ln of descLines) {
+        ensureLine(descLeading + 4);
+        if (ln) drawText(ln, MARGIN + 8, y - 9, { font: regular, size: 9, color: C.ink });
+        y -= descLeading;
+      }
+      y -= 10;
+    }
   }
 
   // ============================================================================
-  // 4. PAINEL DE EXAMES LABORATORIAIS SOLICITADOS
+  // 4. PAINEL DE EXAMES LABORATORIAIS SOLICITADOS (título nunca órfão!)
   // ============================================================================
-  ensureSpace(34);
+  const grupos = Array.isArray(prescricao.grupos_exames) ? prescricao.grupos_exames : [];
+
+  const cardPaddingX = 12;
+  const colGap = 16;
+  const itemColW = (CONTENT_W - cardPaddingX * 2 - colGap) / 2;
+  const examTextW = itemColW - 12;
+  const examFontSize = 8.8;
+  const examLeading = 12.5;
+  const cardHeaderH = 26;
+  const cardPadBottom = 10;
+
+  const preparedGroups = grupos.map((grp, gIdx) => {
+    const exames = Array.isArray(grp.exames) ? grp.exames.filter((e) => String(e).trim()) : [];
+    const groupTitle = grp.nome_grupo?.trim() || `Grupo #${gIdx + 1}`;
+    const countLabel = `${exames.length} ${exames.length === 1 ? "exame" : "exames"}`;
+
+    const rowPairs: Array<{ left: string[]; right: string[]; rowH: number }> = [];
+    for (let i = 0; i < exames.length; i += 2) {
+      const leftLines = wrapText(String(exames[i]), regular, examFontSize, examTextW);
+      const rightLines =
+        i + 1 < exames.length
+          ? wrapText(String(exames[i + 1]), regular, examFontSize, examTextW)
+          : [];
+      const maxLines = Math.max(leftLines.length, rightLines.length, 1);
+      rowPairs.push({
+        left: leftLines,
+        right: rightLines,
+        rowH: maxLines * examLeading + 5,
+      });
+    }
+
+    const totalBodyH = rowPairs.reduce((acc, r) => acc + r.rowH, 0);
+    const fullCardH = cardHeaderH + Math.max(totalBodyH, 16) + cardPadBottom;
+    return { groupTitle, countLabel, rowPairs, fullCardH };
+  });
+
+  // Garante que o título da seção acompanhe o 1º card de exames (sem título órfão)
+  const sectionTitleH = 22;
+  const firstGroupLookahead =
+    preparedGroups.length > 0
+      ? Math.min(preparedGroups[0].fullCardH + 10, 120)
+      : 24;
+  ensureGroup(
+    preparedGroups.length > 0 && sectionTitleH + preparedGroups[0].fullCardH + 10 <= MAX_USABLE_PAGE_H
+      ? sectionTitleH + preparedGroups[0].fullCardH + 10
+      : sectionTitleH + firstGroupLookahead
+  );
+
   page.drawRectangle({
     x: MARGIN,
     y: y - 11,
@@ -577,11 +729,10 @@ export async function buildExamPrescriptionPdf(
     size: 10,
     color: C.ink,
   });
-  y -= 20;
+  y -= sectionTitleH;
 
-  const grupos = Array.isArray(prescricao.grupos_exames) ? prescricao.grupos_exames : [];
-  if (grupos.length === 0) {
-    ensureSpace(24);
+  if (preparedGroups.length === 0) {
+    ensureGroup(24);
     drawText("Nenhum grupo de exame registrado.", MARGIN, y - 10, {
       font: regular,
       size: 9,
@@ -589,63 +740,33 @@ export async function buildExamPrescriptionPdf(
     });
     y -= 22;
   } else {
-    const cardPaddingX = 12;
-    const colGap = 16;
-    const itemColW = (CONTENT_W - cardPaddingX * 2 - colGap) / 2;
-    const examTextW = itemColW - 12;
-    const examFontSize = 8.8;
-    const examLeading = 12;
-
-    for (let gIdx = 0; gIdx < grupos.length; gIdx++) {
-      const grp = grupos[gIdx];
-      const exames = Array.isArray(grp.exames) ? grp.exames.filter((e) => String(e).trim()) : [];
-      const groupTitle = grp.nome_grupo?.trim() || `Grupo #${gIdx + 1}`;
-      const countLabel = `${exames.length} ${exames.length === 1 ? "exame" : "exames"}`;
-
-      // Pré-calcula linhas em pares (grade de 2 colunas)
-      const rowPairs: Array<{ left: string[]; right: string[]; rowH: number }> = [];
-      for (let i = 0; i < exames.length; i += 2) {
-        const leftLines = wrapText(String(exames[i]), regular, examFontSize, examTextW);
-        const rightLines =
-          i + 1 < exames.length
-            ? wrapText(String(exames[i + 1]), regular, examFontSize, examTextW)
-            : [];
-        const maxLines = Math.max(leftLines.length, rightLines.length, 1);
-        rowPairs.push({
-          left: leftLines,
-          right: rightLines,
-          rowH: maxLines * examLeading + 5,
-        });
-      }
-
-      const headerH = 26;
-      const bodyPaddingBottom = 8;
-      const totalBodyH = rowPairs.reduce((acc, r) => acc + r.rowH, 0);
-      const fullCardH = headerH + Math.max(totalBodyH, 16) + bodyPaddingBottom;
-      const maxUsablePageH = PAGE_H - MARGIN * 2 - FOOTER_RESERVED;
-
-      if (fullCardH <= maxUsablePageH) {
-        ensureSpace(fullCardH + 8);
+    for (const grp of preparedGroups) {
+      const drawGroupCard = (
+        pairs: typeof grp.rowPairs,
+        titleText: string,
+        rightBadge: string
+      ) => {
+        const bodyH = pairs.reduce((acc, r) => acc + r.rowH, 0);
+        const cardH = cardHeaderH + Math.max(bodyH, 16) + cardPadBottom;
         const cardTopY = y;
 
         drawRoundedRectangle(page, {
           x: MARGIN,
-          y: cardTopY - fullCardH,
+          y: cardTopY - cardH,
           width: CONTENT_W,
-          height: fullCardH,
-          borderRadius: 7,
+          height: cardH,
+          borderRadius: 8,
           color: C.white,
           borderColor: C.line,
           borderWidth: 0.8,
         });
 
-        // Cabeçalho do grupo
-        drawText(groupTitle, MARGIN + cardPaddingX, cardTopY - 16, {
+        drawText(titleText, MARGIN + cardPaddingX, cardTopY - 16, {
           font: bold,
           size: 9.5,
           color: C.primary,
         });
-        drawText(countLabel, MARGIN, cardTopY - 16, {
+        drawText(rightBadge, MARGIN, cardTopY - 16, {
           font: mono,
           size: 8,
           color: C.muted,
@@ -654,19 +775,17 @@ export async function buildExamPrescriptionPdf(
         });
 
         page.drawLine({
-          start: { x: MARGIN + cardPaddingX, y: cardTopY - headerH + 3 },
-          end: { x: PAGE_W - MARGIN - cardPaddingX, y: cardTopY - headerH + 3 },
+          start: { x: MARGIN + cardPaddingX, y: cardTopY - cardHeaderH + 2 },
+          end: { x: PAGE_W - MARGIN - cardPaddingX, y: cardTopY - cardHeaderH + 2 },
           thickness: 0.6,
           color: C.line,
         });
 
-        // Itens em 2 colunas
-        let rowY = cardTopY - headerH - 4;
-        for (const pair of rowPairs) {
+        let rowY = cardTopY - cardHeaderH - 5;
+        for (const pair of pairs) {
           const leftX = MARGIN + cardPaddingX;
           const rightX = leftX + itemColW + colGap;
 
-          // Bullet + texto esquerda
           page.drawCircle({
             x: leftX + 3,
             y: rowY - examFontSize + 2.8,
@@ -680,7 +799,6 @@ export async function buildExamPrescriptionPdf(
             leading: examLeading,
           });
 
-          // Bullet + texto direita
           if (pair.right.length > 0) {
             page.drawCircle({
               x: rightX + 3,
@@ -699,67 +817,47 @@ export async function buildExamPrescriptionPdf(
           rowY -= pair.rowH;
         }
 
-        y = cardTopY - fullCardH - 10;
+        y = cardTopY - cardH - 11;
+      };
+
+      if (grp.fullCardH <= MAX_USABLE_PAGE_H) {
+        ensureGroup(grp.fullCardH + 11);
+        drawGroupCard(grp.rowPairs, grp.groupTitle, grp.countLabel);
       } else {
-        // Grupo extenso: paginação controlada por linhas
-        ensureSpace(headerH + 30);
-        drawText(`${groupTitle} (${countLabel})`, MARGIN, y - 12, {
-          font: bold,
-          size: 9.5,
-          color: C.primary,
-        });
-        y -= 18;
-        page.drawLine({
-          start: { x: MARGIN, y },
-          end: { x: PAGE_W - MARGIN, y },
-          thickness: 0.6,
-          color: C.primaryBorder,
-        });
-        y -= 8;
+        // Grupo maior que 1 página inteira: divide em sub-cards com cabeçalho preservado
+        let chunk: typeof grp.rowPairs = [];
+        let chunkBodyH = 0;
+        let isFirstChunk = true;
 
-        for (const pair of rowPairs) {
-          ensureSpace(pair.rowH + 4);
-          const leftX = MARGIN + 6;
-          const rightX = leftX + itemColW + colGap;
-
-          page.drawCircle({
-            x: leftX + 3,
-            y: y - examFontSize + 2.8,
-            size: 2,
-            color: C.primary,
-          });
-          drawLines(pair.left, leftX + 10, y, {
-            font: regular,
-            size: examFontSize,
-            color: C.ink,
-            leading: examLeading,
-          });
-
-          if (pair.right.length > 0) {
-            page.drawCircle({
-              x: rightX + 3,
-              y: y - examFontSize + 2.8,
-              size: 2,
-              color: C.primary,
-            });
-            drawLines(pair.right, rightX + 10, y, {
-              font: regular,
-              size: examFontSize,
-              color: C.ink,
-              leading: examLeading,
-            });
+        for (const pair of grp.rowPairs) {
+          const projectedH = cardHeaderH + chunkBodyH + pair.rowH + cardPadBottom;
+          if (chunk.length > 0 && y - projectedH < MARGIN + FOOTER_RESERVED) {
+            drawGroupCard(
+              chunk,
+              isFirstChunk ? grp.groupTitle : `${grp.groupTitle} (continuação)`,
+              grp.countLabel
+            );
+            addPage();
+            chunk = [];
+            chunkBodyH = 0;
+            isFirstChunk = false;
           }
-
-          y -= pair.rowH;
+          chunk.push(pair);
+          chunkBodyH += pair.rowH;
         }
-
-        y -= 8;
+        if (chunk.length > 0) {
+          drawGroupCard(
+            chunk,
+            isFirstChunk ? grp.groupTitle : `${grp.groupTitle} (continuação)`,
+            grp.countLabel
+          );
+        }
       }
     }
   }
 
   // ============================================================================
-  // 5. INSTRUÇÕES E ORIENTAÇÕES PARA A REALIZAÇÃO DOS EXAMES
+  // 5. INSTRUÇÕES E ORIENTAÇÕES PARA A REALIZAÇÃO DOS EXAMES (1:1 com modal)
   // ============================================================================
   const orientacoes = Array.isArray(prescricao.orientacoes)
     ? prescricao.orientacoes.filter((o) => String(o).trim())
@@ -767,7 +865,7 @@ export async function buildExamPrescriptionPdf(
 
   if (orientacoes.length > 0) {
     const oriFontSize = 8.8;
-    const oriLeading = 12.5;
+    const oriLeading = 13;
     const oriTextW = CONTENT_W - 40;
     const wrappedOrientacoes = orientacoes.map((ori, idx) => ({
       num: `${idx + 1}.`,
@@ -775,14 +873,13 @@ export async function buildExamPrescriptionPdf(
     }));
 
     const totalOriLinesH = wrappedOrientacoes.reduce(
-      (acc, item) => acc + item.lines.length * oriLeading + 4,
+      (acc, item) => acc + item.lines.length * oriLeading + 5,
       0
     );
-    const oriBoxH = 30 + totalOriLinesH + 6;
-    const maxUsablePageH = PAGE_H - MARGIN * 2 - FOOTER_RESERVED;
+    const oriBoxH = 30 + totalOriLinesH + 8;
 
-    if (oriBoxH <= maxUsablePageH) {
-      ensureSpace(oriBoxH + 12);
+    if (oriBoxH <= MAX_USABLE_PAGE_H) {
+      ensureGroup(oriBoxH + 14);
       const boxTopY = y;
 
       drawRoundedRectangle(page, {
@@ -790,9 +887,9 @@ export async function buildExamPrescriptionPdf(
         y: boxTopY - oriBoxH,
         width: CONTENT_W,
         height: oriBoxH,
-        borderRadius: 7,
-        color: C.primarySoftBg,
-        borderColor: C.primaryBorder,
+        borderRadius: 8,
+        color: C.panelLow,
+        borderColor: C.line,
         borderWidth: 0.8,
       });
 
@@ -802,7 +899,7 @@ export async function buildExamPrescriptionPdf(
         color: C.primary,
       });
 
-      let itemY = boxTopY - 26;
+      let itemY = boxTopY - 27;
       for (const item of wrappedOrientacoes) {
         drawText(item.num, MARGIN + 14, itemY - oriFontSize, {
           font: bold,
@@ -812,15 +909,15 @@ export async function buildExamPrescriptionPdf(
         drawLines(item.lines, MARGIN + 28, itemY, {
           font: regular,
           size: oriFontSize,
-          color: C.text,
+          color: C.ink,
           leading: oriLeading,
         });
-        itemY -= item.lines.length * oriLeading + 4;
+        itemY -= item.lines.length * oriLeading + 5;
       }
 
-      y = boxTopY - oriBoxH - 12;
+      y = boxTopY - oriBoxH - 14;
     } else {
-      ensureSpace(32);
+      ensureGroup(36);
       drawText("INSTRUÇÕES E ORIENTAÇÕES PARA A REALIZAÇÃO DOS EXAMES", MARGIN, y - 12, {
         font: bold,
         size: 8.5,
@@ -829,8 +926,8 @@ export async function buildExamPrescriptionPdf(
       y -= 20;
 
       for (const item of wrappedOrientacoes) {
-        const h = item.lines.length * oriLeading + 4;
-        ensureSpace(h + 4);
+        const h = item.lines.length * oriLeading + 5;
+        ensureLine(h + 4);
         drawText(item.num, MARGIN + 4, y - oriFontSize, {
           font: bold,
           size: oriFontSize,
@@ -839,7 +936,7 @@ export async function buildExamPrescriptionPdf(
         drawLines(item.lines, MARGIN + 20, y, {
           font: regular,
           size: oriFontSize,
-          color: C.text,
+          color: C.ink,
           leading: oriLeading,
         });
         y -= h;
@@ -849,16 +946,21 @@ export async function buildExamPrescriptionPdf(
   }
 
   // ============================================================================
-  // 6. CHANCELA DE ASSINATURA DIGITAL SHA-256
+  // 6. CHANCELA DE ASSINATURA DIGITAL SHA-256 (1:1 com modal, indivisível)
   // ============================================================================
   const hashValue = prescricao.payload_hash?.trim() || "";
   const hashLines = hashValue
-    ? wrapText(`Hash de Integridade (${prescricao.algoritmo || "SHA-256"}): ${hashValue}`, mono, 7.5, CONTENT_W - 36)
+    ? wrapText(
+        `Hash de Integridade (${prescricao.algoritmo || "SHA-256"}): ${hashValue}`,
+        mono,
+        7.4,
+        CONTENT_W - 36
+      )
     : [];
   const hashBoxH = hashLines.length > 0 ? hashLines.length * 10.5 + 12 : 0;
   const sigBoxH = 66 + (hashBoxH > 0 ? hashBoxH + 10 : 0);
 
-  ensureSpace(sigBoxH + 10);
+  ensureGroup(sigBoxH + 12);
   const sigTopY = y;
 
   drawRoundedRectangle(page, {
@@ -866,21 +968,21 @@ export async function buildExamPrescriptionPdf(
     y: sigTopY - sigBoxH,
     width: CONTENT_W,
     height: sigBoxH,
-    borderRadius: 7,
+    borderRadius: 8,
     color: C.white,
-    borderColor: C.primaryBorder,
-    borderWidth: 0.9,
+    borderColor: C.line,
+    borderWidth: 0.8,
   });
 
   // Cabeçalho da chancela
-  drawText("ASSINATURA DIGITAL & INTEGRIDADE CLÍNICA", MARGIN + 12, sigTopY - 15, {
+  drawText("Assinatura Digital & Integridade Clínica", MARGIN + 12, sigTopY - 15, {
     font: bold,
-    size: 8.2,
-    color: C.primary,
+    size: 8.8,
+    color: C.ink,
   });
 
   const algText = `Algoritmo: ${prescricao.algoritmo || "SHA-256"}`;
-  const algW = mono.widthOfTextAtSize(sanitizeText(mono, algText), 7.2) + 12;
+  const algW = mono.widthOfTextAtSize(sanitizeText(mono, algText), 7.2) + 14;
   const algX = PAGE_W - MARGIN - 12 - algW;
   drawRoundedRectangle(page, {
     x: algX,
@@ -888,14 +990,12 @@ export async function buildExamPrescriptionPdf(
     width: algW,
     height: 14,
     borderRadius: 7,
-    color: C.primarySoftBg,
-    borderColor: C.primaryBorder,
-    borderWidth: 0.6,
+    color: C.primaryContainer,
   });
   drawText(algText, algX, sigTopY - 15.5, {
     font: mono,
     size: 7.2,
-    color: C.primary,
+    color: C.onPrimaryContainer,
     align: "center",
     width: algW,
   });
@@ -908,7 +1008,7 @@ export async function buildExamPrescriptionPdf(
   });
 
   const sigCol1X = MARGIN + 12;
-  const sigCol2X = MARGIN + CONTENT_W * 0.54;
+  const sigCol2X = MARGIN + CONTENT_W * 0.52;
 
   drawText("Profissional Responsável:", sigCol1X, sigTopY - 38, {
     font: regular,
@@ -939,16 +1039,14 @@ export async function buildExamPrescriptionPdf(
       y: hashBoxTopY - hashBoxH,
       width: CONTENT_W - 24,
       height: hashBoxH,
-      borderRadius: 5,
+      borderRadius: 6,
       color: C.panel,
-      borderColor: C.line,
-      borderWidth: 0.6,
     });
 
     drawLines(hashLines, MARGIN + 18, hashBoxTopY - 6, {
       font: mono,
-      size: 7.5,
-      color: C.text,
+      size: 7.4,
+      color: C.muted,
       leading: 10.5,
     });
   }
@@ -969,15 +1067,20 @@ export async function buildExamPrescriptionPdf(
       font: regular,
       size: 6.8,
       color: C.faint,
+      align: "center",
+      width: CONTENT_W,
     });
+    const pageInfo = pages.length > 1 ? `  •  Página ${idx + 1} de ${pages.length}` : "";
     drawText(
-      `Documento: ${prescricao.id || "—"}  •  Emissão: ${emissionDateBR}  •  Página ${idx + 1} de ${pages.length}`,
+      `Documento: ${prescricao.id || "—"}  •  Emissão: ${emissionDateBR}${pageInfo}`,
       MARGIN,
       MARGIN + 4,
       {
         font: regular,
-        size: 6.6,
+        size: 6.5,
         color: C.faint,
+        align: "center",
+        width: CONTENT_W,
       }
     );
   });

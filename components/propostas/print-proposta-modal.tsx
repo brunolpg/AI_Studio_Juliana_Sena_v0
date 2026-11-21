@@ -14,14 +14,15 @@ import {
   Layers,
   Clock,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import type { Proposta } from "@/types/proposta";
 import type { Client } from "@/types/client";
 import {
   sanitizePdfFileName,
   sharePdfViaWhatsApp,
-  generateGenericClinicalPdf,
-  type SectionContent,
+  downloadPdfFile,
+  generatePropostaPdf,
 } from "@/lib/utils/whatsapp-share-pdf";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
@@ -74,15 +75,15 @@ function calculateAge(birthDateStr?: string | null): string {
 
 function formatDateToPortuguese(dateStr?: string | null): string {
   const clean = dateStr ? dateStr.split("T")[0] : null;
-  const date = clean ? new Date(clean + "T12:00:00") : new Date();
-  const months = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-  ];
-  const day = date.getDate();
-  const month = months[date.getMonth()];
-  const year = date.getFullYear();
-  return `Salvador - BA, ${day} de ${month} de ${year}`;
+  const date = clean ? new Date(`${clean}T12:00:00-03:00`) : new Date();
+  const formatted = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(Number.isNaN(date.getTime()) ? new Date() : date);
+  const capitalized = formatted.replace(/ de ([a-zç])/i, (_, ch: string) => ` de ${ch.toUpperCase()}`);
+  return `Salvador - BA, ${capitalized}`;
 }
 
 export function PrintPropostaModal({
@@ -94,6 +95,7 @@ export function PrintPropostaModal({
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   if (!isOpen || !proposta) return null;
 
@@ -103,96 +105,21 @@ export function PrintPropostaModal({
   const pacienteTelefone = client?.telefone || (client as any)?.whatsapp;
   const idadeStr = calculateAge(pacienteNasc);
 
+  const buildPropostaPdfFile = async (): Promise<File> => {
+    const fileName = sanitizePdfFileName("Proposta_Clinica", pacienteNome);
+    return generatePropostaPdf({
+      fileName,
+      proposta,
+      patientName: pacienteNome,
+      patientCpf: pacienteCpf,
+      patientBirthDate: pacienteNasc,
+    });
+  };
+
   const handleShareWhatsApp = async () => {
     try {
       setIsSharingWhatsApp(true);
-      const fileName = sanitizePdfFileName("Proposta_Clinica", pacienteNome);
-
-      const sections: SectionContent[] = [];
-
-      // Objetivo Terapêutico
-      if (proposta.objetivo) {
-        sections.push({
-          title: "Objetivo Terapêutico",
-          paragraph: proposta.objetivo,
-        });
-      }
-
-      // Opções Clínicas
-      if (proposta.opcoes && proposta.opcoes.length > 0) {
-        proposta.opcoes.forEach((op, idx) => {
-          const items: string[] = [];
-          if (op.descricao) items.push(`Descrição: ${op.descricao}`);
-          if (op.beneficios) items.push(`Benefícios: ${op.beneficios}`);
-
-          if (op.procedimentos && op.procedimentos.length > 0) {
-            items.push("Procedimentos inclusos:");
-            op.procedimentos.forEach((p) => {
-              items.push(
-                `• ${p.nome_procedimento}: ${p.num_sessoes} sessão(ões) x ${formatCurrency(
-                  p.valor_sessao
-                )} = ${formatCurrency(p.total)}`
-              );
-            });
-            const totalOpcao = op.procedimentos.reduce((acc, cur) => acc + (cur.total || 0), 0);
-            items.push(`Investimento Total: ${formatCurrency(totalOpcao)}`);
-          }
-
-          if (op.formas_pagamento && op.formas_pagamento.length > 0) {
-            items.push("Condições de Pagamento:");
-            op.formas_pagamento.forEach((fp) => {
-              if (fp.tipo === "a_vista") {
-                items.push(`• À vista com ${fp.desconto || 0}% de desconto`);
-              } else {
-                items.push(`• Parcelado em até ${fp.num_parcelas || 1}x`);
-              }
-            });
-          }
-
-          sections.push({
-            title: op.titulo || `Opção #${idx + 1}`,
-            items,
-          });
-        });
-      }
-
-      // Cronograma Clínico
-      if (proposta.cronograma?.etapas && proposta.cronograma.etapas.length > 0) {
-        sections.push({
-          title: proposta.cronograma.titulo || "Cronograma Clínico Sugerido",
-          items: proposta.cronograma.etapas.map((et) => {
-            const periodo =
-              et.tipo_data === "unica"
-                ? et.data
-                  ? formatDateBR(et.data)
-                  : "Data única"
-                : `${formatDateBR(et.data_inicio)} até ${formatDateBR(et.data_fim)}`;
-            return `${periodo}: ${et.desc_etapa}`;
-          }),
-        });
-      }
-
-      // Tópicos Complementares
-      if (proposta.topicos && proposta.topicos.length > 0) {
-        proposta.topicos.forEach((t) => {
-          sections.push({
-            title: t.titulo,
-            paragraph: t.texto,
-          });
-        });
-      }
-
-      const pdfFile = await generateGenericClinicalPdf({
-        fileName,
-        title: "Proposta de Planejamento Clínico",
-        subtitle: `Título: ${proposta.titulo}`,
-        patientName: pacienteNome,
-        patientCpf: formatCPF(pacienteCpf),
-        patientPhone: pacienteTelefone,
-        dateStr: formatDateBR(proposta.created_at || proposta.assinado_em),
-        professionalName: proposta.profissional || "Dra. Juliana Sena de Souza Vieira",
-        sections,
-      });
+      const pdfFile = await buildPropostaPdfFile();
 
       await sharePdfViaWhatsApp({
         file: pdfFile,
@@ -207,110 +134,16 @@ export function PrintPropostaModal({
     }
   };
 
-  const handlePrint = () => {
-    const printContent = printAreaRef.current;
-    if (!printContent) return;
-
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-    iframe.style.zIndex = "-9999";
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) return;
-
-    const styles = Array.from(document.querySelectorAll("link[rel='stylesheet'], style"))
-      .map((style) => style.outerHTML)
-      .join("\n");
-
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-        <head>
-          <meta charset="utf-8" />
-          <title></title>
-          ${styles}
-          <style>
-            @page {
-              size: A4 portrait;
-              margin: 16mm 14mm 16mm 14mm;
-            }
-
-            *, *::before, *::after {
-              box-sizing: border-box;
-            }
-
-            html, body {
-              margin: 0 !important;
-              padding: 0 !important;
-              background: #ffffff !important;
-              color: #0f172a !important;
-              font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              width: 100% !important;
-              height: auto !important;
-              overflow: visible !important;
-            }
-
-            .print-wrapper {
-              width: 100% !important;
-              max-width: 100% !important;
-              padding: 0 !important;
-              margin: 0 !important;
-              background: #ffffff !important;
-            }
-
-            .print-avoid-break {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-
-            table, tr, td, th {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-
-            thead {
-              display: table-header-group !important;
-            }
-
-            h3, .section-title {
-              break-after: avoid !important;
-              page-break-after: avoid !important;
-            }
-
-            .print-footer {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-              margin-top: 28px !important;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="print-wrapper">
-            ${printContent.innerHTML}
-          </div>
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      }, 1200);
-    }, 400);
+  const handlePrint = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const pdfFile = await buildPropostaPdfFile();
+      downloadPdfFile(pdfFile);
+    } catch (err) {
+      console.error("Erro ao gerar PDF da proposta clínica:", err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   return (
@@ -413,19 +246,28 @@ export function PrintPropostaModal({
             <button
               type="button"
               onClick={handleShareWhatsApp}
-              disabled={isSharingWhatsApp}
+              disabled={isSharingWhatsApp || isGeneratingPdf}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-on-success bg-success hover:opacity-90 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
-              <WhatsAppIcon className="w-4 h-4 shrink-0" />
+              {isSharingWhatsApp ? (
+                <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+              ) : (
+                <WhatsAppIcon className="w-4 h-4 shrink-0" />
+              )}
               <span>{isSharingWhatsApp ? "Preparando envio..." : "Enviar pelo WhatsApp"}</span>
             </button>
             <button
               type="button"
               onClick={handlePrint}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all shadow-xs cursor-pointer"
+              disabled={isGeneratingPdf || isSharingWhatsApp}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
-              <Printer className="w-4 h-4" />
-              <span>Imprimir / Gerar PDF</span>
+              {isGeneratingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Printer className="w-4 h-4" />
+              )}
+              <span>{isGeneratingPdf ? "Gerando PDF..." : "Imprimir / Gerar PDF"}</span>
             </button>
             <button
               type="button"
@@ -471,7 +313,7 @@ export function PrintPropostaModal({
           >
             <div>
               {/* Cabeçalho do Relatório */}
-              <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-6 w-full">
+              <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-6 w-full print-avoid-break break-inside-avoid">
                 <div className="flex items-center gap-4">
                   <img
                     src="/logo-clinica.png"
@@ -501,7 +343,7 @@ export function PrintPropostaModal({
               </div>
 
               {/* Identificação do Paciente */}
-              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6 print-avoid-break">
+              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6 print-avoid-break break-inside-avoid">
                 <div>
                   <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
                     PACIENTE
@@ -526,7 +368,7 @@ export function PrintPropostaModal({
               </div>
 
               {/* 1. Título & Objetivo Terapêutico */}
-              <div className="mb-6 p-4 rounded-2xl bg-teal-50/40 border border-teal-200/70 print-avoid-break">
+              <div className="mb-6 p-4 rounded-2xl bg-teal-50/40 border border-teal-200/70 print-avoid-break break-inside-avoid">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-600 text-white uppercase tracking-wider">
                     Plano Personalizado
@@ -545,7 +387,7 @@ export function PrintPropostaModal({
               {/* 2. Opções Clínicas com Numeração e Tabela de Procedimentos */}
               {proposta.opcoes && proposta.opcoes.length > 0 && (
                 <div className="mb-6 space-y-4">
-                  <div className="border-b-2 border-teal-700/80 pb-1.5 flex items-center justify-between">
+                  <div className="border-b-2 border-teal-700/80 pb-1.5 flex items-center justify-between section-title">
                     <h3 className="text-xs font-black text-teal-950 uppercase tracking-widest flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-teal-600 inline-block" />
                       OPÇÕES DE PLANEJAMENTO TERAPÊUTICO
@@ -565,7 +407,7 @@ export function PrintPropostaModal({
                       return (
                         <div
                           key={opcao.id || idx}
-                          className="rounded-2xl border border-slate-200 overflow-hidden print-avoid-break bg-white"
+                          className="rounded-2xl border border-slate-200 overflow-hidden print-avoid-break break-inside-avoid bg-white"
                         >
                           {/* Topo da Opção */}
                           <div className="p-3.5 bg-slate-50/90 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2">
@@ -672,7 +514,7 @@ export function PrintPropostaModal({
               {/* 3. Cronograma Clínico Sugerido */}
               {proposta.cronograma?.etapas && proposta.cronograma.etapas.length > 0 && (
                 <div className="mb-6 space-y-3">
-                  <div className="border-b-2 border-teal-700/80 pb-1.5 flex items-center justify-between">
+                  <div className="border-b-2 border-teal-700/80 pb-1.5 flex items-center justify-between section-title">
                     <h3 className="text-xs font-black text-teal-950 uppercase tracking-widest flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-teal-600 inline-block" />
                       {proposta.cronograma.titulo || "CRONOGRAMA CLÍNICO SUGERIDO"}
@@ -682,8 +524,8 @@ export function PrintPropostaModal({
                     </span>
                   </div>
 
-                  <div className="overflow-hidden rounded-xl border border-slate-200 print-avoid-break">
-                    <table className="w-full text-left border-collapse text-xs print-avoid-break">
+                  <div className="overflow-hidden rounded-xl border border-slate-200 print-avoid-break break-inside-avoid">
+                    <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 font-bold uppercase text-[10px]">
                           <th className="py-2.5 px-3 w-[28%]">Período / Previsão</th>
@@ -719,7 +561,7 @@ export function PrintPropostaModal({
               {/* 4. Tópicos e Orientações Complementares */}
               {proposta.topicos && proposta.topicos.length > 0 && (
                 <div className="mb-6 space-y-3">
-                  <div className="border-b-2 border-slate-400 pb-1.5 flex items-center justify-between">
+                  <div className="border-b-2 border-slate-400 pb-1.5 flex items-center justify-between section-title">
                     <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-slate-600 inline-block" />
                       ORIENTAÇÕES & CONSIDERAÇÕES COMPLEMENTARES
@@ -728,7 +570,7 @@ export function PrintPropostaModal({
 
                   <div className="space-y-2.5 pt-1">
                     {proposta.topicos.map((topico, idx) => (
-                      <div key={topico.id || idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 print-avoid-break text-xs">
+                      <div key={topico.id || idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 print-avoid-break break-inside-avoid text-xs">
                         <h4 className="font-bold text-slate-900 mb-1">
                           {topico.titulo}
                         </h4>
@@ -743,7 +585,7 @@ export function PrintPropostaModal({
             </div>
 
             {/* 5. Rodapé Institucional com Chancela Criptográfica */}
-            <div className="mt-auto pt-6 border-t border-slate-200 space-y-3 print-footer">
+            <div className="mt-auto pt-6 border-t border-slate-200 space-y-3 print-footer print-avoid-break break-inside-avoid">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
                 <span className="font-medium">
                   {formatDateToPortuguese(proposta.created_at || proposta.assinado_em)}

@@ -452,3 +452,59 @@ html, body, button, input, select, textarea {
     margin-left: 0 !important;
   }
 }
+
+/* ==========================================================================
+   Estilos de Impressão A4 & Paginação Inteligente Sem Quebra de Grupos
+   ========================================================================== */
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-avoid-break,
+  .break-inside-avoid,
+  .print-footer {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  table,
+  tr,
+  td,
+  th {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .section-title {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+}
+

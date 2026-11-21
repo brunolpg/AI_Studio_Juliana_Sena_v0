@@ -21,6 +21,11 @@ import type { Client } from "@/types/client";
 import { suspenderPrescricaoExame } from "@/app/actions/prescricoes-exames-actions";
 import { useToast } from "@/components/ui/toast";
 import { ExamPrescriptionNotificationModal } from "./exam-prescription-notification-modal";
+import {
+  buildExamPrescriptionPdf,
+  examPrescriptionPdfFileName,
+} from "@/lib/prescricoes-exames/pdf";
+import { downloadPdfFile } from "@/lib/utils/whatsapp-share-pdf";
 
 interface PrintExamPrescriptionModalProps {
   isOpen: boolean;
@@ -65,6 +70,7 @@ export function PrintExamPrescriptionModal({
   const [showSuspendPrompt, setShowSuspendPrompt] = useState(false);
   const [justificativa, setJustificativa] = useState("Solicitação de exames substituída ou ajustada");
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   if (!isOpen || !prescricao) return null;
 
@@ -86,8 +92,29 @@ export function PrintExamPrescriptionModal({
 
   const patientAge = client?.idade;
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const pdfBytes = await buildExamPrescriptionPdf(prescricao, {
+        nome: patientName,
+        cpf: patientCpf,
+        idade: patientAge,
+        status: prescricao.status,
+      });
+      const fileName = examPrescriptionPdfFileName(patientName, prescricao.data);
+      const pdfFile = new File([pdfBytes as unknown as BlobPart], fileName, {
+        type: "application/pdf",
+      });
+      downloadPdfFile(pdfFile);
+    } catch (err: any) {
+      toast({
+        type: "error",
+        title: "Falha ao Gerar PDF",
+        description: err?.message || "Não foi possível gerar o PDF da solicitação de exames.",
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleConfirmSuspend = async () => {
@@ -200,14 +227,19 @@ export function PrintExamPrescriptionModal({
               <span>Compartilhar</span>
             </button>
 
-            {/* Botão Imprimir */}
+            {/* Botão Imprimir / Gerar PDF */}
             <button
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold rounded-md-full bg-primary text-on-primary hover:brightness-105 transition-all shadow-sm cursor-pointer"
+              disabled={isGeneratingPdf}
+              className="inline-flex items-center gap-1.5 px-4 py-2 min-h-[44px] text-xs font-semibold rounded-md-full bg-primary text-on-primary hover:brightness-105 transition-all shadow-sm cursor-pointer disabled:opacity-60"
             >
-              <Printer className="w-4 h-4" />
-              <span>Imprimir</span>
+              {isGeneratingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Printer className="w-4 h-4" />
+              )}
+              <span>{isGeneratingPdf ? "Gerando PDF..." : "Imprimir / Gerar PDF"}</span>
             </button>
 
             {/* Fechar */}
@@ -273,20 +305,28 @@ export function PrintExamPrescriptionModal({
           className="flex-1 overflow-y-auto p-6 sm:p-8 md:p-10 space-y-6 bg-surface-container-lowest text-on-surface print:p-8 print:overflow-visible print:bg-white"
         >
           {/* Cabeçalho do Laudo Clínico */}
-          <div className="border-b-2 border-primary/20 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-primary">
-                  Dra. Juliana Sena
-                </h1>
+          <div className="border-b-2 border-primary/20 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 print-avoid-break break-inside-avoid">
+            <div className="flex items-center gap-3.5">
+              <img
+                src="/logo-clinica.png"
+                alt="Logo Clínica"
+                className="h-14 w-auto object-contain shrink-0"
+                referrerPolicy="no-referrer"
+              />
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-primary">
+                    Dra. Juliana Sena
+                  </h1>
+                </div>
+                <p className="text-xs text-on-surface-variant font-medium mt-0.5">
+                  Biomedicina Estética & Práticas Integrativas em Saúde
+                </p>
+                <p className="text-[11px] text-on-surface-variant">
+                  Salvador - Bahia • Atendimento Personalizado
+                </p>
               </div>
-              <p className="text-xs text-on-surface-variant font-medium mt-0.5">
-                Biomedicina Estética & Práticas Integrativas em Saúde
-              </p>
-              <p className="text-[11px] text-on-surface-variant">
-                Salvador - Bahia • Atendimento Personalizado
-              </p>
             </div>
 
             <div className="sm:text-right space-y-0.5">
@@ -301,7 +341,7 @@ export function PrintExamPrescriptionModal({
           </div>
 
           {/* Dados do Paciente */}
-          <div className="p-4 rounded-md-xl border border-outline-variant bg-surface-container-low space-y-2">
+          <div className="p-4 rounded-md-xl border border-outline-variant bg-surface-container-low space-y-2 print-avoid-break break-inside-avoid">
             <span className="text-[10px] font-bold uppercase tracking-wider text-primary block">
               Identificação do Paciente
             </span>
@@ -325,7 +365,7 @@ export function PrintExamPrescriptionModal({
 
           {/* Alerta de Prescrição Suspensa se for o caso */}
           {!isAtivo && (
-            <div className="p-3.5 rounded-md-lg bg-error-container text-on-error-container border border-error/30 flex items-start gap-2.5 text-xs">
+            <div className="p-3.5 rounded-md-lg bg-error-container text-on-error-container border border-error/30 flex items-start gap-2.5 text-xs print-avoid-break break-inside-avoid">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-error" />
               <div>
                 <strong>Atenção - Documento Suspenso:</strong> Esta solicitação de exames foi descontinuada ou substituída.
@@ -341,14 +381,14 @@ export function PrintExamPrescriptionModal({
 
           {/* Descrição / Mensagem ao Laboratório */}
           {prescricao.descricao && (
-            <div className="p-3.5 rounded-md-lg border border-outline-variant bg-surface-container text-xs text-on-surface leading-relaxed whitespace-pre-wrap">
+            <div className="p-3.5 rounded-md-lg border border-outline-variant bg-surface-container text-xs text-on-surface leading-relaxed whitespace-pre-wrap print-avoid-break break-inside-avoid">
               {prescricao.descricao}
             </div>
           )}
 
           {/* Grupos e Exames */}
           <div className="space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-on-surface flex items-center gap-2">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-on-surface flex items-center gap-2 section-title">
               <FlaskConical className="w-4 h-4 text-primary" />
               <span>Painel de Exames Laboratoriais Solicitados</span>
             </h2>
@@ -358,7 +398,7 @@ export function PrintExamPrescriptionModal({
                 prescricao.grupos_exames.map((grp, gIdx) => (
                   <div
                     key={grp.id || `view_grp_${gIdx}`}
-                    className="p-4 rounded-md-xl border border-outline-variant bg-surface-container-lowest space-y-2.5 shadow-2xs"
+                    className="p-4 rounded-md-xl border border-outline-variant bg-surface-container-lowest space-y-2.5 shadow-2xs print-avoid-break break-inside-avoid"
                   >
                     <div className="flex items-center justify-between border-b border-outline-variant pb-2">
                       <h3 className="text-xs sm:text-sm font-bold text-primary">
@@ -389,7 +429,7 @@ export function PrintExamPrescriptionModal({
 
           {/* Orientações para Coleta */}
           {prescricao.orientacoes && prescricao.orientacoes.length > 0 && (
-            <div className="p-4 rounded-md-xl border border-outline-variant bg-surface-container-low space-y-2">
+            <div className="p-4 rounded-md-xl border border-outline-variant bg-surface-container-low space-y-2 print-avoid-break break-inside-avoid">
               <h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Instruções e Orientações para a Realização dos Exames</span>
@@ -406,7 +446,7 @@ export function PrintExamPrescriptionModal({
           )}
 
           {/* Bloco de Assinatura e Integridade Criptográfica SHA-256 */}
-          <div className="p-4 rounded-md-xl border border-outline-variant bg-surface-container-lowest space-y-3 mt-6">
+          <div className="p-4 rounded-md-xl border border-outline-variant bg-surface-container-lowest space-y-3 mt-6 print-footer print-avoid-break break-inside-avoid">
             <div className="flex items-center justify-between border-b border-outline-variant pb-2">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-primary" />
@@ -429,7 +469,9 @@ export function PrintExamPrescriptionModal({
                 <span className="text-on-surface-variant block text-[11px]">Assinado Digitalmente em:</span>
                 <span className="text-on-surface font-mono">
                   {prescricao.assinado_em
-                    ? new Date(prescricao.assinado_em).toLocaleString("pt-BR")
+                    ? new Date(prescricao.assinado_em).toLocaleString("pt-BR", {
+                        timeZone: "America/Sao_Paulo",
+                      })
                     : formatDateBR(prescricao.data)}
                 </span>
               </div>
@@ -441,6 +483,11 @@ export function PrintExamPrescriptionModal({
                 {prescricao.payload_hash}
               </div>
             )}
+          </div>
+
+          {/* Rodapé Institucional */}
+          <div className="text-center text-[10px] text-on-surface-variant border-t border-outline-variant pt-3 print-avoid-break break-inside-avoid">
+            Dra. Juliana Sena • Biomedicina Estética & Práticas Integrativas • Salvador - BA • Documento emitido eletronicamente
           </div>
         </div>
       </div>

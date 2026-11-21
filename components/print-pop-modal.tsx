@@ -12,12 +12,14 @@ import {
   ClipboardList,
   Pill,
   Table,
+  Loader2,
 } from "lucide-react";
 import type { PopProtocoloCompleto } from "@/types/pop";
 import {
   sanitizePdfFileName,
   sharePdfViaWhatsApp,
-  generateGenericClinicalPdf,
+  downloadPdfFile,
+  generatePopPdf,
 } from "@/lib/utils/whatsapp-share-pdf";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
@@ -39,99 +41,36 @@ function formatDateBR(dateStr?: string | null): string {
 
 function formatDateToPortuguese(dateStr?: string | null): string {
   const clean = dateStr ? dateStr.split("T")[0] : null;
-  const date = clean ? new Date(clean + "T12:00:00") : new Date();
-  const months = [
-    "janeiro",
-    "fevereiro",
-    "março",
-    "abril",
-    "maio",
-    "junho",
-    "julho",
-    "agosto",
-    "setembro",
-    "outubro",
-    "novembro",
-    "dezembro",
-  ];
-  const day = date.getDate();
-  const month = months[date.getMonth()];
-  const year = date.getFullYear();
-  return `Salvador - BA, ${day} de ${month} de ${year}`;
+  const date = clean ? new Date(`${clean}T12:00:00-03:00`) : new Date();
+  const formatted = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(Number.isNaN(date.getTime()) ? new Date() : date);
+  return `Salvador - BA, ${formatted}`;
 }
 
 export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   if (!isOpen) return null;
+
+  const buildPopPdfFile = async (): Promise<File> => {
+    const fileName = sanitizePdfFileName("POP", pop.protocolo);
+    return generatePopPdf({
+      fileName,
+      pop,
+    });
+  };
 
   const handleShareWhatsApp = async () => {
     try {
       setIsSharingWhatsApp(true);
-      const fileName = sanitizePdfFileName("POP", pop.protocolo);
-
-      const sections: Array<{
-        title?: string;
-        items?: string[];
-        paragraph?: string;
-        badge?: string;
-      }> = [];
-
-      // Finalidade
-      if (pop.finalidade) {
-        sections.push({
-          title: "Finalidade & Escopo Clínico",
-          paragraph: pop.finalidade,
-        });
-      }
-
-      // Blocos do POP
-      if (pop.blocos && pop.blocos.length > 0) {
-        for (const bloco of pop.blocos) {
-          if (bloco.tipo === "TOPICO") {
-            const subItems =
-              bloco.subtopicos && bloco.subtopicos.length > 0
-                ? bloco.subtopicos.map((s) => `${s.titulo}: ${s.descricao}`)
-                : undefined;
-            sections.push({
-              title: bloco.topico_titulo || "Diretriz Operacional",
-              paragraph: bloco.topico_descricao,
-              items: subItems,
-            });
-          } else if (bloco.tipo === "FORMULA" && bloco.formula) {
-            sections.push({
-              title: "Protocolo Farmacológico / Fórmula",
-              badge: bloco.formula.via ? `Uso ${bloco.formula.via}` : undefined,
-              paragraph: `${bloco.formula.nome}${bloco.formula.dosagem ? ` - ${bloco.formula.dosagem}` : ""}`,
-              items: [
-                bloco.formula.posologia ? `Posologia: ${bloco.formula.posologia}` : "",
-                bloco.formula.orient_paciente ? `Orientações: ${bloco.formula.orient_paciente}` : "",
-              ].filter(Boolean),
-            });
-          } else if (bloco.tipo === "TABELA" && bloco.tabela_dados) {
-            const linhasFormatadas = bloco.tabela_dados.linhas.map((row) =>
-              row
-                .map((cell, idx) => `${bloco.tabela_dados?.colunas[idx] || "Item"}: ${cell}`)
-                .join(" | ")
-            );
-            sections.push({
-              title: "Parâmetros e Tabela Técnica",
-              items: linhasFormatadas,
-            });
-          }
-        }
-      }
-
-      const pdfFile = await generateGenericClinicalPdf({
-        fileName,
-        title: "Procedimento Operacional Padrão (POP)",
-        subtitle: `Protocolo Clínico: ${pop.protocolo}`,
-        dateStr: formatDateBR(pop.data_pop),
-        professionalName: pop.profissional || "Dra. Juliana Sena de Souza Vieira",
-        sections,
-      });
+      const pdfFile = await buildPopPdfFile();
 
       await sharePdfViaWhatsApp({
         file: pdfFile,
@@ -144,84 +83,16 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
     }
   };
 
-  const handlePrint = () => {
-    const printContent = printAreaRef.current;
-    if (!printContent) return;
-
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-    iframe.style.zIndex = "-9999";
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) return;
-
-    const styles = Array.from(document.querySelectorAll("link[rel='stylesheet'], style"))
-      .map((style) => style.outerHTML)
-      .join("\n");
-
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-        <head>
-          <meta charset="utf-8" />
-          <title></title>
-          ${styles}
-          <style>
-            @page {
-              size: A4 portrait;
-              margin: 16mm 14mm 16mm 14mm;
-            }
-
-            *, *::before, *::after {
-              box-sizing: border-box;
-            }
-
-            html, body {
-              margin: 0 !important;
-              padding: 0 !important;
-              background: #ffffff !important;
-              color: #0f172a !important;
-              font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-
-            .print-avoid-break {
-              break-inside: avoid !important;
-              page-break-inside: avoid !important;
-            }
-
-            .print-footer {
-              break-inside: avoid !important;
-              page-break-inside: avoid !important;
-            }
-          </style>
-        </head>
-        <body>
-          <div style="width: 100%; max-width: 100%;">
-            ${printContent.innerHTML}
-          </div>
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      }, 1200);
-    }, 400);
+  const handlePrint = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const pdfFile = await buildPopPdfFile();
+      downloadPdfFile(pdfFile);
+    } catch (err) {
+      console.error("Erro ao gerar PDF do POP:", err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const blocosOrdenados = [...(pop.blocos || [])].sort((a, b) => a.ordem - b.ordem);
@@ -350,19 +221,28 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
             <button
               type="button"
               onClick={handleShareWhatsApp}
-              disabled={isSharingWhatsApp}
+              disabled={isSharingWhatsApp || isGeneratingPdf}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
-              <WhatsAppIcon className="w-4 h-4 shrink-0" />
+              {isSharingWhatsApp ? (
+                <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+              ) : (
+                <WhatsAppIcon className="w-4 h-4 shrink-0" />
+              )}
               <span>{isSharingWhatsApp ? "Preparando envio..." : "Enviar pelo WhatsApp"}</span>
             </button>
             <button
               type="button"
               onClick={handlePrint}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-[#004d40] hover:bg-[#003830] rounded-xl transition-all shadow-xs cursor-pointer"
+              disabled={isGeneratingPdf || isSharingWhatsApp}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-[#004d40] hover:bg-[#003830] rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
-              <Printer className="w-4 h-4" />
-              <span>Imprimir / Gerar PDF</span>
+              {isGeneratingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Printer className="w-4 h-4" />
+              )}
+              <span>{isGeneratingPdf ? "Gerando PDF..." : "Imprimir / Gerar PDF"}</span>
             </button>
             <button
               type="button"
@@ -408,7 +288,7 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
           >
             <div>
               {/* 1. Cabeçalho Oficial do Relatório */}
-              <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-5 w-full">
+              <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-5 w-full print-avoid-break break-inside-avoid">
                 {/* Lado Esquerdo: Logo + Título, Nome e Especialidade */}
                 <div className="flex items-center gap-4">
                   <img
@@ -440,7 +320,7 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
               </div>
 
               {/* 2. Destaque do Protocolo / Procedimento (Acima das Informações) */}
-              <div className="bg-emerald-50/60 border border-emerald-200/80 p-3.5 rounded-xl mb-3 print-avoid-break">
+              <div className="bg-emerald-50/60 border border-emerald-200/80 p-3.5 rounded-xl mb-3 print-avoid-break break-inside-avoid">
                 <div className="flex items-center gap-2 mb-1.5">
                   <div className="w-6 h-6 rounded-lg bg-[#004d40] text-white flex items-center justify-center font-bold text-xs shrink-0">
                     <ClipboardList className="w-3.5 h-3.5" />
@@ -455,7 +335,7 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
               </div>
 
               {/* 3. Metadados do Protocolo (Status, Data e Profissional) */}
-              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 mb-5 print-avoid-break">
+              <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 mb-5 print-avoid-break break-inside-avoid">
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">
@@ -485,7 +365,7 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
               </div>
 
               {/* 4. Finalidade do Procedimento */}
-              <div className="border border-slate-200 rounded-xl p-3.5 bg-white mb-5 print-avoid-break">
+              <div className="border border-slate-200 rounded-xl p-3.5 bg-white mb-5 print-avoid-break break-inside-avoid">
                 <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100 mb-2">
                   <span className="px-2 py-0.5 text-[10px] font-black tracking-wider uppercase rounded bg-emerald-100 text-emerald-900 border border-emerald-200">
                     Finalidade Clínica
@@ -501,7 +381,7 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
 
               {/* 5. Sequência dos Blocos Ordenados (Tópicos e Prescrições) */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                <div className="flex items-center justify-between pb-1 border-b border-slate-200 section-title">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     Estrutura Operacional & Prescrições Integradas
                   </span>
@@ -517,7 +397,7 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
                     return (
                       <div
                         key={bloco.id || idx}
-                        className="border border-slate-200 rounded-xl p-3.5 bg-white print-avoid-break space-y-2.5"
+                        className="border border-slate-200 rounded-xl p-3.5 bg-white print-avoid-break break-inside-avoid space-y-2.5"
                       >
                         {/* Título do Tópico */}
                         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -544,12 +424,12 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
                         {/* Subtópicos Hierárquicos */}
                         {bloco.subtopicos && bloco.subtopicos.length > 0 && (
                           <div className="pl-7 pt-1 space-y-2">
-                            {bloco.subtopicos
+                            {[...bloco.subtopicos]
                               .sort((a, b) => a.ordem - b.ordem)
                               .map((sub, sIdx) => (
                                 <div
                                   key={sub.id || sIdx}
-                                  className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-200/80 space-y-1"
+                                  className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-200/80 space-y-1 print-avoid-break break-inside-avoid"
                                 >
                                   <div className="flex items-center gap-1.5 font-bold text-[11px] text-slate-800">
                                     <span className="text-[#004d40]">{numBloco}.{sIdx + 1}</span>
@@ -576,7 +456,7 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
                     return (
                       <div
                         key={bloco.id || idx}
-                        className="border border-slate-200 rounded-xl p-3.5 bg-white print-avoid-break space-y-2.5"
+                        className="border border-slate-200 rounded-xl p-3.5 bg-white print-avoid-break break-inside-avoid space-y-2.5"
                       >
                         {/* Cabeçalho da Tabela */}
                         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -654,7 +534,7 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
                     return (
                       <div
                         key={bloco.id || idx}
-                        className="border border-emerald-200/80 rounded-xl p-3.5 bg-emerald-50/30 print-avoid-break space-y-2.5"
+                        className="border border-emerald-200/80 rounded-xl p-3.5 bg-emerald-50/30 print-avoid-break break-inside-avoid space-y-2.5"
                       >
                         {/* Cabeçalho da Fórmula */}
                         <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
@@ -728,7 +608,7 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
                   return (
                     <div
                       key={bloco.id || idx}
-                      className="border border-emerald-200/80 rounded-xl p-3.5 bg-emerald-50/30 print-avoid-break space-y-2.5"
+                      className="border border-emerald-200/80 rounded-xl p-3.5 bg-emerald-50/30 print-avoid-break break-inside-avoid space-y-2.5"
                     >
                       {/* Cabeçalho da Prescrição */}
                       <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
@@ -756,7 +636,7 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
                           {itensRx.map((item: any, itIdx: number) => (
                             <div
                               key={item.id || itIdx}
-                              className="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1 text-xs"
+                              className="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1 text-xs print-avoid-break break-inside-avoid"
                             >
                               <div className="flex items-baseline justify-between gap-2 flex-wrap">
                                 <span className="font-bold text-slate-900 text-xs">
@@ -816,7 +696,7 @@ export function PrintPopModal({ isOpen, onClose, pop }: PrintPopModalProps) {
             </div>
 
             {/* 6. Rodapé Institucional com Chancela Criptográfica */}
-            <div className="mt-auto pt-6 border-t border-slate-200 space-y-3 print-footer">
+            <div className="mt-auto pt-6 border-t border-slate-200 space-y-3 print-footer print-avoid-break break-inside-avoid">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
                 <span className="font-medium">{formatDateToPortuguese(pop.data_pop)}</span>
                 <span className="text-[11px] font-semibold text-slate-700">

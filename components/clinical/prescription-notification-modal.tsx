@@ -15,7 +15,7 @@ import type { Client } from "@/types/client";
 import type { PrescriptionItem } from "@/types/clinical-record";
 import { useToast } from "@/components/ui/toast";
 import {
-  generateGenericClinicalPdf,
+  generatePrescriptionPdfClient,
   sanitizePdfFileName,
   sharePdfViaWhatsApp,
 } from "@/lib/utils/whatsapp-share-pdf";
@@ -58,7 +58,9 @@ interface FeedbackState {
 }
 
 function formatDateBR(dateStr?: string | null): string {
-  if (!dateStr) return new Date().toLocaleDateString("pt-BR");
+  if (!dateStr) {
+    return new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  }
   const clean = String(dateStr).trim().split("T")[0];
   const parts = clean.split("-");
   if (parts.length === 3 && parts[0].length === 4) {
@@ -67,17 +69,11 @@ function formatDateBR(dateStr?: string | null): string {
   return clean;
 }
 
-function formatCpf(cpf?: string): string {
-  if (!cpf) return "Não informado";
-  const clean = cpf.replace(/\D/g, "");
-  if (clean.length !== 11) return cpf;
-  return `${clean.substring(0, 3)}.${clean.substring(3, 6)}.${clean.substring(6, 9)}-${clean.substring(9, 11)}`;
-}
-
 function parseRxDetails(rx: NotifiablePrescription) {
   const dosagemStr = rx.dosagem || "";
   let componentes: { nome: string; qtd: string }[] = [];
   let veiculoInfo = rx.item?.veiculo || "";
+  let dosagemInfo = rx.item?.dosagem != null ? String(rx.item.dosagem) : "";
   let totalInfo = "";
 
   if (Array.isArray(rx.componentes) && rx.componentes.length > 0) {
@@ -108,6 +104,7 @@ function parseRxDetails(rx: NotifiablePrescription) {
           const insideParentheses = remaining.substring(parenthesIndex + 2, remaining.length - 1);
           if (insideParentheses.includes(" | ")) {
             const parts = insideParentheses.split(" | ");
+            dosagemInfo = dosagemInfo || parts[0].replace("Dose: ", "").trim();
             totalInfo = parts[1].replace("Total: ", "").trim();
           } else {
             totalInfo = insideParentheses.replace("Total: ", "").trim();
@@ -141,6 +138,7 @@ function parseRxDetails(rx: NotifiablePrescription) {
   return {
     componentes: componentes.length > 0 ? componentes : [{ nome: rx.medicamento, qtd: dosagemStr }],
     veiculo: veiculoInfo || "Veículo base adequado",
+    dosagem: dosagemInfo,
     total: totalInfo || rx.duracao,
     orientPaciente,
     orientFarmacia,
@@ -237,54 +235,27 @@ export function PrescriptionNotificationModal({
         }
       }
 
-      // 3. Fallback em memória via pdf-lib
+      // 3. Fallback em memória via pdf-lib (paridade 1:1 com a visualização e o servidor)
       if (!pdfFile) {
         const rxDetails = parseRxDetails(prescription);
-        pdfFile = await generateGenericClinicalPdf({
+        pdfFile = await generatePrescriptionPdfClient({
           fileName,
-          title: "Receituário & Prescrição Clínica",
-          subtitle: `Prescrição: ${formulaName} (Uso ${viaLabel})`,
+          id: rxId || undefined,
           patientName,
-          patientCpf: formatCpf(client?.cpf),
-          patientPhone,
-          dateStr: emissionDate || undefined,
-          sections: [
-            {
-              title: "Medicamento / Fórmula Magistral",
-              badge: `Uso ${viaLabel}`,
-              paragraph: formulaName,
-            },
-            {
-              title: "Composição & Dosagem",
-              items: rxDetails.componentes.map((c) => (c.qtd ? `${c.nome}: ${c.qtd}` : c.nome)),
-              paragraph: `Veículo: ${rxDetails.veiculo}${
-                rxDetails.total ? ` | Quantidade Total: ${rxDetails.total}` : ""
-              }`,
-            },
-            {
-              title: "Posologia & Modo de Uso",
-              paragraph:
-                prescription.posologia ||
-                prescription.item?.posologia ||
-                "Conforme orientação profissional.",
-            },
-            ...(rxDetails.orientPaciente
-              ? [
-                  {
-                    title: "Orientações ao Paciente",
-                    paragraph: rxDetails.orientPaciente,
-                  },
-                ]
-              : []),
-            ...(rxDetails.orientFarmacia
-              ? [
-                  {
-                    title: "Observações à Farmácia Magistral",
-                    paragraph: rxDetails.orientFarmacia,
-                  },
-                ]
-              : []),
-          ],
+          patientCpf: client?.cpf,
+          dataPrescricao: emissionDate || undefined,
+          medicamento: formulaName,
+          via: viaLabel,
+          componentes: rxDetails.componentes,
+          veiculo: rxDetails.veiculo,
+          dosagem: rxDetails.dosagem,
+          total: rxDetails.total,
+          posologia:
+            prescription.posologia ||
+            prescription.item?.posologia ||
+            "Conforme orientação profissional.",
+          orientPaciente: rxDetails.orientPaciente,
+          orientFarmacia: rxDetails.orientFarmacia,
         });
       }
 

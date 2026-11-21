@@ -10,13 +10,15 @@ import {
   PanelLeftOpen,
   Calendar,
   ShieldCheck,
+  Loader2,
 } from "lucide-react";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
 import type { Client } from "@/types/client";
 import {
   sanitizePdfFileName,
   sharePdfViaWhatsApp,
-  generateGenericClinicalPdf,
+  downloadPdfFile,
+  generateHomeCarePdf,
 } from "@/lib/utils/whatsapp-share-pdf";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
@@ -46,15 +48,15 @@ function formatCPF(cpf?: string | null): string {
 
 function formatDateToPortuguese(dateStr?: string | null): string {
   const clean = dateStr ? dateStr.split("T")[0] : null;
-  const date = clean ? new Date(clean + "T12:00:00") : new Date();
-  const months = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-  ];
-  const day = date.getDate();
-  const month = months[date.getMonth()];
-  const year = date.getFullYear();
-  return `Salvador - BA, ${day} de ${month} de ${year}`;
+  const date = clean ? new Date(`${clean}T12:00:00-03:00`) : new Date();
+  const formatted = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(Number.isNaN(date.getTime()) ? new Date() : date);
+  const capitalized = formatted.replace(/ de ([a-zç])/i, (_, ch: string) => ` de ${ch.toUpperCase()}`);
+  return `Salvador - BA, ${capitalized}`;
 }
 
 export function PrintHomeCareModal({
@@ -66,6 +68,7 @@ export function PrintHomeCareModal({
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   if (!isOpen) return null;
 
@@ -74,67 +77,20 @@ export function PrintHomeCareModal({
   const pacienteCpf = client?.cpf || ficha.paciente?.cpf;
   const pacienteTelefone = client?.telefone || (client as any)?.whatsapp;
 
+  const buildHomeCarePdfFile = async (): Promise<File> => {
+    const fileName = sanitizePdfFileName("Home_Care", pacienteNome);
+    return generateHomeCarePdf({
+      fileName,
+      ficha,
+      patientName: pacienteNome,
+      patientCpf: pacienteCpf,
+    });
+  };
+
   const handleShareWhatsApp = async () => {
     try {
       setIsSharingWhatsApp(true);
-      const fileName = sanitizePdfFileName("Home_Care", pacienteNome);
-
-      const sections: Array<{
-        title?: string;
-        items?: string[];
-        paragraph?: string;
-        badge?: string;
-      }> = [];
-
-      // Grupo 1: Cuidados Diários
-      if (ficha.cuidados && ficha.cuidados.length > 0) {
-        sections.push({
-          title: "Cuidados Diários e Orientações",
-          items: ficha.cuidados.map((c) => `${c.titulo}: ${c.texto}`),
-        });
-      }
-
-      // Grupo 2: Cronograma de Tratamento (se incluído)
-      if (ficha.cronograma && ficha.cronograma.length > 0) {
-        sections.push({
-          title: "Cronograma de Tratamento",
-          items: ficha.cronograma.map(
-            (cr) =>
-              `Dias ${cr.dia_inicio} a ${cr.dia_fim} • ${cr.nome_formula}: ${cr.posologia}${
-                cr.objetivo_clinico ? ` (Objetivo: ${cr.objetivo_clinico})` : ""
-              }`
-          ),
-        });
-      }
-
-      // Grupo 3: Recomendações Complementares
-      if (ficha.incluir_recomendacoes && ficha.recomendacoes && ficha.recomendacoes.length > 0) {
-        sections.push({
-          title: "Recomendações Complementares",
-          items: ficha.recomendacoes.map((r) => `${r.titulo}: ${r.texto}`),
-        });
-      }
-
-      // Grupo 4: Atenção Crítica
-      if (ficha.incluir_atencao_critica && (ficha.atencao_critica_titulo || ficha.atencao_critica_texto)) {
-        sections.push({
-          title: ficha.atencao_critica_titulo || "Atenção Crítica & Sinais de Alerta",
-          badge: "Alerta Clínico",
-          paragraph: ficha.atencao_critica_texto || "Em caso de reação adversa, contate a clínica imediatamente.",
-        });
-      }
-
-      const pdfFile = await generateGenericClinicalPdf({
-        fileName,
-        title: "Protocolo de Home Care",
-        subtitle: `Protocolo: ${ficha.titulo_protocolo}`,
-        patientName: pacienteNome,
-        patientCpf: formatCPF(pacienteCpf),
-        patientPhone: pacienteTelefone,
-        dateStr: formatDateBR(ficha.data_home_care),
-        professionalName: ficha.profissional || "Dra. Juliana Sena de Souza Vieira",
-        sections,
-      });
+      const pdfFile = await buildHomeCarePdfFile();
 
       await sharePdfViaWhatsApp({
         file: pdfFile,
@@ -149,118 +105,16 @@ export function PrintHomeCareModal({
     }
   };
 
-  const handlePrint = () => {
-    const printContent = printAreaRef.current;
-    if (!printContent) return;
-
-    // Cria um iframe invisível no DOM
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-    iframe.style.zIndex = "-9999";
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) return;
-
-    // Clona folhas de estilos e fontes da página principal
-    const styles = Array.from(document.querySelectorAll("link[rel='stylesheet'], style"))
-      .map((style) => style.outerHTML)
-      .join("\n");
-
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-        <head>
-          <meta charset="utf-8" />
-          <title></title>
-          ${styles}
-          <style>
-            /* Margens físicas oficiais aplicadas de forma uniforme em TODAS as páginas */
-            @page {
-              size: A4 portrait;
-              margin: 16mm 14mm 16mm 14mm;
-            }
-
-            *, *::before, *::after {
-              box-sizing: border-box;
-            }
-
-            html, body {
-              margin: 0 !important;
-              padding: 0 !important;
-              background: #ffffff !important;
-              color: #0f172a !important;
-              font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              width: 100% !important;
-              height: auto !important;
-              overflow: visible !important;
-            }
-
-            /* O container interno não deve ter padding extra para não somar com o @page */
-            .print-wrapper {
-              width: 100% !important;
-              max-width: 100% !important;
-              padding: 0 !important;
-              margin: 0 !important;
-              background: #ffffff !important;
-            }
-
-            /* Evita corte no meio de cards, linhas de tabelas e tópicos */
-            .print-avoid-break {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-
-            table, tr, td, th {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-
-            thead {
-              display: table-header-group !important;
-            }
-
-            /* Margem de segurança acima de seções na quebra de página */
-            h3, .section-title {
-              break-after: avoid !important;
-              page-break-after: avoid !important;
-            }
-
-            /* Bloco de assinatura e data */
-            .print-footer {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-              margin-top: 28px !important;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="print-wrapper">
-            ${printContent.innerHTML}
-          </div>
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    // Dispara a impressão a partir do iframe após o carregamento dos recursos
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      }, 1200);
-    }, 400);
+  const handlePrint = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const pdfFile = await buildHomeCarePdfFile();
+      downloadPdfFile(pdfFile);
+    } catch (err) {
+      console.error("Erro ao gerar PDF da ficha de Home Care:", err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   return (
@@ -351,19 +205,28 @@ export function PrintHomeCareModal({
             <button
               type="button"
               onClick={handleShareWhatsApp}
-              disabled={isSharingWhatsApp}
+              disabled={isSharingWhatsApp || isGeneratingPdf}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
-              <WhatsAppIcon className="w-4 h-4 shrink-0" />
+              {isSharingWhatsApp ? (
+                <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+              ) : (
+                <WhatsAppIcon className="w-4 h-4 shrink-0" />
+              )}
               <span>{isSharingWhatsApp ? "Preparando envio..." : "Enviar pelo WhatsApp"}</span>
             </button>
             <button
               type="button"
               onClick={handlePrint}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all shadow-xs cursor-pointer"
+              disabled={isGeneratingPdf || isSharingWhatsApp}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
-              <Printer className="w-4 h-4" />
-              <span>Imprimir / Gerar PDF</span>
+              {isGeneratingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Printer className="w-4 h-4" />
+              )}
+              <span>{isGeneratingPdf ? "Gerando PDF..." : "Imprimir / Gerar PDF"}</span>
             </button>
             <button
               type="button"
@@ -409,7 +272,7 @@ export function PrintHomeCareModal({
           >
             <div>
               {/* Cabeçalho do Relatório */}
-              <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-6 w-full">
+              <div className="flex items-center justify-between border-b border-slate-900 pb-3 mb-6 w-full print-avoid-break break-inside-avoid">
                 {/* Lado Esquerdo: Logo + Coluna com Título, Nome e Especialidade */}
                 <div className="flex items-center gap-4">
                   {/* Logo da Clínica */}
@@ -448,7 +311,7 @@ export function PrintHomeCareModal({
               </div>
 
               {/* Identificação do Paciente */}
-              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6 print-avoid-break">
+              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6 print-avoid-break break-inside-avoid">
                 <div>
                   <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
                     PACIENTE
@@ -469,7 +332,7 @@ export function PrintHomeCareModal({
 
               {/* 3. Caixa de Alerta: ATENÇÃO CRÍTICA (Configurável) */}
               {ficha.incluir_atencao_critica !== false && Boolean(ficha.atencao_critica_texto?.trim()) && (
-                <div className="rounded-2xl bg-amber-50 border border-amber-200/80 p-3.5 mb-5 flex items-start gap-3 print-avoid-break">
+                <div className="rounded-2xl bg-amber-50 border border-amber-200/80 p-3.5 mb-5 flex items-start gap-3 print-avoid-break break-inside-avoid">
                   <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                   <div className="text-xs text-amber-900 leading-relaxed">
                     <span className="font-bold uppercase tracking-wider block mb-0.5 text-amber-800">
@@ -482,7 +345,7 @@ export function PrintHomeCareModal({
 
               {/* 4. Bloco: CUIDADOS (Tópicos numerados) */}
               <div className="mb-6 space-y-3">
-                <div className="border-b-2 border-teal-700/80 pb-1.5 flex items-center justify-between">
+                <div className="border-b-2 border-teal-700/80 pb-1.5 flex items-center justify-between section-title">
                   <h3 className="text-xs font-black text-teal-950 uppercase tracking-widest flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-teal-600 inline-block" />
                     CUIDADOS DIÁRIOS FUNDAMENTAIS
@@ -494,7 +357,7 @@ export function PrintHomeCareModal({
 
                 <div className="space-y-3 pt-1">
                   {ficha.cuidados.map((cuidado, idx) => (
-                    <div key={idx} className="flex items-start gap-3 text-xs print-avoid-break">
+                    <div key={idx} className="flex items-start gap-3 text-xs print-avoid-break break-inside-avoid">
                       <div className="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 font-bold flex items-center justify-center shrink-0 mt-0.5 text-[11px]">
                         {idx + 1}
                       </div>
@@ -514,7 +377,7 @@ export function PrintHomeCareModal({
               {/* 5. Bloco: CRONOGRAMA DE TRATAMENTO */}
               {ficha.cronograma && ficha.cronograma.length > 0 && (
                 <div className="mb-6 space-y-3">
-                  <div className="border-b-2 border-teal-700/80 pb-1.5 flex items-center justify-between">
+                  <div className="border-b-2 border-teal-700/80 pb-1.5 flex items-center justify-between section-title">
                     <h3 className="text-xs font-black text-teal-950 uppercase tracking-widest flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-teal-600 inline-block" />
                       CRONOGRAMA DE TRATAMENTO
@@ -524,8 +387,8 @@ export function PrintHomeCareModal({
                     </span>
                   </div>
 
-                  <div className="overflow-hidden rounded-xl border border-slate-200 print-avoid-break">
-                    <table className="w-full text-left border-collapse text-xs print-avoid-break">
+                  <div className="overflow-hidden rounded-xl border border-slate-200 print-avoid-break break-inside-avoid">
+                    <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="bg-slate-100 text-slate-700 border-b border-slate-200 font-bold uppercase text-[10px]">
                           <th className="py-2.5 px-3 w-[22%]">Período</th>
@@ -568,7 +431,7 @@ export function PrintHomeCareModal({
               {/* 6. Bloco: RECOMENDAÇÕES COMPLEMENTARES IMPORTANTES (Se houver) */}
               {ficha.incluir_recomendacoes && ficha.recomendacoes && ficha.recomendacoes.length > 0 && (
                 <div className="mb-6 space-y-3">
-                  <div className="border-b-2 border-amber-600/80 pb-1.5 flex items-center justify-between">
+                  <div className="border-b-2 border-amber-600/80 pb-1.5 flex items-center justify-between section-title">
                     <h3 className="text-xs font-black text-amber-950 uppercase tracking-widest flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
                       RECOMENDAÇÕES COMPLEMENTARES IMPORTANTES
@@ -577,7 +440,7 @@ export function PrintHomeCareModal({
 
                   <div className="space-y-2.5 pt-1">
                     {ficha.recomendacoes.map((rec, idx) => (
-                      <div key={idx} className="flex items-start gap-3 text-xs bg-amber-50/40 p-2.5 rounded-xl border border-amber-200/50 print-avoid-break">
+                      <div key={idx} className="flex items-start gap-3 text-xs bg-amber-50/40 p-2.5 rounded-xl border border-amber-200/50 print-avoid-break break-inside-avoid">
                         <div className="w-5 h-5 rounded-md bg-amber-200 text-amber-900 font-bold flex items-center justify-center shrink-0 mt-0.5 text-[10px]">
                           {idx + 1}
                         </div>
@@ -597,7 +460,7 @@ export function PrintHomeCareModal({
             </div>
 
             {/* 7. Rodapé Institucional com Chancela Criptográfica */}
-            <div className="mt-auto pt-6 border-t border-slate-200 space-y-3 print-footer">
+            <div className="mt-auto pt-6 border-t border-slate-200 space-y-3 print-footer print-avoid-break break-inside-avoid">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600">
                 <span className="font-medium">{formatDateToPortuguese(ficha.data_home_care)}</span>
                 <span className="text-[11px] font-semibold text-slate-700">
