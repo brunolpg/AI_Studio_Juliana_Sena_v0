@@ -43,6 +43,7 @@ import {
   RotateCcw,
   FlaskConical,
   Lock,
+  FileSignature,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
 import {
@@ -69,9 +70,12 @@ import { ExamPrescriptionNotificationModal } from "./exam-prescription-notificat
 import { getPatientHomeCareFichas } from "@/app/actions/home-care";
 import { getPropostasByPaciente } from "@/app/actions/propostas-actions";
 import { getPrescricoesExamesByPaciente } from "@/app/actions/prescricoes-exames-actions";
+import { getTermosByPaciente } from "@/app/actions/termos";
 import type { Proposta } from "@/types/proposta";
+import type { TermoConsentimento } from "@/types/termo";
 import { PropostasCards } from "@/components/propostas/propostas-cards";
 import { PropostaFormModal } from "@/components/propostas/proposta-form-modal";
+import { TermosTab } from "@/components/termos/termos-tab";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
 import type { PrescricaoExame } from "@/types/prescricao-exame";
 import { useToast } from "@/components/ui/toast";
@@ -90,7 +94,7 @@ interface PatientClinicalTabsProps {
   onTabChange?: (tab: ClinicalSubTab) => void;
 }
 
-export type ClinicalSubTab = "historico" | "evolucoes" | "prescricoes" | "propostas" | "metricas";
+export type ClinicalSubTab = "historico" | "evolucoes" | "prescricoes" | "termos" | "propostas" | "metricas";
 
 export function PatientClinicalTabs({
   client,
@@ -216,6 +220,9 @@ export function PatientClinicalTabs({
   const [homeCareFichas, setHomeCareFichas] = useState<HomeCareFichaCompleta[]>([]);
   const [isHomeCareModalOpen, setIsHomeCareModalOpen] = useState(false);
   const [selectedHomeCareForEdit, setSelectedHomeCareForEdit] = useState<HomeCareFichaCompleta | null>(null);
+
+  // Termos de Consentimento
+  const [termos, setTermos] = useState<TermoConsentimento[]>([]);
 
   // Propostas de Planejamento Clínico
   const [propostas, setPropostas] = useState<Proposta[]>([]);
@@ -505,6 +512,7 @@ export function PatientClinicalTabs({
         setClinicalRecord(null);
         setAestheticData(null);
         setHomeCareFichas([]);
+        setTermos([]);
         setPropostas([]);
         setPrescricoesExames([]);
         const res = await getPatientClinicalRecordAction(client.id);
@@ -614,6 +622,18 @@ export function PatientClinicalTabs({
             console.warn("Erro ao buscar fichas de Home Care:", hcareErr);
           }
 
+          // Busca Termos de Consentimento do paciente
+          if (!isPatient) {
+            try {
+              const termosRes = await getTermosByPaciente(client.id);
+              if (termosRes.success && termosRes.data) {
+                setTermos(termosRes.data);
+              }
+            } catch (termosErr) {
+              console.warn("Erro ao buscar termos de consentimento:", termosErr);
+            }
+          }
+
           // Busca Propostas de Planejamento do paciente
           try {
             const propRes = await getPropostasByPaciente(client.id);
@@ -648,7 +668,7 @@ export function PatientClinicalTabs({
         setIsLoading(false);
       }
     });
-  }, [client?.id, toast]);
+  }, [client?.id, toast, isPatient]);
 
   useEffect(() => {
     loadClinicalData();
@@ -926,6 +946,26 @@ export function PatientClinicalTabs({
                   : "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60"
               }`}>
                 {activePrescriptions.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("termos")}
+              className={`flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-md-full font-semibold transition-all cursor-pointer whitespace-nowrap md-state-layer ${
+                activeSubTab === "termos"
+                  ? "bg-primary text-on-primary shadow-xs"
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
+              }`}
+            >
+              <FileSignature className="w-3.5 h-3.5" />
+              <span>Termos</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-md-full ${
+                activeSubTab === "termos"
+                  ? "bg-on-primary/20 text-on-primary"
+                  : "bg-primary-container text-on-primary-container border border-primary/20"
+              }`}>
+                {termos.length}
               </span>
             </button>
 
@@ -2492,6 +2532,19 @@ export function PatientClinicalTabs({
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* ABA: TERMOS DE CONSENTIMENTO */}
+            {/* ======================================================== */}
+            {activeSubTab === "termos" && !isPatient && (
+              <div className="w-full">
+                <TermosTab
+                  client={client}
+                  termos={termos}
+                  onRefresh={loadClinicalData}
+                />
               </div>
             )}
 
