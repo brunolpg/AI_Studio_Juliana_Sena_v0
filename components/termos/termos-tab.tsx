@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FileSignature,
   Plus,
@@ -28,6 +28,7 @@ interface TermosTabProps {
   client: Client;
   termos: TermoConsentimento[];
   onRefresh: () => void;
+  openNewTermoSignal?: number;
 }
 
 function formatDateBR(dateStr?: string | null): string {
@@ -40,7 +41,12 @@ function formatDateBR(dateStr?: string | null): string {
   return dateStr;
 }
 
-export function TermosTab({ client, termos, onRefresh }: TermosTabProps) {
+export function TermosTab({
+  client,
+  termos,
+  onRefresh,
+  openNewTermoSignal,
+}: TermosTabProps) {
   const { toast } = useToast();
 
   const [modelos, setModelos] = useState<TermoModelo[]>([]);
@@ -51,6 +57,17 @@ export function TermosTab({ client, termos, onRefresh }: TermosTabProps) {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [selectedTermoForDetails, setSelectedTermoForDetails] =
     useState<TermoConsentimento | null>(null);
+  const lastNewTermoSignalRef = useRef(openNewTermoSignal ?? 0);
+
+  useEffect(() => {
+    if (
+      openNewTermoSignal &&
+      openNewTermoSignal !== lastNewTermoSignalRef.current
+    ) {
+      lastNewTermoSignalRef.current = openNewTermoSignal;
+      setIsFormModalOpen(true);
+    }
+  }, [openNewTermoSignal]);
 
   const loadModelos = useCallback(async () => {
     try {
@@ -120,12 +137,12 @@ export function TermosTab({ client, termos, onRefresh }: TermosTabProps) {
               type="button"
               onClick={() => setIsModeloModalOpen(true)}
               disabled={isLoadingModelos}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-md-full text-xs font-semibold bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high transition-all cursor-pointer whitespace-nowrap"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container shadow-2xs transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] md-state-layer disabled:opacity-60"
             >
               {isLoadingModelos ? (
                 <Loader2 className="w-4 h-4 animate-spin shrink-0" />
               ) : (
-                <BookOpen className="w-4 h-4 shrink-0 text-primary" />
+                <BookOpen className="w-4 h-4 shrink-0" />
               )}
               <span>Modelos</span>
             </button>
@@ -133,7 +150,7 @@ export function TermosTab({ client, termos, onRefresh }: TermosTabProps) {
             <button
               type="button"
               onClick={() => setIsFormModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-md-full text-xs font-semibold bg-primary text-on-primary hover:opacity-95 shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-semibold text-white bg-[#0d6e64] hover:bg-[#0b5c54] dark:bg-teal-600 dark:hover:bg-teal-500 rounded-full shadow-xs hover:shadow transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] md-state-layer"
             >
               <Plus className="w-4 h-4 shrink-0" />
               <span>Novo Termo</span>
