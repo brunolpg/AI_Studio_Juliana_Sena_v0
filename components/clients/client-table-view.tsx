@@ -367,9 +367,9 @@ export function ClientTableView() {
                   </div>
                 </th>
                 <th className="py-3.5 px-4">CPF / Sexo</th>
-                <th className="py-3.5 px-4">Contato</th>
+                <th className="hidden lg:table-cell py-3.5 px-4">Contato</th>
                 <th
-                  className="py-3.5 px-4 cursor-pointer select-none hover:text-teal-700 dark:hover:text-teal-400 transition-colors"
+                  className="hidden lg:table-cell py-3.5 px-4 cursor-pointer select-none hover:text-teal-700 dark:hover:text-teal-400 transition-colors"
                   onClick={() => handleSort("cidade")}
                   title="Ordenar por Cidade"
                 >
@@ -485,7 +485,7 @@ export function ClientTableView() {
                       </td>
 
                       {/* Contato */}
-                      <td className="py-3 px-4">
+                      <td className="hidden lg:table-cell py-3 px-4">
                         <span className="text-xs text-slate-700 dark:text-slate-300 block">
                           {client.telefone}
                         </span>
@@ -495,7 +495,7 @@ export function ClientTableView() {
                       </td>
 
                       {/* Localização */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      <td className="hidden lg:table-cell py-3 px-4 whitespace-nowrap">
                         <span className="text-xs text-slate-700 dark:text-slate-300">
                           {client.cidade} / {client.estado}
                         </span>
