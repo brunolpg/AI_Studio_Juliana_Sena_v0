@@ -4,16 +4,10 @@ import React, { useRef, useState } from "react";
 import {
   X,
   Printer,
-  FileText,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Calendar,
   ShieldCheck,
-  CreditCard,
   Sparkles,
-  Layers,
-  Clock,
-  CheckCircle2,
+  Edit2,
+  Share2,
   Loader2,
 } from "lucide-react";
 import type { Proposta } from "@/types/proposta";
@@ -24,13 +18,38 @@ import {
   downloadPdfFile,
   generatePropostaPdf,
 } from "@/lib/utils/whatsapp-share-pdf";
-import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
 interface PrintPropostaModalProps {
   isOpen: boolean;
   onClose: () => void;
   proposta: Proposta;
   client?: Client | null;
+  userRole?: string;
+  onEdit?: (proposta: Proposta) => void;
+}
+
+function getPropostaStatusBadgeClass(status?: string): string {
+  const normalized = (status || "Ativo").toLowerCase();
+  if (normalized === "ativo" || normalized === "aprovada" || normalized === "aprovado") {
+    return "bg-success-container text-on-success-container border border-success/30";
+  }
+  if (
+    normalized === "suspenso" ||
+    normalized === "suspensa" ||
+    normalized === "cancelado" ||
+    normalized === "cancelada" ||
+    normalized === "recusada" ||
+    normalized === "recusado"
+  ) {
+    return "bg-error-container text-on-error-container border border-error/30";
+  }
+  if (normalized === "enviada" || normalized === "enviado") {
+    return "bg-secondary-container text-on-secondary-container border border-secondary/30";
+  }
+  if (normalized === "rascunho" || normalized === "pendente") {
+    return "bg-warning-container text-on-warning-container border border-warning/30";
+  }
+  return "bg-surface-container-high text-on-surface-variant border border-outline-variant";
 }
 
 function formatDateBR(dateStr?: string | null): string {
@@ -91,13 +110,31 @@ export function PrintPropostaModal({
   onClose,
   proposta,
   client,
+  userRole = "profissional",
+  onEdit,
 }: PrintPropostaModalProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   if (!isOpen || !proposta) return null;
+
+  const isProfissionalOrAdmin =
+    userRole === "administrador" ||
+    userRole === "admin" ||
+    userRole === "profissional";
+
+  const statusLabel = proposta.status || "Ativo";
+  const normalizedStatus = statusLabel.toLowerCase();
+  const canEdit =
+    isProfissionalOrAdmin &&
+    Boolean(onEdit) &&
+    normalizedStatus !== "suspenso" &&
+    normalizedStatus !== "suspensa" &&
+    normalizedStatus !== "cancelado" &&
+    normalizedStatus !== "cancelada" &&
+    normalizedStatus !== "recusada" &&
+    normalizedStatus !== "recusado";
 
   const pacienteNome = client?.nome || "Paciente";
   const pacienteNasc = client?.data_nascimento;
@@ -147,7 +184,7 @@ export function PrintPropostaModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-on-surface/50 backdrop-blur-xs animate-in fade-in duration-200 print:p-0 print:bg-surface print:fixed print:inset-0">
       {/* Fonte Plus Jakarta Sans */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -163,144 +200,92 @@ export function PrintPropostaModal({
         }
       `}} />
 
-      <div className="relative w-[95vw] max-w-[1300px] h-[90vh] bg-slate-100 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col lg:flex-row overflow-hidden animate-in zoom-in-95 duration-200">
-        
-        {/* Painel Lateral com Informações e Ações */}
-        <div
-          className={`bg-white dark:bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between shrink-0 overflow-y-auto print:hidden transition-all duration-300 ${
-            isSidebarOpen ? "w-full lg:w-80" : "w-0 p-0 overflow-hidden border-0 hidden"
-          }`}
-        >
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                <span className="font-bold text-slate-800 dark:text-slate-100 text-sm">
-                  Relatório de Proposta Clínica
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <div className="w-full max-w-4xl max-h-[85dvh] bg-surface rounded-md-2xl sm:rounded-md-3xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:border-none print:shadow-none print:max-h-none print:rounded-none">
+        {/* Barra Superior de Ações (Oculta na Impressão) */}
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-container-low shrink-0 print:hidden flex-wrap gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-md-lg bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-primary" />
             </div>
-
-            <div className="space-y-3.5">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 block uppercase">Paciente</span>
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mt-0.5">
-                  {pacienteNome}
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 block uppercase">Título da Proposta</span>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block mt-0.5">
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold text-on-surface truncate">
+                Relatório de Proposta Clínica
+              </h3>
+              <div className="flex items-center gap-2 text-[11px] text-on-surface-variant flex-wrap">
+                <span>{pacienteNome}</span>
+                <span>•</span>
+                <span className="truncate max-w-[180px] sm:max-w-[260px]" title={proposta.titulo}>
                   {proposta.titulo}
                 </span>
-              </div>
-
-              {proposta.objetivo && (
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Objetivo Clínico</span>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 mt-0.5 leading-relaxed">
-                    {proposta.objetivo}
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 block uppercase">Data de Emissão</span>
-                <span className="text-xs font-semibold text-teal-700 dark:text-teal-400 block mt-0.5">
-                  {formatDateBR(proposta.created_at || proposta.assinado_em)}
+                <span>•</span>
+                <span className={`px-2 py-0.5 rounded-md-full font-semibold ${getPropostaStatusBadgeClass(statusLabel)}`}>
+                  {statusLabel}
                 </span>
               </div>
-
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 block uppercase">Profissional Responsável</span>
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mt-0.5">
-                  Juliana Sena de Souza Vieira • COREN-BA 366.344
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 block uppercase">Assinatura Digital</span>
-                <span className="text-[11px] font-mono text-success break-all block mt-0.5">
-                  SHA-256: {proposta.payload_hash ? `${proposta.payload_hash.substring(0, 16)}...` : "AUTÊNTICO"}
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-teal-50/50 dark:bg-teal-950/30 border border-teal-200/50 dark:border-teal-800/60 p-4 rounded-2xl space-y-2">
-              <h4 className="text-xs font-bold text-teal-800 dark:text-teal-300">Padrão Institucional A4</h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                Relatório oficial de proposta terapêutica com detalhamento de opções, procedimentos, condições de investimento, cronograma sugerido e chancela de autenticidade.
-              </p>
             </div>
           </div>
 
-          <div className="space-y-2.5 mt-6">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Ações Restritas a Administrador e Profissional */}
+            {canEdit && onEdit && (
+              <button
+                type="button"
+                onClick={() => {
+                  onEdit(proposta);
+                  onClose();
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-md-full border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+              >
+                <Edit2 className="w-3.5 h-3.5 text-primary" />
+                <span>Editar Proposta</span>
+              </button>
+            )}
+
+            {/* Botão Compartilhar (WhatsApp com PDF) */}
             <button
               type="button"
               onClick={handleShareWhatsApp}
               disabled={isSharingWhatsApp || isGeneratingPdf}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-on-success bg-success hover:opacity-90 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-md-full border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer disabled:opacity-60"
+              title="Compartilhar proposta em PDF pelo WhatsApp"
             >
               {isSharingWhatsApp ? (
-                <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
               ) : (
-                <WhatsAppIcon className="w-4 h-4 shrink-0" />
+                <Share2 className="w-3.5 h-3.5 text-primary" />
               )}
-              <span>{isSharingWhatsApp ? "Preparando envio..." : "Enviar pelo WhatsApp"}</span>
+              <span>{isSharingWhatsApp ? "Compartilhando..." : "Compartilhar"}</span>
             </button>
+
+            {/* Botão Imprimir / Gerar PDF */}
             <button
               type="button"
               onClick={handlePrint}
               disabled={isGeneratingPdf || isSharingWhatsApp}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-md-full border border-transparent bg-primary text-on-primary hover:brightness-105 transition-all shadow-sm cursor-pointer disabled:opacity-60"
             >
               {isGeneratingPdf ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <Printer className="w-4 h-4" />
+                <Printer className="w-3.5 h-3.5" />
               )}
               <span>{isGeneratingPdf ? "Gerando PDF..." : "Imprimir / Gerar PDF"}</span>
             </button>
+
+            {/* Fechar */}
             <button
               type="button"
               onClick={onClose}
-              className="w-full px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors cursor-pointer"
+              className="p-2 min-h-[44px] min-w-[44px] rounded-md-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer flex items-center justify-center"
+              title="Fechar"
             >
-              Fechar Visualização
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         {/* Pré-visualização da Folha A4 */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 dark:bg-slate-950/40 flex justify-center items-start relative">
-          {/* Botão de Toggle para Ocultar / Mostrar Detalhes */}
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="absolute top-4 left-4 p-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-md cursor-pointer z-30 transition-all hover:scale-105 print:hidden"
-            title={isSidebarOpen ? "Ocultar Painel Lateral" : "Mostrar Painel Lateral"}
-          >
-            {isSidebarOpen ? (
-              <div className="flex items-center gap-1.5 text-xs font-semibold">
-                <PanelLeftClose className="w-4 h-4" />
-                <span className="hidden sm:inline">Ocultar Painel</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 text-xs font-semibold">
-                <PanelLeftOpen className="w-4 h-4" />
-                <span className="hidden sm:inline">Mostrar Painel</span>
-              </div>
-            )}
-          </button>
-
+        <div className="flex-1 overflow-y-auto overflow-x-auto p-4 sm:p-6 bg-surface-container/40 print:p-0 print:overflow-visible">
           {/* Folha de Impressão A4 */}
           <div
             id="proposta-print-area"

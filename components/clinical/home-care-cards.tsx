@@ -19,6 +19,7 @@ interface HomeCareCardsProps {
   fichas: HomeCareFichaCompleta[];
   client?: Client | null;
   isPatientView?: boolean;
+  userRole?: string;
   onEdit?: (ficha: HomeCareFichaCompleta) => void;
   onRefresh?: () => void;
 }
@@ -37,6 +38,7 @@ export function HomeCareCards({
   fichas,
   client,
   isPatientView = false,
+  userRole,
   onEdit,
   onRefresh,
 }: HomeCareCardsProps) {
@@ -249,6 +251,8 @@ export function HomeCareCards({
           onClose={() => setSelectedFichaForPrint(null)}
           ficha={selectedFichaForPrint}
           client={client}
+          userRole={userRole || (isPatientView ? "paciente" : "profissional")}
+          onEdit={!isPatientView ? onEdit : undefined}
         />
       )}
     </>

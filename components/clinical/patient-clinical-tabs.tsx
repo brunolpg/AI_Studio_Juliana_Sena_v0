@@ -2517,7 +2517,8 @@ export function PatientClinicalTabs({
                         <HomeCareCards
                           fichas={homeCareFichas}
                           client={client}
-                          isPatientView={isPatientView}
+                          isPatientView={isPatient}
+                          userRole={isPatient ? "paciente" : (user?.role || "profissional")}
                           onEdit={(f) => {
                             setSelectedHomeCareForEdit(f);
                             setIsHomeCareModalOpen(true);
@@ -2802,6 +2803,18 @@ export function PatientClinicalTabs({
           onClose={() => setSelectedRxForPrint(null)}
           prescription={selectedRxForPrint}
           client={client}
+          userRole={isPatient ? "paciente" : (user?.role || "profissional")}
+          onEdit={(rx) => {
+            setSelectedRxForPrint(null);
+            handleOpenEditPrescription({
+              ...rx,
+              id: rx.prescricao_id ?? rx.id,
+              prescricao_id: rx.prescricao_id ?? rx.id,
+            });
+          }}
+          onSuccessSuspend={() => {
+            loadClinicalData();
+          }}
         />
       )}
 

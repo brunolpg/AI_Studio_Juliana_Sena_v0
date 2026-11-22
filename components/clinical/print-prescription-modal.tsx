@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { X, Printer, FileText, PanelLeftClose, PanelLeftOpen, Loader2 } from "lucide-react";
+import {
+  X,
+  Printer,
+  Pill,
+  Edit2,
+  Archive,
+  AlertTriangle,
+  Share2,
+  Loader2,
+} from "lucide-react";
 import type { PrescriptionItem } from "@/types/clinical-record";
 import type { Client } from "@/types/client";
 import {
@@ -10,14 +19,18 @@ import {
   downloadPdfFile,
   generatePrescriptionPdfClient,
 } from "@/lib/utils/whatsapp-share-pdf";
-import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { parsePrescriptionDetails } from "@/lib/prescricoes/format";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/toast";
 
 interface PrintPrescriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
   prescription: PrescriptionItem;
   client: Client;
+  userRole?: string;
+  onEdit?: (prescription: PrescriptionItem) => void;
+  onSuccessSuspend?: () => void;
 }
 
 function formatCPF(cpf?: string): string {
@@ -45,15 +58,34 @@ export function PrintPrescriptionModal({
   onClose,
   prescription,
   client,
+  userRole = "profissional",
+  onEdit,
+  onSuccessSuspend,
 }: PrintPrescriptionModalProps) {
+  const { toast } = useToast();
   const printAreaRef = useRef<HTMLDivElement>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSharingWhatsApp, setIsSharingWhatsApp] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isSuspending, setIsSuspending] = useState(false);
+  const [showSuspendPrompt, setShowSuspendPrompt] = useState(false);
+  const [justificativa, setJustificativa] = useState("Prescrição substituída ou ajustada");
 
   if (!isOpen) return null;
 
   const rxDetails = parsePrescriptionDetails(prescription);
+
+  const isProfissionalOrAdmin =
+    userRole === "administrador" ||
+    userRole === "admin" ||
+    userRole === "profissional";
+
+  const statusLabel =
+    prescription.status || (prescription.ativo === false ? "Suspenso" : "Ativo");
+  const isAtivo = statusLabel === "Ativo" && prescription.ativo !== false;
+
+  const viaRaw = prescription.item?.via || prescription.via || "";
+  const viaLabel = viaRaw.toLowerCase() === "oral" ? "Oral" : "Tópico";
+  const patientName = client?.nome || "Paciente";
 
   const buildPrescriptionPdfFile = async (): Promise<File> => {
     const fileName = sanitizePdfFileName("Receituario", client.nome);
@@ -121,8 +153,79 @@ export function PrintPrescriptionModal({
     }
   };
 
+  const handleConfirmSuspend = async () => {
+    if (!justificativa.trim()) {
+      toast({
+        type: "warning",
+        title: "Justificativa Obrigatória",
+        description: "Informe a justificativa para suspender esta receita.",
+      });
+      return;
+    }
+
+    const targetId = prescription.prescricao_id || prescription.id;
+    if (!targetId) {
+      toast({
+        type: "error",
+        title: "Erro ao Suspender",
+        description: "Identificador da prescrição não encontrado.",
+      });
+      return;
+    }
+
+    setIsSuspending(true);
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        toast({
+          type: "error",
+          title: "Erro de conexão",
+          description: "Não foi possível conectar ao Supabase.",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from("prescricoes")
+        .update({
+          status: "Suspenso",
+          justificativa_suspensao: justificativa.trim(),
+          data_suspensao: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", targetId);
+
+      if (error) {
+        toast({
+          type: "error",
+          title: "Erro ao Suspender",
+          description: error.message || "Não foi possível suspender a prescrição.",
+        });
+        return;
+      }
+
+      toast({
+        type: "success",
+        title: "Receita Suspensa",
+        description: "A prescrição foi arquivada no histórico de suspensas.",
+      });
+
+      setShowSuspendPrompt(false);
+      if (onSuccessSuspend) onSuccessSuspend();
+      onClose();
+    } catch (err: any) {
+      toast({
+        type: "error",
+        title: "Falha",
+        description: err?.message || "Erro inesperado ao suspender.",
+      });
+    } finally {
+      setIsSuspending(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-on-surface/50 backdrop-blur-xs animate-in fade-in duration-200 print:p-0 print:bg-surface print:fixed print:inset-0">
       {/* Link de carregamento direto e à prova de falhas para a fonte Plus Jakarta Sans */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -139,109 +242,154 @@ export function PrintPrescriptionModal({
         }
       `}} />
 
-      <div className="relative w-[95vw] max-w-[1300px] h-[90vh] bg-slate-100 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col lg:flex-row overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* Painel Lateral com Ações */}
-        <div
-          className={`bg-white dark:bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 p-5 flex flex-col justify-between shrink-0 overflow-y-auto print:hidden transition-all duration-300 ${
-            isSidebarOpen ? "w-full lg:w-80" : "w-0 p-0 overflow-hidden border-0 hidden"
-          }`}
-        >
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-teal-600" />
-                <span className="font-semibold text-slate-800">Receituário</span>
-              </div>
-              <button
-                onClick={onClose}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <div className="w-full max-w-4xl max-h-[85dvh] bg-surface rounded-md-2xl sm:rounded-md-3xl border border-outline-variant shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:border-none print:shadow-none print:max-h-none print:rounded-none">
+        {/* Barra Superior de Ações (Oculta na Impressão) */}
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant bg-surface-container-low shrink-0 print:hidden flex-wrap gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-md-lg bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
+              <Pill className="w-5 h-5 text-primary" />
             </div>
-
-            <div className="space-y-4">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 block uppercase">Paciente</span>
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mt-0.5">{client.nome}</span>
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold text-on-surface truncate">
+                Receituário / Prescrição Magistral
+              </h3>
+              <div className="flex items-center gap-2 text-[11px] text-on-surface-variant flex-wrap">
+                <span>{patientName}</span>
+                <span>•</span>
+                <span>Uso {viaLabel}</span>
+                <span>•</span>
+                <span
+                  className={`px-2 py-0.5 rounded-md-full font-semibold ${
+                    isAtivo
+                      ? "bg-success-container text-on-success-container border border-success/30"
+                      : "bg-error-container text-on-error-container border border-error/30"
+                  }`}
+                >
+                  {statusLabel}
+                </span>
               </div>
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 block uppercase">Fórmula / Medicamento</span>
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mt-0.5">{prescription.medicamento}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 block uppercase">Via de Administração</span>
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mt-0.5">Uso {prescription.via}</span>
-              </div>
-            </div>
-
-            <div className="bg-teal-50/50 dark:bg-teal-950/20 border border-teal-200/50 dark:border-teal-800 p-4 rounded-xl space-y-2">
-              <h4 className="text-xs font-bold text-teal-800 dark:text-teal-400">Padrão A4</h4>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Este relatório foi otimizado para papel A4. Você pode imprimi-lo ou salvá-lo como PDF utilizando as opções de impressão do seu navegador.
-              </p>
             </div>
           </div>
 
-          <div className="space-y-2.5 mt-6">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Ações Restritas a Administrador e Profissional */}
+            {isProfissionalOrAdmin && isAtivo && (
+              <>
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onEdit(prescription);
+                      onClose();
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-md-full border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-primary" />
+                    <span>Editar Receita</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowSuspendPrompt(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-md-full border border-error/30 bg-error-container/60 text-on-error-container hover:bg-error-container transition-colors cursor-pointer"
+                >
+                  <Archive className="w-3.5 h-3.5 text-error" />
+                  <span>Suspender</span>
+                </button>
+              </>
+            )}
+
+            {/* Botão Compartilhar (WhatsApp com PDF) */}
             <button
               type="button"
               onClick={handleShareWhatsApp}
               disabled={isSharingWhatsApp || isGeneratingPdf}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-md-full border border-outline-variant bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer disabled:opacity-60"
+              title="Compartilhar receituário em PDF pelo WhatsApp"
             >
               {isSharingWhatsApp ? (
-                <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
               ) : (
-                <WhatsAppIcon className="w-4 h-4 shrink-0" />
+                <Share2 className="w-3.5 h-3.5 text-primary" />
               )}
-              <span>{isSharingWhatsApp ? "Preparando envio..." : "Enviar pelo WhatsApp"}</span>
+              <span>{isSharingWhatsApp ? "Compartilhando..." : "Compartilhar"}</span>
             </button>
+
+            {/* Botão Imprimir / Gerar PDF */}
             <button
               type="button"
               onClick={handlePrint}
               disabled={isGeneratingPdf || isSharingWhatsApp}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-md-full border border-transparent bg-primary text-on-primary hover:brightness-105 transition-all shadow-sm cursor-pointer disabled:opacity-60"
             >
               {isGeneratingPdf ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <Printer className="w-4 h-4" />
+                <Printer className="w-3.5 h-3.5" />
               )}
               <span>{isGeneratingPdf ? "Gerando PDF..." : "Imprimir / Gerar PDF"}</span>
             </button>
+
+            {/* Fechar */}
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              className="p-2 min-h-[44px] min-w-[44px] rounded-md-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer flex items-center justify-center"
+              title="Fechar"
             >
-              Fechar Visualização
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Pré-visualização da Folha A4 */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 dark:bg-slate-950/40 flex justify-center items-start relative">
-          {/* Botão de Toggle para Ocultar / Mostrar Detalhes */}
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="absolute top-4 left-4 p-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-md cursor-pointer z-30 transition-all hover:scale-105 print:hidden"
-            title={isSidebarOpen ? "Ocultar Painel Lateral" : "Mostrar Painel Lateral"}
-          >
-            {isSidebarOpen ? (
-              <div className="flex items-center gap-1.5 text-xs font-semibold">
-                <PanelLeftClose className="w-4 h-4" />
-                <span className="hidden sm:inline">Ocultar Painel</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 text-xs font-semibold">
-                <PanelLeftOpen className="w-4 h-4" />
-                <span className="hidden sm:inline">Mostrar Painel</span>
-              </div>
-            )}
-          </button>
+        {/* Confirmação Inline de Suspensão */}
+        {showSuspendPrompt && (
+          <div className="p-4 bg-error-container text-on-error-container border-b border-error/30 space-y-2 shrink-0 print:hidden animate-in slide-in-from-top duration-150">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-error shrink-0" />
+              <h4 className="text-xs font-bold">Suspender Prescrição Magistral</h4>
+            </div>
+            <p className="text-xs">
+              Informe a justificativa clínica para descontinuar/suspender esta receita. Ela será arquivada no histórico de suspensas.
+            </p>
+            <input
+              type="text"
+              value={justificativa}
+              onChange={(e) => setJustificativa(e.target.value)}
+              placeholder="Ex: Reação adversa, ajuste de concentração ou troca de protocolo"
+              className="w-full min-h-[44px] px-3 rounded-md-md border border-error/40 bg-surface text-on-surface text-xs focus:outline-none focus:ring-2 focus:ring-error"
+            />
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowSuspendPrompt(false)}
+                disabled={isSuspending}
+                className="px-3 py-1.5 min-h-[44px] rounded-md-md text-xs font-semibold hover:bg-surface-container transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSuspend}
+                disabled={isSuspending}
+                className="inline-flex items-center gap-1.5 px-4 py-1.5 min-h-[44px] rounded-md-md bg-error text-on-error text-xs font-semibold hover:brightness-110 transition-all cursor-pointer shadow-sm disabled:opacity-60"
+              >
+                {isSuspending ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Suspendendo...</span>
+                  </>
+                ) : (
+                  "Confirmar Suspensão"
+                )}
+              </button>
+            </div>
+          </div>
+        )}
 
+        {/* Pré-visualização da Folha A4 */}
+        <div className="flex-1 overflow-y-auto overflow-x-auto p-4 sm:p-6 bg-surface-container/40 print:p-0 print:overflow-visible">
           <div
             id="receituario-print-area"
             ref={printAreaRef}

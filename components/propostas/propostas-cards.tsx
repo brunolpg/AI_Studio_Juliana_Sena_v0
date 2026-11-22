@@ -483,6 +483,15 @@ export function PropostasCards({
           onClose={() => setSelectedPropostaForPrint(null)}
           proposta={selectedPropostaForPrint}
           client={client}
+          userRole={isPatientView ? "paciente" : (userRole || "profissional")}
+          onEdit={
+            isAdminOrProfissional && onEdit
+              ? (prop) => {
+                  setSelectedPropostaForPrint(null);
+                  onEdit(prop);
+                }
+              : undefined
+          }
         />
       )}
 
