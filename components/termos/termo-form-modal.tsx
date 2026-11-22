@@ -373,17 +373,12 @@ export function TermoFormModal({
     return null;
   };
 
-  const submitUploadedPdf = async (
-    file: File,
-    options: { assinaturaApenasNoPdf: boolean }
-  ) => {
+  const submitUploadedPdf = async (file: File) => {
     const validationError = validatePdfFile(file);
     if (validationError) {
       setSelectedPdfFile(null);
       setFormError(validationError);
-      if (options.assinaturaApenasNoPdf) {
-        setSignatureError(validationError);
-      }
+      setSignatureError(validationError);
       toast({
         type: "error",
         title: "Arquivo excede o limite permitido",
@@ -398,15 +393,13 @@ export function TermoFormModal({
       .trim();
 
     const procedimentoNome =
-      (options.assinaturaApenasNoPdf ? legacyProcedimentoNome.trim() : "") ||
+      legacyProcedimentoNome.trim() ||
       selectedModelo?.procedimento?.procedimento ||
       selectedModelo?.titulo ||
       fallbackName ||
       "Termo de Consentimento Assinado";
 
-    const dataFinal = options.assinaturaApenasNoPdf
-      ? legacyTermoData.trim() || getTodaySaoPaulo()
-      : getTodaySaoPaulo();
+    const dataFinal = legacyTermoData.trim() || getTodaySaoPaulo();
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dataFinal)) {
       const msg = "Informe uma data válida para o termo.";
@@ -423,19 +416,10 @@ export function TermoFormModal({
       formData.append("procedimento_nome", procedimentoNome);
       formData.append("data", dataFinal);
       formData.append("origem_pdf", "upload");
-      formData.append(
-        "assinatura_apenas_no_pdf",
-        options.assinaturaApenasNoPdf ? "true" : "false"
-      );
+      formData.append("assinatura_apenas_no_pdf", "true");
 
       if (selectedModelo?.id) {
         formData.append("modelo_id", selectedModelo.id);
-        if (!options.assinaturaApenasNoPdf) {
-          const snapshot = buildSnapshotFromSelectedModelo();
-          if (snapshot) {
-            formData.append("conteudo_snapshot", JSON.stringify(snapshot));
-          }
-        }
       }
 
       const res = await uploadTermoAssinadoAction(formData);
@@ -452,9 +436,7 @@ export function TermoFormModal({
 
       toast({
         type: "success",
-        title: options.assinaturaApenasNoPdf
-          ? "Termo antigo registrado com sucesso!"
-          : "Termo assinado anexado!",
+        title: "Termo antigo registrado com sucesso!",
         description: `O PDF foi vinculado ao prontuário de ${client.nome}.`,
       });
 
@@ -479,9 +461,7 @@ export function TermoFormModal({
 
       if (isPayloadLimitError) {
         setSelectedPdfFile(null);
-        if (options.assinaturaApenasNoPdf) {
-          setSignatureError(msg);
-        }
+        setSignatureError(msg);
       }
 
       setFormError(msg);
@@ -504,15 +484,15 @@ export function TermoFormModal({
         "Anexe o arquivo PDF assinado do termo antigo para concluir o registro."
       );
       setFormError(
-        'Selecione o PDF assinado do termo antigo na seção "Assinatura do Paciente" ou pelo botão "Carregar Termo Assinado".'
+        'Selecione o PDF assinado do termo antigo na seção "Assinatura do Paciente".'
       );
       return;
     }
 
-    await submitUploadedPdf(selectedPdfFile, { assinaturaApenasNoPdf: true });
+    await submitUploadedPdf(selectedPdfFile);
   };
 
-  const processSelectedPdfFile = async (file: File) => {
+  const processSelectedPdfFile = (file: File) => {
     setFormError(null);
     setSignatureError(null);
 
@@ -520,9 +500,7 @@ export function TermoFormModal({
     if (validationError) {
       setSelectedPdfFile(null);
       setFormError(validationError);
-      if (signatureOnlyInAttachedPdf) {
-        setSignatureError(validationError);
-      }
+      setSignatureError(validationError);
       toast({
         type: "error",
         title:
@@ -534,43 +512,36 @@ export function TermoFormModal({
       return;
     }
 
-    if (signatureOnlyInAttachedPdf) {
-      setSelectedPdfFile(file);
-      if (!legacyProcedimentoNome.trim()) {
-        const fallbackName = file.name
-          .replace(/\.pdf$/i, "")
-          .replace(/[_-]+/g, " ")
-          .trim();
-        setLegacyProcedimentoNome(
-          selectedModelo?.procedimento?.procedimento ||
-            selectedModelo?.titulo ||
-            fallbackName
-        );
-      }
-      return;
+    setSelectedPdfFile(file);
+    if (!legacyProcedimentoNome.trim()) {
+      const fallbackName = file.name
+        .replace(/\.pdf$/i, "")
+        .replace(/[_-]+/g, " ")
+        .trim();
+      setLegacyProcedimentoNome(
+        selectedModelo?.procedimento?.procedimento ||
+          selectedModelo?.titulo ||
+          fallbackName
+      );
     }
-
-    await submitUploadedPdf(file, { assinaturaApenasNoPdf: false });
   };
 
-  const handleFileSelected = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     // Reseta o input para permitir selecionar o mesmo arquivo novamente se necessário
     e.target.value = "";
     if (!file) return;
 
-    await processSelectedPdfFile(file);
+    processSelectedPdfFile(file);
   };
 
-  const handleFileDrop = async (e: React.DragEvent<HTMLButtonElement>) => {
+  const handleFileDrop = (e: React.DragEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (isBusy) return;
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
 
-    await processSelectedPdfFile(file);
+    processSelectedPdfFile(file);
   };
 
   const sortedTopicos = selectedModelo
@@ -899,7 +870,7 @@ export function TermoFormModal({
                 <p className="text-xs text-on-surface-variant">
                   {signatureOnlyInAttachedPdf
                     ? "Para termos antigos, selecionar um modelo acima é opcional. Informe os dados do documento e anexe o PDF assinado na seção abaixo."
-                    : 'Escolha um modelo no campo acima para preencher e assinar digitalmente, ou utilize "Carregar Termo Assinado" para anexar um PDF já assinado.'}
+                    : 'Escolha um modelo no campo acima para preencher e assinar digitalmente, ou marque a opção na seção "Assinatura do Paciente" para anexar um termo antigo já assinado em PDF.'}
                 </p>
               </div>
             )}
@@ -1104,33 +1075,14 @@ export function TermoFormModal({
             />
           </div>
 
-          {/* Rodapé com 2 Botões Principais */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 p-4 sm:p-5 border-t border-outline-variant bg-surface-container-low shrink-0">
-            <button
-              type="button"
-              onClick={handleTriggerUploadClick}
-              disabled={isBusy}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-md-full text-xs font-semibold bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {isUploading && !signatureOnlyInAttachedPdf ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>Enviando PDF...</span>
-                </>
-              ) : (
-                <>
-                  <UploadCloud className="w-4 h-4 shrink-0" />
-                  <span>Carregar Termo Assinado</span>
-                </>
-              )}
-            </button>
-
+          {/* Rodapé com Ação Principal */}
+          <div className="flex items-center justify-end gap-3 p-4 sm:p-5 border-t border-outline-variant bg-surface-container-low shrink-0">
             {signatureOnlyInAttachedPdf ? (
               <button
                 type="button"
                 onClick={handleSubmitLegacyAttachedPdf}
                 disabled={isBusy}
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 rounded-md-full text-xs font-semibold bg-primary text-on-primary hover:opacity-95 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[44px] px-6 rounded-md-full text-xs font-semibold bg-primary text-on-primary hover:opacity-95 shadow-xs transition-all cursor-pointer disabled:opacity-50"
               >
                 {isUploading ? (
                   <>
@@ -1149,7 +1101,7 @@ export function TermoFormModal({
                 type="button"
                 onClick={handleGenerateSignedPdf}
                 disabled={isBusy}
-                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 rounded-md-full text-xs font-semibold bg-primary text-on-primary hover:opacity-95 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-[44px] px-6 rounded-md-full text-xs font-semibold bg-primary text-on-primary hover:opacity-95 shadow-xs transition-all cursor-pointer disabled:opacity-50"
               >
                 {isGenerating ? (
                   <>
