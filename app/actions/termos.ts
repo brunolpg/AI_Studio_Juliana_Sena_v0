@@ -470,12 +470,25 @@ export async function getTermosByPaciente(
 
     const supabase = auth.supabase;
 
-    const { data: paciente, error: pacError } = await supabase
-      .from("pacientes")
-      .select("id")
-      .eq("id", pacienteId)
-      .is("deleted_at", null)
-      .maybeSingle();
+    const [
+      { data: paciente, error: pacError },
+      { data, error },
+    ] = await Promise.all([
+      supabase
+        .from("pacientes")
+        .select("id")
+        .eq("id", pacienteId)
+        .is("deleted_at", null)
+        .maybeSingle(),
+      supabase
+        .from("termos")
+        .select(
+          "id, paciente_id, modelo_id, procedimento_nome, data, conteudo_snapshot, assinado, origem_pdf, pdf_path, assinado_em, profissional, created_at, updated_at"
+        )
+        .eq("paciente_id", pacienteId)
+        .order("data", { ascending: false })
+        .order("created_at", { ascending: false }),
+    ]);
 
     if (pacError || !paciente) {
       return {
@@ -483,13 +496,6 @@ export async function getTermosByPaciente(
         error: "Paciente não encontrado ou inativo.",
       };
     }
-
-    const { data, error } = await supabase
-      .from("termos")
-      .select("*")
-      .eq("paciente_id", pacienteId)
-      .order("data", { ascending: false })
-      .order("created_at", { ascending: false });
 
     if (error) {
       return {

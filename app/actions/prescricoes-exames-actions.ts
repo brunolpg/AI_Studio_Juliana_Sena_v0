@@ -75,13 +75,26 @@ export async function getPrescricoesExamesByPaciente(
 
     const activeDb = auth.supabase;
 
-    // 1. Valida se o paciente existe e está ativo (filtro soft delete)
-    const { data: paciente, error: pacError } = await activeDb
-      .from("pacientes")
-      .select("id, nome, cpf, email, telefone, deleted_at, status")
-      .eq("id", pacienteId)
-      .is("deleted_at", null)
-      .maybeSingle();
+    // Valida paciente ativo (deleted_at IS NULL) e consulta exames em paralelo com projeção enxuta
+    const [
+      { data: paciente, error: pacError },
+      { data: registros, error: regError },
+    ] = await Promise.all([
+      activeDb
+        .from("pacientes")
+        .select("id, nome, cpf, email, telefone")
+        .eq("id", pacienteId)
+        .is("deleted_at", null)
+        .maybeSingle(),
+      activeDb
+        .from("prescricoes_exames")
+        .select(
+          "id, paciente_id, titulo, data, descricao, grupos_exames, orientacoes, status, justificativa_suspensao, data_suspensao, profissional, payload_hash, algoritmo, assinado_em, created_at, updated_at"
+        )
+        .eq("paciente_id", pacienteId)
+        .order("data", { ascending: false })
+        .order("created_at", { ascending: false }),
+    ]);
 
     if (pacError || !paciente) {
       return {
@@ -89,14 +102,6 @@ export async function getPrescricoesExamesByPaciente(
         error: "Paciente não encontrado ou inativo.",
       };
     }
-
-    // 2. Consulta registros de exames do paciente
-    const { data: registros, error: regError } = await activeDb
-      .from("prescricoes_exames")
-      .select("*")
-      .eq("paciente_id", pacienteId)
-      .order("data", { ascending: false })
-      .order("created_at", { ascending: false });
 
     if (regError) {
       return {

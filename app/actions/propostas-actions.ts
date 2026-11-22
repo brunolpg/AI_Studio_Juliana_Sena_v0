@@ -35,13 +35,25 @@ export async function getPropostasByPaciente(
 
     const activeDb = auth.supabase;
 
-    // 1. Valida se o paciente existe e está ativo (soft-delete filter)
-    const { data: paciente, error: pacError } = await activeDb
-      .from("pacientes")
-      .select("id, deleted_at, status")
-      .eq("id", pacienteId)
-      .is("deleted_at", null)
-      .maybeSingle();
+    // Valida paciente ativo (deleted_at IS NULL) e consulta propostas em paralelo com projeção enxuta
+    const [
+      { data: paciente, error: pacError },
+      { data: propostas, error: propError },
+    ] = await Promise.all([
+      activeDb
+        .from("pacientes")
+        .select("id")
+        .eq("id", pacienteId)
+        .is("deleted_at", null)
+        .maybeSingle(),
+      activeDb
+        .from("propostas")
+        .select(
+          "id, paciente_id, titulo, objetivo, opcoes, cronograma, topicos, status, justificativa_suspensao, data_suspensao, profissional, payload_hash, algoritmo, assinado_em, created_at, updated_at"
+        )
+        .eq("paciente_id", pacienteId)
+        .order("created_at", { ascending: false }),
+    ]);
 
     if (pacError || !paciente) {
       return {
@@ -49,13 +61,6 @@ export async function getPropostasByPaciente(
         error: "Paciente não encontrado ou inativo.",
       };
     }
-
-    // 2. Busca registros na tabela public.propostas
-    const { data: propostas, error: propError } = await activeDb
-      .from("propostas")
-      .select("*")
-      .eq("paciente_id", pacienteId)
-      .order("created_at", { ascending: false });
 
     if (propError) {
       return {

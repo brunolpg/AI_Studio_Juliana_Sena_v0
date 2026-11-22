@@ -492,11 +492,26 @@ export async function getPatientHomeCareFichas(pacienteId: string): Promise<Home
     if (!auth.authorized) return [];
     const adminDb = auth.supabase;
 
-    // Busca as fichas do paciente
+    // Busca as fichas do paciente com projeção enxuta (sem payload_canonico/assinatura)
     const { data: fichas, error: fichasError } = await adminDb
       .from("home_care_fichas")
       .select(`
-        *,
+        id,
+        paciente_id,
+        appointment_id,
+        titulo_protocolo,
+        data_home_care,
+        incluir_atencao_critica,
+        atencao_critica_titulo,
+        atencao_critica_texto,
+        incluir_recomendacoes,
+        status,
+        profissional,
+        payload_hash,
+        algoritmo,
+        assinado_em,
+        created_at,
+        updated_at,
         paciente:pacientes (id, nome, cpf, data_nascimento, email, telefone),
         appointment:appointments (id, data, horario_inicio, horario_fim, procedimento)
       `)
@@ -513,38 +528,55 @@ export async function getPatientHomeCareFichas(pacienteId: string): Promise<Home
 
     const fichaIds = fichas.map((f: any) => f.id);
 
-    // Busca tópicos relacionados usando adminDb
-    const { data: fichaTopicos, error: topicosError } = await adminDb
-      .from("home_care_ficha_topicos")
-      .select(`
-        ficha_id,
-        topico_id,
-        grupo,
-        ordem,
-        topico:home_care_topicos (id, titulo, texto)
-      `)
-      .in("ficha_id", fichaIds)
-      .order("ordem", { ascending: true });
+    // Busca tópicos e cronograma em paralelo
+    const [
+      { data: fichaTopicos, error: topicosError },
+      { data: cronogramas, error: cronoError },
+    ] = await Promise.all([
+      adminDb
+        .from("home_care_ficha_topicos")
+        .select(`
+          ficha_id,
+          topico_id,
+          grupo,
+          ordem,
+          topico:home_care_topicos (id, titulo, texto)
+        `)
+        .in("ficha_id", fichaIds)
+        .order("ordem", { ascending: true }),
+      adminDb
+        .from("home_care_cronograma")
+        .select("id, ficha_id, ordem, dia_inicio, dia_fim, fase_titulo, formula_id, nome_formula, posologia, objetivo_clinico")
+        .in("ficha_id", fichaIds)
+        .order("ordem", { ascending: true }),
+    ]);
 
     if (topicosError) {
       console.warn("Aviso ao buscar home_care_ficha_topicos:", topicosError.message);
     }
 
-    // Busca linhas do cronograma usando adminDb
-    const { data: cronogramas, error: cronoError } = await adminDb
-      .from("home_care_cronograma")
-      .select("*")
-      .in("ficha_id", fichaIds)
-      .order("ordem", { ascending: true });
-
     if (cronoError) {
       console.warn("Aviso ao buscar home_care_cronograma:", cronoError.message);
     }
 
+    const topicosByFicha = new Map<string, any[]>();
+    for (const ft of fichaTopicos || []) {
+      const list = topicosByFicha.get(ft.ficha_id) || [];
+      list.push(ft);
+      topicosByFicha.set(ft.ficha_id, list);
+    }
+
+    const cronoByFicha = new Map<string, any[]>();
+    for (const cr of cronogramas || []) {
+      const list = cronoByFicha.get(cr.ficha_id) || [];
+      list.push(cr);
+      cronoByFicha.set(cr.ficha_id, list);
+    }
+
     // Monta o objeto completo para cada ficha
     const resultado: HomeCareFichaCompleta[] = fichas.map((f: any) => {
-      const topicosDaFicha = (fichaTopicos || []).filter((ft: any) => ft.ficha_id === f.id);
-      const cronoDaFicha = (cronogramas || []).filter((cr: any) => cr.ficha_id === f.id);
+      const topicosDaFicha = topicosByFicha.get(f.id) || [];
+      const cronoDaFicha = cronoByFicha.get(f.id) || [];
 
       const cuidados = topicosDaFicha
         .filter((ft: any) => ft.grupo === "CUIDADOS")

@@ -42,12 +42,21 @@ export function PatientClinicalDashboardView({
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
     initialClientId || null
   );
+  const initialClientIdRef = useRef<string | null>(initialClientId || null);
   const [activeTab, setActiveTab] = useState<ClinicalSubTab>(() =>
     normalizeClinicalSubTab(initialTab, "evolucoes")
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Sincroniza quando initialClientId muda externamente (deep-link)
+  useEffect(() => {
+    initialClientIdRef.current = initialClientId || null;
+    if (initialClientId) {
+      setSelectedPatientId(initialClientId);
+    }
+  }, [initialClientId]);
 
   // Fallback para deep-links de URL apontando para a antiga aba de sinais vitais ("metricas")
   useEffect(() => {
@@ -81,18 +90,28 @@ export function PatientClinicalDashboardView({
     };
   }, [isDropdownOpen]);
 
-  // Carrega pacientes ativos diretamente do Supabase
+  // Carrega pacientes ativos uma única vez por perfil (evita refetch ao alternar paciente)
   useEffect(() => {
+    let cancelled = false;
+
     async function loadPatients() {
       try {
         const supabase = getSupabaseClient();
         if (!supabase) return;
 
+        const baseColumns =
+          "id, nome, data_nascimento, idade, email, sexo, telefone, cpf, cep, logradouro, numero, complemento, estado, cidade, profissao, status, observacoes, created_at, updated_at, deleted_at";
+        const selectColumns = isAdmin
+          ? baseColumns
+          : `${baseColumns}, avatar_url, foto_perfil`;
+
         const { data: pacientes, error } = await supabase
           .from("pacientes")
-          .select("*")
+          .select(selectColumns)
           .is("deleted_at", null)
           .order("nome", { ascending: true });
+
+        if (cancelled) return;
 
         if (error) {
           console.error("Erro ao carregar lista de pacientes do Supabase:", error);
@@ -100,24 +119,27 @@ export function PatientClinicalDashboardView({
         }
 
         if (pacientes && pacientes.length > 0) {
-          // Busca profiles vinculados para incluir avatar_url
-          const emails = Array.from(
-            new Set(
-              pacientes
-                .map((p: any) => p.email?.toLowerCase().trim())
-                .filter(Boolean)
-            )
-          );
+          // Busca profiles vinculados apenas para pacientes sem avatar próprio
+          const emailsMissingAvatar = isAdmin
+            ? []
+            : Array.from(
+                new Set(
+                  pacientes
+                    .filter((p: any) => !p.avatar_url && !p.foto_perfil)
+                    .map((p: any) => p.email?.toLowerCase().trim())
+                    .filter(Boolean)
+                )
+              );
 
           const profilesMap = new Map<string, string>();
-          if (!isAdmin && emails.length > 0) {
+          if (!isAdmin && emailsMissingAvatar.length > 0) {
             try {
               const { data: profiles } = await supabase
                 .from("profiles")
                 .select("email, avatar_url")
-                .in("email", emails);
+                .in("email", emailsMissingAvatar);
 
-              if (profiles) {
+              if (!cancelled && profiles) {
                 for (const pr of profiles) {
                   if (pr.email && pr.avatar_url) {
                     profilesMap.set(pr.email.toLowerCase().trim(), pr.avatar_url);
@@ -128,6 +150,8 @@ export function PatientClinicalDashboardView({
               console.warn("Falha ao buscar avatar_url em profiles para prontuários:", pErr);
             }
           }
+
+          if (cancelled) return;
 
           const enriched = pacientes.map((p: any) => {
             if (isAdmin) {
@@ -147,14 +171,13 @@ export function PatientClinicalDashboardView({
           });
 
           setClients(enriched as Client[]);
-          if (!selectedPatientId) {
-            setSelectedPatientId(enriched[0].id);
-          } else {
-            const exists = enriched.some((p) => p.id === selectedPatientId);
-            if (!exists) {
-              setSelectedPatientId(enriched[0].id);
+          setSelectedPatientId((prev) => {
+            const preferred = prev || initialClientIdRef.current;
+            if (preferred && enriched.some((p: any) => p.id === preferred)) {
+              return preferred;
             }
-          }
+            return enriched[0].id;
+          });
         } else {
           setClients([]);
           setSelectedPatientId(null);
@@ -163,14 +186,25 @@ export function PatientClinicalDashboardView({
         console.error("Erro ao carregar lista de pacientes:", err);
       }
     }
-    loadPatients();
-  }, [selectedPatientId, isAdmin]);
 
-  // Paciente selecionado
+    loadPatients();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin]);
+
+  // Paciente selecionado (referência estável para evitar re-renders desnecessários nas abas)
   const selectedPatient = useMemo(() => {
     if (!selectedPatientId) return null;
     return clients.find((c) => c.id === selectedPatientId) || null;
   }, [clients, selectedPatientId]);
+
+  const selectedPatientForTabs = useMemo(() => {
+    if (!selectedPatient) return null;
+    return isAdmin
+      ? { ...selectedPatient, avatar_url: null, foto_perfil: null }
+      : selectedPatient;
+  }, [selectedPatient, isAdmin]);
 
   // Filtro do dropdown
   const filteredClients = useMemo(() => {
@@ -340,9 +374,9 @@ export function PatientClinicalDashboardView({
       </div>
 
       {/* Renderiza o Subcomponente de Abas do Prontuário */}
-      {selectedPatient ? (
+      {selectedPatientForTabs ? (
         <PatientClinicalTabs
-          client={isAdmin ? { ...selectedPatient, avatar_url: null, foto_perfil: null } : selectedPatient}
+          client={selectedPatientForTabs}
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />

@@ -46,12 +46,21 @@ import {
   FileSignature,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-context";
-import {
-  getPatientClinicalRecordAction,
-  togglePrescriptionStatusAction,
-  getAestheticEvaluationAction,
-} from "@/actions/clinical-actions";
+import { togglePrescriptionStatusAction } from "@/actions/clinical-actions";
 import { deleteClinicalEvolutionAction } from "@/app/actions/clinical-evolution";
+import {
+  getClinicalTabBundleAction,
+  type ClinicalTabCounts,
+  type ClinicalTabSection,
+} from "@/app/actions/clinical-record-loader";
+import {
+  dedupeClinicalRequest,
+  getCachedPatientClinical,
+  invalidatePatientClinicalCache,
+  updatePatientClinicalCache,
+  type ClinicalRoleScope,
+  type PatientClinicalCacheEntry,
+} from "@/lib/clinical/session-cache";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { validateFileSize } from "@/lib/validations/file-upload";
 import { EvolutionFormModal } from "./evolution-form-modal";
@@ -67,10 +76,6 @@ import { ExamPrescriptionCards } from "./exam-prescription-cards";
 import { ExamPrescriptionModal } from "./exam-prescription-modal";
 import { PrintExamPrescriptionModal } from "./print-exam-prescription-modal";
 import { ExamPrescriptionNotificationModal } from "./exam-prescription-notification-modal";
-import { getPatientHomeCareFichas } from "@/app/actions/home-care";
-import { getPropostasByPaciente } from "@/app/actions/propostas-actions";
-import { getPrescricoesExamesByPaciente } from "@/app/actions/prescricoes-exames-actions";
-import { getTermosByPaciente } from "@/app/actions/termos";
 import type { Proposta } from "@/types/proposta";
 import type { TermoConsentimento } from "@/types/termo";
 import { PropostasCards } from "@/components/propostas/propostas-cards";
@@ -85,7 +90,6 @@ import type {
   ClinicalEvolution,
   PrescriptionItem,
 } from "@/types/clinical-record";
-import { sanitizeVehicleText, formatPrescriptionSummaryString } from "@/lib/prescricoes/format";
 
 interface PatientClinicalTabsProps {
   client: Client;
@@ -136,6 +140,7 @@ export function PatientClinicalTabs({
   const { user } = useAuth();
   const isPatient = isPatientView || user?.role === "paciente";
   const isAdmin = user?.role === "administrador";
+  const roleScope: ClinicalRoleScope = isPatient ? "patient" : isAdmin ? "admin" : "staff";
 
   const defaultTab: ClinicalSubTab = isPatient ? "prescricoes" : "evolucoes";
   const [internalSubTab, setInternalSubTab] = useState<ClinicalSubTab>(defaultTab);
@@ -157,10 +162,29 @@ export function PatientClinicalTabs({
     setInternalSubTab(resolvedTab);
     onTabChange?.(resolvedTab);
   };
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const [clinicalRecord, setClinicalRecord] = useState<PatientClinicalRecord | null>(null);
+  const [vitalEvolutionsState, setVitalEvolutionsState] = useState<ClinicalEvolution[]>([]);
+  const [tabCounts, setTabCounts] = useState<ClinicalTabCounts>({
+    evolucoes: 0,
+    prescricoesAtivas: 0,
+    termos: 0,
+    propostasAtivas: 0,
+    hasAlergias: false,
+  });
+  const [loadedTabsState, setLoadedTabsState] = useState<Set<ClinicalTabSection>>(
+    () => new Set()
+  );
   const [isLoading, setIsLoading] = useState(true);
+  const [isTabLoading, setIsTabLoading] = useState(false);
+
+  const activeClientIdRef = useRef<string | undefined>(client?.id);
+  activeClientIdRef.current = client?.id;
+  const activeSubTabRef = useRef<ClinicalSubTab>(activeSubTab);
+  activeSubTabRef.current = activeSubTab;
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
 
   // Seção de prescrições suspensas (apenas profissional/administrador)
   const [isSuspendedSectionOpen, setIsSuspendedSectionOpen] = useState(false);
@@ -535,209 +559,204 @@ export function PatientClinicalTabs({
     }
   };
 
-  // Carrega prontuário do paciente
-  const loadClinicalData = useCallback(() => {
-    const isValidUUID = (id?: string | null) => 
-      typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  const isValidUUID = (id?: string | null): id is string =>
+    typeof id === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-    if (!isValidUUID(client?.id)) {
-      setClinicalRecord(null);
-      setIsLoading(false);
-      return;
-    }
+  // Hidrata estado local instantaneamente a partir do cache em memória da sessão
+  const applyCacheEntry = useCallback((entry: PatientClinicalCacheEntry) => {
+    setClinicalRecord({
+      client_id: entry.clientId,
+      medicalHistory: (entry.medicalHistory ?? undefined) as any,
+      evolutions: entry.evolutions,
+      prescriptions: entry.prescriptions,
+    });
+    setVitalEvolutionsState(entry.vitalEvolutions);
+    setAestheticData(entry.aestheticData);
+    setHomeCareFichas(entry.homeCareFichas);
+    setTermos(entry.termos);
+    setPropostas(entry.propostas);
+    setPrescricoesExames(entry.prescricoesExames);
+    setTabCounts(entry.counts);
+    setLoadedTabsState(new Set(entry.loadedTabs));
+  }, []);
 
-    startTransition(async () => {
-      try {
-        setIsLoading(true);
-        setClinicalRecord(null);
-        setAestheticData(null);
-        setHomeCareFichas([]);
-        setTermos([]);
-        setPropostas([]);
-        setPrescricoesExames([]);
-        const res = await getPatientClinicalRecordAction(client.id);
-        if (res.success && res.data) {
-          const record = { ...res.data };
-          try {
-            const supabase = getSupabaseClient();
-            if (supabase) {
-              const { data: dbPrescs, error: dbErr } = await supabase
-                .from("prescricoes")
-                .select(`
-                  id,
-                  paciente_id,
-                  data_prescricao,
-                  status,
-                  justificativa_suspensao,
-                  data_suspensao,
-                  pdf_assinado_url,
-                  data_assinatura,
-                  prescricao_itens (
-                    id,
-                    nome_formula,
-                    via,
-                    veiculo,
-                    dosagem,
-                    tipo_veiculo,
-                    posologia,
-                    duracao,
-                    orient_paciente,
-                    orient_farmacia,
-                    componentes_snapshot
-                  )
-                `)
-                .eq("paciente_id", client.id);
+  // Busca sob demanda apenas a aba solicitada (com deduplicação e atualização do cache por client.id)
+  const fetchClinicalTab = useCallback(
+    async (
+      targetClientId: string,
+      tab: ClinicalTabSection,
+      options?: { includeCounts?: boolean; skipVitals?: boolean }
+    ) => {
+      const includeCounts = options?.includeCounts ?? false;
+      const skipVitals = options?.skipVitals ?? false;
+      const requestKey = `${targetClientId}:${roleScope}:${tab}:${includeCounts ? "c1" : "c0"}`;
 
-              if (dbPrescs && !dbErr) {
-                const mappedPrescriptions: PrescriptionItem[] = dbPrescs.map((p: any) => {
-                  const item = p.prescricao_itens && p.prescricao_itens[0];
-                  const componentsList = item?.componentes_snapshot || [];
+      const res = await dedupeClinicalRequest(requestKey, () =>
+        getClinicalTabBundleAction(targetClientId, tab, {
+          includeCounts,
+          skipVitals,
+        })
+      );
 
-                  // Reconstrução da dosagem formatada com veículo sanitizado e parênteses balanceados
-                  const listAtivos = Array.isArray(componentsList)
-                    ? componentsList.map((c: any) => `${toSentenceCase(c.nome)}: ${c.quantidade}${c.unidade || ""}`).join(" + ")
-                    : "";
-
-                  const cleanVeiculo = sanitizeVehicleText(item?.veiculo);
-                  const formattedDosagem = formatPrescriptionSummaryString({
-                    ativos: listAtivos,
-                    via: item?.via,
-                    veiculo: cleanVeiculo,
-                    dosagem: item?.dosagem,
-                    duracao: item?.duracao,
-                    tipoVeiculo: item?.tipo_veiculo,
-                  });
-
-                  const combinedInstrucoes = [
-                    item?.orient_paciente ? `[Orientações ao Paciente]\n${item.orient_paciente}` : "",
-                    item?.orient_farmacia ? `[Observações à Farmácia Magistral]\n${item.orient_farmacia}` : "",
-                  ]
-                    .filter(Boolean)
-                    .join("\n\n");
-
-                  const mappedComponents = Array.isArray(componentsList)
-                    ? componentsList.map((c: any) => ({
-                        nome: toSentenceCase(c.nome),
-                        quantidade: c.quantidade,
-                        unidade: c.unidade,
-                      }))
-                    : [];
-
-                  return {
-                    id: p.id,
-                    prescricao_id: p.id,
-                    item_id: item?.id,
-                    client_id: p.paciente_id,
-                    data: p.data_prescricao,
-                    medicamento: item?.nome_formula || "Fórmula Magistral",
-                    nome_formula: item?.nome_formula || "Fórmula Magistral",
-                    dosagem: formattedDosagem || String(item?.dosagem ?? ""),
-                    via: item?.via === "oral" ? "Oral" : "Tópico",
-                    posologia: item?.posologia || "",
-                    duracao: item?.via === "oral" ? `${item?.duracao} ${item?.tipo_veiculo || "dose(s)"}` : "Uso recomendado",
-                    ativo: p.status === "Ativo",
-                    instrucoes: combinedInstrucoes || undefined,
-                    orient_paciente: item?.orient_paciente || undefined,
-                    orient_farmacia: item?.orient_farmacia || undefined,
-                    status: p.status,
-                    justificativa_suspensao: p.justificativa_suspensao,
-                    data_suspensao: p.data_suspensao,
-                    pdf_assinado_url: p.pdf_assinado_url ?? null,
-                    data_assinatura: p.data_assinatura ?? null,
-                    componentes: mappedComponents,
-                    item: item
-                      ? {
-                          nome_formula: item.nome_formula,
-                          via: item.via,
-                          veiculo: cleanVeiculo || null,
-                          dosagem: item.dosagem,
-                          tipo_veiculo: item.tipo_veiculo,
-                          posologia: item.posologia,
-                          duracao: item.duracao,
-                          orient_paciente: item.orient_paciente,
-                          orient_farmacia: item.orient_farmacia,
-                          componentes_snapshot: mappedComponents,
-                        }
-                      : undefined,
-                  };
-                });
-
-                record.prescriptions = mappedPrescriptions;
-              }
-            }
-          } catch (err) {
-            console.warn("Erro ao buscar prescrições do Supabase:", err);
-          }
-
-          // Busca avaliação estética
-          try {
-            const aesRes = await getAestheticEvaluationAction(client.id);
-            if (aesRes.success && aesRes.data) {
-              setAestheticData(aesRes.data);
-            }
-          } catch (aesErr) {
-            console.warn("Erro ao buscar avaliações estéticas:", aesErr);
-          }
-
-          // Busca Fichas de Home Care (Cuidados & Orientações)
-          try {
-            const hcareRes = await getPatientHomeCareFichas(client.id);
-            setHomeCareFichas(hcareRes || []);
-          } catch (hcareErr) {
-            console.warn("Erro ao buscar fichas de Home Care:", hcareErr);
-          }
-
-          // Busca Termos de Consentimento do paciente
-          if (!isPatient) {
-            try {
-              const termosRes = await getTermosByPaciente(client.id);
-              if (termosRes.success && termosRes.data) {
-                setTermos(termosRes.data);
-              }
-            } catch (termosErr) {
-              console.warn("Erro ao buscar termos de consentimento:", termosErr);
-            }
-          }
-
-          // Busca Propostas de Planejamento do paciente
-          try {
-            const propRes = await getPropostasByPaciente(client.id);
-            if (propRes.success && propRes.data) {
-              setPropostas(propRes.data);
-            }
-          } catch (propErr) {
-            console.warn("Erro ao buscar propostas de planejamento:", propErr);
-          }
-
-          // Busca Prescrições de Exames do paciente
-          try {
-            const examesRes = await getPrescricoesExamesByPaciente(client.id);
-            if (examesRes.success && examesRes.data) {
-              setPrescricoesExames(examesRes.data);
-            }
-          } catch (exErr) {
-            console.warn("Erro ao buscar prescrições de exames:", exErr);
-          }
-
-          setClinicalRecord(record);
-        } else {
-          toast({
+      if (!res.success || !res.data) {
+        if (activeClientIdRef.current === targetClientId) {
+          toastRef.current({
             type: "error",
             title: "Erro ao carregar prontuário",
             description: res.message,
           });
         }
+        return null;
+      }
+
+      const { section, counts } = res.data;
+      const updatedEntry = updatePatientClinicalCache(targetClientId, roleScope, {
+        loadedTab: tab,
+        countsLoaded: includeCounts ? true : undefined,
+        counts,
+        evolutions: section.evolutions,
+        vitalEvolutions: section.vitalEvolutions,
+        medicalHistory: section.medicalHistory,
+        aestheticData: section.aestheticData,
+        prescriptions: section.prescriptions,
+        homeCareFichas: section.homeCareFichas,
+        prescricoesExames: section.prescricoesExames,
+        termos: section.termos,
+        propostas: section.propostas,
+      });
+
+      if (activeClientIdRef.current === targetClientId) {
+        applyCacheEntry(updatedEntry);
+      }
+
+      return updatedEntry;
+    },
+    [roleScope, applyCacheEntry]
+  );
+
+  // Invalida cache do paciente após mutações (criar, editar, suspender, excluir ou assinar) e recarrega a aba ativa
+  const loadClinicalData = useCallback(() => {
+    const targetClientId = client?.id;
+    if (!isValidUUID(targetClientId)) {
+      setClinicalRecord(null);
+      setIsLoading(false);
+      setIsTabLoading(false);
+      return;
+    }
+
+    invalidatePatientClinicalCache(targetClientId);
+    const currentTab = activeSubTabRef.current;
+
+    startTransition(async () => {
+      try {
+        setIsTabLoading(true);
+        await fetchClinicalTab(targetClientId, currentTab, {
+          includeCounts: true,
+          skipVitals: false,
+        });
       } catch (err) {
         console.error(err);
       } finally {
-        setIsLoading(false);
+        if (activeClientIdRef.current === targetClientId) {
+          setIsLoading(false);
+          setIsTabLoading(false);
+        }
       }
     });
-  }, [client?.id, toast, isPatient]);
+  }, [client?.id, fetchClinicalTab]);
 
+  // Carregamento sob demanda com cache em sessão por client.id e deduplicação
   useEffect(() => {
-    loadClinicalData();
-  }, [loadClinicalData]);
+    const targetClientId = client?.id;
+    if (!isValidUUID(targetClientId)) {
+      setClinicalRecord(null);
+      setVitalEvolutionsState([]);
+      setAestheticData(null);
+      setHomeCareFichas([]);
+      setTermos([]);
+      setPropostas([]);
+      setPrescricoesExames([]);
+      setLoadedTabsState(new Set());
+      setIsLoading(false);
+      setIsTabLoading(false);
+      return;
+    }
+
+    const cached = getCachedPatientClinical(targetClientId, roleScope);
+    if (cached && cached.loadedTabs.has(activeSubTab)) {
+      applyCacheEntry(cached);
+      setIsLoading(false);
+      setIsTabLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    if (cached) {
+      // Paciente já em cache, mas aba secundária ainda não carregada: mantém UI visível e busca somente a aba ativa
+      applyCacheEntry(cached);
+      setIsLoading(false);
+      setIsTabLoading(true);
+    } else {
+      // Primeiro acesso ao paciente na sessão: limpa estado anterior e prioriza somente a aba ativa + contadores
+      setClinicalRecord(null);
+      setVitalEvolutionsState([]);
+      setAestheticData(null);
+      setHomeCareFichas([]);
+      setTermos([]);
+      setPropostas([]);
+      setPrescricoesExames([]);
+      setTabCounts({
+        evolucoes: 0,
+        prescricoesAtivas: 0,
+        termos: 0,
+        propostasAtivas: 0,
+        hasAlergias: false,
+      });
+      setLoadedTabsState(new Set());
+      setIsLoading(true);
+      setIsTabLoading(false);
+    }
+
+    fetchClinicalTab(targetClientId, activeSubTab, {
+      includeCounts: !cached?.countsLoaded,
+      skipVitals: Boolean(cached?.loadedTabs.has("evolucoes")),
+    })
+      .catch((err) => {
+        console.error(err);
+      })
+      .finally(() => {
+        if (!cancelled && activeClientIdRef.current === targetClientId) {
+          setIsLoading(false);
+          setIsTabLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client?.id, activeSubTab, roleScope, applyCacheEntry, fetchClinicalTab]);
+
+  // Garante hidratação das prescrições/home care vinculados ao abrir relatório de evolução
+  const handleOpenEvolutionPrint = useCallback(
+    (evo: ClinicalEvolution) => {
+      setSelectedEvolutionForPrint(evo);
+      const needsLinkedData =
+        (evo.prescricoes_ids && evo.prescricoes_ids.length > 0) ||
+        Boolean(evo.home_care_ficha_id);
+      if (needsLinkedData && isValidUUID(client?.id)) {
+        const cached = getCachedPatientClinical(client.id, roleScope);
+        if (!cached?.loadedTabs.has("prescricoes")) {
+          void fetchClinicalTab(client.id, "prescricoes", {
+            includeCounts: false,
+            skipVitals: true,
+          });
+        }
+      }
+    },
+    [client?.id, roleScope, fetchClinicalTab]
+  );
 
   // Função para suspender receita com persistência real
   const handleConfirmSuspension = async () => {
@@ -917,11 +936,12 @@ export function PatientClinicalTabs({
 
   const history = clinicalRecord?.medicalHistory;
   const evolutions = clinicalRecord?.evolutions || [];
-  const allPrescriptions = clinicalRecord?.prescriptions || [];
-  const vitalEvolutions = useMemo(
-    () => (clinicalRecord?.evolutions || []).filter((e) => Boolean(e.sinaisVitais)),
-    [clinicalRecord?.evolutions]
-  );
+  const vitalEvolutions = useMemo(() => {
+    if (loadedTabsState.has("evolucoes")) {
+      return (clinicalRecord?.evolutions || []).filter((e) => Boolean(e.sinaisVitais));
+    }
+    return vitalEvolutionsState;
+  }, [loadedTabsState, clinicalRecord?.evolutions, vitalEvolutionsState]);
   const latestVitalEvolution = vitalEvolutions[0] ?? null;
 
   // Prescrições ativas/concluídas (Em Uso)
@@ -954,6 +974,21 @@ export function PatientClinicalTabs({
   // Lista principal exibe apenas as vigentes/ativas
   const prescriptions = activePrescriptions;
 
+  // Contadores das abas: usa lista carregada quando disponível, senão o contador leve retornado no bundle
+  const evolucoesBadgeCount = loadedTabsState.has("evolucoes")
+    ? evolutions.length
+    : tabCounts.evolucoes;
+  const hasAlergiasBadge = loadedTabsState.has("historico")
+    ? Boolean(history?.alergias && history.alergias.length > 0)
+    : tabCounts.hasAlergias;
+  const prescricoesBadgeCount = loadedTabsState.has("prescricoes")
+    ? activePrescriptions.length
+    : tabCounts.prescricoesAtivas;
+  const termosBadgeCount = loadedTabsState.has("termos") ? termos.length : tabCounts.termos;
+  const propostasBadgeCount = loadedTabsState.has("propostas")
+    ? activePropostasCount
+    : tabCounts.propostasAtivas;
+
   return (
     <div className={isPatient ? "space-y-6" : "bg-white dark:bg-slate-900 rounded-3xl border border-outline shadow-xs overflow-hidden transition-all duration-200"}>
       {/* Barra de Navegação Interna das Abas Clínicas (Apenas para Administrador / Profissional) */}
@@ -977,7 +1012,7 @@ export function PatientClinicalTabs({
                   ? "bg-white/20 text-white"
                   : "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60"
               }`}>
-                {evolutions.length}
+                {evolucoesBadgeCount}
               </span>
             </button>
 
@@ -992,7 +1027,7 @@ export function PatientClinicalTabs({
             >
               <FileHeart className="w-3.5 h-3.5" />
               <span>Histórico & Anamnese</span>
-              {history?.alergias && history.alergias.length > 0 && (
+              {hasAlergiasBadge && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-bold">
                   Alergias
                 </span>
@@ -1015,7 +1050,7 @@ export function PatientClinicalTabs({
                   ? "bg-white/20 text-white"
                   : "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60"
               }`}>
-                {activePrescriptions.length}
+                {prescricoesBadgeCount}
               </span>
             </button>
 
@@ -1035,7 +1070,7 @@ export function PatientClinicalTabs({
                   ? "bg-white/20 text-white"
                   : "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60"
               }`}>
-                {termos.length}
+                {termosBadgeCount}
               </span>
             </button>
 
@@ -1055,7 +1090,7 @@ export function PatientClinicalTabs({
                   ? "bg-white/20 text-white"
                   : "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/60"
               }`}>
-                {activePropostasCount}
+                {propostasBadgeCount}
               </span>
             </button>
           </div>
@@ -1161,12 +1196,19 @@ export function PatientClinicalTabs({
       )}
 
       {/* Conteúdo das Abas */}
-      <div className={isPatientView ? "p-0" : "p-6"}>
+      <div className={isPatientView ? "p-0" : "p-4 sm:p-5 md:p-6"}>
         {isLoading ? (
-          <div className="py-16 text-center text-slate-500">
+          <div className="py-16 text-center text-on-surface-variant">
             <div className="flex flex-col items-center justify-center gap-2">
-              <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               <span className="text-xs">Carregando prontuário médico de {client.nome}...</span>
+            </div>
+          </div>
+        ) : isTabLoading && !loadedTabsState.has(activeSubTab) ? (
+          <div className="py-12 text-center text-on-surface-variant">
+            <div className="flex flex-col items-center justify-center gap-2">
+              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs">Carregando dados da aba selecionada...</span>
             </div>
           </div>
         ) : (
@@ -1272,7 +1314,7 @@ export function PatientClinicalTabs({
 
                               <button
                                 type="button"
-                                onClick={() => setSelectedEvolutionForPrint(evo)}
+                                onClick={() => handleOpenEvolutionPrint(evo)}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full border border-teal-300 dark:border-teal-700 bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/50 transition-colors shadow-2xs cursor-pointer md-state-layer"
                                 title="Gerar Relatório de Evolução Clínica em PDF / Impressão"
                               >

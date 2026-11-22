@@ -64,12 +64,121 @@ export async function getPatientClinicalRecordAction(
 
     let medicalHistory = { ...defaultHistory };
 
-    const { data: dbHistory, error: dbErr } = await supabase
-      .from("historico_clinico")
-      .select("*")
-      .eq("paciente_id", clientId)
-      .maybeSingle();
+    const evolucoesColumns = isAdminRole
+      ? `
+          id,
+          paciente_id,
+          data,
+          horario,
+          tipo,
+          tipo_atendimento,
+          status,
+          procedimento_id,
+          appointment_id,
+          exames_anexos,
+          profissional,
+          especialidade,
+          subjetivo,
+          objetivo,
+          sinais_vitais,
+          avaliacao,
+          plano,
+          prescricoes_ids,
+          home_care_ficha_id,
+          payload_hash,
+          algoritmo,
+          assinado_em,
+          created_at,
+          home_care_ficha:home_care_fichas (
+            id,
+            titulo_protocolo,
+            data_home_care,
+            status,
+            payload_hash,
+            incluir_atencao_critica,
+            atencao_critica_titulo,
+            atencao_critica_texto
+          )
+        `
+      : `
+          id,
+          paciente_id,
+          data,
+          horario,
+          tipo,
+          tipo_atendimento,
+          status,
+          procedimento_id,
+          appointment_id,
+          exames_anexos,
+          fotos_paciente,
+          profissional,
+          especialidade,
+          subjetivo,
+          objetivo,
+          sinais_vitais,
+          avaliacao,
+          plano,
+          prescricoes_ids,
+          home_care_ficha_id,
+          payload_hash,
+          algoritmo,
+          assinado_em,
+          created_at,
+          home_care_ficha:home_care_fichas (
+            id,
+            titulo_protocolo,
+            data_home_care,
+            status,
+            payload_hash,
+            incluir_atencao_critica,
+            atencao_critica_titulo,
+            atencao_critica_texto
+          )
+        `;
 
+    // Executa histórico, prescrições e evoluções em paralelo
+    const [histRes, rxRes, evRes] = await Promise.all([
+      supabase
+        .from("historico_clinico")
+        .select("*")
+        .eq("paciente_id", clientId)
+        .maybeSingle(),
+      supabase
+        .from("prescricoes")
+        .select(`
+          id,
+          data_prescricao,
+          status,
+          observacoes,
+          justificativa_suspensao,
+          data_suspensao,
+          pdf_assinado_url,
+          data_assinatura,
+          prescricao_itens (
+            id,
+            nome_formula,
+            via,
+            veiculo,
+            dosagem,
+            tipo_veiculo,
+            posologia,
+            duracao,
+            orient_paciente,
+            orient_farmacia,
+            componentes_snapshot
+          )
+        `)
+        .eq("paciente_id", clientId)
+        .order("data_prescricao", { ascending: false }),
+      supabase
+        .from("evolucoes_clinicas")
+        .select(evolucoesColumns)
+        .eq("paciente_id", clientId)
+        .order("created_at", { ascending: false }),
+    ]);
+
+    const { data: dbHistory, error: dbErr } = histRes;
     if (!dbErr && dbHistory) {
       medicalHistory = {
         alergias: dbHistory.alergias || [],
@@ -96,34 +205,11 @@ export async function getPatientClinicalRecordAction(
       };
     }
 
-    // 2. Carrega prescrições reais do Supabase
-    const { data: prescricoesDb, error: rxErr } = await supabase
-      .from("prescricoes")
-      .select(`
-        id,
-        data_prescricao,
-        status,
-        observacoes,
-        pdf_assinado_url,
-        data_assinatura,
-        prescricao_itens (
-          id,
-          nome_formula,
-          via,
-          veiculo,
-          dosagem,
-          tipo_veiculo,
-          posologia,
-          duracao,
-          orient_paciente,
-          orient_farmacia,
-          componentes_snapshot
-        )
-      `)
-      .eq("paciente_id", clientId)
-      .order("data_prescricao", { ascending: false });
-
+    const { data: prescricoesDb, error: rxErr } = rxRes;
     const mappedPrescriptions: PrescriptionItem[] = [];
+    const fallbackDate = new Date().toLocaleDateString("en-CA", {
+      timeZone: "America/Sao_Paulo",
+    });
 
     if (!rxErr && prescricoesDb && prescricoesDb.length > 0) {
       for (const p of prescricoesDb) {
@@ -155,7 +241,8 @@ export async function getPatientClinicalRecordAction(
             prescricao_id: p.id,
             item_id: item.id,
             client_id: clientId,
-            data: p.data_prescricao || new Date().toISOString().split("T")[0],
+            data: p.data_prescricao || fallbackDate,
+            data_prescricao: p.data_prescricao || fallbackDate,
             medicamento: item.nome_formula,
             nome_formula: item.nome_formula,
             dosagem: formattedDosagem,
@@ -164,6 +251,8 @@ export async function getPatientClinicalRecordAction(
             duracao: item.via === "oral" ? `${item.duracao} ${sanitizedTipoVeiculo || "dose(s)"}` : "Uso recomendado",
             ativo: p.status === "Ativo",
             status: p.status,
+            justificativa_suspensao: p.justificativa_suspensao ?? null,
+            data_suspensao: p.data_suspensao ?? null,
             instrucoes: combinedInstrucoes || undefined,
             orient_paciente: item.orient_paciente || undefined,
             orient_farmacia: item.orient_farmacia || undefined,
@@ -191,72 +280,54 @@ export async function getPatientClinicalRecordAction(
       }
     }
 
-    // 3. Evoluções com relacionamentos
     let mappedEvolutions: ClinicalEvolution[] = [];
-    try {
-      const { data: evDb, error: evErr } = await supabase
-        .from("evolucoes_clinicas")
-        .select(`
-          *,
-          home_care_ficha:home_care_fichas (
-            id,
-            titulo_protocolo,
-            data_home_care,
-            status,
-            payload_hash,
-            incluir_atencao_critica,
-            atencao_critica_titulo,
-            atencao_critica_texto
-          )
-        `)
-        .eq("paciente_id", clientId)
-        .order("created_at", { ascending: false });
-
-      if (!evErr && evDb) {
-        mappedEvolutions = evDb.map((e: any) => {
-          const linkedPrescs = (prescricoesDb || [])
-            .filter((p: any) => (e.prescricoes_ids || []).includes(p.id))
-            .map((p: any) => ({
-              id: p.id,
-              data_prescricao: p.data_prescricao,
-              status: p.status,
-              formulas: (p.prescricao_itens || []).map((it: any) => it.nome_formula),
-            }));
-
-          return {
-            id: e.id,
-            client_id: e.paciente_id,
-            data: e.data,
-            horario: e.horario,
-            tipo: e.tipo,
-            tipo_atendimento: e.tipo_atendimento,
-            status: e.status || "Ativo",
-            procedimento_id: e.procedimento_id,
-            appointment_id: e.appointment_id,
-            exames_anexos: e.exames_anexos || [],
-            fotos_paciente: isAdminRole ? [] : (e.fotos_paciente || []),
-            profissional: e.profissional,
-            especialidade: e.especialidade,
-            subjetivo: e.subjetivo,
-            objetivo: e.objetivo,
-            sinaisVitais: e.sinais_vitais || undefined,
-            avaliacao: e.avaliacao,
-            plano: e.plano,
-            prescricoes_ids: e.prescricoes_ids || [],
-            home_care_ficha_id: e.home_care_ficha_id || null,
-            home_care_ficha: e.home_care_ficha || null,
-            prescricoes_detalhes: linkedPrescs,
-            payload_canonico: e.payload_canonico || undefined,
-            payload_hash: e.payload_hash || undefined,
-            assinatura: e.assinatura || undefined,
-            algoritmo: e.algoritmo || undefined,
-            assinado_em: e.assinado_em || undefined,
-            created_at: e.created_at,
-          };
-        });
+    const { data: evDb, error: evErr } = evRes;
+    if (!evErr && evDb) {
+      const prescMap = new Map<string, any>();
+      for (const p of prescricoesDb || []) {
+        prescMap.set(p.id, p);
       }
-    } catch {
-      // Falha silenciosa caso a tabela não exista, mantendo array vazio
+
+      mappedEvolutions = evDb.map((e: any) => {
+        const linkedPrescs = (e.prescricoes_ids || [])
+          .map((rxId: string) => prescMap.get(rxId))
+          .filter(Boolean)
+          .map((p: any) => ({
+            id: p.id,
+            data_prescricao: p.data_prescricao,
+            status: p.status,
+            formulas: (p.prescricao_itens || []).map((it: any) => it.nome_formula),
+          }));
+
+        return {
+          id: e.id,
+          client_id: e.paciente_id,
+          data: e.data,
+          horario: e.horario,
+          tipo: e.tipo,
+          tipo_atendimento: e.tipo_atendimento,
+          status: e.status || "Ativo",
+          procedimento_id: e.procedimento_id,
+          appointment_id: e.appointment_id,
+          exames_anexos: e.exames_anexos || [],
+          fotos_paciente: isAdminRole ? [] : (e.fotos_paciente || []),
+          profissional: e.profissional,
+          especialidade: e.especialidade,
+          subjetivo: e.subjetivo,
+          objetivo: e.objetivo,
+          sinaisVitais: e.sinais_vitais || undefined,
+          avaliacao: e.avaliacao,
+          plano: e.plano,
+          prescricoes_ids: e.prescricoes_ids || [],
+          home_care_ficha_id: e.home_care_ficha_id || null,
+          home_care_ficha: e.home_care_ficha || null,
+          prescricoes_detalhes: linkedPrescs,
+          payload_hash: e.payload_hash || undefined,
+          algoritmo: e.algoritmo || undefined,
+          assinado_em: e.assinado_em || undefined,
+          created_at: e.created_at,
+        };
+      });
     }
 
     return {
@@ -1688,25 +1759,29 @@ export async function getAestheticEvaluationAction(patientId: string): Promise<A
     const supabase = await createClient();
     if (!supabase) return { success: false, message: 'Falha de conexão com o banco de dados.' };
 
-    const { data: facialData, error: facialErr } = await supabase
-      .from('avaliacoes_faciais')
-      .select('*')
-      .eq('paciente_id', cleanId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const [
+      { data: facialData, error: facialErr },
+      { data: corporalData, error: corporalErr },
+    ] = await Promise.all([
+      supabase
+        .from('avaliacoes_faciais')
+        .select('id, paciente_id, tipo_pele, textura, fototipo, hidratacao, oleosidade, escala_glogau, acne_grau, discromias, textura_relevo, vascularizacao, outras_alteracoes, avaliacao_lupa, exames_laboratoriais, created_at, updated_at')
+        .eq('paciente_id', cleanId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('avaliacoes_corporais')
+        .select('id, paciente_id, fototipo, hidratacao_pele, estrias_localizacao, estrias_localizacao_outros, estrias_tipo_coloracao, estrias_espessura, tempo_estimado_surgimento, fatores_desencadeantes, alteracoes_associadas, created_at, updated_at')
+        .eq('paciente_id', cleanId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
     if (facialErr) {
       console.error('Erro ao buscar avaliação facial:', facialErr.message);
     }
-
-    const { data: corporalData, error: corporalErr } = await supabase
-      .from('avaliacoes_corporais')
-      .select('*')
-      .eq('paciente_id', cleanId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
 
     if (corporalErr) {
       console.error('Erro ao buscar avaliação corporal:', corporalErr.message);
