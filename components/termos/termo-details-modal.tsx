@@ -23,6 +23,7 @@ import {
   cleanBrazilianPhone,
   sharePdfViaWhatsApp,
 } from "@/lib/utils/whatsapp-share-pdf";
+import { normalizeDeclaracaoOrdem } from "@/lib/validations/termo";
 import type { Client } from "@/types/client";
 import type { TermoConsentimento, TermoSnapshotCheckbox } from "@/types/termo";
 
@@ -693,38 +694,64 @@ export function TermoDetailsModal({
                     );
                   })}
 
-                  {snapshot.declaracao && (
-                    <div className="p-4 sm:p-5 rounded-md-lg bg-primary-container/35 border-2 border-primary/50 space-y-3">
-                      <div className="flex items-center gap-2 text-primary">
-                        <ShieldCheck className="w-5 h-5 shrink-0" />
-                        <h4 className="text-sm sm:text-base font-bold text-on-surface">
-                          {snapshot.declaracao.titulo ||
-                            "Declaração de Consentimento"}
-                        </h4>
-                      </div>
-                      {snapshot.declaracao.texto_topico?.trim() && (
-                        <p className="text-xs sm:text-sm text-on-surface leading-relaxed whitespace-pre-line">
-                          {snapshot.declaracao.texto_topico}
-                        </p>
-                      )}
-                      {(snapshot.declaracao.linhas_checkbox || []).length > 0 && (
-                        <ul className="pt-2 space-y-1.5 border-t border-primary/25">
-                          {(snapshot.declaracao.linhas_checkbox || [])
-                            .map(getCheckboxText)
-                            .filter((txt) => txt.trim().length > 0)
-                            .map((txt, cIdx) => (
-                              <li
-                                key={cIdx}
-                                className="flex items-start gap-2 text-xs sm:text-sm font-medium text-on-surface"
+                  {snapshot.declaracao && (() => {
+                    const decl = snapshot.declaracao;
+                    const declTexto = decl.texto_topico?.trim() || "";
+                    const declCheckboxes = (decl.linhas_checkbox || [])
+                      .map(getCheckboxText)
+                      .filter((txt) => txt.trim().length > 0);
+                    const declOrdem = normalizeDeclaracaoOrdem(
+                      decl.ordem_blocos
+                    );
+                    const visibleBlocks = declOrdem.filter((bloco) =>
+                      bloco === "texto"
+                        ? declTexto.length > 0
+                        : declCheckboxes.length > 0
+                    );
+
+                    return (
+                      <div className="p-4 sm:p-5 rounded-md-lg bg-primary-container/35 border-2 border-primary/50 space-y-3">
+                        <div className="flex items-center gap-2 text-primary">
+                          <ShieldCheck className="w-5 h-5 shrink-0" />
+                          <h4 className="text-sm sm:text-base font-bold text-on-surface">
+                            {decl.titulo || "Declaração de Consentimento"}
+                          </h4>
+                        </div>
+                        {visibleBlocks.map((bloco, idx) => {
+                          const dividerClass =
+                            idx > 0 ? "pt-2.5 border-t border-primary/25" : "";
+
+                          if (bloco === "texto") {
+                            return (
+                              <p
+                                key="texto"
+                                className={`text-xs sm:text-sm text-on-surface leading-relaxed whitespace-pre-line ${dividerClass}`}
                               >
-                                <CheckSquare className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                                <span>{txt}</span>
-                              </li>
-                            ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
+                                {decl.texto_topico}
+                              </p>
+                            );
+                          }
+
+                          return (
+                            <ul
+                              key="confirmacoes"
+                              className={`space-y-1.5 ${dividerClass}`}
+                            >
+                              {declCheckboxes.map((txt, cIdx) => (
+                                <li
+                                  key={cIdx}
+                                  className="flex items-start gap-2 text-xs sm:text-sm font-medium text-on-surface"
+                                >
+                                  <CheckSquare className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                  <span>{txt}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 <div className="p-6 rounded-md-lg bg-surface-container-low border border-outline-variant text-center space-y-3">

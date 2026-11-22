@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireProfissionalAccess } from "@/lib/auth/session";
 import {
   criarTermoSchema,
+  normalizeDeclaracaoOrdem,
   termoModeloSchema,
   termoSnapshotSchema,
   uploadTermoAssinadoSchema,
@@ -16,6 +17,7 @@ import type {
   TermoActionResult,
   TermoConsentimento,
   TermoDeclaracao,
+  TermoDeclaracaoBloco,
   TermoModelo,
   TermoProcedimento,
   TermoSnapshot,
@@ -26,6 +28,7 @@ const TERMOS_BUCKET = "termos-consentimento";
 const MAX_TERMO_PDF_BYTES = 1 * 1024 * 1024; // 1MB
 const SIGNED_URL_EXPIRES_IN = 300; // 300s
 const DEFAULT_PROFISSIONAL = "Dra. Juliana Sena";
+const DECLARACAO_ORDEM_META_PREFIX = "__ordem_blocos__:";
 
 const uuidSchema = z.string().uuid();
 
@@ -44,6 +47,69 @@ function isPdfBuffer(bytes: Uint8Array): boolean {
     bytes[2] === 0x44 &&
     bytes[3] === 0x46 &&
     bytes[4] === 0x2d
+  );
+}
+
+function extractDeclaracaoLinhasAndOrdem(
+  rawLinhas: unknown,
+  rawOrdemBlocos: unknown
+): { linhas_checkbox: string[]; ordem_blocos: TermoDeclaracaoBloco[] } {
+  const rawArray = Array.isArray(rawLinhas)
+    ? rawLinhas.map((item: unknown) => String(item))
+    : [];
+
+  let fallbackOrdem: string[] | null = null;
+  const cleanLinhas: string[] = [];
+
+  for (const item of rawArray) {
+    if (item.startsWith(DECLARACAO_ORDEM_META_PREFIX)) {
+      fallbackOrdem = item
+        .slice(DECLARACAO_ORDEM_META_PREFIX.length)
+        .split(",")
+        .map((s) => s.trim());
+    } else {
+      cleanLinhas.push(item);
+    }
+  }
+
+  const ordemSource = Array.isArray(rawOrdemBlocos)
+    ? rawOrdemBlocos.map((item: unknown) => String(item))
+    : fallbackOrdem;
+
+  return {
+    linhas_checkbox: cleanLinhas,
+    ordem_blocos: normalizeDeclaracaoOrdem(ordemSource),
+  };
+}
+
+function encodeDeclaracaoLinhasWithOrdemFallback(
+  linhas: string[],
+  ordemBlocos: TermoDeclaracaoBloco[]
+): string[] {
+  const cleanLinhas = linhas.filter(
+    (item) => !item.startsWith(DECLARACAO_ORDEM_META_PREFIX)
+  );
+  if (ordemBlocos[0] === "confirmacoes") {
+    return [
+      `${DECLARACAO_ORDEM_META_PREFIX}${ordemBlocos.join(",")}`,
+      ...cleanLinhas,
+    ];
+  }
+  return cleanLinhas;
+}
+
+function isMissingOrdemBlocosColumnError(
+  error: { code?: string; message?: string } | null
+): boolean {
+  if (!error) return false;
+  const code = String(error.code || "");
+  const message = String(error.message || "").toLowerCase();
+  return (
+    (code === "42703" ||
+      code === "PGRST204" ||
+      message.includes("schema cache") ||
+      message.includes("does not exist")) &&
+    message.includes("ordem_blocos")
   );
 }
 
@@ -72,19 +138,26 @@ function normalizeTermoModelo(raw: any): TermoModelo {
     ? raw.declaracao[0]
     : raw?.declaracao;
 
-  const declaracao: TermoDeclaracao | null = declaracaoRaw
-    ? {
-        id: declaracaoRaw.id,
-        modelo_id: declaracaoRaw.modelo_id,
-        titulo: String(declaracaoRaw.titulo || ""),
-        texto_topico: String(declaracaoRaw.texto_topico || ""),
-        linhas_checkbox: Array.isArray(declaracaoRaw.linhas_checkbox)
-          ? declaracaoRaw.linhas_checkbox.map((item: unknown) => String(item))
-          : [],
-        created_at: declaracaoRaw.created_at,
-        updated_at: declaracaoRaw.updated_at,
-      }
+  const declaracaoParsed = declaracaoRaw
+    ? extractDeclaracaoLinhasAndOrdem(
+        declaracaoRaw.linhas_checkbox,
+        declaracaoRaw.ordem_blocos
+      )
     : null;
+
+  const declaracao: TermoDeclaracao | null =
+    declaracaoRaw && declaracaoParsed
+      ? {
+          id: declaracaoRaw.id,
+          modelo_id: declaracaoRaw.modelo_id,
+          titulo: String(declaracaoRaw.titulo || ""),
+          texto_topico: String(declaracaoRaw.texto_topico || ""),
+          linhas_checkbox: declaracaoParsed.linhas_checkbox,
+          ordem_blocos: declaracaoParsed.ordem_blocos,
+          created_at: declaracaoRaw.created_at,
+          updated_at: declaracaoRaw.updated_at,
+        }
+      : null;
 
   return {
     id: raw.id,
@@ -122,7 +195,7 @@ async function fetchTermoModeloById(
       updated_at,
       procedimento:procedimentos ( id, procedimento ),
       topicos:termos_topicos ( id, modelo_id, ordem, titulo, texto_topico, linhas_checkbox, created_at, updated_at ),
-      declaracao:termos_declaracao ( id, modelo_id, titulo, texto_topico, linhas_checkbox, created_at, updated_at )
+      declaracao:termos_declaracao ( * )
     `
     )
     .eq("id", modeloId)
@@ -181,7 +254,7 @@ export async function getTermosModelos(): Promise<
           updated_at,
           procedimento:procedimentos ( id, procedimento ),
           topicos:termos_topicos ( id, modelo_id, ordem, titulo, texto_topico, linhas_checkbox, created_at, updated_at ),
-          declaracao:termos_declaracao ( id, modelo_id, titulo, texto_topico, linhas_checkbox, created_at, updated_at )
+          declaracao:termos_declaracao ( * )
         `
         )
         .eq("ativo", true)
@@ -333,18 +406,40 @@ export async function saveTermoModelo(
         };
       }
 
-      const { error: upsertDeclErr } = await supabase
+      const ordemBlocos = normalizeDeclaracaoOrdem(
+        validData.declaracao.ordem_blocos
+      );
+      const declBasePayload = {
+        modelo_id: modeloId,
+        titulo: validData.declaracao.titulo,
+        texto_topico: validData.declaracao.texto_topico ?? "",
+        linhas_checkbox: validData.declaracao.linhas_checkbox,
+        updated_at: nowIso,
+      };
+
+      let { error: upsertDeclErr } = await supabase
         .from("termos_declaracao")
         .upsert(
           {
-            modelo_id: modeloId,
-            titulo: validData.declaracao.titulo,
-            texto_topico: validData.declaracao.texto_topico ?? "",
-            linhas_checkbox: validData.declaracao.linhas_checkbox,
-            updated_at: nowIso,
+            ...declBasePayload,
+            ordem_blocos: ordemBlocos,
           },
           { onConflict: "modelo_id" }
         );
+
+      if (isMissingOrdemBlocosColumnError(upsertDeclErr)) {
+        const retry = await supabase.from("termos_declaracao").upsert(
+          {
+            ...declBasePayload,
+            linhas_checkbox: encodeDeclaracaoLinhasWithOrdemFallback(
+              validData.declaracao.linhas_checkbox,
+              ordemBlocos
+            ),
+          },
+          { onConflict: "modelo_id" }
+        );
+        upsertDeclErr = retry.error;
+      }
 
       if (upsertDeclErr) {
         return {
@@ -395,16 +490,35 @@ export async function saveTermoModelo(
         };
       }
 
-      const { error: insertDeclErr } = await supabase
+      const ordemBlocos = normalizeDeclaracaoOrdem(
+        validData.declaracao.ordem_blocos
+      );
+      const declInsertBase = {
+        modelo_id: modeloId,
+        titulo: validData.declaracao.titulo,
+        texto_topico: validData.declaracao.texto_topico ?? "",
+        linhas_checkbox: validData.declaracao.linhas_checkbox,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+
+      let { error: insertDeclErr } = await supabase
         .from("termos_declaracao")
         .insert({
-          modelo_id: modeloId,
-          titulo: validData.declaracao.titulo,
-          texto_topico: validData.declaracao.texto_topico ?? "",
-          linhas_checkbox: validData.declaracao.linhas_checkbox,
-          created_at: nowIso,
-          updated_at: nowIso,
+          ...declInsertBase,
+          ordem_blocos: ordemBlocos,
         });
+
+      if (isMissingOrdemBlocosColumnError(insertDeclErr)) {
+        const retry = await supabase.from("termos_declaracao").insert({
+          ...declInsertBase,
+          linhas_checkbox: encodeDeclaracaoLinhasWithOrdemFallback(
+            validData.declaracao.linhas_checkbox,
+            ordemBlocos
+          ),
+        });
+        insertDeclErr = retry.error;
+      }
 
       if (insertDeclErr) {
         return {

@@ -15,7 +15,15 @@ import {
 } from "lucide-react";
 import { saveTermoModelo } from "@/app/actions/termos";
 import { useToast } from "@/components/ui/toast";
-import type { TermoModelo, TermoProcedimento } from "@/types/termo";
+import {
+  DEFAULT_DECLARACAO_ORDEM,
+  normalizeDeclaracaoOrdem,
+} from "@/lib/validations/termo";
+import type {
+  TermoDeclaracaoBloco,
+  TermoModelo,
+  TermoProcedimento,
+} from "@/types/termo";
 
 interface TermoModeloModalProps {
   isOpen: boolean;
@@ -33,10 +41,16 @@ interface DraftTopico {
   linhas_checkbox: string[];
 }
 
+interface DraftDeclaracaoCheckboxItem {
+  localId: string;
+  texto: string;
+}
+
 interface DraftDeclaracao {
   titulo: string;
   texto_topico: string;
-  linhas_checkbox: string[];
+  linhas_checkbox: DraftDeclaracaoCheckboxItem[];
+  ordem_blocos: TermoDeclaracaoBloco[];
 }
 
 const DEFAULT_DECLARACAO_TITULO = "Declaração de Consentimento";
@@ -59,6 +73,7 @@ function buildEmptyDeclaracao(): DraftDeclaracao {
     titulo: DEFAULT_DECLARACAO_TITULO,
     texto_topico: "",
     linhas_checkbox: [],
+    ordem_blocos: [...DEFAULT_DECLARACAO_ORDEM],
   };
 }
 
@@ -116,8 +131,14 @@ export function TermoModeloModal({
             titulo: modelo.declaracao.titulo || DEFAULT_DECLARACAO_TITULO,
             texto_topico: modelo.declaracao.texto_topico || "",
             linhas_checkbox: Array.isArray(modelo.declaracao.linhas_checkbox)
-              ? [...modelo.declaracao.linhas_checkbox]
+              ? modelo.declaracao.linhas_checkbox.map((texto) => ({
+                  localId: createLocalId(),
+                  texto: String(texto),
+                }))
               : [],
+            ordem_blocos: normalizeDeclaracaoOrdem(
+              modelo.declaracao.ordem_blocos
+            ),
           }
         : buildEmptyDeclaracao()
     );
@@ -226,17 +247,56 @@ export function TermoModeloModal({
   };
 
   // --- Manipulação da Declaração ---
+  const handleMoveDeclaracaoBloco = (
+    index: number,
+    direction: "up" | "down"
+  ) => {
+    setDeclaracao((prev) => {
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= prev.ordem_blocos.length) {
+        return prev;
+      }
+      const nextOrdem = [...prev.ordem_blocos];
+      const [moved] = nextOrdem.splice(index, 1);
+      nextOrdem.splice(targetIndex, 0, moved);
+      return {
+        ...prev,
+        ordem_blocos: nextOrdem,
+      };
+    });
+  };
+
   const handleAddDeclaracaoCheckbox = () => {
     setDeclaracao((prev) => ({
       ...prev,
-      linhas_checkbox: [...prev.linhas_checkbox, ""],
+      linhas_checkbox: [
+        ...prev.linhas_checkbox,
+        { localId: createLocalId(), texto: "" },
+      ],
     }));
   };
 
   const handleUpdateDeclaracaoCheckbox = (cbIndex: number, value: string) => {
     setDeclaracao((prev) => {
       const next = [...prev.linhas_checkbox];
-      next[cbIndex] = value;
+      if (!next[cbIndex]) return prev;
+      next[cbIndex] = { ...next[cbIndex], texto: value };
+      return { ...prev, linhas_checkbox: next };
+    });
+  };
+
+  const handleMoveDeclaracaoCheckbox = (
+    cbIndex: number,
+    direction: "up" | "down"
+  ) => {
+    setDeclaracao((prev) => {
+      const targetIndex = direction === "up" ? cbIndex - 1 : cbIndex + 1;
+      if (targetIndex < 0 || targetIndex >= prev.linhas_checkbox.length) {
+        return prev;
+      }
+      const next = [...prev.linhas_checkbox];
+      const [moved] = next.splice(cbIndex, 1);
+      next.splice(targetIndex, 0, moved);
       return { ...prev, linhas_checkbox: next };
     });
   };
@@ -299,8 +359,9 @@ export function TermoModeloModal({
           titulo: declaracao.titulo.trim(),
           texto_topico: declaracao.texto_topico.trim(),
           linhas_checkbox: declaracao.linhas_checkbox
-            .map((c) => c.trim())
+            .map((c) => c.texto.trim())
             .filter((c) => c.length > 0),
+          ordem_blocos: declaracao.ordem_blocos,
         },
       });
 
@@ -655,67 +716,173 @@ export function TermoModeloModal({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-on-surface block">
-                Texto da Declaração (opcional)
-              </label>
-              <textarea
-                value={declaracao.texto_topico}
-                onChange={(e) =>
-                  setDeclaracao((prev) => ({
-                    ...prev,
-                    texto_topico: e.target.value,
-                  }))
-                }
-                placeholder="Ex: Declaro que li e compreendi todas as informações contidas neste termo, tive todas as minhas dúvidas esclarecidas e autorizo a realização do procedimento..."
-                rows={3}
-                className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-md-md border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y"
-              />
-            </div>
+            {/* Blocos Reordenáveis da Declaração: Texto da Declaração <-> Confirmações */}
+            <div className="space-y-3">
+              {declaracao.ordem_blocos.map((bloco, blocoIdx) => {
+                const isTexto = bloco === "texto";
+                const blocoLabel = isTexto
+                  ? "Texto da Declaração (opcional)"
+                  : `Confirmações da Declaração (${declaracao.linhas_checkbox.length})`;
 
-            {/* Linhas com Checkbox da Declaração */}
-            <div className="space-y-2 pt-1">
-              {declaracao.linhas_checkbox.length > 0 && (
-                <div className="space-y-2">
-                  <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
-                    Confirmações da Declaração ({declaracao.linhas_checkbox.length})
-                  </span>
-                  {declaracao.linhas_checkbox.map((line, cbIdx) => (
-                    <div
-                      key={`decl-cb-${cbIdx}`}
-                      className="flex items-center gap-2"
-                    >
-                      <CheckSquare className="w-4 h-4 text-primary shrink-0" />
-                      <input
-                        type="text"
-                        value={line}
-                        onChange={(e) =>
-                          handleUpdateDeclaracaoCheckbox(cbIdx, e.target.value)
-                        }
-                        placeholder="Ex: Autorizo a realização do procedimento proposto."
-                        className="flex-1 min-h-[44px] px-3 py-2 text-xs sm:text-sm rounded-md-md border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveDeclaracaoCheckbox(cbIdx)}
-                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md-full text-on-surface-variant hover:text-error hover:bg-error-container transition-colors cursor-pointer shrink-0"
-                        aria-label="Remover confirmação da declaração"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                return (
+                  <div
+                    key={bloco}
+                    className="p-3.5 sm:p-4 rounded-md-md bg-surface-container-low border border-outline-variant space-y-2.5"
+                  >
+                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-outline-variant/70">
+                      <span className="inline-flex items-center gap-2 text-xs font-semibold text-on-surface min-w-0">
+                        <span className="w-6 h-6 rounded-md-full bg-primary-container text-on-primary-container flex items-center justify-center text-xs font-bold shrink-0">
+                          {blocoIdx + 1}
+                        </span>
+                        <span className="truncate">{blocoLabel}</span>
+                      </span>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleMoveDeclaracaoBloco(blocoIdx, "up")
+                          }
+                          disabled={blocoIdx === 0}
+                          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high disabled:opacity-35 cursor-pointer transition-colors"
+                          title={
+                            isTexto
+                              ? "Mover Texto da Declaração para cima"
+                              : "Mover Confirmações da Declaração para cima"
+                          }
+                          aria-label={
+                            isTexto
+                              ? "Mover bloco Texto da Declaração para cima"
+                              : "Mover bloco Confirmações da Declaração para cima"
+                          }
+                        >
+                          <ArrowUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleMoveDeclaracaoBloco(blocoIdx, "down")
+                          }
+                          disabled={
+                            blocoIdx === declaracao.ordem_blocos.length - 1
+                          }
+                          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high disabled:opacity-35 cursor-pointer transition-colors"
+                          title={
+                            isTexto
+                              ? "Mover Texto da Declaração para baixo"
+                              : "Mover Confirmações da Declaração para baixo"
+                          }
+                          aria-label={
+                            isTexto
+                              ? "Mover bloco Texto da Declaração para baixo"
+                              : "Mover bloco Confirmações da Declaração para baixo"
+                          }
+                        >
+                          <ArrowDown className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
 
-              <button
-                type="button"
-                onClick={handleAddDeclaracaoCheckbox}
-                className="inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-md-full text-xs font-semibold text-on-primary-container bg-primary-container hover:opacity-90 transition-colors cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5 shrink-0" />
-                <span>Adicionar linha com checkbox</span>
-              </button>
+                    {isTexto ? (
+                      <textarea
+                        value={declaracao.texto_topico}
+                        onChange={(e) =>
+                          setDeclaracao((prev) => ({
+                            ...prev,
+                            texto_topico: e.target.value,
+                          }))
+                        }
+                        placeholder="Ex: Declaro que li e compreendi todas as informações contidas neste termo, tive todas as minhas dúvidas esclarecidas e autorizo a realização do procedimento..."
+                        rows={3}
+                        aria-label="Texto da Declaração"
+                        className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-md-md border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y"
+                      />
+                    ) : (
+                      <div className="space-y-2.5">
+                        {declaracao.linhas_checkbox.length > 0 && (
+                          <div className="space-y-2">
+                            {declaracao.linhas_checkbox.map((item, cbIdx) => (
+                              <div
+                                key={item.localId}
+                                className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 sm:p-0 rounded-md-md bg-surface-container-lowest sm:bg-transparent border border-outline-variant/60 sm:border-0"
+                              >
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <CheckSquare className="w-4 h-4 text-primary shrink-0" />
+                                  <input
+                                    type="text"
+                                    value={item.texto}
+                                    onChange={(e) =>
+                                      handleUpdateDeclaracaoCheckbox(
+                                        cbIdx,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="Ex: Autorizo a realização do procedimento proposto."
+                                    className="flex-1 min-w-0 min-h-[44px] px-3 py-2 text-xs sm:text-sm rounded-md-md border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                                  />
+                                </div>
+
+                                <div className="flex items-center justify-end gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleMoveDeclaracaoCheckbox(cbIdx, "up")
+                                    }
+                                    disabled={cbIdx === 0}
+                                    className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high disabled:opacity-35 transition-colors cursor-pointer shrink-0"
+                                    title="Mover confirmação para cima"
+                                    aria-label={`Mover confirmação ${cbIdx + 1} para cima`}
+                                  >
+                                    <ArrowUp className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleMoveDeclaracaoCheckbox(
+                                        cbIdx,
+                                        "down"
+                                      )
+                                    }
+                                    disabled={
+                                      cbIdx ===
+                                      declaracao.linhas_checkbox.length - 1
+                                    }
+                                    className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high disabled:opacity-35 transition-colors cursor-pointer shrink-0"
+                                    title="Mover confirmação para baixo"
+                                    aria-label={`Mover confirmação ${cbIdx + 1} para baixo`}
+                                  >
+                                    <ArrowDown className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleRemoveDeclaracaoCheckbox(cbIdx)
+                                    }
+                                    className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md-full text-on-surface-variant hover:text-error hover:bg-error-container transition-colors cursor-pointer shrink-0"
+                                    title="Remover confirmação da declaração"
+                                    aria-label={`Remover confirmação ${cbIdx + 1} da declaração`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={handleAddDeclaracaoCheckbox}
+                          className="inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-md-full text-xs font-semibold text-on-primary-container bg-primary-container hover:opacity-90 transition-colors cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5 shrink-0" />
+                          <span>Adicionar linha com checkbox</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </form>

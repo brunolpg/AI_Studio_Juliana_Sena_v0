@@ -1,4 +1,36 @@
 import { z } from "zod";
+import type { TermoDeclaracaoBloco } from "@/types/termo";
+
+export const DEFAULT_DECLARACAO_ORDEM: TermoDeclaracaoBloco[] = [
+  "texto",
+  "confirmacoes",
+];
+
+export function normalizeDeclaracaoOrdem(
+  ordem?: readonly string[] | null
+): TermoDeclaracaoBloco[] {
+  if (!Array.isArray(ordem)) return [...DEFAULT_DECLARACAO_ORDEM];
+  const valid = ordem.filter(
+    (item): item is TermoDeclaracaoBloco =>
+      item === "texto" || item === "confirmacoes"
+  );
+  if (valid.length >= 2 && valid[0] !== valid[1]) {
+    return [valid[0], valid[1]];
+  }
+  if (valid.length >= 1) {
+    return valid[0] === "confirmacoes"
+      ? ["confirmacoes", "texto"]
+      : ["texto", "confirmacoes"];
+  }
+  return [...DEFAULT_DECLARACAO_ORDEM];
+}
+
+export const termoDeclaracaoBlocoSchema = z.enum(["texto", "confirmacoes"]);
+
+const declaracaoOrdemSchema = z
+  .array(termoDeclaracaoBlocoSchema)
+  .optional()
+  .transform((items) => normalizeDeclaracaoOrdem(items));
 
 const checkboxListSchema = z
   .array(z.string().trim())
@@ -18,6 +50,7 @@ export const termoDeclaracaoSchema = z.object({
   titulo: z.string().trim().min(1, "O título da declaração é obrigatório."),
   texto_topico: z.string().trim().optional().default(""),
   linhas_checkbox: checkboxListSchema,
+  ordem_blocos: declaracaoOrdemSchema,
 });
 
 export const termoModeloSchema = z.object({
@@ -50,6 +83,7 @@ export const termoSnapshotDeclaracaoSchema = z.object({
   titulo: z.string().trim().min(1, "O título da declaração é obrigatório."),
   texto_topico: z.string().trim().optional().default(""),
   linhas_checkbox: z.array(termoSnapshotCheckboxSchema).default([]),
+  ordem_blocos: declaracaoOrdemSchema,
 });
 
 const isoDateSchema = z

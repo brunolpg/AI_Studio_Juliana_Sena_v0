@@ -11,12 +11,15 @@ export interface TermoTopico {
   updated_at?: string;
 }
 
+export type TermoDeclaracaoBloco = "texto" | "confirmacoes";
+
 export interface TermoDeclaracao {
   id?: string;
   modelo_id?: string;
   titulo: string;
   texto_topico: string;
   linhas_checkbox: string[];
+  ordem_blocos?: TermoDeclaracaoBloco[];
   created_at?: string;
   updated_at?: string;
 }
@@ -54,6 +57,7 @@ export interface TermoSnapshotDeclaracao {
   titulo: string;
   texto_topico: string;
   linhas_checkbox: TermoSnapshotCheckbox[];
+  ordem_blocos?: TermoDeclaracaoBloco[];
 }
 
 export interface TermoSnapshot {

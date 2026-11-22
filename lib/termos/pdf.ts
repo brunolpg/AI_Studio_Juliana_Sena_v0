@@ -11,6 +11,7 @@ import {
 } from "pdf-lib";
 // @ts-expect-error @pdf-lib/fontkit não possui declarações completas para ESM/CJS
 import fontkit from "@pdf-lib/fontkit";
+import { normalizeDeclaracaoOrdem } from "@/lib/validations/termo";
 import type { TermoSnapshot, TermoSnapshotCheckbox } from "@/types/termo";
 
 export interface TermoPdfPaciente {
@@ -1010,12 +1011,18 @@ export async function generateTermoConsentimentoPdf(
       0
     );
 
+    const declOrdem = normalizeDeclaracaoOrdem(declaracao.ordem_blocos);
+    const hasDeclBody = declBodyLines.length > 0;
+    const hasDeclChecks = wrappedDeclCheckboxes.length > 0;
+    const betweenBlocksGap = hasDeclBody && hasDeclChecks ? 8 : 0;
+
     const totalDeclCardH =
       declHeaderH +
       12 +
       subtitleH +
       bodyH +
-      (checksH > 0 ? 8 + checksH : 0) +
+      checksH +
+      betweenBlocksGap +
       10;
 
     if (totalDeclCardH <= usableContinuationPageH) {
@@ -1062,35 +1069,45 @@ export async function generateTermoConsentimentoPdf(
         cursorY -= subtitleH;
       }
 
-      for (const line of declBodyLines) {
-        if (line === "") {
-          cursorY -= declLeading * 0.55;
-          continue;
-        }
-        drawText(page, line, MARGIN + declPadX, cursorY - declFontSize, {
-          font: regular,
-          size: declFontSize,
-          color: C.ink,
-        });
-        cursorY -= declLeading;
-      }
+      let renderedBlocks = 0;
+      for (const bloco of declOrdem) {
+        if (bloco === "texto" && hasDeclBody) {
+          if (renderedBlocks > 0) {
+            cursorY -= betweenBlocksGap;
+          }
+          for (const line of declBodyLines) {
+            if (line === "") {
+              cursorY -= declLeading * 0.55;
+              continue;
+            }
+            drawText(page, line, MARGIN + declPadX, cursorY - declFontSize, {
+              font: regular,
+              size: declFontSize,
+              color: C.ink,
+            });
+            cursorY -= declLeading;
+          }
+          renderedBlocks += 1;
+        } else if (bloco === "confirmacoes" && hasDeclChecks) {
+          if (renderedBlocks > 0) {
+            cursorY -= betweenBlocksGap;
+          }
+          for (const itemLines of wrappedDeclCheckboxes) {
+            const itemH =
+              Math.max(checkboxBoxSize + 2, itemLines.length * declCheckLeading) + 5;
+            const boxX = MARGIN + declPadX;
+            const boxBottomY = cursorY - checkboxBoxSize - 0.5;
+            drawCheckedVectorBox(page, boxX, boxBottomY, checkboxBoxSize);
 
-      if (wrappedDeclCheckboxes.length > 0) {
-        cursorY -= 8;
-        for (const itemLines of wrappedDeclCheckboxes) {
-          const itemH =
-            Math.max(checkboxBoxSize + 2, itemLines.length * declCheckLeading) + 5;
-          const boxX = MARGIN + declPadX;
-          const boxBottomY = cursorY - checkboxBoxSize - 0.5;
-          drawCheckedVectorBox(page, boxX, boxBottomY, checkboxBoxSize);
-
-          drawLines(page, itemLines, boxX + checkboxTextIndent, cursorY + 0.5, {
-            font: bold,
-            size: declCheckFontSize,
-            color: C.ink,
-            leading: declCheckLeading,
-          });
-          cursorY -= itemH;
+            drawLines(page, itemLines, boxX + checkboxTextIndent, cursorY + 0.5, {
+              font: bold,
+              size: declCheckFontSize,
+              color: C.ink,
+              leading: declCheckLeading,
+            });
+            cursorY -= itemH;
+          }
+          renderedBlocks += 1;
         }
       }
 
@@ -1124,66 +1141,76 @@ export async function generateTermoConsentimentoPdf(
         y -= subtitleH;
       }
 
-      for (const line of declBodyLines) {
-        if (line === "") {
-          y -= declLeading * 0.55;
-          continue;
-        }
-        ensureSpace(declLeading + 4);
-        page.drawRectangle({
-          x: MARGIN,
-          y: y - declLeading,
-          width: CONTENT_W,
-          height: declLeading,
-          color: C.primarySoftBg,
-        });
-        page.drawRectangle({
-          x: MARGIN,
-          y: y - declLeading,
-          width: 3,
-          height: declLeading,
-          color: C.primary,
-        });
-        drawText(page, line, MARGIN + 10, y - declFontSize, {
-          font: regular,
-          size: declFontSize,
-          color: C.ink,
-        });
-        y -= declLeading;
-      }
+      let renderedBlocks = 0;
+      for (const bloco of declOrdem) {
+        if (bloco === "texto" && hasDeclBody) {
+          if (renderedBlocks > 0) {
+            y -= 6;
+          }
+          for (const line of declBodyLines) {
+            if (line === "") {
+              y -= declLeading * 0.55;
+              continue;
+            }
+            ensureSpace(declLeading + 4);
+            page.drawRectangle({
+              x: MARGIN,
+              y: y - declLeading,
+              width: CONTENT_W,
+              height: declLeading,
+              color: C.primarySoftBg,
+            });
+            page.drawRectangle({
+              x: MARGIN,
+              y: y - declLeading,
+              width: 3,
+              height: declLeading,
+              color: C.primary,
+            });
+            drawText(page, line, MARGIN + 10, y - declFontSize, {
+              font: regular,
+              size: declFontSize,
+              color: C.ink,
+            });
+            y -= declLeading;
+          }
+          renderedBlocks += 1;
+        } else if (bloco === "confirmacoes" && hasDeclChecks) {
+          if (renderedBlocks > 0) {
+            y -= 6;
+          }
+          for (const itemLines of wrappedDeclCheckboxes) {
+            const itemH =
+              Math.max(checkboxBoxSize + 2, itemLines.length * declCheckLeading) + 6;
+            ensureSpace(itemH + 4);
 
-      if (wrappedDeclCheckboxes.length > 0) {
-        y -= 6;
-        for (const itemLines of wrappedDeclCheckboxes) {
-          const itemH =
-            Math.max(checkboxBoxSize + 2, itemLines.length * declCheckLeading) + 6;
-          ensureSpace(itemH + 4);
+            page.drawRectangle({
+              x: MARGIN,
+              y: y - itemH,
+              width: CONTENT_W,
+              height: itemH,
+              color: C.primarySoftBg,
+            });
+            page.drawRectangle({
+              x: MARGIN,
+              y: y - itemH,
+              width: 3,
+              height: itemH,
+              color: C.primary,
+            });
 
-          page.drawRectangle({
-            x: MARGIN,
-            y: y - itemH,
-            width: CONTENT_W,
-            height: itemH,
-            color: C.primarySoftBg,
-          });
-          page.drawRectangle({
-            x: MARGIN,
-            y: y - itemH,
-            width: 3,
-            height: itemH,
-            color: C.primary,
-          });
-
-          const boxX = MARGIN + 10;
-          const boxBottomY = y - checkboxBoxSize - 2;
-          drawCheckedVectorBox(page, boxX, boxBottomY, checkboxBoxSize);
-          drawLines(page, itemLines, boxX + checkboxTextIndent, y - 1, {
-            font: bold,
-            size: declCheckFontSize,
-            color: C.ink,
-            leading: declCheckLeading,
-          });
-          y -= itemH;
+            const boxX = MARGIN + 10;
+            const boxBottomY = y - checkboxBoxSize - 2;
+            drawCheckedVectorBox(page, boxX, boxBottomY, checkboxBoxSize);
+            drawLines(page, itemLines, boxX + checkboxTextIndent, y - 1, {
+              font: bold,
+              size: declCheckFontSize,
+              color: C.ink,
+              leading: declCheckLeading,
+            });
+            y -= itemH;
+          }
+          renderedBlocks += 1;
         }
       }
 

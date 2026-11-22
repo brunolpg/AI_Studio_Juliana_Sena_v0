@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { uploadTermoAssinadoAction } from "@/app/actions/termos";
 import { useToast } from "@/components/ui/toast";
+import { normalizeDeclaracaoOrdem } from "@/lib/validations/termo";
 import { SignaturePad, type SignaturePadHandle } from "./signature-pad";
 import { TermoModeloModal } from "./termo-modelo-modal";
 import type { Client } from "@/types/client";
@@ -259,6 +260,9 @@ export function TermoFormModal({
                 texto: line.trim(),
                 marcado: Boolean(checkedMap[`declaracao-${cIdx}`]),
               })),
+            ordem_blocos: normalizeDeclaracaoOrdem(
+              selectedModelo.declaracao.ordem_blocos
+            ),
           }
         : null,
     };
@@ -810,59 +814,81 @@ export function TermoFormModal({
                 </div>
 
                 {/* Declaração de Consentimento (Destacada) */}
-                {selectedModelo.declaracao && (
-                  <div className="p-4 sm:p-5 rounded-md-lg bg-primary-container/35 border-2 border-primary/50 space-y-3">
-                    <div className="flex items-center gap-2 text-primary">
-                      <ShieldCheck className="w-5 h-5 shrink-0" />
-                      <h4 className="text-sm sm:text-base font-bold text-on-surface">
-                        {selectedModelo.declaracao.titulo ||
-                          "Declaração de Consentimento"}
-                      </h4>
-                    </div>
+                {selectedModelo.declaracao && (() => {
+                  const decl = selectedModelo.declaracao;
+                  const declTexto = decl.texto_topico?.trim() || "";
+                  const declCheckboxes = (decl.linhas_checkbox || []).filter(
+                    (l) => l.trim().length > 0
+                  );
+                  const declOrdem = normalizeDeclaracaoOrdem(decl.ordem_blocos);
+                  const visibleBlocks = declOrdem.filter((bloco) =>
+                    bloco === "texto"
+                      ? declTexto.length > 0
+                      : declCheckboxes.length > 0
+                  );
 
-                    {selectedModelo.declaracao.texto_topico?.trim() && (
-                      <p className="text-xs sm:text-sm text-on-surface leading-relaxed whitespace-pre-line">
-                        {selectedModelo.declaracao.texto_topico}
-                      </p>
-                    )}
-
-                    {(selectedModelo.declaracao.linhas_checkbox || []).filter(
-                      (l) => l.trim().length > 0
-                    ).length > 0 && (
-                      <div className="pt-2 space-y-1.5 border-t border-primary/25">
-                        {(selectedModelo.declaracao.linhas_checkbox || [])
-                          .filter((l) => l.trim().length > 0)
-                          .map((line, cIdx) => {
-                            const key = `declaracao-${cIdx}`;
-                            const checked = Boolean(checkedMap[key]);
-                            return (
-                              <button
-                                key={key}
-                                type="button"
-                                role="checkbox"
-                                aria-checked={checked}
-                                onClick={() => toggleCheckbox(key)}
-                                className={`w-full min-h-[44px] px-3 py-2 rounded-md-md border text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
-                                  checked
-                                    ? "bg-primary-container border-primary text-on-primary-container"
-                                    : "bg-surface-container-lowest border-outline-variant text-on-surface hover:bg-surface-container"
-                                }`}
-                              >
-                                {checked ? (
-                                  <CheckSquare className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                                ) : (
-                                  <Square className="w-5 h-5 text-on-surface-variant shrink-0 mt-0.5" />
-                                )}
-                                <span className="text-xs sm:text-sm font-medium leading-snug">
-                                  {line}
-                                </span>
-                              </button>
-                            );
-                          })}
+                  return (
+                    <div className="p-4 sm:p-5 rounded-md-lg bg-primary-container/35 border-2 border-primary/50 space-y-3">
+                      <div className="flex items-center gap-2 text-primary">
+                        <ShieldCheck className="w-5 h-5 shrink-0" />
+                        <h4 className="text-sm sm:text-base font-bold text-on-surface">
+                          {decl.titulo || "Declaração de Consentimento"}
+                        </h4>
                       </div>
-                    )}
-                  </div>
-                )}
+
+                      {visibleBlocks.map((bloco, idx) => {
+                        const dividerClass =
+                          idx > 0 ? "pt-2.5 border-t border-primary/25" : "";
+
+                        if (bloco === "texto") {
+                          return (
+                            <p
+                              key="texto"
+                              className={`text-xs sm:text-sm text-on-surface leading-relaxed whitespace-pre-line ${dividerClass}`}
+                            >
+                              {decl.texto_topico}
+                            </p>
+                          );
+                        }
+
+                        return (
+                          <div
+                            key="confirmacoes"
+                            className={`space-y-1.5 ${dividerClass}`}
+                          >
+                            {declCheckboxes.map((line, cIdx) => {
+                              const key = `declaracao-${cIdx}`;
+                              const checked = Boolean(checkedMap[key]);
+                              return (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  role="checkbox"
+                                  aria-checked={checked}
+                                  onClick={() => toggleCheckbox(key)}
+                                  className={`w-full min-h-[44px] px-3 py-2 rounded-md-md border text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
+                                    checked
+                                      ? "bg-primary-container border-primary text-on-primary-container"
+                                      : "bg-surface-container-lowest border-outline-variant text-on-surface hover:bg-surface-container"
+                                  }`}
+                                >
+                                  {checked ? (
+                                    <CheckSquare className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                                  ) : (
+                                    <Square className="w-5 h-5 text-on-surface-variant shrink-0 mt-0.5" />
+                                  )}
+                                  <span className="text-xs sm:text-sm font-medium leading-snug">
+                                    {line}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             ) : (
               <div className="p-6 rounded-md-lg bg-surface-container-low border border-dashed border-outline-variant text-center space-y-1.5">
