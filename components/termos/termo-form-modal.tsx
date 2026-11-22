@@ -41,7 +41,17 @@ interface TermoFormModalProps {
   onSuccess: (termo: TermoConsentimento) => void;
 }
 
-const MAX_UPLOAD_PDF_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_UPLOAD_PDF_BYTES = 1 * 1024 * 1024; // 1MB
+
+function buildFileTooLargeMessage(fileSizeBytes?: number): string {
+  if (typeof fileSizeBytes === "number" && fileSizeBytes > 0) {
+    const sizeMb = (Math.ceil((fileSizeBytes / (1024 * 1024)) * 100) / 100)
+      .toFixed(2)
+      .replace(".", ",");
+    return `O arquivo selecionado possui ${sizeMb} MB e excede o limite máximo de 1 MB. Reduza ou comprima o PDF antes de anexá-lo.`;
+  }
+  return "O arquivo selecionado excede o limite máximo de 1 MB. Reduza ou comprima o PDF antes de anexá-lo.";
+}
 
 function getTodaySaoPaulo(): string {
   return new Date().toLocaleDateString("en-CA", {
@@ -358,8 +368,7 @@ export function TermoFormModal({
       return "O arquivo PDF selecionado está vazio.";
     }
     if (file.size > MAX_UPLOAD_PDF_BYTES) {
-      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      return `O arquivo (${sizeMb}MB) excede o limite máximo de 10MB.`;
+      return buildFileTooLargeMessage(file.size);
     }
     return null;
   };
@@ -368,6 +377,21 @@ export function TermoFormModal({
     file: File,
     options: { assinaturaApenasNoPdf: boolean }
   ) => {
+    const validationError = validatePdfFile(file);
+    if (validationError) {
+      setSelectedPdfFile(null);
+      setFormError(validationError);
+      if (options.assinaturaApenasNoPdf) {
+        setSignatureError(validationError);
+      }
+      toast({
+        type: "error",
+        title: "Arquivo excede o limite permitido",
+        description: validationError,
+      });
+      return;
+    }
+
     const fallbackName = file.name
       .replace(/\.pdf$/i, "")
       .replace(/[_-]+/g, " ")
@@ -437,14 +461,33 @@ export function TermoFormModal({
       onSuccess(res.data);
       onClose();
     } catch (err: unknown) {
-      const msg =
+      const rawMsg =
         err instanceof Error
           ? err.message
           : "Erro inesperado ao enviar o arquivo PDF.";
+      const normalizedErr = rawMsg.toLowerCase();
+      const isPayloadLimitError =
+        normalizedErr.includes("body exceeded") ||
+        normalizedErr.includes("unexpected response") ||
+        normalizedErr.includes("payload too large") ||
+        normalizedErr.includes("413");
+      const msg = isPayloadLimitError
+        ? buildFileTooLargeMessage(
+            file.size > MAX_UPLOAD_PDF_BYTES ? file.size : undefined
+          )
+        : rawMsg;
+
+      if (isPayloadLimitError) {
+        setSelectedPdfFile(null);
+        if (options.assinaturaApenasNoPdf) {
+          setSignatureError(msg);
+        }
+      }
+
       setFormError(msg);
       toast({
         type: "error",
-        title: "Erro inesperado",
+        title: isPayloadLimitError ? "Arquivo excede o limite de 1 MB" : "Erro inesperado",
         description: msg,
       });
     } finally {
@@ -469,23 +512,23 @@ export function TermoFormModal({
     await submitUploadedPdf(selectedPdfFile, { assinaturaApenasNoPdf: true });
   };
 
-  const handleFileSelected = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    // Reseta o input para permitir selecionar o mesmo arquivo novamente se necessário
-    e.target.value = "";
-    if (!file) return;
-
+  const processSelectedPdfFile = async (file: File) => {
     setFormError(null);
     setSignatureError(null);
 
     const validationError = validatePdfFile(file);
     if (validationError) {
+      setSelectedPdfFile(null);
       setFormError(validationError);
+      if (signatureOnlyInAttachedPdf) {
+        setSignatureError(validationError);
+      }
       toast({
         type: "error",
-        title: "Arquivo inválido",
+        title:
+          file.size > MAX_UPLOAD_PDF_BYTES
+            ? "Arquivo excede o limite de 1 MB"
+            : "Arquivo inválido",
         description: validationError,
       });
       return;
@@ -508,6 +551,26 @@ export function TermoFormModal({
     }
 
     await submitUploadedPdf(file, { assinaturaApenasNoPdf: false });
+  };
+
+  const handleFileSelected = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    // Reseta o input para permitir selecionar o mesmo arquivo novamente se necessário
+    e.target.value = "";
+    if (!file) return;
+
+    await processSelectedPdfFile(file);
+  };
+
+  const handleFileDrop = async (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (isBusy) return;
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    await processSelectedPdfFile(file);
   };
 
   const sortedTopicos = selectedModelo
@@ -1005,15 +1068,17 @@ export function TermoFormModal({
                       <button
                         type="button"
                         onClick={handleTriggerUploadClick}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={handleFileDrop}
                         disabled={isBusy}
                         className="w-full min-h-[72px] p-4 rounded-md-md border-2 border-dashed border-outline-variant bg-surface-container-lowest hover:bg-surface-container hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-1.5 text-center cursor-pointer disabled:opacity-50"
                       >
                         <UploadCloud className="w-5 h-5 text-primary shrink-0" />
                         <span className="text-xs sm:text-sm font-semibold text-on-surface">
-                          Selecionar PDF assinado do termo antigo
+                          Selecionar ou arrastar PDF assinado do termo antigo
                         </span>
                         <span className="text-[11px] text-on-surface-variant">
-                          Formato .pdf • Tamanho máximo de 10MB
+                          Formato .pdf • Tamanho máximo de 1 MB
                         </span>
                       </button>
                     )}

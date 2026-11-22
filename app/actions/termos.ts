@@ -23,7 +23,7 @@ import type {
 } from "@/types/termo";
 
 const TERMOS_BUCKET = "termos-consentimento";
-const MAX_TERMO_PDF_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_TERMO_PDF_BYTES = 1 * 1024 * 1024; // 1MB
 const SIGNED_URL_EXPIRES_IN = 300; // 300s
 const DEFAULT_PROFISSIONAL = "Dra. Juliana Sena";
 
@@ -607,7 +607,7 @@ export async function createTermoConsentimento(
 
 /**
  * 4. uploadTermoAssinadoAction
- * Valida arquivo PDF (máx 10MB, header %PDF-), faz upload no bucket privado `termos-consentimento`
+ * Valida arquivo PDF (máx 1MB, header %PDF-), faz upload no bucket privado `termos-consentimento`
  * em `{paciente_id}/{termo_id}.pdf` e insere registro em `termos` com assinado = true.
  */
 export async function uploadTermoAssinadoAction(
@@ -677,10 +677,14 @@ export async function uploadTermoAssinadoAction(
     }
 
     if (fileEntry.size > MAX_TERMO_PDF_BYTES) {
-      const sizeInMb = (fileEntry.size / (1024 * 1024)).toFixed(1);
+      const sizeInMb = (
+        Math.ceil((fileEntry.size / (1024 * 1024)) * 100) / 100
+      )
+        .toFixed(2)
+        .replace(".", ",");
       return {
         success: false,
-        error: `O arquivo (${sizeInMb}MB) excede o limite máximo permitido de 10MB.`,
+        error: `O arquivo selecionado possui ${sizeInMb} MB e excede o limite máximo de 1 MB. Reduza ou comprima o PDF antes de anexá-lo.`,
       };
     }
 
@@ -791,7 +795,8 @@ export async function uploadTermoAssinadoAction(
         modelo_id: modeloId,
         procedimento_nome: procedimentoNomeFinal,
         data: dataFinal,
-        conteudo_snapshot: conteudoSnapshot,
+        conteudo_snapshot:
+          conteudoSnapshot ?? ({} as unknown as TermoSnapshot),
         assinado: true,
         origem_pdf: "upload",
         pdf_path: pdfPath,
