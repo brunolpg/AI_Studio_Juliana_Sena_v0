@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   AlertCircle,
   RefreshCw,
+  UploadCloud,
 } from "lucide-react";
 import { getTermoPdfSignedUrl } from "@/app/actions/termos";
 import { useToast } from "@/components/ui/toast";
@@ -176,6 +177,10 @@ export function TermoDetailsModal({
     return res.data.signedUrl;
   };
 
+  const patientName = client?.nome?.trim() || "Paciente";
+  const procedimentoTitulo =
+    termo.procedimento_nome?.trim() || "Termo de Consentimento";
+
   const handleDownloadPdf = async () => {
     let urlToUse: string | null = null;
     try {
@@ -183,7 +188,7 @@ export function TermoDetailsModal({
       urlToUse = await resolvePdfSignedUrl();
       if (!urlToUse) return;
 
-      const fileName = sanitizePatientPdfFileName(client.nome);
+      const fileName = sanitizePatientPdfFileName(patientName);
       try {
         const response = await fetch(urlToUse);
         if (!response.ok) {
@@ -228,17 +233,17 @@ export function TermoDetailsModal({
       }
 
       const blob = await response.blob();
-      const fileName = sanitizePatientPdfFileName(client.nome);
+      const fileName = sanitizePatientPdfFileName(patientName);
       const pdfFile = new File([blob], fileName, { type: "application/pdf" });
-      const cleanPhone = cleanBrazilianPhone(client.telefone);
+      const cleanPhone = cleanBrazilianPhone(client?.telefone);
 
-      const customMessage = `Olá, ${client.nome}!\n\nSegue o seu *Termo de Consentimento* referente ao procedimento *${termo.procedimento_nome}* (emitido em ${formatDateBR(termo.data)}).\n\nQualquer dúvida, nossa equipe permanece à disposição.\n\n*Clínica Dra. Juliana Sena*\nEstética Avançada e Regenerativa\nSalvador - BA`;
+      const customMessage = `Olá, ${patientName}!\n\nSegue o seu *Termo de Consentimento* referente ao procedimento *${procedimentoTitulo}* (emitido em ${formatDateBR(termo.data)}).\n\nQualquer dúvida, nossa equipe permanece à disposição.\n\n*Clínica Dra. Juliana Sena*\nEstética Avançada e Regenerativa\nSalvador - BA`;
 
       const result = await sharePdfViaWhatsApp({
         file: pdfFile,
-        documentTitle: `Termo de Consentimento - ${termo.procedimento_nome}`,
-        patientName: client.nome,
-        patientPhone: cleanPhone || client.telefone,
+        documentTitle: `Termo de Consentimento - ${procedimentoTitulo}`,
+        patientName,
+        patientPhone: cleanPhone || client?.telefone,
         customMessage,
       });
 
@@ -281,7 +286,7 @@ export function TermoDetailsModal({
     setIsShareMenuOpen(false);
     setGmailAuthUrl(null);
 
-    const trimmedEmail = client.email?.trim() || "";
+    const trimmedEmail = client?.email?.trim() || "";
     if (!trimmedEmail) {
       toast({
         type: "warning",
@@ -301,7 +306,7 @@ export function TermoDetailsModal({
         },
         body: JSON.stringify({
           patientEmail: trimmedEmail,
-          patientName: client.nome,
+          patientName,
         }),
       });
 
@@ -356,12 +361,22 @@ export function TermoDetailsModal({
   };
 
   const snapshot = termo.conteudo_snapshot;
-  const sortedTopicos = snapshot?.topicos
-    ? [...snapshot.topicos].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
+  const sortedTopicos = Array.isArray(snapshot?.topicos)
+    ? [...snapshot.topicos].sort((a, b) => (a?.ordem ?? 0) - (b?.ordem ?? 0))
     : [];
+  const hasSnapshotContent =
+    sortedTopicos.length > 0 || Boolean(snapshot?.declaracao);
 
-  const origemLabel =
-    termo.origem_pdf === "upload"
+  const isUploadPdf = termo.origem_pdf === "upload";
+  const isLegacyAttachedTermo =
+    isUploadPdf &&
+    (!termo.assinado_em ||
+      !hasSnapshotContent ||
+      Boolean(snapshot?.assinatura_apenas_no_pdf));
+
+  const origemLabel = isLegacyAttachedTermo
+    ? "Termo antigo (PDF anexado)"
+    : isUploadPdf
       ? "Upload de PDF assinado"
       : termo.origem_pdf === "gerado"
         ? "Gerado digitalmente"
@@ -387,7 +402,7 @@ export function TermoDetailsModal({
                   id="termo-details-modal-title"
                   className="text-sm sm:text-base font-bold text-on-surface truncate"
                 >
-                  {termo.procedimento_nome}
+                  {procedimentoTitulo}
                 </h3>
                 <span
                   className={`inline-flex items-center px-2.5 py-0.5 rounded-md-full text-[11px] font-semibold ${
@@ -398,9 +413,15 @@ export function TermoDetailsModal({
                 >
                   {termo.assinado ? "Assinado" : "Pendente"}
                 </span>
+                {isUploadPdf && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md-full text-[11px] font-semibold bg-surface-container text-on-surface-variant border border-outline-variant">
+                    <UploadCloud className="w-3 h-3 shrink-0" />
+                    {isLegacyAttachedTermo ? "Termo antigo anexado" : "PDF anexado"}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-on-surface-variant truncate">
-                Paciente: {client.nome} • Emitido em {formatDateBR(termo.data)}
+                Paciente: {patientName} • Data: {formatDateBR(termo.data)}
               </p>
             </div>
           </div>
@@ -520,7 +541,7 @@ export function TermoDetailsModal({
                           WhatsApp
                         </span>
                         <span className="block text-[11px] text-on-surface-variant truncate">
-                          {client.telefone?.trim() || "Enviar PDF pelo WhatsApp"}
+                          {client?.telefone?.trim() || "Enviar PDF pelo WhatsApp"}
                         </span>
                       </span>
                     </button>
@@ -539,7 +560,7 @@ export function TermoDetailsModal({
                           E-mail
                         </span>
                         <span className="block text-[11px] text-on-surface-variant truncate">
-                          {client.email?.trim() || "E-mail não cadastrado"}
+                          {client?.email?.trim() || "E-mail não cadastrado"}
                         </span>
                       </span>
                     </button>
@@ -576,7 +597,7 @@ export function TermoDetailsModal({
                     Paciente
                   </span>
                   <span className="text-xs sm:text-sm font-bold text-on-surface mt-0.5 block">
-                    {client.nome}
+                    {patientName}
                   </span>
                 </div>
 
@@ -585,7 +606,7 @@ export function TermoDetailsModal({
                     Procedimento
                   </span>
                   <span className="text-xs sm:text-sm font-bold text-on-surface mt-0.5 block">
-                    {termo.procedimento_nome}
+                    {procedimentoTitulo}
                   </span>
                 </div>
 
@@ -598,6 +619,11 @@ export function TermoDetailsModal({
                       ? formatDateTimeSaoPaulo(termo.assinado_em)
                       : formatDateBR(termo.data)}
                   </span>
+                  {isUploadPdf && !termo.assinado_em && (
+                    <span className="text-[11px] text-on-surface-variant block mt-0.5">
+                      Assinatura no PDF anexado
+                    </span>
+                  )}
                 </div>
 
                 <div className="p-3.5 rounded-md-lg bg-surface-container-low border border-outline-variant">
@@ -610,8 +636,30 @@ export function TermoDetailsModal({
                 </div>
               </div>
 
+              {/* Aviso de origem para termos anexados via PDF quando também houver snapshot */}
+              {isUploadPdf && hasSnapshotContent && (
+                <div className="p-3.5 rounded-md-lg bg-primary-container/35 border border-primary/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-2.5 text-xs text-on-surface">
+                    <UploadCloud className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      Este documento foi registrado via upload de PDF assinado. A assinatura válida do paciente consta no arquivo PDF anexado.
+                    </p>
+                  </div>
+                  {termo.pdf_path && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveView("pdf")}
+                      className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-md-full text-xs font-semibold bg-primary text-on-primary hover:opacity-95 transition-all cursor-pointer shrink-0"
+                    >
+                      <FileText className="w-3.5 h-3.5 shrink-0" />
+                      <span>Abrir PDF</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Tópicos & Declaração do Snapshot */}
-              {snapshot ? (
+              {hasSnapshotContent && snapshot ? (
                 <div className="space-y-4">
                   {sortedTopicos.map((topico, idx) => {
                     const checkboxes = (topico.linhas_checkbox || [])
@@ -678,18 +726,41 @@ export function TermoDetailsModal({
                 </div>
               ) : (
                 <div className="p-6 rounded-md-lg bg-surface-container-low border border-outline-variant text-center space-y-3">
-                  <p className="text-xs sm:text-sm text-on-surface-variant">
-                    Este termo foi anexado via upload direto de arquivo PDF assinado.
-                  </p>
+                  <div className="w-11 h-11 rounded-md-full bg-primary-container text-on-primary-container flex items-center justify-center mx-auto">
+                    <UploadCloud className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1 max-w-lg mx-auto">
+                    <p className="text-xs sm:text-sm font-semibold text-on-surface">
+                      {isUploadPdf
+                        ? "Termo registrado com assinatura no PDF anexado"
+                        : "Documento disponível no arquivo PDF vinculado"}
+                    </p>
+                    <p className="text-xs text-on-surface-variant leading-relaxed">
+                      {isUploadPdf
+                        ? "Este termo não foi gerado a partir de um modelo digital no sistema. A assinatura do paciente e o conteúdo integral constam no arquivo PDF anexado."
+                        : "Utilize os botões abaixo para visualizar ou baixar o arquivo PDF do termo de consentimento."}
+                    </p>
+                  </div>
                   {termo.pdf_path && (
-                    <button
-                      type="button"
-                      onClick={() => setActiveView("pdf")}
-                      className="inline-flex items-center gap-2 min-h-[44px] px-5 rounded-md-full text-xs font-semibold bg-primary text-on-primary hover:opacity-95 transition-all cursor-pointer"
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>Visualizar PDF</span>
-                    </button>
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setActiveView("pdf")}
+                        className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-md-full text-xs font-semibold bg-primary text-on-primary hover:opacity-95 transition-all cursor-pointer"
+                      >
+                        <FileText className="w-4 h-4 shrink-0" />
+                        <span>Visualizar PDF</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDownloadPdf}
+                        disabled={isDownloading}
+                        className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-md-full text-xs font-semibold bg-primary-container text-on-primary-container hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        <Download className="w-4 h-4 shrink-0" />
+                        <span>Baixar PDF</span>
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -734,7 +805,7 @@ export function TermoDetailsModal({
                   >
                     <iframe
                       src={signedUrl}
-                      title={`PDF do termo - ${termo.procedimento_nome}`}
+                      title={`PDF do termo - ${procedimentoTitulo}`}
                       className="w-full h-full border-0"
                     />
                   </object>

@@ -8,6 +8,7 @@ import {
   criarTermoSchema,
   termoModeloSchema,
   termoSnapshotSchema,
+  uploadTermoAssinadoSchema,
   type CriarTermoInput,
   type TermoModeloInput,
 } from "@/lib/validations/termo";
@@ -625,29 +626,41 @@ export async function uploadTermoAssinadoAction(
     const supabase = auth.supabase;
 
     const fileEntry = formData.get("file");
-    const pacienteId = String(formData.get("paciente_id") || "").trim();
-    const modeloIdRaw = String(formData.get("modelo_id") || "").trim();
-    const procedimentoNomeRaw = String(formData.get("procedimento_nome") || "").trim();
-    const dataRaw = String(formData.get("data") || "").trim();
-    const profissionalRaw = String(formData.get("profissional") || "").trim();
     const snapshotRaw = formData.get("conteudo_snapshot");
+    const assinaturaApenasNoPdfRaw = String(
+      formData.get("assinatura_apenas_no_pdf") || ""
+    )
+      .trim()
+      .toLowerCase();
 
-    if (!uuidSchema.safeParse(pacienteId).success) {
+    const parsedMeta = uploadTermoAssinadoSchema.safeParse({
+      paciente_id: String(formData.get("paciente_id") || "").trim(),
+      modelo_id: String(formData.get("modelo_id") || "").trim(),
+      procedimento_nome: String(formData.get("procedimento_nome") || "").trim(),
+      data: String(formData.get("data") || "").trim(),
+      profissional: String(formData.get("profissional") || "").trim(),
+      assinatura_apenas_no_pdf:
+        assinaturaApenasNoPdfRaw === "true" || assinaturaApenasNoPdfRaw === "1",
+      origem_pdf: "upload",
+    });
+
+    if (!parsedMeta.success) {
       return {
         success: false,
-        error: "Identificador do paciente inválido.",
+        error:
+          parsedMeta.error.issues[0]?.message ||
+          "Dados inválidos para registro do termo assinado.",
       };
     }
 
-    const modeloId =
-      modeloIdRaw && uuidSchema.safeParse(modeloIdRaw).success ? modeloIdRaw : null;
-
-    if (modeloIdRaw && !modeloId) {
-      return {
-        success: false,
-        error: "Identificador do modelo de termo inválido.",
-      };
-    }
+    const {
+      paciente_id: pacienteId,
+      modelo_id: modeloId,
+      procedimento_nome: procedimentoNomeRaw,
+      data: dataInformed,
+      profissional: profissionalRaw,
+      assinatura_apenas_no_pdf: assinaturaApenasNoPdf,
+    } = parsedMeta.data;
 
     if (!fileEntry || !(fileEntry instanceof File)) {
       return {
@@ -717,19 +730,15 @@ export async function uploadTermoAssinadoAction(
       };
     }
 
-    let dataFinal = getTodaySaoPaulo();
-    if (dataRaw) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dataRaw)) {
-        return {
-          success: false,
-          error: "Data inválida. Utilize o formato AAAA-MM-DD.",
-        };
-      }
-      dataFinal = dataRaw;
-    }
+    const todaySaoPaulo = getTodaySaoPaulo();
+    const dataFinal = dataInformed || todaySaoPaulo;
 
     let conteudoSnapshot: TermoSnapshot | null = null;
-    if (typeof snapshotRaw === "string" && snapshotRaw.trim()) {
+    if (
+      !assinaturaApenasNoPdf &&
+      typeof snapshotRaw === "string" &&
+      snapshotRaw.trim()
+    ) {
       try {
         const parsedJson = JSON.parse(snapshotRaw);
         const validatedSnapshot = termoSnapshotSchema.safeParse(parsedJson);
@@ -753,6 +762,10 @@ export async function uploadTermoAssinadoAction(
     const termoId = randomUUID();
     const pdfPath = `${pacienteId}/${termoId}.pdf`;
     const nowIso = new Date().toISOString();
+    // Em termos antigos ou com data retroativa cuja assinatura consta apenas no PDF anexado,
+    // mantemos assinado = true com a data histórica em `data` e sem carimbo digital atual em `assinado_em`.
+    const assinadoEmFinal =
+      assinaturaApenasNoPdf || dataFinal !== todaySaoPaulo ? null : nowIso;
 
     const { error: uploadError } = await supabase.storage
       .from(TERMOS_BUCKET)
@@ -782,7 +795,7 @@ export async function uploadTermoAssinadoAction(
         assinado: true,
         origem_pdf: "upload",
         pdf_path: pdfPath,
-        assinado_em: nowIso,
+        assinado_em: assinadoEmFinal,
         profissional: profissionalFinal,
         created_at: nowIso,
         updated_at: nowIso,

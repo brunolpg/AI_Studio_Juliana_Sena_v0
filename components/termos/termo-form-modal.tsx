@@ -8,12 +8,16 @@ import {
   Check,
   ChevronDown,
   FileSignature,
+  FileText,
   UploadCloud,
   ShieldCheck,
   Loader2,
   User,
   CheckSquare,
   Square,
+  PenTool,
+  Calendar,
+  Trash2,
 } from "lucide-react";
 import { uploadTermoAssinadoAction } from "@/app/actions/termos";
 import { useToast } from "@/components/ui/toast";
@@ -38,6 +42,19 @@ interface TermoFormModalProps {
 }
 
 const MAX_UPLOAD_PDF_BYTES = 10 * 1024 * 1024; // 10MB
+
+function getTodaySaoPaulo(): string {
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Sao_Paulo",
+  });
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
 
 function formatCpf(cpf?: string | null): string {
   if (!cpf) return "Não informado";
@@ -65,6 +82,14 @@ export function TermoFormModal({
   const [isComboboxOpen, setIsComboboxOpen] = useState<boolean>(false);
   const [checkedMap, setCheckedMap] = useState<Record<string, boolean>>({});
   const [hasSignature, setHasSignature] = useState<boolean>(false);
+  const [signatureOnlyInAttachedPdf, setSignatureOnlyInAttachedPdf] =
+    useState<boolean>(false);
+  const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
+  const [legacyProcedimentoNome, setLegacyProcedimentoNome] =
+    useState<string>("");
+  const [legacyTermoData, setLegacyTermoData] = useState<string>(() =>
+    getTodaySaoPaulo()
+  );
 
   const [isModeloModalOpen, setIsModeloModalOpen] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -120,6 +145,10 @@ export function TermoFormModal({
     setIsComboboxOpen(false);
     setCheckedMap({});
     setHasSignature(false);
+    setSignatureOnlyInAttachedPdf(false);
+    setSelectedPdfFile(null);
+    setLegacyProcedimentoNome("");
+    setLegacyTermoData(getTodaySaoPaulo());
     setFormError(null);
     setSignatureError(null);
     signatureRef.current?.clear();
@@ -152,6 +181,11 @@ export function TermoFormModal({
         ? `${modelo.procedimento.procedimento} — ${modelo.titulo}`
         : modelo.titulo
     );
+    if (signatureOnlyInAttachedPdf && !legacyProcedimentoNome.trim()) {
+      setLegacyProcedimentoNome(
+        modelo.procedimento?.procedimento || modelo.titulo || ""
+      );
+    }
     setIsComboboxOpen(false);
     setCheckedMap({});
     setFormError(null);
@@ -160,6 +194,25 @@ export function TermoFormModal({
   const toggleCheckbox = (key: string) => {
     setCheckedMap((prev) => ({ ...prev, [key]: !prev[key] }));
     setFormError(null);
+  };
+
+  const handleToggleSignatureOnlyInAttachedPdf = (checked: boolean) => {
+    setSignatureOnlyInAttachedPdf(checked);
+    setFormError(null);
+    setSignatureError(null);
+    if (checked) {
+      signatureRef.current?.clear();
+      setHasSignature(false);
+      if (!legacyProcedimentoNome.trim() && selectedModelo) {
+        setLegacyProcedimentoNome(
+          selectedModelo.procedimento?.procedimento ||
+            selectedModelo.titulo ||
+            ""
+        );
+      }
+    } else {
+      setSelectedPdfFile(null);
+    }
   };
 
   const buildSnapshotFromSelectedModelo = (): TermoSnapshot | null => {
@@ -290,57 +343,76 @@ export function TermoFormModal({
 
   const handleTriggerUploadClick = () => {
     setFormError(null);
+    setSignatureError(null);
     fileInputRef.current?.click();
   };
 
-  const handleFileSelected = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    // Reseta o input para permitir selecionar o mesmo arquivo novamente se necessário
-    e.target.value = "";
-    if (!file) return;
-
-    setFormError(null);
-
+  const validatePdfFile = (file: File): string | null => {
     if (
       file.type !== "application/pdf" &&
       !file.name.toLowerCase().endsWith(".pdf")
     ) {
-      const msg = "Selecione um arquivo no formato PDF (.pdf).";
-      setFormError(msg);
-      toast({ type: "error", title: "Formato inválido", description: msg });
-      return;
+      return "Selecione um arquivo no formato PDF (.pdf).";
     }
-
+    if (file.size <= 0) {
+      return "O arquivo PDF selecionado está vazio.";
+    }
     if (file.size > MAX_UPLOAD_PDF_BYTES) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      const msg = `O arquivo (${sizeMb}MB) excede o limite máximo de 10MB.`;
-      setFormError(msg);
-      toast({ type: "error", title: "Arquivo muito grande", description: msg });
-      return;
+      return `O arquivo (${sizeMb}MB) excede o limite máximo de 10MB.`;
     }
+    return null;
+  };
 
-    const fallbackName = file.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " ").trim();
+  const submitUploadedPdf = async (
+    file: File,
+    options: { assinaturaApenasNoPdf: boolean }
+  ) => {
+    const fallbackName = file.name
+      .replace(/\.pdf$/i, "")
+      .replace(/[_-]+/g, " ")
+      .trim();
+
     const procedimentoNome =
+      (options.assinaturaApenasNoPdf ? legacyProcedimentoNome.trim() : "") ||
       selectedModelo?.procedimento?.procedimento ||
       selectedModelo?.titulo ||
       fallbackName ||
       "Termo de Consentimento Assinado";
+
+    const dataFinal = options.assinaturaApenasNoPdf
+      ? legacyTermoData.trim() || getTodaySaoPaulo()
+      : getTodaySaoPaulo();
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dataFinal)) {
+      const msg = "Informe uma data válida para o termo.";
+      setFormError(msg);
+      toast({ type: "error", title: "Data inválida", description: msg });
+      return;
+    }
 
     try {
       setIsUploading(true);
       const formData = new FormData();
       formData.append("file", file);
       formData.append("paciente_id", client.id);
+      formData.append("procedimento_nome", procedimentoNome);
+      formData.append("data", dataFinal);
+      formData.append("origem_pdf", "upload");
+      formData.append(
+        "assinatura_apenas_no_pdf",
+        options.assinaturaApenasNoPdf ? "true" : "false"
+      );
+
       if (selectedModelo?.id) {
         formData.append("modelo_id", selectedModelo.id);
-        const snapshot = buildSnapshotFromSelectedModelo();
-        if (snapshot) {
-          formData.append("conteudo_snapshot", JSON.stringify(snapshot));
+        if (!options.assinaturaApenasNoPdf) {
+          const snapshot = buildSnapshotFromSelectedModelo();
+          if (snapshot) {
+            formData.append("conteudo_snapshot", JSON.stringify(snapshot));
+          }
         }
       }
-      formData.append("procedimento_nome", procedimentoNome);
 
       const res = await uploadTermoAssinadoAction(formData);
       if (!res.success || !res.data) {
@@ -356,7 +428,9 @@ export function TermoFormModal({
 
       toast({
         type: "success",
-        title: "Termo assinado anexado!",
+        title: options.assinaturaApenasNoPdf
+          ? "Termo antigo registrado com sucesso!"
+          : "Termo assinado anexado!",
         description: `O PDF foi vinculado ao prontuário de ${client.nome}.`,
       });
 
@@ -376,6 +450,64 @@ export function TermoFormModal({
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleSubmitLegacyAttachedPdf = async () => {
+    setFormError(null);
+    setSignatureError(null);
+
+    if (!selectedPdfFile) {
+      setSignatureError(
+        "Anexe o arquivo PDF assinado do termo antigo para concluir o registro."
+      );
+      setFormError(
+        'Selecione o PDF assinado do termo antigo na seção "Assinatura do Paciente" ou pelo botão "Carregar Termo Assinado".'
+      );
+      return;
+    }
+
+    await submitUploadedPdf(selectedPdfFile, { assinaturaApenasNoPdf: true });
+  };
+
+  const handleFileSelected = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    // Reseta o input para permitir selecionar o mesmo arquivo novamente se necessário
+    e.target.value = "";
+    if (!file) return;
+
+    setFormError(null);
+    setSignatureError(null);
+
+    const validationError = validatePdfFile(file);
+    if (validationError) {
+      setFormError(validationError);
+      toast({
+        type: "error",
+        title: "Arquivo inválido",
+        description: validationError,
+      });
+      return;
+    }
+
+    if (signatureOnlyInAttachedPdf) {
+      setSelectedPdfFile(file);
+      if (!legacyProcedimentoNome.trim()) {
+        const fallbackName = file.name
+          .replace(/\.pdf$/i, "")
+          .replace(/[_-]+/g, " ")
+          .trim();
+        setLegacyProcedimentoNome(
+          selectedModelo?.procedimento?.procedimento ||
+            selectedModelo?.titulo ||
+            fallbackName
+        );
+      }
+      return;
+    }
+
+    await submitUploadedPdf(file, { assinaturaApenasNoPdf: false });
   };
 
   const sortedTopicos = selectedModelo
@@ -567,18 +699,24 @@ export function TermoFormModal({
             {selectedModelo ? (
               <div className="space-y-4">
                 {requiredCheckboxKeys.length > 0 && (
-                  <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-md-md bg-surface-container border border-outline-variant text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 rounded-md-md bg-surface-container border border-outline-variant text-xs">
                     <span className="font-semibold text-on-surface">
-                      Confirmações obrigatórias do paciente
+                      {signatureOnlyInAttachedPdf
+                        ? "Cláusulas do modelo (opcionais para termo antigo anexado)"
+                        : "Confirmações obrigatórias do paciente"}
                     </span>
                     <span
                       className={`px-2.5 py-0.5 rounded-md-full font-bold ${
-                        checkedCount === requiredCheckboxKeys.length
-                          ? "bg-success-container text-on-success-container"
-                          : "bg-warning-container text-on-warning-container"
+                        signatureOnlyInAttachedPdf
+                          ? "bg-primary-container text-on-primary-container"
+                          : checkedCount === requiredCheckboxKeys.length
+                            ? "bg-success-container text-on-success-container"
+                            : "bg-warning-container text-on-warning-container"
                       }`}
                     >
-                      {checkedCount} / {requiredCheckboxKeys.length}
+                      {signatureOnlyInAttachedPdf
+                        ? "Assinatura no PDF"
+                        : `${checkedCount} / ${requiredCheckboxKeys.length}`}
                     </span>
                   </div>
                 )}
@@ -696,22 +834,198 @@ export function TermoFormModal({
                   Nenhum modelo selecionado
                 </p>
                 <p className="text-xs text-on-surface-variant">
-                  Escolha um modelo no campo acima para preencher e assinar digitalmente, ou utilize &ldquo;Carregar Termo Assinado&rdquo; para anexar um PDF já assinado.
+                  {signatureOnlyInAttachedPdf
+                    ? "Para termos antigos, selecionar um modelo acima é opcional. Informe os dados do documento e anexe o PDF assinado na seção abaixo."
+                    : 'Escolha um modelo no campo acima para preencher e assinar digitalmente, ou utilize "Carregar Termo Assinado" para anexar um PDF já assinado.'}
                 </p>
               </div>
             )}
 
-            {/* Assinatura Digital com Caneta / Toque / Mouse */}
-            <div className="pt-2 border-t border-outline-variant">
-              <SignaturePad
-                ref={signatureRef}
-                disabled={isBusy}
-                error={signatureError}
-                onChange={(signed) => {
-                  setHasSignature(signed);
-                  if (signed) setSignatureError(null);
-                }}
-              />
+            {/* Seção ASSINATURA DO PACIENTE */}
+            <div className="pt-3 border-t border-outline-variant space-y-3">
+              {signatureOnlyInAttachedPdf ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <PenTool className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-xs font-bold text-on-surface uppercase tracking-wider">
+                      Assinatura do Paciente
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md-full text-[11px] font-semibold bg-primary-container text-on-primary-container">
+                      <UploadCloud className="w-3 h-3 shrink-0" />
+                      Assinatura no PDF anexado
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <SignaturePad
+                  ref={signatureRef}
+                  disabled={isBusy}
+                  error={signatureError}
+                  onChange={(signed) => {
+                    setHasSignature(signed);
+                    if (signed) setSignatureError(null);
+                  }}
+                />
+              )}
+
+              {/* Checkbox Acessível: Termo Antigo com Assinatura Apenas no PDF Anexado */}
+              <label
+                htmlFor="termo-assinatura-apenas-pdf"
+                className={`flex items-start gap-3 min-h-[44px] p-3.5 rounded-md-lg border transition-colors cursor-pointer select-none ${
+                  signatureOnlyInAttachedPdf
+                    ? "bg-primary-container/40 border-primary/50 text-on-surface"
+                    : "bg-surface-container-low border-outline-variant text-on-surface hover:bg-surface-container"
+                } ${isBusy ? "opacity-60 pointer-events-none" : ""}`}
+              >
+                <input
+                  id="termo-assinatura-apenas-pdf"
+                  type="checkbox"
+                  checked={signatureOnlyInAttachedPdf}
+                  disabled={isBusy}
+                  onChange={(e) =>
+                    handleToggleSignatureOnlyInAttachedPdf(e.target.checked)
+                  }
+                  className="sr-only"
+                />
+                {signatureOnlyInAttachedPdf ? (
+                  <CheckSquare className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                ) : (
+                  <Square className="w-5 h-5 text-on-surface-variant shrink-0 mt-0.5" />
+                )}
+                <span className="space-y-0.5 min-w-0">
+                  <span className="text-xs sm:text-sm font-semibold text-on-surface block leading-snug">
+                    A assinatura do paciente consta apenas no termo antigo que será anexado
+                  </span>
+                  <span className="text-[11px] sm:text-xs text-on-surface-variant block leading-relaxed">
+                    Dispensa o desenho na tela e registra o documento antigo diretamente pelo PDF já assinado (origem: upload).
+                  </span>
+                </span>
+              </label>
+
+              {/* Painel de Registro de Termo Antigo Anexado */}
+              {signatureOnlyInAttachedPdf && (
+                <div className="p-4 rounded-md-lg bg-surface-container-low border border-outline-variant space-y-4">
+                  <div className="flex items-start gap-2.5 p-3 rounded-md-md bg-primary-container/35 border border-primary/30 text-xs text-on-surface">
+                    <ShieldCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      O traçado em tela foi desabilitado. Informe o procedimento e a data original do termo antigo e anexe o arquivo PDF assinado para salvar com status{" "}
+                      <strong className="font-bold">Assinado</strong>.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="termo-antigo-procedimento"
+                        className="text-xs font-bold text-on-surface uppercase tracking-wider block"
+                      >
+                        Procedimento / Título do Termo
+                      </label>
+                      <input
+                        id="termo-antigo-procedimento"
+                        type="text"
+                        value={legacyProcedimentoNome}
+                        disabled={isBusy}
+                        onChange={(e) => {
+                          setLegacyProcedimentoNome(e.target.value);
+                          setFormError(null);
+                        }}
+                        placeholder="Ex.: Harmonização Facial, PEIM..."
+                        className="w-full min-h-[44px] px-3.5 py-2 text-xs sm:text-sm rounded-md-md border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="termo-antigo-data"
+                        className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span>Data do Termo (Retroativa ou Atual)</span>
+                      </label>
+                      <input
+                        id="termo-antigo-data"
+                        type="date"
+                        value={legacyTermoData}
+                        disabled={isBusy}
+                        onChange={(e) => {
+                          setLegacyTermoData(e.target.value);
+                          setFormError(null);
+                        }}
+                        className="w-full min-h-[44px] px-3.5 py-2 text-xs sm:text-sm rounded-md-md border border-outline-variant bg-surface-container-lowest text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Área do Arquivo PDF Anexado */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-on-surface uppercase tracking-wider block">
+                      Arquivo PDF Assinado
+                    </span>
+
+                    {selectedPdfFile ? (
+                      <div className="p-3.5 rounded-md-md bg-surface-container-lowest border border-primary/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-md-md bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs sm:text-sm font-semibold text-on-surface block truncate">
+                              {selectedPdfFile.name}
+                            </span>
+                            <span className="text-[11px] text-on-surface-variant block">
+                              {formatFileSize(selectedPdfFile.size)} • Pronto para registro (origem: PDF anexado)
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={handleTriggerUploadClick}
+                            disabled={isBusy}
+                            className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-3.5 rounded-md-full text-xs font-semibold bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            <UploadCloud className="w-3.5 h-3.5 shrink-0" />
+                            <span>Trocar PDF</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPdfFile(null)}
+                            disabled={isBusy}
+                            aria-label="Remover arquivo PDF selecionado"
+                            className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md-full bg-error-container text-on-error-container hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+                          >
+                            <Trash2 className="w-4 h-4 shrink-0" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleTriggerUploadClick}
+                        disabled={isBusy}
+                        className="w-full min-h-[72px] p-4 rounded-md-md border-2 border-dashed border-outline-variant bg-surface-container-lowest hover:bg-surface-container hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-1.5 text-center cursor-pointer disabled:opacity-50"
+                      >
+                        <UploadCloud className="w-5 h-5 text-primary shrink-0" />
+                        <span className="text-xs sm:text-sm font-semibold text-on-surface">
+                          Selecionar PDF assinado do termo antigo
+                        </span>
+                        <span className="text-[11px] text-on-surface-variant">
+                          Formato .pdf • Tamanho máximo de 10MB
+                        </span>
+                      </button>
+                    )}
+
+                    {signatureError && (
+                      <p className="text-xs font-medium text-error">
+                        {signatureError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Input Oculto para Upload de PDF Assinado */}
@@ -733,7 +1047,7 @@ export function TermoFormModal({
               disabled={isBusy}
               className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-md-full text-xs font-semibold bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high transition-colors cursor-pointer disabled:opacity-50"
             >
-              {isUploading ? (
+              {isUploading && !signatureOnlyInAttachedPdf ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                   <span>Enviando PDF...</span>
@@ -746,24 +1060,45 @@ export function TermoFormModal({
               )}
             </button>
 
-            <button
-              type="button"
-              onClick={handleGenerateSignedPdf}
-              disabled={isBusy}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 rounded-md-full text-xs font-semibold bg-primary text-on-primary hover:opacity-95 shadow-xs transition-all cursor-pointer disabled:opacity-50"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>Gerando Termo Assinado...</span>
-                </>
-              ) : (
-                <>
-                  <FileSignature className="w-4 h-4 shrink-0" />
-                  <span>Gerar Termo Assinado</span>
-                </>
-              )}
-            </button>
+            {signatureOnlyInAttachedPdf ? (
+              <button
+                type="button"
+                onClick={handleSubmitLegacyAttachedPdf}
+                disabled={isBusy}
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 rounded-md-full text-xs font-semibold bg-primary text-on-primary hover:opacity-95 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    <span>Registrando Termo Antigo...</span>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="w-4 h-4 shrink-0" />
+                    <span>Salvar Termo Antigo Anexado</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleGenerateSignedPdf}
+                disabled={isBusy}
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-6 rounded-md-full text-xs font-semibold bg-primary text-on-primary hover:opacity-95 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    <span>Gerando Termo Assinado...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileSignature className="w-4 h-4 shrink-0" />
+                    <span>Gerar Termo Assinado</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

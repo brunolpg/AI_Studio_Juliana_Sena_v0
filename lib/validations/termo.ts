@@ -52,6 +52,19 @@ export const termoSnapshotDeclaracaoSchema = z.object({
   linhas_checkbox: z.array(termoSnapshotCheckboxSchema).default([]),
 });
 
+const isoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato AAAA-MM-DD.")
+  .refine((value) => {
+    const [year, month, day] = value.split("-").map(Number);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    return (
+      parsed.getUTCFullYear() === year &&
+      parsed.getUTCMonth() === month - 1 &&
+      parsed.getUTCDate() === day
+    );
+  }, "Informe uma data válida.");
+
 export const termoSnapshotSchema = z.object({
   titulo: z.string().trim().min(1, "O título do termo é obrigatório."),
   procedimento: z.string().trim().min(1, "O procedimento é obrigatório."),
@@ -59,6 +72,7 @@ export const termoSnapshotSchema = z.object({
     .array(termoSnapshotTopicoSchema)
     .min(1, "O termo deve possuir ao menos um tópico."),
   declaracao: termoSnapshotDeclaracaoSchema.nullable(),
+  assinatura_apenas_no_pdf: z.boolean().optional(),
 });
 
 export const criarTermoSchema = z.object({
@@ -68,12 +82,44 @@ export const criarTermoSchema = z.object({
     .string()
     .trim()
     .min(1, "O nome do procedimento é obrigatório."),
+  data: isoDateSchema.optional(),
+  conteudo_snapshot: termoSnapshotSchema,
+});
+
+export const uploadTermoAssinadoSchema = z.object({
+  paciente_id: z.string().uuid("Identificador do paciente inválido."),
+  modelo_id: z
+    .string()
+    .trim()
+    .optional()
+    .nullable()
+    .transform((val) => (val ? val : null))
+    .refine(
+      (val) => val === null || z.string().uuid().safeParse(val).success,
+      "Identificador do modelo de termo inválido."
+    ),
+  procedimento_nome: z
+    .string()
+    .trim()
+    .max(200, "O nome do procedimento deve ter no máximo 200 caracteres.")
+    .optional()
+    .default(""),
   data: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato AAAA-MM-DD.")
-    .optional(),
-  conteudo_snapshot: termoSnapshotSchema,
+    .trim()
+    .optional()
+    .transform((val) => (val ? val : undefined))
+    .pipe(isoDateSchema.optional()),
+  profissional: z
+    .string()
+    .trim()
+    .max(150, "O nome do profissional deve ter no máximo 150 caracteres.")
+    .optional()
+    .default(""),
+  assinatura_apenas_no_pdf: z.boolean().optional().default(false),
+  origem_pdf: z.literal("upload").optional().default("upload"),
 });
 
 export type TermoModeloInput = z.input<typeof termoModeloSchema>;
 export type CriarTermoInput = z.input<typeof criarTermoSchema>;
+export type UploadTermoAssinadoInput = z.input<typeof uploadTermoAssinadoSchema>;

@@ -61,6 +61,17 @@ export interface TermoSnapshot {
   procedimento: string;
   topicos: TermoSnapshotTopico[];
   declaracao: TermoSnapshotDeclaracao | null;
+  assinatura_apenas_no_pdf?: boolean;
+}
+
+export interface UploadTermoAssinadoMeta {
+  paciente_id: string;
+  modelo_id?: string | null;
+  procedimento_nome?: string;
+  data?: string;
+  profissional?: string;
+  assinatura_apenas_no_pdf?: boolean;
+  origem_pdf?: "upload";
 }
 
 export interface TermoConsentimento {
