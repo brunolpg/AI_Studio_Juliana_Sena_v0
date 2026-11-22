@@ -1838,30 +1838,30 @@ export function PatientClinicalTabs({
                     SEÇÃO: AVALIAÇÃO ESTÉTICA (FACIAL & CORPORAL)
                     ======================================================== */}
                 <div className="space-y-4 pt-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                      <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                      <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                      <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">
                         Avaliação Estética Integrada
                       </h4>
                     </div>
                     <button
                       type="button"
                       onClick={() => setIsAestheticModalOpen(true)}
-                      className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
+                      className="inline-flex items-center justify-center gap-1.5 min-h-[44px] sm:min-h-[36px] px-4 rounded-md-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                     >
                       Editar Avaliação
                     </button>
                   </div>
 
                   {/* Grade com 2 Cartões: Facial e Corporal */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Card Facial */}
-                    <div className="p-4 rounded-2xl border border-outline bg-white dark:bg-slate-850/60 shadow-2xs space-y-3">
-                      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-                        <span className="text-xs font-bold text-teal-700 dark:text-teal-300">Avaliação Facial</span>
+                    <div className="p-4 sm:p-5 rounded-md-2xl border border-outline bg-surface-container shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between border-b border-outline-variant pb-2">
+                        <span className="text-xs font-bold text-primary">Avaliação Facial</span>
                         {aestheticData?.facial?.fototipo && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 font-semibold border border-teal-200/60">
+                          <span className="text-[10px] px-2 py-0.5 rounded-md-full bg-primary-container text-on-primary-container font-semibold border border-outline-variant">
                             Fototipo {aestheticData.facial.fototipo}
                           </span>
                         )}
@@ -1870,23 +1870,23 @@ export function PatientClinicalTabs({
                       {aestheticData?.facial ? (
                         <div className="space-y-2 text-xs">
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                              <span className="text-[10px] text-slate-400 block">Tipo de Pele / Textura</span>
-                              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                            <div className="p-2.5 rounded-md-md bg-surface-container-lowest border border-outline-variant">
+                              <span className="text-[10px] text-on-surface-variant block">Tipo de Pele / Textura</span>
+                              <span className="font-semibold text-on-surface">
                                 {aestheticData.facial.tipo_pele || "—"} / {aestheticData.facial.textura || "—"}
                               </span>
                             </div>
-                            <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                              <span className="text-[10px] text-slate-400 block">Hidratação / Oleosidade</span>
-                              <span className="font-semibold text-teal-700 dark:text-teal-300">
+                            <div className="p-2.5 rounded-md-md bg-surface-container-lowest border border-outline-variant">
+                              <span className="text-[10px] text-on-surface-variant block">Hidratação / Oleosidade</span>
+                              <span className="font-semibold text-primary">
                                 {aestheticData.facial.hidratacao !== null && aestheticData.facial.hidratacao !== undefined ? `${aestheticData.facial.hidratacao}%` : "—"} / {aestheticData.facial.oleosidade !== null && aestheticData.facial.oleosidade !== undefined ? `${aestheticData.facial.oleosidade}%` : "—"}
                               </span>
                             </div>
                           </div>
 
                           {aestheticData.facial.escala_glogau && (
-                            <div className="text-slate-600 dark:text-slate-300">
-                              <span className="text-slate-400 mr-1">Escala Glogau:</span>
+                            <div className="text-on-surface">
+                              <span className="text-on-surface-variant mr-1">Escala Glogau:</span>
                               <span className="font-medium">{aestheticData.facial.escala_glogau}</span>
                             </div>
                           )}
@@ -1894,46 +1894,46 @@ export function PatientClinicalTabs({
                           {/* Tags de Alterações Dérmicas */}
                           <div className="flex flex-wrap gap-1.5 pt-1">
                             {aestheticData.facial.acne_grau && (
-                              <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/80">
+                              <span className="px-2 py-0.5 rounded-md-sm text-[10px] font-semibold bg-error-container text-on-error-container border border-error/30">
                                 Acne: {aestheticData.facial.acne_grau}
                               </span>
                             )}
                             {Array.isArray(aestheticData.facial.discromias) && aestheticData.facial.discromias.map((d: string, i: number) => (
-                              <span key={i} className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/80">
+                              <span key={i} className="px-2 py-0.5 rounded-md-sm text-[10px] font-medium bg-warning-container text-on-warning-container border border-warning/30">
                                 {d}
                               </span>
                             ))}
                             {Array.isArray(aestheticData.facial.textura_relevo) && aestheticData.facial.textura_relevo.map((t: string, i: number) => (
-                              <span key={i} className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                              <span key={i} className="px-2 py-0.5 rounded-md-sm text-[10px] font-medium bg-surface-container-high text-on-surface border border-outline-variant">
                                 {t}
                               </span>
                             ))}
                             {Array.isArray(aestheticData.facial.vascularizacao) && aestheticData.facial.vascularizacao.map((v: string, i: number) => (
-                              <span key={i} className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                              <span key={i} className="px-2 py-0.5 rounded-md-sm text-[10px] font-medium bg-error-container text-on-error-container border border-error/30">
                                 {v}
                               </span>
                             ))}
                           </div>
 
                           {aestheticData.facial.avaliacao_lupa && (
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic pt-1">
-                              <span className="font-medium not-italic text-slate-700 dark:text-slate-300">Lupa:</span> {aestheticData.facial.avaliacao_lupa}
+                            <p className="text-[11px] text-on-surface-variant italic pt-1">
+                              <span className="font-medium not-italic text-on-surface">Lupa:</span> {aestheticData.facial.avaliacao_lupa}
                             </p>
                           )}
                         </div>
                       ) : (
-                        <p className="text-xs text-slate-400 italic py-2">
+                        <p className="text-xs text-on-surface-variant italic py-2">
                           Nenhuma avaliação facial registrada para este paciente.
                         </p>
                       )}
                     </div>
 
                     {/* Card Corporal */}
-                    <div className="p-4 rounded-2xl border border-outline bg-white dark:bg-slate-850/60 shadow-2xs space-y-3">
-                      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-                        <span className="text-xs font-bold text-teal-700 dark:text-teal-300">Avaliação Corporal</span>
+                    <div className="p-4 sm:p-5 rounded-md-2xl border border-outline bg-surface-container shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between border-b border-outline-variant pb-2">
+                        <span className="text-xs font-bold text-primary">Avaliação Corporal</span>
                         {aestheticData?.corporal?.fototipo && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 font-semibold border border-teal-200/60">
+                          <span className="text-[10px] px-2 py-0.5 rounded-md-full bg-primary-container text-on-primary-container font-semibold border border-outline-variant">
                             Fototipo {aestheticData.corporal.fototipo}
                           </span>
                         )}
@@ -1941,9 +1941,9 @@ export function PatientClinicalTabs({
 
                       {aestheticData?.corporal ? (
                         <div className="space-y-2 text-xs">
-                          <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-                            <span className="text-[10px] text-slate-400 block">Hidratação na Região</span>
-                            <span className="font-semibold text-slate-700 dark:text-slate-200">
+                          <div className="p-2.5 rounded-md-md bg-surface-container-lowest border border-outline-variant">
+                            <span className="text-[10px] text-on-surface-variant block">Hidratação na Região</span>
+                            <span className="font-semibold text-on-surface">
                               {aestheticData.corporal.hidratacao_pele || "Não informado"}
                             </span>
                           </div>
@@ -1951,15 +1951,15 @@ export function PatientClinicalTabs({
                           {/* Estrias e Regiões */}
                           {Array.isArray(aestheticData.corporal.estrias_localizacao) && aestheticData.corporal.estrias_localizacao.length > 0 && (
                             <div className="space-y-1">
-                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Localização das Estrias</span>
+                              <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider block">Localização das Estrias</span>
                               <div className="flex flex-wrap gap-1">
                                 {aestheticData.corporal.estrias_localizacao.map((loc: string, i: number) => (
-                                  <span key={i} className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300 border border-teal-200/60">
+                                  <span key={i} className="px-2 py-0.5 rounded-md-sm text-[10px] font-medium bg-primary-container text-on-primary-container border border-outline-variant">
                                     {loc}
                                   </span>
                                 ))}
                                 {aestheticData.corporal.estrias_localizacao_outros && (
-                                  <span className="px-2 py-0.5 rounded-md text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                  <span className="px-2 py-0.5 rounded-md-sm text-[10px] bg-surface-container-high text-on-surface-variant border border-outline-variant">
                                     {aestheticData.corporal.estrias_localizacao_outros}
                                   </span>
                                 )}
@@ -1970,25 +1970,25 @@ export function PatientClinicalTabs({
                           {/* Tipos e Fatores */}
                           <div className="flex flex-wrap gap-1.5 pt-1">
                             {Array.isArray(aestheticData.corporal.estrias_tipo_coloracao) && aestheticData.corporal.estrias_tipo_coloracao.map((tipo: string, i: number) => (
-                              <span key={i} className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200/80">
+                              <span key={i} className="px-2 py-0.5 rounded-md-sm text-[10px] font-medium bg-secondary-container text-on-secondary-container border border-outline-variant">
                                 {tipo}
                               </span>
                             ))}
                             {Array.isArray(aestheticData.corporal.alteracoes_associadas) && aestheticData.corporal.alteracoes_associadas.map((alt: string, i: number) => (
-                              <span key={i} className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200/80">
+                              <span key={i} className="px-2 py-0.5 rounded-md-sm text-[10px] font-medium bg-warning-container text-on-warning-container border border-warning/30">
                                 {alt}
                               </span>
                             ))}
                           </div>
 
                           {aestheticData.corporal.tempo_estimado_surgimento && (
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 pt-1">
-                              <span className="font-medium text-slate-700 dark:text-slate-300">Surgimento:</span> {aestheticData.corporal.tempo_estimado_surgimento}
+                            <p className="text-[11px] text-on-surface-variant pt-1">
+                              <span className="font-medium text-on-surface">Surgimento:</span> {aestheticData.corporal.tempo_estimado_surgimento}
                             </p>
                           )}
                         </div>
                       ) : (
-                        <p className="text-xs text-slate-400 italic py-2">
+                        <p className="text-xs text-on-surface-variant italic py-2">
                           Nenhuma avaliação corporal registrada para este paciente.
                         </p>
                       )}

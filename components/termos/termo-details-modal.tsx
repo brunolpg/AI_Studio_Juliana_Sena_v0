@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   X,
   FileSignature,
   FileText,
   Download,
+  Share2,
+  ChevronDown,
+  MessageCircle,
+  Mail,
   Loader2,
   CheckSquare,
   ShieldCheck,
@@ -14,6 +18,10 @@ import {
 } from "lucide-react";
 import { getTermoPdfSignedUrl } from "@/app/actions/termos";
 import { useToast } from "@/components/ui/toast";
+import {
+  cleanBrazilianPhone,
+  sharePdfViaWhatsApp,
+} from "@/lib/utils/whatsapp-share-pdf";
 import type { Client } from "@/types/client";
 import type { TermoConsentimento, TermoSnapshotCheckbox } from "@/types/termo";
 
@@ -75,6 +83,13 @@ export function TermoDetailsModal({
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+  const [sharingMethod, setSharingMethod] = useState<"whatsapp" | "email" | null>(
+    null
+  );
+  const [gmailAuthUrl, setGmailAuthUrl] = useState<string | null>(null);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
+  const shareTriggerRef = useRef<HTMLButtonElement>(null);
 
   const fetchSignedUrl = useCallback(async () => {
     if (!termo?.id) return;
@@ -103,6 +118,9 @@ export function TermoDetailsModal({
     setActiveView("dados");
     setSignedUrl(null);
     setPdfError(null);
+    setIsShareMenuOpen(false);
+    setSharingMethod(null);
+    setGmailAuthUrl(null);
   }, [isOpen, termo?.id]);
 
   useEffect(() => {
@@ -111,57 +129,229 @@ export function TermoDetailsModal({
     }
   }, [isOpen, activeView, signedUrl, isLoadingPdf, pdfError, fetchSignedUrl]);
 
+  useEffect(() => {
+    if (!isShareMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (
+        shareMenuRef.current &&
+        !shareMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsShareMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        setIsShareMenuOpen(false);
+        shareTriggerRef.current?.focus();
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isShareMenuOpen]);
+
   if (!isOpen) return null;
 
-  const handleDownloadPdf = async () => {
-    let urlToUse = signedUrl;
-    if (!urlToUse) {
-      try {
-        setIsDownloading(true);
-        const res = await getTermoPdfSignedUrl(termo.id);
-        if (!res.success || !res.data?.signedUrl) {
-          toast({
-            type: "error",
-            title: "Erro ao baixar PDF",
-            description: res.error || "URL do PDF não disponível.",
-          });
-          return;
-        }
-        urlToUse = res.data.signedUrl;
-        setSignedUrl(urlToUse);
-      } finally {
-        setIsDownloading(false);
-      }
+  const resolvePdfSignedUrl = async (): Promise<string | null> => {
+    if (signedUrl) return signedUrl;
+    const res = await getTermoPdfSignedUrl(termo.id);
+    if (!res.success || !res.data?.signedUrl) {
+      toast({
+        type: "error",
+        title: "PDF indisponível",
+        description: res.error || "URL do PDF não disponível.",
+      });
+      return null;
     }
+    setSignedUrl(res.data.signedUrl);
+    return res.data.signedUrl;
+  };
 
-    const fileName = sanitizePatientPdfFileName(client.nome);
-
+  const handleDownloadPdf = async () => {
+    let urlToUse: string | null = null;
     try {
       setIsDownloading(true);
-      const response = await fetch(urlToUse);
-      if (!response.ok) {
-        throw new Error("Não foi possível transferir o arquivo PDF.");
+      urlToUse = await resolvePdfSignedUrl();
+      if (!urlToUse) return;
+
+      const fileName = sanitizePatientPdfFileName(client.nome);
+      try {
+        const response = await fetch(urlToUse);
+        if (!response.ok) {
+          throw new Error("Não foi possível transferir o arquivo PDF.");
+        }
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = objectUrl;
+        anchor.download = fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 15000);
+      } catch {
+        // Fallback direto para download caso CORS impeça fetch do blob
+        const anchor = document.createElement("a");
+        anchor.href = urlToUse;
+        anchor.download = fileName;
+        anchor.rel = "noopener noreferrer";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
       }
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = objectUrl;
-      anchor.download = fileName;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 15000);
-    } catch {
-      // Fallback direto para download caso CORS impeça fetch do blob
-      const anchor = document.createElement("a");
-      anchor.href = urlToUse;
-      anchor.download = fileName;
-      anchor.rel = "noopener noreferrer";
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const handleShareWhatsApp = async () => {
+    setIsShareMenuOpen(false);
+    setGmailAuthUrl(null);
+    setSharingMethod("whatsapp");
+
+    try {
+      const urlToUse = await resolvePdfSignedUrl();
+      if (!urlToUse) return;
+
+      const response = await fetch(urlToUse);
+      if (!response.ok) {
+        throw new Error("Não foi possível carregar o PDF do termo para envio.");
+      }
+
+      const blob = await response.blob();
+      const fileName = sanitizePatientPdfFileName(client.nome);
+      const pdfFile = new File([blob], fileName, { type: "application/pdf" });
+      const cleanPhone = cleanBrazilianPhone(client.telefone);
+
+      const customMessage = `Olá, ${client.nome}!\n\nSegue o seu *Termo de Consentimento* referente ao procedimento *${termo.procedimento_nome}* (emitido em ${formatDateBR(termo.data)}).\n\nQualquer dúvida, nossa equipe permanece à disposição.\n\n*Clínica Dra. Juliana Sena*\nEstética Avançada e Regenerativa\nSalvador - BA`;
+
+      const result = await sharePdfViaWhatsApp({
+        file: pdfFile,
+        documentTitle: `Termo de Consentimento - ${termo.procedimento_nome}`,
+        patientName: client.nome,
+        patientPhone: cleanPhone || client.telefone,
+        customMessage,
+      });
+
+      if (result.method === "cancelled") {
+        return;
+      }
+
+      if (result.success) {
+        toast({
+          type: "success",
+          title: "Termo pronto no WhatsApp",
+          description:
+            result.method === "web-share"
+              ? "PDF do termo compartilhado diretamente pelo dispositivo."
+              : "WhatsApp aberto com a mensagem e o link do PDF do termo.",
+        });
+      } else {
+        toast({
+          type: "error",
+          title: "Erro ao compartilhar no WhatsApp",
+          description:
+            result.error || "Não foi possível compartilhar o PDF pelo WhatsApp.",
+        });
+      }
+    } catch (err: unknown) {
+      toast({
+        type: "error",
+        title: "Falha ao preparar WhatsApp",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Erro inesperado ao preparar o PDF do termo para envio.",
+      });
+    } finally {
+      setSharingMethod(null);
+    }
+  };
+
+  const handleShareEmail = async () => {
+    setIsShareMenuOpen(false);
+    setGmailAuthUrl(null);
+
+    const trimmedEmail = client.email?.trim() || "";
+    if (!trimmedEmail) {
+      toast({
+        type: "warning",
+        title: "E-mail não cadastrado",
+        description: "O paciente não possui um endereço de e-mail cadastrado.",
+      });
+      return;
+    }
+
+    setSharingMethod("email");
+    try {
+      const response = await fetch(`/api/termos/${termo.id}/notify-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({
+          patientEmail: trimmedEmail,
+          patientName: client.nome,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (data?.code === "GMAIL_AUTH_REQUIRED") {
+        const authPath =
+          typeof data?.authUrl === "string" &&
+          data.authUrl.startsWith("/api/auth/google")
+            ? data.authUrl
+            : "/api/auth/google";
+        setGmailAuthUrl(authPath);
+        toast({
+          type: "warning",
+          title: "Conexão com Gmail necessária",
+          description:
+            data?.message ||
+            "Conecte a conta Gmail profissional para enviar termos por e-mail.",
+        });
+        return;
+      }
+
+      if (!response.ok || !data?.success) {
+        toast({
+          type: "error",
+          title: "Falha ao enviar e-mail",
+          description:
+            data?.message ||
+            data?.error ||
+            "Não foi possível enviar o PDF do termo por e-mail.",
+        });
+        return;
+      }
+
+      toast({
+        type: "success",
+        title: "E-mail enviado",
+        description: `PDF do termo enviado com sucesso para ${trimmedEmail}.`,
+      });
+    } catch (err: unknown) {
+      toast({
+        type: "error",
+        title: "Erro no envio por e-mail",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Erro de conexão ao enviar o PDF do termo por e-mail.",
+      });
+    } finally {
+      setSharingMethod(null);
     }
   };
 
@@ -226,7 +416,7 @@ export function TermoDetailsModal({
         </div>
 
         {/* Navegação interna: Dados do Termo | Visualizar PDF */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-outline-variant bg-surface-container-lowest shrink-0">
+        <div className="relative z-20 flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-outline-variant bg-surface-container-lowest shrink-0">
           <div className="inline-flex items-center p-1 rounded-md-full bg-surface-container border border-outline-variant">
             <button
               type="button"
@@ -256,26 +446,124 @@ export function TermoDetailsModal({
           </div>
 
           {termo.pdf_path && (
-            <button
-              type="button"
-              onClick={handleDownloadPdf}
-              disabled={isDownloading}
-              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-md-full text-xs font-semibold bg-primary-container text-on-primary-container hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
-            >
-              {isDownloading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  <span>Preparando...</span>
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4 shrink-0" />
-                  <span>Baixar PDF</span>
-                </>
-              )}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={isDownloading || sharingMethod !== null}
+                className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-md-full text-xs font-semibold bg-primary-container text-on-primary-container hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    <span>Preparando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 shrink-0" />
+                    <span>Baixar PDF</span>
+                  </>
+                )}
+              </button>
+
+              <div ref={shareMenuRef} className="relative">
+                <button
+                  ref={shareTriggerRef}
+                  type="button"
+                  onClick={() => setIsShareMenuOpen((prev) => !prev)}
+                  disabled={isDownloading || sharingMethod !== null}
+                  aria-haspopup="menu"
+                  aria-expanded={isShareMenuOpen}
+                  aria-controls="termo-share-menu"
+                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-md-full text-xs font-semibold bg-surface-container-low text-on-surface border border-outline-variant hover:bg-surface-container-high transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {sharingMethod ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+                      <span>
+                        {sharingMethod === "whatsapp"
+                          ? "Preparando WhatsApp..."
+                          : "Enviando e-mail..."}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-4 h-4 text-primary shrink-0" />
+                      <span>Compartilhar</span>
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-on-surface-variant transition-transform ${
+                          isShareMenuOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </>
+                  )}
+                </button>
+
+                {isShareMenuOpen && (
+                  <div
+                    id="termo-share-menu"
+                    role="menu"
+                    aria-label="Compartilhar PDF do termo"
+                    className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 z-30 w-64 max-w-[calc(100vw-2.5rem)] p-1.5 rounded-md-lg bg-surface-container-lowest border border-outline-variant shadow-xl space-y-1 animate-in fade-in zoom-in-95 duration-100"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleShareWhatsApp}
+                      className="w-full flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-md-md text-left bg-surface-container-lowest hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+                    >
+                      <span className="w-8 h-8 rounded-md-full bg-success-container text-on-success-container flex items-center justify-center shrink-0">
+                        <MessageCircle className="w-4 h-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold text-on-surface">
+                          WhatsApp
+                        </span>
+                        <span className="block text-[11px] text-on-surface-variant truncate">
+                          {client.telefone?.trim() || "Enviar PDF pelo WhatsApp"}
+                        </span>
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleShareEmail}
+                      className="w-full flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-md-md text-left bg-surface-container-lowest hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+                    >
+                      <span className="w-8 h-8 rounded-md-full bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
+                        <Mail className="w-4 h-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold text-on-surface">
+                          E-mail
+                        </span>
+                        <span className="block text-[11px] text-on-surface-variant truncate">
+                          {client.email?.trim() || "E-mail não cadastrado"}
+                        </span>
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
+
+        {gmailAuthUrl && (
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-2.5 border-b border-outline-variant bg-warning-container text-on-warning-container shrink-0">
+            <span className="text-xs font-medium">
+              A conta Gmail profissional precisa ser reconectada para enviar termos por e-mail.
+            </span>
+            <a
+              href={gmailAuthUrl}
+              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-md-full text-xs font-semibold bg-primary-container text-on-primary-container hover:opacity-90 transition-opacity"
+            >
+              <Mail className="w-3.5 h-3.5 shrink-0" />
+              <span>Conectar Gmail</span>
+            </a>
+          </div>
+        )}
 
         {/* Conteúdo Rolável */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6 space-y-5">
