@@ -287,10 +287,6 @@ export function TermoModeloModal({
       setFormError("Informe o título da Declaração de Consentimento.");
       return;
     }
-    if (!declaracao.texto_topico.trim()) {
-      setFormError("Informe o texto da Declaração de Consentimento.");
-      return;
-    }
 
     try {
       setIsSaving(true);
@@ -661,7 +657,7 @@ export function TermoModeloModal({
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-on-surface block">
-                Texto da Declaração *
+                Texto da Declaração (opcional)
               </label>
               <textarea
                 value={declaracao.texto_topico}
@@ -673,7 +669,6 @@ export function TermoModeloModal({
                 }
                 placeholder="Ex: Declaro que li e compreendi todas as informações contidas neste termo, tive todas as minhas dúvidas esclarecidas e autorizo a realização do procedimento..."
                 rows={3}
-                required
                 className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-md-md border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-y"
               />
             </div>

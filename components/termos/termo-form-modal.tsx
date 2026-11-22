@@ -820,9 +820,11 @@ export function TermoFormModal({
                       </h4>
                     </div>
 
-                    <p className="text-xs sm:text-sm text-on-surface leading-relaxed whitespace-pre-line">
-                      {selectedModelo.declaracao.texto_topico}
-                    </p>
+                    {selectedModelo.declaracao.texto_topico?.trim() && (
+                      <p className="text-xs sm:text-sm text-on-surface leading-relaxed whitespace-pre-line">
+                        {selectedModelo.declaracao.texto_topico}
+                      </p>
+                    )}
 
                     {(selectedModelo.declaracao.linhas_checkbox || []).filter(
                       (l) => l.trim().length > 0

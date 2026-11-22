@@ -16,7 +16,7 @@ export const termoTopicoSchema = z.object({
 export const termoDeclaracaoSchema = z.object({
   id: z.string().uuid().optional(),
   titulo: z.string().trim().min(1, "O título da declaração é obrigatório."),
-  texto_topico: z.string().trim().min(1, "O texto da declaração é obrigatório."),
+  texto_topico: z.string().trim().optional().default(""),
   linhas_checkbox: checkboxListSchema,
 });
 
@@ -48,7 +48,7 @@ export const termoSnapshotTopicoSchema = z.object({
 
 export const termoSnapshotDeclaracaoSchema = z.object({
   titulo: z.string().trim().min(1, "O título da declaração é obrigatório."),
-  texto_topico: z.string().trim().min(1, "O texto da declaração é obrigatório."),
+  texto_topico: z.string().trim().optional().default(""),
   linhas_checkbox: z.array(termoSnapshotCheckboxSchema).default([]),
 });
 

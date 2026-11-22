@@ -702,9 +702,11 @@ export function TermoDetailsModal({
                             "Declaração de Consentimento"}
                         </h4>
                       </div>
-                      <p className="text-xs sm:text-sm text-on-surface leading-relaxed whitespace-pre-line">
-                        {snapshot.declaracao.texto_topico}
-                      </p>
+                      {snapshot.declaracao.texto_topico?.trim() && (
+                        <p className="text-xs sm:text-sm text-on-surface leading-relaxed whitespace-pre-line">
+                          {snapshot.declaracao.texto_topico}
+                        </p>
+                      )}
                       {(snapshot.declaracao.linhas_checkbox || []).length > 0 && (
                         <ul className="pt-2 space-y-1.5 border-t border-primary/25">
                           {(snapshot.declaracao.linhas_checkbox || [])

@@ -339,7 +339,7 @@ export async function saveTermoModelo(
           {
             modelo_id: modeloId,
             titulo: validData.declaracao.titulo,
-            texto_topico: validData.declaracao.texto_topico,
+            texto_topico: validData.declaracao.texto_topico ?? "",
             linhas_checkbox: validData.declaracao.linhas_checkbox,
             updated_at: nowIso,
           },
@@ -400,7 +400,7 @@ export async function saveTermoModelo(
         .insert({
           modelo_id: modeloId,
           titulo: validData.declaracao.titulo,
-          texto_topico: validData.declaracao.texto_topico,
+          texto_topico: validData.declaracao.texto_topico ?? "",
           linhas_checkbox: validData.declaracao.linhas_checkbox,
           created_at: nowIso,
           updated_at: nowIso,
