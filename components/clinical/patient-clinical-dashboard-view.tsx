@@ -15,7 +15,11 @@ import {
   Activity,
   ShieldCheck,
 } from "lucide-react";
-import { PatientClinicalTabs, type ClinicalSubTab } from "./patient-clinical-tabs";
+import {
+  PatientClinicalTabs,
+  normalizeClinicalSubTab,
+  type ClinicalSubTab,
+} from "./patient-clinical-tabs";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Client } from "@/types/client";
 import { PatientAvatar } from "@/components/shared/patient-avatar";
@@ -24,7 +28,7 @@ import { useAuth } from "@/components/auth/auth-context";
 interface PatientClinicalDashboardViewProps {
   initialClientId?: string;
   onOpenAppointments?: () => void;
-  initialTab?: ClinicalSubTab;
+  initialTab?: ClinicalSubTab | string;
 }
 
 export function PatientClinicalDashboardView({
@@ -38,10 +42,29 @@ export function PatientClinicalDashboardView({
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
     initialClientId || null
   );
-  const [activeTab, setActiveTab] = useState<ClinicalSubTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<ClinicalSubTab>(() =>
+    normalizeClinicalSubTab(initialTab, "evolucoes")
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fallback para deep-links de URL apontando para a antiga aba de sinais vitais ("metricas")
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const paramKey = params.has("subtab") ? "subtab" : params.has("tab") ? "tab" : null;
+    if (!paramKey) return;
+    const rawParam = params.get(paramKey);
+    if (!rawParam) return;
+    const resolved = normalizeClinicalSubTab(rawParam, "evolucoes");
+    setActiveTab(resolved);
+    if (rawParam.toLowerCase().trim() !== resolved) {
+      params.set(paramKey, resolved);
+      const nextUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+      window.history.replaceState(null, "", nextUrl);
+    }
+  }, []);
 
   // Fecha dropdown ao clicar fora
   useEffect(() => {

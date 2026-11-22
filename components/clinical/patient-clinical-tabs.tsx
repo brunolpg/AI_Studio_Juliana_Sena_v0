@@ -95,7 +95,35 @@ interface PatientClinicalTabsProps {
   onTabChange?: (tab: ClinicalSubTab) => void;
 }
 
-export type ClinicalSubTab = "historico" | "evolucoes" | "prescricoes" | "termos" | "propostas" | "metricas";
+export type ClinicalSubTab = "historico" | "evolucoes" | "prescricoes" | "termos" | "propostas";
+
+const VALID_CLINICAL_SUB_TABS: readonly ClinicalSubTab[] = [
+  "historico",
+  "evolucoes",
+  "prescricoes",
+  "termos",
+  "propostas",
+];
+
+export function normalizeClinicalSubTab(
+  tab?: string | null,
+  fallback: ClinicalSubTab = "evolucoes"
+): ClinicalSubTab {
+  if (!tab) return fallback;
+  const normalized = tab.toLowerCase().trim();
+  if (
+    normalized === "metricas" ||
+    normalized === "sinais-vitais" ||
+    normalized === "sinais_vitais" ||
+    normalized === "biometria"
+  ) {
+    return "historico";
+  }
+  if ((VALID_CLINICAL_SUB_TABS as readonly string[]).includes(normalized)) {
+    return normalized as ClinicalSubTab;
+  }
+  return fallback;
+}
 
 export function PatientClinicalTabs({
   client,
@@ -109,15 +137,25 @@ export function PatientClinicalTabs({
   const isPatient = isPatientView || user?.role === "paciente";
   const isAdmin = user?.role === "administrador";
 
-  const [internalSubTab, setInternalSubTab] = useState<ClinicalSubTab>(
-    isPatient ? "prescricoes" : "evolucoes"
+  const defaultTab: ClinicalSubTab = isPatient ? "prescricoes" : "evolucoes";
+  const [internalSubTab, setInternalSubTab] = useState<ClinicalSubTab>(defaultTab);
+
+  const activeSubTab: ClinicalSubTab = normalizeClinicalSubTab(
+    controlledActiveTab ?? internalSubTab,
+    defaultTab
   );
 
-  const activeSubTab = controlledActiveTab ?? internalSubTab;
+  // Redireciona automaticamente qualquer estado/deep-link legado (ex.: "metricas") para "historico"
+  useEffect(() => {
+    if (controlledActiveTab && controlledActiveTab !== activeSubTab) {
+      onTabChange?.(activeSubTab);
+    }
+  }, [controlledActiveTab, activeSubTab, onTabChange]);
 
   const setActiveSubTab = (tab: ClinicalSubTab) => {
-    setInternalSubTab(tab);
-    onTabChange?.(tab);
+    const resolvedTab = normalizeClinicalSubTab(tab, defaultTab);
+    setInternalSubTab(resolvedTab);
+    onTabChange?.(resolvedTab);
   };
   const [isPending, startTransition] = useTransition();
 
@@ -880,6 +918,11 @@ export function PatientClinicalTabs({
   const history = clinicalRecord?.medicalHistory;
   const evolutions = clinicalRecord?.evolutions || [];
   const allPrescriptions = clinicalRecord?.prescriptions || [];
+  const vitalEvolutions = useMemo(
+    () => (clinicalRecord?.evolutions || []).filter((e) => Boolean(e.sinaisVitais)),
+    [clinicalRecord?.evolutions]
+  );
+  const latestVitalEvolution = vitalEvolutions[0] ?? null;
 
   // Prescrições ativas/concluídas (Em Uso)
   const activePrescriptions = useMemo(() => {
@@ -1014,19 +1057,6 @@ export function PatientClinicalTabs({
               }`}>
                 {activePropostasCount}
               </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveSubTab("metricas")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full font-semibold transition-all cursor-pointer whitespace-nowrap md-state-layer ${
-                activeSubTab === "metricas"
-                  ? "bg-[#0d6e64] dark:bg-teal-600 text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
-              }`}
-            >
-              <Gauge className="w-3.5 h-3.5" />
-              <span>Sinais Vitais & Biometria</span>
             </button>
           </div>
 
@@ -1965,6 +1995,185 @@ export function PatientClinicalTabs({
                     </div>
                   </div>
                 </div>
+
+                {/* ========================================================
+                    SEÇÃO: SINAIS VITAIS & BIOMETRIA
+                    ======================================================== */}
+                {!isPatient && (
+                  <section
+                    aria-label="Sinais Vitais e Biometria"
+                    className="space-y-4 pt-6 border-t border-outline-variant"
+                  >
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <Gauge className="w-4 h-4 text-primary shrink-0" />
+                        <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">
+                          Sinais Vitais & Biometria
+                        </h4>
+                      </div>
+                    </div>
+
+                    {/* Resumo da Última Medição */}
+                    {latestVitalEvolution?.sinaisVitais ? (
+                      <div className="p-4 sm:p-5 rounded-md-2xl border border-outline bg-primary-container/30 space-y-3">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-primary shrink-0" />
+                            <h5 className="text-xs font-bold text-on-surface uppercase tracking-wider">
+                              Última Aferição de Sinais Vitais ({latestVitalEvolution.data})
+                            </h5>
+                          </div>
+                          <span className="text-[11px] font-medium text-on-primary-container">
+                            {latestVitalEvolution.profissional}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 text-center">
+                          <div className="p-3 bg-surface-container-lowest rounded-md-lg border border-outline-variant">
+                            <span className="text-[10px] text-on-surface-variant font-semibold block">
+                              PA (mmHg)
+                            </span>
+                            <span className="text-sm font-bold text-on-surface font-mono">
+                              {latestVitalEvolution.sinaisVitais.pressaoArterial || "--/--"}
+                            </span>
+                          </div>
+                          <div className="p-3 bg-surface-container-lowest rounded-md-lg border border-outline-variant">
+                            <span className="text-[10px] text-on-surface-variant font-semibold block">
+                              FC (bpm)
+                            </span>
+                            <span className="text-sm font-bold text-on-surface font-mono">
+                              {latestVitalEvolution.sinaisVitais.frequenciaCardiaca
+                                ? `${latestVitalEvolution.sinaisVitais.frequenciaCardiaca}`
+                                : "--"}
+                            </span>
+                          </div>
+                          <div className="p-3 bg-surface-container-lowest rounded-md-lg border border-outline-variant">
+                            <span className="text-[10px] text-on-surface-variant font-semibold block">
+                              Hidratação (%)
+                            </span>
+                            <span className="text-sm font-bold text-primary font-mono">
+                              {latestVitalEvolution.sinaisVitais.hidratacaoCutanea != null
+                                ? `${latestVitalEvolution.sinaisVitais.hidratacaoCutanea}%`
+                                : "--"}
+                            </span>
+                          </div>
+                          <div className="p-3 bg-surface-container-lowest rounded-md-lg border border-outline-variant">
+                            <span className="text-[10px] text-on-surface-variant font-semibold block">
+                              Oleosidade (%)
+                            </span>
+                            <span className="text-sm font-bold text-on-surface font-mono">
+                              {latestVitalEvolution.sinaisVitais.oleosidadeSebo != null
+                                ? `${latestVitalEvolution.sinaisVitais.oleosidadeSebo}%`
+                                : "--"}
+                            </span>
+                          </div>
+                          <div className="p-3 bg-surface-container-lowest rounded-md-lg border border-outline-variant col-span-2 md:col-span-1">
+                            <span className="text-[10px] text-on-surface-variant font-semibold block">
+                              Elasticidade
+                            </span>
+                            <span className="text-sm font-bold text-on-surface font-mono">
+                              {(() => {
+                                const elast =
+                                  (latestVitalEvolution.sinaisVitais as any)?.elasticidade ??
+                                  latestVitalEvolution.sinaisVitais?.indiceElasticidade;
+                                if (elast == null || elast === "") return "--";
+                                const num = Number(elast);
+                                const normalized =
+                                  num > 5 ? Math.min(5, Math.max(1, Math.round(num / 20))) : num;
+                                return `${normalized}/5`;
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 sm:p-5 rounded-md-lg border border-outline bg-surface-container text-xs text-on-surface-variant text-center">
+                        Nenhum sinal vital registrado recentemente. Ao adicionar uma evolução clínica, informe os sinais vitais para acompanhamento gráfico.
+                      </div>
+                    )}
+
+                    {/* Tabela Histórica de Medições */}
+                    <div className="space-y-2">
+                      <h5 className="text-xs font-bold text-on-surface">
+                        Histórico Cronológico de Biometria
+                      </h5>
+
+                      <div className="overflow-x-auto scrollbar-none rounded-md-lg border border-outline bg-surface-container-lowest">
+                        <table className="w-full min-w-[600px] text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="border-b border-outline-variant bg-surface-container font-bold text-on-surface-variant">
+                              <th className="py-2.5 px-3 whitespace-nowrap">Data</th>
+                              <th className="py-2.5 px-3 whitespace-nowrap">Tipo</th>
+                              <th className="py-2.5 px-3 whitespace-nowrap">PA (mmHg)</th>
+                              <th className="py-2.5 px-3 whitespace-nowrap">FC (bpm)</th>
+                              <th className="py-2.5 px-3 whitespace-nowrap">Hidratação (%)</th>
+                              <th className="py-2.5 px-3 whitespace-nowrap">Oleosidade (%)</th>
+                              <th className="py-2.5 px-3 whitespace-nowrap">Elasticidade</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-outline-variant font-mono text-on-surface">
+                            {vitalEvolutions.length > 0 ? (
+                              vitalEvolutions.map((e) => (
+                                <tr
+                                  key={e.id}
+                                  className="hover:bg-surface-container-low transition-colors"
+                                >
+                                  <td className="py-2.5 px-3 font-sans font-medium text-on-surface whitespace-nowrap">
+                                    {e.data}
+                                  </td>
+                                  <td className="py-2.5 px-3 font-sans text-on-surface-variant whitespace-nowrap">
+                                    {e.tipo}
+                                  </td>
+                                  <td className="py-2.5 px-3 whitespace-nowrap">
+                                    {e.sinaisVitais?.pressaoArterial || "-"}
+                                  </td>
+                                  <td className="py-2.5 px-3 whitespace-nowrap">
+                                    {e.sinaisVitais?.frequenciaCardiaca
+                                      ? `${e.sinaisVitais.frequenciaCardiaca}`
+                                      : "-"}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-primary font-semibold whitespace-nowrap">
+                                    {e.sinaisVitais?.hidratacaoCutanea != null
+                                      ? `${e.sinaisVitais.hidratacaoCutanea}%`
+                                      : "-"}
+                                  </td>
+                                  <td className="py-2.5 px-3 whitespace-nowrap">
+                                    {e.sinaisVitais?.oleosidadeSebo != null
+                                      ? `${e.sinaisVitais.oleosidadeSebo}%`
+                                      : "-"}
+                                  </td>
+                                  <td className="py-2.5 px-3 whitespace-nowrap">
+                                    {(() => {
+                                      const elast =
+                                        (e.sinaisVitais as any)?.elasticidade ??
+                                        e.sinaisVitais?.indiceElasticidade;
+                                      if (elast == null || elast === "") return "-";
+                                      const num = Number(elast);
+                                      const normalized =
+                                        num > 5
+                                          ? Math.min(5, Math.max(1, Math.round(num / 20)))
+                                          : num;
+                                      return `${normalized}/5`;
+                                    })()}
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td
+                                  colSpan={7}
+                                  className="py-5 px-3 text-center font-sans text-xs text-on-surface-variant italic"
+                                >
+                                  Nenhum registro biométrico encontrado nas evoluções clínicas.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </section>
+                )}
               </div>
             )}
 
@@ -2608,131 +2817,6 @@ export function PatientClinicalTabs({
                     setIsPropostaFormOpen(true);
                   }}
                 />
-              </div>
-            )}
-
-            {/* ======================================================== */}
-            {/* ABA 4: SINAIS VITAIS & BIOMETRIA */}
-            {/* ======================================================== */}
-            {activeSubTab === "metricas" && !isPatientView && (
-              <div className="space-y-6">
-                {/* Resumo da Última Medição */}
-                {evolutions.length > 0 && evolutions[0].sinaisVitais ? (
-                  <div className="p-4 rounded-2xl border border-teal-200/80 dark:border-teal-900/60 bg-teal-50/40 dark:bg-teal-950/20">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-teal-600" />
-                        <h4 className="text-xs font-bold text-teal-950 dark:text-teal-100 uppercase tracking-wider">
-                          Última Aferição de Sinais Vitais ({evolutions[0].data})
-                        </h4>
-                      </div>
-                      <span className="text-[11px] text-teal-700 dark:text-teal-300">
-                        {evolutions[0].profissional}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
-                      <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-200/50">
-                        <span className="text-[10px] text-slate-400 font-semibold block">PA (mmHg)</span>
-                        <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">
-                          {evolutions[0].sinaisVitais.pressaoArterial || "--/--"}
-                        </span>
-                      </div>
-                      <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-200/50">
-                        <span className="text-[10px] text-slate-400 font-semibold block">FC (bpm)</span>
-                        <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">
-                          {evolutions[0].sinaisVitais.frequenciaCardiaca ? `${evolutions[0].sinaisVitais.frequenciaCardiaca}` : "--"}
-                        </span>
-                      </div>
-                      <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-200/50">
-                        <span className="text-[10px] text-slate-400 font-semibold block">Hidratação (%)</span>
-                        <span className="text-sm font-bold text-teal-600 dark:text-teal-400 font-mono">
-                          {evolutions[0].sinaisVitais.hidratacaoCutanea != null ? `${evolutions[0].sinaisVitais.hidratacaoCutanea}%` : "--"}
-                        </span>
-                      </div>
-                      <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-200/50">
-                        <span className="text-[10px] text-slate-400 font-semibold block">Oleosidade (%)</span>
-                        <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">
-                          {evolutions[0].sinaisVitais.oleosidadeSebo != null ? `${evolutions[0].sinaisVitais.oleosidadeSebo}%` : "--"}
-                        </span>
-                      </div>
-                      <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-teal-200/50">
-                        <span className="text-[10px] text-slate-400 font-semibold block">Elasticidade</span>
-                        <span className="text-sm font-bold text-slate-900 dark:text-white font-mono">
-                          {(() => {
-                            const elast = (evolutions[0].sinaisVitais as any)?.elasticidade ?? evolutions[0].sinaisVitais?.indiceElasticidade;
-                            if (elast == null || elast === "") return "--";
-                            const num = Number(elast);
-                            const normalized = num > 5 ? Math.min(5, Math.max(1, Math.round(num / 20))) : num;
-                            return `${normalized}/5`;
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 text-xs text-slate-500 text-center">
-                    Nenhum sinal vital registrado recentemente. Ao adicionar uma evolução clínica, informe os sinais vitais para acompanhamento gráfico.
-                  </div>
-                )}
-
-                {/* Tabela Histórica de Medições */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Histórico Cronológico de Biometria
-                  </h4>
-
-                  <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 font-bold text-slate-500">
-                          <th className="py-2.5 px-3">Data</th>
-                          <th className="py-2.5 px-3">Tipo</th>
-                          <th className="py-2.5 px-3">PA (mmHg)</th>
-                          <th className="py-2.5 px-3">FC (bpm)</th>
-                          <th className="py-2.5 px-3">Hidratação (%)</th>
-                          <th className="py-2.5 px-3">Oleosidade (%)</th>
-                          <th className="py-2.5 px-3">Elasticidade</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
-                        {evolutions
-                          .filter((e) => e.sinaisVitais)
-                          .map((e) => (
-                            <tr key={e.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                              <td className="py-2 px-3 font-sans font-medium text-slate-800 dark:text-slate-200">
-                                {e.data}
-                              </td>
-                              <td className="py-2 px-3 font-sans text-slate-600 dark:text-slate-400">
-                                {e.tipo}
-                              </td>
-                              <td className="py-2 px-3">
-                                {e.sinaisVitais?.pressaoArterial || "-"}
-                              </td>
-                              <td className="py-2 px-3">
-                                {e.sinaisVitais?.frequenciaCardiaca ? `${e.sinaisVitais.frequenciaCardiaca}` : "-"}
-                              </td>
-                              <td className="py-2 px-3 text-teal-600 dark:text-teal-400 font-semibold">
-                                {e.sinaisVitais?.hidratacaoCutanea != null ? `${e.sinaisVitais.hidratacaoCutanea}%` : "-"}
-                              </td>
-                              <td className="py-2 px-3">
-                                {e.sinaisVitais?.oleosidadeSebo != null ? `${e.sinaisVitais.oleosidadeSebo}%` : "-"}
-                              </td>
-                              <td className="py-2 px-3">
-                                {(() => {
-                                  const elast = (e.sinaisVitais as any)?.elasticidade ?? e.sinaisVitais?.indiceElasticidade;
-                                  if (elast == null || elast === "") return "-";
-                                  const num = Number(elast);
-                                  const normalized = num > 5 ? Math.min(5, Math.max(1, Math.round(num / 20))) : num;
-                                  return `${normalized}/5`;
-                                })()}
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
               </div>
             )}
 
