@@ -123,7 +123,7 @@ export function TermoFormModal({
     });
   }, [modelos, searchQuery]);
 
-  // Lista de todas as chaves de checkboxes obrigatórios do modelo selecionado
+  // Lista de todas as chaves de checkboxes do modelo selecionado
   const requiredCheckboxKeys = useMemo(() => {
     if (!selectedModelo) return [];
     const keys: string[] = [];
@@ -274,16 +274,6 @@ export function TermoFormModal({
 
     if (!selectedModelo) {
       setFormError("Selecione um modelo de termo de consentimento antes de gerar.");
-      return;
-    }
-
-    if (
-      requiredCheckboxKeys.length > 0 &&
-      checkedCount < requiredCheckboxKeys.length
-    ) {
-      setFormError(
-        `Marque todas as confirmações obrigatórias (${checkedCount} de ${requiredCheckboxKeys.length} marcadas) antes de assinar.`
-      );
       return;
     }
 
@@ -741,7 +731,7 @@ export function TermoFormModal({
                     <span className="font-semibold text-on-surface">
                       {signatureOnlyInAttachedPdf
                         ? "Cláusulas do modelo (opcionais para termo antigo anexado)"
-                        : "Confirmações obrigatórias do paciente"}
+                        : "Confirmações pendentes pelo paciente"}
                     </span>
                     <span
                       className={`px-2.5 py-0.5 rounded-md-full font-bold ${
