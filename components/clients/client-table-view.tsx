@@ -24,6 +24,14 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { getClientsAction, restoreClientAction } from "@/actions/client-actions";
+import {
+  buildClientsListCacheKey,
+  dedupeSessionRequest,
+  getCachedClientsList,
+  invalidateAppointmentsCache,
+  invalidateClientsCache,
+  setCachedClientsList,
+} from "@/lib/cache/session-cache";
 import { ClientFormModal } from "./client-form-modal";
 import { ClientDetailsModal } from "./client-details-modal";
 import { DeleteConfirmModal } from "./delete-confirm-modal";
@@ -33,10 +41,20 @@ import { useAuth } from "@/components/auth/auth-context";
 import { PatientAvatar } from "@/components/shared/patient-avatar";
 import type { Client, ClientFilter, PaginatedResult } from "@/types/client";
 
+const EMPTY_PAGINATED_CLIENTS: PaginatedResult<Client> = {
+  data: [],
+  total: 0,
+  page: 1,
+  pageSize: 10,
+  totalPages: 1,
+  hasMore: false,
+};
+
 export function ClientTableView() {
   const { toast } = useToast();
-  const { user, requireAuth, openAuthModal } = useAuth();
+  const { user, isLoading: isAuthLoading, requireAuth, openAuthModal } = useAuth();
   const isAdmin = user?.role === "administrador";
+  const roleScope = user?.id ? `${user.id}:${user.role}` : "anon";
 
   // Estados de dados e filtros
   const [isPending, startTransition] = useTransition();
@@ -47,13 +65,18 @@ export function ClientTableView() {
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<"nome" | "created_at" | "idade" | "cidade">("nome");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [paginatedData, setPaginatedData] = useState<PaginatedResult<Client>>({
-    data: [],
-    total: 0,
-    page: 1,
-    pageSize: 10,
-    totalPages: 1,
-    hasMore: false,
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [paginatedData, setPaginatedData] = useState<PaginatedResult<Client>>(() => {
+    const initialKey = buildClientsListCacheKey({
+      roleScope,
+      search: "",
+      status: "todos",
+      page: 1,
+      pageSize: 10,
+      sortBy: "nome",
+      sortOrder: "asc",
+    });
+    return getCachedClientsList(initialKey) ?? EMPTY_PAGINATED_CLIENTS;
   });
 
   // Modais
@@ -79,39 +102,80 @@ export function ClientTableView() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Carregar dados via Server Action e useTransition
-  const loadClients = useCallback(() => {
-    startTransition(async () => {
-      try {
-        const filters: Partial<ClientFilter> = {
-          search: debouncedSearch,
-          status: statusFilter,
-          page: currentPage,
-          pageSize,
-          sortBy,
-          sortOrder,
-        };
+  // Carregar dados via Server Action com cache de sessão e invalidação após mutações
+  const loadClients = useCallback(
+    (options?: { forceRefresh?: boolean }) => {
+      if (isAuthLoading) return;
 
-        const res = await getClientsAction(filters);
-        if (res.success && res.data) {
-          setPaginatedData(res.data);
-        } else {
+      const forceRefresh = Boolean(options?.forceRefresh);
+      const cacheKey = buildClientsListCacheKey({
+        roleScope,
+        search: debouncedSearch,
+        status: statusFilter,
+        page: currentPage,
+        pageSize,
+        sortBy,
+        sortOrder,
+      });
+
+      if (forceRefresh) {
+        invalidateClientsCache();
+      } else {
+        const cached = getCachedClientsList(cacheKey);
+        if (cached) {
+          setPaginatedData(cached);
+          setLoadError(null);
+          return;
+        }
+      }
+
+      setLoadError(null);
+      startTransition(async () => {
+        try {
+          const filters: Partial<ClientFilter> = {
+            search: debouncedSearch,
+            status: statusFilter,
+            page: currentPage,
+            pageSize,
+            sortBy,
+            sortOrder,
+          };
+
+          const res = await dedupeSessionRequest(
+            `clients:${cacheKey}`,
+            () => getClientsAction(filters)
+          );
+
+          if (res.success && res.data) {
+            setCachedClientsList(cacheKey, res.data);
+            setPaginatedData(res.data);
+            setLoadError(null);
+          } else {
+            const errMsg = res.message || "Não foi possível carregar a lista de pacientes.";
+            setLoadError(errMsg);
+            toast({
+              type: "error",
+              title: "Erro ao buscar pacientes",
+              description: errMsg,
+            });
+          }
+        } catch (error) {
+          console.error(error);
+          const errMsg =
+            error instanceof Error
+              ? error.message
+              : "Falha ao sincronizar lista de pacientes.";
+          setLoadError(errMsg);
           toast({
             type: "error",
-            title: "Erro ao buscar pacientes",
-            description: res.message,
+            title: "Erro de conexão",
+            description: errMsg,
           });
         }
-      } catch (error) {
-        console.error(error);
-        toast({
-          type: "error",
-          title: "Erro de conexão",
-          description: "Falha ao sincronizar lista de pacientes.",
-        });
-      }
-    });
-  }, [debouncedSearch, statusFilter, currentPage, pageSize, sortBy, sortOrder, toast]);
+      });
+    },
+    [isAuthLoading, roleScope, debouncedSearch, statusFilter, currentPage, pageSize, sortBy, sortOrder, toast]
+  );
 
   useEffect(() => {
     loadClients();
@@ -174,7 +238,7 @@ export function ClientTableView() {
             title: "Paciente restaurado",
             description: `O cadastro de ${client.nome} voltou para a lista ativa.`,
           });
-          loadClients();
+          loadClients({ forceRefresh: true });
         } else {
           toast({
             type: "error",
@@ -306,7 +370,7 @@ export function ClientTableView() {
 
           <button
             id="refresh-client-list-btn"
-            onClick={() => loadClients()}
+            onClick={() => loadClients({ forceRefresh: true })}
             disabled={isPending}
             className="p-2.5 rounded-full border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors cursor-pointer md-state-layer"
             title="Atualizar lista"
@@ -391,24 +455,48 @@ export function ClientTableView() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm">
               {isPending && paginatedData.data.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                  <td colSpan={7} className="py-12 text-center text-on-surface-variant">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                       <span className="text-xs">Consultando banco de dados...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : loadError && paginatedData.data.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 px-4 text-center">
+                    <div className="max-w-md mx-auto flex flex-col items-center justify-center gap-2.5 p-5 rounded-md-2xl bg-error-container/40 border border-error/40">
+                      <div className="p-2.5 bg-error-container rounded-full text-on-error-container">
+                        <AlertCircle className="w-5 h-5" />
+                      </div>
+                      <h4 className="font-semibold text-on-surface text-sm">
+                        Erro ao carregar pacientes
+                      </h4>
+                      <p className="text-xs text-on-error-container leading-relaxed">
+                        {loadError}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => loadClients({ forceRefresh: true })}
+                        className="mt-1 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-full text-xs font-semibold bg-primary text-on-primary hover:opacity-90 transition-all cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Tentar novamente</span>
+                      </button>
                     </div>
                   </td>
                 </tr>
               ) : paginatedData.data.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center">
-                    <div className="max-w-sm mx-auto flex flex-col items-center justify-center text-slate-500 dark:text-slate-400">
-                      <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full mb-3 text-slate-400">
+                    <div className="max-w-sm mx-auto flex flex-col items-center justify-center text-on-surface-variant">
+                      <div className="p-3 bg-surface-container rounded-full mb-3 text-on-surface-variant">
                         <UserX className="w-6 h-6" />
                       </div>
-                      <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">
+                      <h4 className="font-semibold text-on-surface text-sm">
                         Nenhum paciente encontrado
                       </h4>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-on-surface-variant mt-1">
                         {statusFilter === "excluidos"
                           ? "A lixeira está vazia. Não há registros com exclusão lógica."
                           : searchTerm
@@ -418,7 +506,7 @@ export function ClientTableView() {
                       {statusFilter === "todos" && !searchTerm && (
                         <button
                           onClick={handleOpenCreate}
-                          className="mt-4 inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
+                          className="mt-4 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-full text-xs font-semibold leading-none bg-primary-container text-on-primary-container hover:bg-primary-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                         >
                           Cadastrar Paciente Agora
                         </button>
@@ -647,7 +735,7 @@ export function ClientTableView() {
       <ClientFormModal
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
-        onSuccess={loadClients}
+        onSuccess={() => loadClients({ forceRefresh: true })}
         clientToEdit={clientToEdit}
       />
 
@@ -665,7 +753,7 @@ export function ClientTableView() {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         client={clientToDelete}
-        onSuccess={loadClients}
+        onSuccess={() => loadClients({ forceRefresh: true })}
         isPermanent={isPermanentDelete}
       />
 
@@ -677,7 +765,8 @@ export function ClientTableView() {
           setPatientToSchedule(null);
         }}
         onSuccess={() => {
-          loadClients();
+          invalidateAppointmentsCache();
+          loadClients({ forceRefresh: true });
         }}
       />
     </div>

@@ -44,6 +44,27 @@ import { AppointmentDetailsModal } from "./appointment-details-modal";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/auth/auth-context";
 import { PatientAvatar } from "@/components/shared/patient-avatar";
+import {
+  buildAppointmentsListCacheKey,
+  dedupeSessionRequest,
+  getCachedAppointmentsList,
+  getCachedCalendarMeta,
+  invalidateAppointmentsCache,
+  setCachedAppointmentsList,
+  setCachedCalendarMeta,
+} from "@/lib/cache/session-cache";
+import type { Appointment, AppointmentFilterTab } from "@/types/appointment";
+import type { PaginatedResult } from "@/types/client";
+
+const EMPTY_APPOINTMENTS_PAGE: PaginatedResult<Appointment> = {
+  data: [],
+  total: 0,
+  page: 1,
+  pageSize: 10,
+  totalPages: 1,
+  hasMore: false,
+};
+
 function formatShortName(fullName?: string): string {
   if (!fullName) return "Paciente";
   const parts = fullName.trim().split(/\s+/);
@@ -111,9 +132,11 @@ interface AppointmentTableViewProps {
 
 export function AppointmentTableView({ clientId, patientData }: AppointmentTableViewProps = {}) {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const isPatient = user?.role === "paciente";
   const isAdmin = user?.role === "administrador";
+  const roleScope = user?.id ? `${user.id}:${user.role}` : "anon";
+  const effectiveClientId = clientId || (isPatient ? patientData?.id : undefined);
   const [isPending, startTransition] = useTransition();
 
   // Estados de busca e filtros
@@ -123,33 +146,44 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Dados paginados
-  const [paginatedData, setPaginatedData] = useState<PaginatedResult<Appointment>>({
-    data: [],
-    total: 0,
-    page: 1,
-    pageSize: 10,
-    totalPages: 1,
-    hasMore: false,
+  // Dados paginados (inicializados do cache de sessão quando disponível)
+  const [paginatedData, setPaginatedData] = useState<PaginatedResult<Appointment>>(() => {
+    const initialKey = buildAppointmentsListCacheKey({
+      roleScope,
+      clientId: effectiveClientId,
+      tab: "proximos",
+      search: "",
+      page: 1,
+      pageSize: 10,
+    });
+    return getCachedAppointmentsList(initialKey) ?? EMPTY_APPOINTMENTS_PAGE;
   });
 
-  // Status da integração Google Calendar
+  // Status e saúde da integração Google Calendar (inicializados do cache de sessão)
+  const initialCalendarMeta = user?.id ? getCachedCalendarMeta(roleScope) : null;
   const [calendarStatus, setCalendarStatus] = useState<{
     isConfigured: boolean;
     calendarId: string;
-  }>({
-    isConfigured: false,
-    calendarId: "primary",
-  });
+  }>(
+    initialCalendarMeta?.status ?? {
+      isConfigured: false,
+      calendarId: "primary",
+    }
+  );
 
-  // Saúde da integração Google Calendar
   const [calendarHealth, setCalendarHealth] = useState<{
     healthy: boolean;
     status?: string;
     calendarSummary?: string;
     canManageCalendar?: boolean;
     message?: string;
-  }>({ healthy: false, status: "checking", canManageCalendar: false });
+  }>(
+    initialCalendarMeta?.health ?? {
+      healthy: false,
+      status: "checking",
+      canManageCalendar: false,
+    }
+  );
 
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -268,6 +302,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
         });
 
         if (res.success && res.data) {
+          invalidateAppointmentsCache();
           const updatedAppt = { ...attachmentModalAppointment, anexos_clinicos: res.data };
           setAttachmentModalAppointment(updatedAppt);
           setPaginatedData((prev) => ({
@@ -369,6 +404,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
       });
 
       if (res.success) {
+        invalidateAppointmentsCache();
         toast({
           type: "success",
           title: "Recibo Enviado!",
@@ -427,30 +463,45 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Carrega status da API e saúde do Google Calendar
+  // Carrega status da API e saúde do Google Calendar em paralelo (com cache de sessão)
   useEffect(() => {
-    async function loadStatus() {
-      try {
-        const status = await getCalendarIntegrationStatusAction();
-        setCalendarStatus(status);
-      } catch (err) {
-        console.error(err);
-      }
+    if (isAuthLoading || !user?.id || isPatient) return;
+
+    const cached = getCachedCalendarMeta(roleScope);
+    if (cached) {
+      setCalendarStatus(cached.status);
+      setCalendarHealth(cached.health);
+      return;
     }
 
-    async function checkHealth() {
-      try {
-        const res = await fetch("/api/calendar/health");
-        const data = await res.json();
-        setCalendarHealth(data);
-      } catch {
-        setCalendarHealth({ healthy: false, message: "Não conectado" });
-      }
-    }
+    let cancelled = false;
+    dedupeSessionRequest(`calendar-meta:${roleScope}`, async () => {
+      const [statusResult, healthResult] = await Promise.all([
+        getCalendarIntegrationStatusAction().catch(() => ({
+          isConfigured: false,
+          calendarId: "primary",
+        })),
+        fetch("/api/calendar/health")
+          .then((r) => r.json())
+          .catch(() => ({ healthy: false, message: "Não conectado" })),
+      ]);
 
-    loadStatus();
-    checkHealth();
-  }, []);
+      return {
+        status: statusResult,
+        health: healthResult,
+        updatedAt: Date.now(),
+      };
+    }).then((meta) => {
+      if (cancelled) return;
+      setCachedCalendarMeta(roleScope, meta);
+      setCalendarStatus(meta.status);
+      setCalendarHealth(meta.health);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthLoading, user?.id, isPatient, roleScope]);
 
   const handleTriggerSync = async () => {
     if (!calendarHealth.canManageCalendar) {
@@ -472,7 +523,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
           title: "Sincronização Concluída",
           description: data.message,
         });
-        loadAppointments();
+        loadAppointments({ forceRefresh: true });
       } else {
         toast({
           type: "error",
@@ -496,39 +547,67 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
     toastRef.current = toast;
   }, [toast]);
 
-  // Carregar agendamentos (dependências exclusivamente primitivas e estáveis)
-  const effectiveClientId = clientId || (isPatient ? patientData?.id : undefined);
+  // Carregar agendamentos com cache em memória e invalidação após mutações
+  const loadAppointments = useCallback(
+    (options?: { forceRefresh?: boolean }) => {
+      if (isAuthLoading) return;
 
-  const loadAppointments = useCallback(() => {
-    startTransition(async () => {
-      try {
-        const res = await getAppointmentsAction({
-          search: debouncedSearch,
-          tab: activeFilterTab,
-          page: currentPage,
-          pageSize,
-          clientId: effectiveClientId,
-        });
+      const forceRefresh = Boolean(options?.forceRefresh);
+      const cacheKey = buildAppointmentsListCacheKey({
+        roleScope,
+        clientId: effectiveClientId,
+        tab: activeFilterTab,
+        search: debouncedSearch,
+        page: currentPage,
+        pageSize,
+      });
 
-        if (res.success && res.data) {
-          setPaginatedData(res.data);
-        } else {
+      if (forceRefresh) {
+        invalidateAppointmentsCache();
+      } else {
+        const cached = getCachedAppointmentsList(cacheKey);
+        if (cached) {
+          setPaginatedData(cached);
+          return;
+        }
+      }
+
+      startTransition(async () => {
+        try {
+          const res = await dedupeSessionRequest(
+            `appointments:${cacheKey}`,
+            () =>
+              getAppointmentsAction({
+                search: debouncedSearch,
+                tab: activeFilterTab,
+                page: currentPage,
+                pageSize,
+                clientId: effectiveClientId,
+              })
+          );
+
+          if (res.success && res.data) {
+            setCachedAppointmentsList(cacheKey, res.data);
+            setPaginatedData(res.data);
+          } else {
+            toastRef.current({
+              type: "error",
+              title: "Erro ao buscar agendamentos",
+              description: res.message,
+            });
+          }
+        } catch (err) {
+          console.error(err);
           toastRef.current({
             type: "error",
-            title: "Erro ao buscar agendamentos",
-            description: res.message,
+            title: "Erro de conexão",
+            description: "Falha ao sincronizar agenda de consultas.",
           });
         }
-      } catch (err) {
-        console.error(err);
-        toastRef.current({
-          type: "error",
-          title: "Erro de conexão",
-          description: "Falha ao sincronizar agenda de consultas.",
-        });
-      }
-    });
-  }, [debouncedSearch, activeFilterTab, currentPage, pageSize, effectiveClientId]);
+      });
+    },
+    [isAuthLoading, roleScope, debouncedSearch, activeFilterTab, currentPage, pageSize, effectiveClientId]
+  );
 
   useEffect(() => {
     loadAppointments();
@@ -545,7 +624,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
     if (!hasPendingPayments) return;
 
     const timer = setInterval(() => {
-      loadAppointments();
+      loadAppointments({ forceRefresh: true });
     }, 60000); // 60 segundos
 
     return () => clearInterval(timer);
@@ -568,7 +647,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
           description: `O horário de ${appointmentToCancel.client_nome} foi liberado.`,
         });
         setAppointmentToCancel(null);
-        loadAppointments();
+        loadAppointments({ forceRefresh: true });
       } else {
         toast({
           type: "error",
@@ -719,7 +798,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
             {/* Botão de Atualizar Circular */}
             <button
               id="refresh-appointments-btn"
-              onClick={() => loadAppointments()}
+              onClick={() => loadAppointments({ forceRefresh: true })}
               disabled={isPending}
               className="p-2.5 rounded-full border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors cursor-pointer shrink-0 md-state-layer"
               title="Recarregar / sincronizar dados com o Google Agenda"
@@ -1199,7 +1278,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
         initialPatient={patientData || null}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={() => {
-          loadAppointments();
+          loadAppointments({ forceRefresh: true });
         }}
       />
 
@@ -1212,7 +1291,7 @@ export function AppointmentTableView({ clientId, patientData }: AppointmentTable
           setSelectedAppointment(null);
         }}
         onSuccess={() => {
-          loadAppointments();
+          loadAppointments({ forceRefresh: true });
         }}
       />
 

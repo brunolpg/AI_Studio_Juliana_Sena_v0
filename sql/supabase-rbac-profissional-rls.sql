@@ -24,13 +24,23 @@
 --     home_care_ficha_topicos, home_care_cronograma
 -- ==============================================================================
 
--- 1. Garante coluna user_id em public.pacientes para vínculo direto com auth.users
+-- 1. Garante colunas auxiliares em public.pacientes (idempotente)
 ALTER TABLE public.pacientes
 ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+
+ALTER TABLE public.pacientes
+ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+ALTER TABLE public.pacientes
+ADD COLUMN IF NOT EXISTS foto_perfil TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_pacientes_user_id
 ON public.pacientes (user_id)
 WHERE deleted_at IS NULL;
+
+-- Garante permissões explícitas de tabela para usuários autenticados (sujeitas à RLS)
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.pacientes TO authenticated;
 
 -- 2. Funções auxiliares SECURITY DEFINER (evitam recursão de RLS e validam role)
 CREATE OR REPLACE FUNCTION public.is_profissional()
@@ -43,9 +53,16 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM public.profiles p
-    WHERE p.id = auth.uid()
+    WHERE (
+        p.id = auth.uid()
+        OR (
+          COALESCE(auth.jwt() ->> 'email', '') <> ''
+          AND LOWER(TRIM(p.email)) = LOWER(TRIM(auth.jwt() ->> 'email'))
+        )
+      )
       AND LOWER(TRIM(p.role::text)) = 'profissional'
-  );
+  )
+  OR LOWER(TRIM(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', ''))) = 'profissional';
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_profissional_ou_admin()
@@ -58,9 +75,16 @@ AS $$
   SELECT EXISTS (
     SELECT 1
     FROM public.profiles p
-    WHERE p.id = auth.uid()
+    WHERE (
+        p.id = auth.uid()
+        OR (
+          COALESCE(auth.jwt() ->> 'email', '') <> ''
+          AND LOWER(TRIM(p.email)) = LOWER(TRIM(auth.jwt() ->> 'email'))
+        )
+      )
       AND LOWER(TRIM(p.role::text)) IN ('profissional', 'administrador', 'admin')
-  );
+  )
+  OR LOWER(TRIM(COALESCE(auth.jwt() -> 'user_metadata' ->> 'role', ''))) IN ('profissional', 'administrador', 'admin');
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_paciente_owner(p_paciente_id UUID)
@@ -77,7 +101,10 @@ AS $$
       AND pac.deleted_at IS NULL
       AND (
         pac.user_id = auth.uid()
-        OR LOWER(TRIM(pac.email)) = LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', '')))
+        OR (
+          COALESCE(auth.jwt() ->> 'email', '') <> ''
+          AND LOWER(TRIM(pac.email)) = LOWER(TRIM(auth.jwt() ->> 'email'))
+        )
       )
   );
 $$;
@@ -130,20 +157,29 @@ END $$;
 
 -- ==============================================================================
 -- 4. POLÍTICAS RLS: public.pacientes
---    - SELECT: profissional/administrador (apenas pacientes ativos: deleted_at IS NULL)
---              ou o próprio paciente (user_id = auth.uid() e deleted_at IS NULL)
---    - INSERT / UPDATE / DELETE: profissional ou administrador
+--    - SELECT (equipe): profissional e administrador podem listar pacientes ativos
+--      (consultas filtram deleted_at IS NULL por padrão) e gerenciar a Lixeira.
+--    - SELECT (paciente): apenas o próprio cadastro ativo (deleted_at IS NULL).
+--    - INSERT / UPDATE / DELETE: profissional ou administrador.
 -- ==============================================================================
-CREATE POLICY "pacientes_select_profissional_ou_proprio"
+CREATE POLICY "pacientes_select_profissional_ou_admin"
+ON public.pacientes
+FOR SELECT
+TO authenticated
+USING (public.is_profissional_ou_admin());
+
+CREATE POLICY "pacientes_select_proprio_paciente"
 ON public.pacientes
 FOR SELECT
 TO authenticated
 USING (
   deleted_at IS NULL
   AND (
-    public.is_profissional_ou_admin()
-    OR user_id = auth.uid()
-    OR LOWER(TRIM(email)) = LOWER(TRIM(COALESCE(auth.jwt() ->> 'email', '')))
+    user_id = auth.uid()
+    OR (
+      COALESCE(auth.jwt() ->> 'email', '') <> ''
+      AND LOWER(TRIM(email)) = LOWER(TRIM(auth.jwt() ->> 'email'))
+    )
   )
 );
 

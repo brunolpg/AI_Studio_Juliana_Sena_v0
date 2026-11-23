@@ -16,7 +16,7 @@ async function checkAuthAndRole() {
   const adminClient = getSupabaseAdminClient();
   const adminDb = adminClient || serverClient;
 
-  const user = await getSession();
+  const user = await getSession(serverClient);
   if (!user) {
     throw new Error("Usuário não autenticado.");
   }
@@ -43,50 +43,40 @@ export async function getPopsAction(): Promise<PopProtocoloCompleto[]> {
   try {
     const { adminDb } = await checkAuthAndRole();
 
-    // 1. Busca todos os protocolos cadastrados com projeção enxuta
-    const { data: protocolos, error: popError } = await adminDb
-      .from("pops_protocolos")
-      .select("id, protocolo, finalidade, data_pop, status, profissional, payload_hash, created_at")
-      .order("data_pop", { ascending: false })
-      .order("created_at", { ascending: false });
+    // 1. Busca paralela enxuta de protocolos, blocos e subtópicos (sem payload_canonico/assinatura)
+    const [protoRes, blocosRes, subsRes] = await Promise.all([
+      adminDb
+        .from("pops_protocolos")
+        .select("id, protocolo, finalidade, data_pop, status, profissional, payload_hash, created_at")
+        .order("data_pop", { ascending: false })
+        .order("created_at", { ascending: false }),
+      adminDb
+        .from("pops_blocos")
+        .select("id, pop_id, tipo, ordem, topico_titulo, topico_descricao, tabela_dados, formula_id, prescricao_id")
+        .order("ordem", { ascending: true }),
+      adminDb
+        .from("pops_subtopicos")
+        .select("id, bloco_id, ordem, titulo, descricao")
+        .order("ordem", { ascending: true }),
+    ]);
 
-    if (popError) {
-      console.warn("Aviso ao carregar pops_protocolos:", popError.message);
+    if (protoRes.error) {
+      console.warn("Aviso ao carregar pops_protocolos:", protoRes.error.message);
       return [];
     }
 
+    const protocolos = protoRes.data;
     if (!protocolos || protocolos.length === 0) return [];
 
-    const popIds = protocolos.map((p: any) => p.id);
-
-    // 2. Busca blocos agrupados com seleção enxuta
-    const { data: blocosDb, error: blocosError } = await adminDb
-      .from("pops_blocos")
-      .select("id, pop_id, tipo, ordem, topico_titulo, topico_descricao, tabela_dados, formula_id, prescricao_id")
-      .in("pop_id", popIds)
-      .order("ordem", { ascending: true });
-
-    if (blocosError) {
-      console.warn("Aviso ao carregar pops_blocos:", blocosError.message);
+    if (blocosRes.error) {
+      console.warn("Aviso ao carregar pops_blocos:", blocosRes.error.message);
+    }
+    if (subsRes.error) {
+      console.warn("Aviso ao carregar pops_subtopicos:", subsRes.error.message);
     }
 
-    const blocoIds = (blocosDb || []).map((b: any) => b.id);
-
-    // 3. Busca subtópicos apenas se houver blocos
-    let subtopicosDb: any[] = [];
-    if (blocoIds.length > 0) {
-      const { data: subs, error: subsError } = await adminDb
-        .from("pops_subtopicos")
-        .select("id, bloco_id, ordem, titulo, descricao")
-        .in("bloco_id", blocoIds)
-        .order("ordem", { ascending: true });
-
-      if (subsError) {
-        console.warn("Aviso ao carregar pops_subtopicos:", subsError.message);
-      } else {
-        subtopicosDb = subs || [];
-      }
-    }
+    const blocosDb = blocosRes.data || [];
+    const subtopicosDb = subsRes.data || [];
 
     // Indexação em Maps para montagem O(N) imediata
     const subtopicosMap = new Map<string, any[]>();
@@ -139,20 +129,27 @@ export async function getPopCompletoAction(popId: string): Promise<PopProtocoloC
     if (!popId) return null;
     const { adminDb } = await checkAuthAndRole();
 
-    const { data: proto, error: protoErr } = await adminDb
-      .from("pops_protocolos")
-      .select("*")
-      .eq("id", popId)
-      .single();
+    const [protoRes, blocosRes] = await Promise.all([
+      adminDb
+        .from("pops_protocolos")
+        .select(
+          "id, protocolo, finalidade, data_pop, status, profissional, justificativa_suspensao, data_suspensao, payload_hash, algoritmo, assinado_em, created_at, updated_at"
+        )
+        .eq("id", popId)
+        .single(),
+      adminDb
+        .from("pops_blocos")
+        .select(
+          "id, pop_id, tipo, ordem, topico_titulo, topico_descricao, tabela_dados, formula_id, prescricao_id, created_at"
+        )
+        .eq("pop_id", popId)
+        .order("ordem", { ascending: true }),
+    ]);
 
+    const { data: proto, error: protoErr } = protoRes;
     if (protoErr || !proto) return null;
 
-    // Busca blocos do protocolo
-    const { data: blocosDb } = await adminDb
-      .from("pops_blocos")
-      .select("*")
-      .eq("pop_id", popId)
-      .order("ordem", { ascending: true });
+    const blocosDb = blocosRes.data || [];
 
     const blocoIds = (blocosDb || []).map((b: any) => b.id);
     const prescricaoIds = Array.from(

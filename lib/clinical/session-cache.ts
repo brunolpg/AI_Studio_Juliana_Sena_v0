@@ -150,6 +150,11 @@ export function invalidatePatientClinicalCache(clientId?: string | null): void {
   }
 }
 
+export function clearAllClinicalSessionCache(): void {
+  clinicalSessionCache.clear();
+  inFlightRequests.clear();
+}
+
 /**
  * Deduplica chamadas concorrentes com a mesma chave no mesmo ciclo de montagem/efeito.
  */

@@ -165,7 +165,7 @@ export const clientFilterSchema = z.object({
   search: z.string().optional().default(""),
   status: z.enum(["todos", "Ativo", "Inativo", "excluidos"]).optional().default("todos"),
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(5).max(100).default(10),
+  pageSize: z.coerce.number().int().min(1).max(500).default(10),
   sortBy: z.enum(["nome", "created_at", "idade", "cidade"]).default("nome"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });

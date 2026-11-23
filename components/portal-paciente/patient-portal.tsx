@@ -116,7 +116,10 @@ export function PatientPortal({ user, onLogout }: PatientPortalProps) {
           return;
         }
 
-        let query = supabase.from("pacientes").select("id, nome, cpf, data_nascimento, idade, email, sexo, telefone, logradouro, numero, complemento, estado, cidade, cep, foto_perfil, user_id, status");
+        let query = supabase
+          .from("pacientes")
+          .select("id, nome, cpf, data_nascimento, idade, email, sexo, telefone, logradouro, numero, complemento, estado, cidade, cep, foto_perfil, user_id, status")
+          .is("deleted_at", null);
         if (userId) {
           query = query.or(`user_id.eq.${userId},email.ilike.${userEmail}`);
         } else {

@@ -19,6 +19,11 @@ import {
 import { FormulaModal } from "./formula-modal";
 import { AppHeader } from "@/components/shared/app-header";
 import { deleteFormulaAction, getFormulasAction } from "@/actions/formula-actions";
+import {
+  getCachedFormulasCatalog,
+  invalidateFormulasCache,
+  setCachedFormulasCatalog,
+} from "@/lib/cache/session-cache";
 import { useToast } from "@/components/ui/toast";
 import type { Formula, Componente, Unidade } from "@/types/formula";
 
@@ -35,23 +40,35 @@ export function FormulaCatalogView({
 }: FormulaCatalogViewProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [formulas, setFormulas] = useState<Formula[]>(initialFormulas);
+  const [formulas, setFormulas] = useState<Formula[]>(() => {
+    if (initialFormulas && initialFormulas.length > 0) return initialFormulas;
+    return getCachedFormulasCatalog() ?? [];
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [viaFilter, setViaFilter] = useState<"todos" | "oral" | "tópico">("todos");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Sincroniza e busca no client caso o SSR retorne vazio inicialmente
+  // Sincroniza e utiliza cache em memória de sessão caso o SSR retorne vazio inicialmente
   React.useEffect(() => {
     if (initialFormulas && initialFormulas.length > 0) {
+      setCachedFormulasCatalog(initialFormulas);
       setFormulas(initialFormulas);
-    } else {
-      getFormulasAction().then((res) => {
-        if (res.success && res.data && res.data.length > 0) {
-          setFormulas(res.data);
-        }
-      });
+      return;
     }
+
+    const cached = getCachedFormulasCatalog();
+    if (cached && cached.length > 0) {
+      setFormulas(cached);
+      return;
+    }
+
+    getFormulasAction().then((res) => {
+      if (res.success && res.data && res.data.length > 0) {
+        setCachedFormulasCatalog(res.data);
+        setFormulas(res.data);
+      }
+    });
   }, [initialFormulas]);
 
   // Cálculo preciso dos Componentes Ativos únicos em catálogo e disponíveis
@@ -91,7 +108,12 @@ export function FormulaCatalogView({
     try {
       const res = await deleteFormulaAction(id);
       if (res.success) {
-        setFormulas((prev) => prev.filter((f) => f.id !== id));
+        invalidateFormulasCache();
+        setFormulas((prev) => {
+          const next = prev.filter((f) => f.id !== id);
+          setCachedFormulasCatalog(next);
+          return next;
+        });
         toast({ type: "success", title: "Fórmula Excluída", description: `"${nome}" foi removida com sucesso.` });
       } else {
         toast({ type: "error", title: "Erro", description: res.error || "Não foi possível excluir a fórmula." });
@@ -104,9 +126,11 @@ export function FormulaCatalogView({
   };
 
   const handleRefresh = async () => {
+    invalidateFormulasCache();
     try {
       const res = await getFormulasAction();
       if (res.success && res.data) {
+        setCachedFormulasCatalog(res.data);
         setFormulas(res.data);
       } else {
         window.location.reload();

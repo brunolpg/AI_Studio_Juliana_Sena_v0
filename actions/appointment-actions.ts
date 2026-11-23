@@ -35,8 +35,10 @@ export interface AuthenticatedUserContext {
   patientId: string | null;
 }
 
-export async function getAuthenticatedUserContext(): Promise<AuthenticatedUserContext | null> {
-  const supabase = await createClient();
+export async function getAuthenticatedUserContext(
+  existingSupabase?: NonNullable<Awaited<ReturnType<typeof createClient>>> | null
+): Promise<AuthenticatedUserContext | null> {
+  const supabase = existingSupabase ?? (await createClient());
   if (!supabase) return null;
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) return null;
@@ -47,31 +49,40 @@ export async function getAuthenticatedUserContext(): Promise<AuthenticatedUserCo
     .eq("id", authUser.id)
     .maybeSingle();
 
-  let role = profile?.role as UserRole;
-  if (!role) {
+  const rawRole = String(profile?.role || authUser.user_metadata?.role || "").toLowerCase().trim();
+  let role: UserRole;
+  if (rawRole === "profissional") {
+    role = "profissional";
+  } else if (rawRole === "administrador" || rawRole === "admin") {
+    role = "administrador";
+  } else if (rawRole === "paciente") {
+    role = "paciente";
+  } else {
     role = authUser.email?.toLowerCase() === "brunolpg@gmail.com" ? "administrador" : "paciente";
   }
 
   let patientId: string | null = null;
-  const userEmail = (authUser.email || "").toLowerCase().trim();
+  if (role === "paciente") {
+    const userEmail = (authUser.email || "").toLowerCase().trim();
 
-  // Identifica o paciente vinculado através de user_id ou email (com deleted_at IS NULL)
-  let patientQuery = supabase
-    .from("pacientes")
-    .select("id")
-    .is("deleted_at", null);
+    // Identifica o paciente vinculado através de user_id ou email (com deleted_at IS NULL)
+    let patientQuery = supabase
+      .from("pacientes")
+      .select("id")
+      .is("deleted_at", null);
 
-  if (authUser.id && userEmail) {
-    patientQuery = patientQuery.or(`user_id.eq.${authUser.id},email.ilike.${userEmail}`);
-  } else if (authUser.id) {
-    patientQuery = patientQuery.eq("user_id", authUser.id);
-  } else if (userEmail) {
-    patientQuery = patientQuery.ilike("email", userEmail);
-  }
+    if (authUser.id && userEmail) {
+      patientQuery = patientQuery.or(`user_id.eq.${authUser.id},email.ilike.${userEmail}`);
+    } else if (authUser.id) {
+      patientQuery = patientQuery.eq("user_id", authUser.id);
+    } else if (userEmail) {
+      patientQuery = patientQuery.ilike("email", userEmail);
+    }
 
-  const { data: patientRow } = await patientQuery.limit(1).maybeSingle();
-  if (patientRow?.id) {
-    patientId = patientRow.id;
+    const { data: patientRow } = await patientQuery.limit(1).maybeSingle();
+    if (patientRow?.id) {
+      patientId = patientRow.id;
+    }
   }
 
   return {
@@ -87,11 +98,7 @@ async function getAuthUserRole(): Promise<UserRole | null> {
 }
 
 function getTodayString(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return getTodaySaoPauloDateString();
 }
 
 /**
@@ -249,7 +256,7 @@ export async function getAppointmentsAction(
       clientId: requestedClientId,
     } = filter;
 
-    const authCtx = await getAuthenticatedUserContext();
+    const authCtx = await getAuthenticatedUserContext(supabase);
     const isPatientRole = authCtx?.role === "paciente";
 
     // 0. Isolamento Estrito de Segurança por Paciente:
@@ -297,8 +304,7 @@ export async function getAppointmentsAction(
           id,
           nome,
           email,
-          telefone,
-          foto_perfil
+          telefone
         )
       `,
       { count: "exact" }
@@ -477,11 +483,16 @@ export async function getActivePatientsForSchedulingAction(): Promise<ActionResp
       };
     }
 
-    const { data, error } = await supabase
-      .from("pacientes")
-      .select("id, nome, cpf, email, telefone, foto_perfil")
-      .is("deleted_at", null)
-      .order("nome", { ascending: true });
+    const [patientsRes, authCtx] = await Promise.all([
+      supabase
+        .from("pacientes")
+        .select("id, nome, cpf, email, telefone")
+        .is("deleted_at", null)
+        .order("nome", { ascending: true }),
+      getAuthenticatedUserContext(supabase),
+    ]);
+
+    const { data, error } = patientsRes;
 
     if (error) {
       console.error("Erro ao buscar pacientes no Supabase:", error.message);
@@ -492,7 +503,6 @@ export async function getActivePatientsForSchedulingAction(): Promise<ActionResp
       };
     }
 
-    const authCtx = await getAuthenticatedUserContext();
     const isAdminRole = authCtx?.role === "administrador";
 
     const patientRows = (data as any[]) || [];
@@ -576,7 +586,8 @@ export async function getTimeSlotsForDateAction(
 ): Promise<ActionResponse<TimeSlot[]>> {
   let isAdmin = false;
   try {
-    const authCtx = await getAuthenticatedUserContext();
+    const supabase = await createClient();
+    const authCtx = await getAuthenticatedUserContext(supabase);
     isAdmin = authCtx?.role === "administrador" || authCtx?.role === "profissional";
 
     if (!dateStr || !isAllowedAppointmentDay(dateStr, isAdmin)) {
@@ -592,37 +603,36 @@ export async function getTimeSlotsForDateAction(
 
     const standardDaySlots = getAllowedSlotsForDate(dateStr, isAdmin);
 
-    const supabase = await createClient();
-    let activeDbList: RawAppointmentRow[] = [];
-
-    if (supabase) {
-      // Consulta no Supabase todos os agendamentos ativos na data especificada
-      const { data: dbAppointments, error } = await supabase
-        .from("appointments")
-        .select(
-          `
-            id,
-            horario_inicio,
-            horario_fim,
-            status,
-            client_id,
-            pacientes (
-              nome
+    const [dbRes, googleRes] = await Promise.all([
+      supabase
+        ? supabase
+            .from("appointments")
+            .select(
+              `
+                id,
+                horario_inicio,
+                horario_fim,
+                status,
+                client_id,
+                pacientes (
+                  nome
+                )
+              `
             )
-          `
-        )
-        .eq("data", dateStr)
-        .neq("status", "Cancelado");
+            .eq("data", dateStr)
+            .neq("status", "Cancelado")
+        : Promise.resolve({ data: null, error: null }),
+      listGoogleCalendarEventsForDate(dateStr),
+    ]);
 
-      if (error) {
-        console.warn("Aviso ao buscar slots no Supabase:", error.message);
-      } else if (dbAppointments) {
-        activeDbList = dbAppointments as unknown as RawAppointmentRow[];
-      }
+    let activeDbList: RawAppointmentRow[] = [];
+    if (dbRes.error) {
+      console.warn("Aviso ao buscar slots no Supabase:", dbRes.error.message);
+    } else if (dbRes.data) {
+      activeDbList = dbRes.data as unknown as RawAppointmentRow[];
     }
 
-    // Consulta paralela na Google Calendar API se configurada
-    const { events: googleEvents } = await listGoogleCalendarEventsForDate(dateStr);
+    const { events: googleEvents } = googleRes;
 
     const timeSlots: TimeSlot[] = standardDaySlots.map(({ slot, endSlot, label }) => {
       // 1. Verifica colisão com o banco de dados Supabase

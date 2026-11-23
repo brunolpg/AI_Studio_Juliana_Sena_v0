@@ -25,62 +25,79 @@ export async function removeSessionCookie(): Promise<void> {
   // Gerenciado nativamente pelo Supabase Auth
 }
 
-export async function getSession(): Promise<User | null> {
-  try {
-    const supabase = await createClient();
-    if (!supabase) return null;
+type ServerSupabaseClient = NonNullable<Awaited<ReturnType<typeof createClient>>>;
 
-    const {
-      data: { user: authUser },
-      error,
-    } = await supabase.auth.getUser();
-    if (error || !authUser) return null;
+function normalizeUserRole(rawRole: unknown): UserRole | null {
+  if (!rawRole) return null;
+  const normalized = String(rawRole).toLowerCase().trim();
+  if (normalized === "profissional") return "profissional";
+  if (normalized === "admin" || normalized === "administrador") return "administrador";
+  if (normalized === "paciente") return "paciente";
+  return null;
+}
 
-    const { data: profile } = await supabase
+async function resolveSessionUser(supabase: ServerSupabaseClient): Promise<User | null> {
+  const {
+    data: { user: authUser },
+    error,
+  } = await supabase.auth.getUser();
+  if (error || !authUser) return null;
+
+  const { data: profileById } = await supabase
+    .from("profiles")
+    .select("id, nome, role, avatar_url")
+    .eq("id", authUser.id)
+    .maybeSingle();
+
+  let profile = profileById;
+  if (!profile && authUser.email) {
+    const { data: profileByEmail } = await supabase
       .from("profiles")
       .select("id, nome, role, avatar_url")
-      .eq("id", authUser.id)
+      .ilike("email", authUser.email.trim())
       .maybeSingle();
+    profile = profileByEmail;
+  }
 
-    // Obtém o perfil da base de dados ou aplica a regra de contingência para a conta de administração
-    let rawRole = profile?.role;
-    let role: UserRole;
-    if (rawRole) {
-      const normalized = String(rawRole).toLowerCase().trim();
-      role = normalized === "profissional"
-        ? "profissional"
-        : normalized === "admin" || normalized === "administrador"
-        ? "administrador"
-        : "paciente";
-    } else {
-      role =
-        (authUser.email?.toLowerCase() === "brunolpg@gmail.com" || authUser.email?.toLowerCase().includes("admin"))
-          ? "administrador"
-          : "paciente";
-    }
+  const role: UserRole =
+    normalizeUserRole(profile?.role) ??
+    normalizeUserRole(authUser.user_metadata?.role) ??
+    (authUser.email?.toLowerCase() === "brunolpg@gmail.com" ||
+    authUser.email?.toLowerCase().includes("admin")
+      ? "administrador"
+      : "paciente");
 
-    const name =
-      profile?.nome ||
-      authUser.user_metadata?.full_name ||
-      authUser.user_metadata?.nome ||
-      authUser.email?.split("@")[0] ||
-      "Usuário";
+  const name =
+    profile?.nome ||
+    authUser.user_metadata?.full_name ||
+    authUser.user_metadata?.nome ||
+    authUser.email?.split("@")[0] ||
+    "Usuário";
 
-    return {
+  return {
+    id: authUser.id,
+    name,
+    email: authUser.email || "",
+    role,
+    roleLabel: getRoleLabel(role),
+    avatar: profile?.avatar_url || authUser.user_metadata?.avatar_url,
+    created_at: authUser.created_at,
+    profile: profile || {
       id: authUser.id,
-      name,
-      email: authUser.email || "",
+      nome: name,
       role,
-      roleLabel: getRoleLabel(role),
-      avatar: profile?.avatar_url || authUser.user_metadata?.avatar_url,
-      created_at: authUser.created_at,
-      profile: profile || {
-        id: authUser.id,
-        nome: name,
-        role,
-        avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url,
-      },
-    };
+      avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url,
+    },
+  };
+}
+
+export async function getSession(
+  existingSupabase?: ServerSupabaseClient | null
+): Promise<User | null> {
+  try {
+    const supabase = existingSupabase ?? (await createClient());
+    if (!supabase) return null;
+    return await resolveSessionUser(supabase);
   } catch {
     return null;
   }
@@ -97,7 +114,7 @@ export async function requireAuth(): Promise<User> {
 }
 
 export async function requireProfissionalAccess(): Promise<
-  | { authorized: true; user: User; supabase: NonNullable<Awaited<ReturnType<typeof createClient>>> }
+  | { authorized: true; user: User; supabase: ServerSupabaseClient }
   | { authorized: false; message: string }
 > {
   const supabase = await createClient();
@@ -105,7 +122,7 @@ export async function requireProfissionalAccess(): Promise<
     return { authorized: false, message: "Banco de dados não disponível." };
   }
 
-  const user = await getSession();
+  const user = await getSession(supabase);
   if (!user) {
     return {
       authorized: false,
@@ -125,7 +142,7 @@ export async function requireProfissionalAccess(): Promise<
 }
 
 export async function verifyProfissionalOrOwnPaciente(pacienteId: string): Promise<
-  | { authorized: true; user: User; isProfissional: boolean; supabase: NonNullable<Awaited<ReturnType<typeof createClient>>> }
+  | { authorized: true; user: User; isProfissional: boolean; supabase: ServerSupabaseClient }
   | { authorized: false; message: string }
 > {
   const supabase = await createClient();
@@ -133,7 +150,7 @@ export async function verifyProfissionalOrOwnPaciente(pacienteId: string): Promi
     return { authorized: false, message: "Banco de dados não disponível." };
   }
 
-  const user = await getSession();
+  const user = await getSession(supabase);
   if (!user) {
     return {
       authorized: false,

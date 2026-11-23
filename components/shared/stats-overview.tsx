@@ -2,39 +2,70 @@
 
 import React, { useEffect, useState } from "react";
 import { Users, UserCheck, Calendar, CalendarCheck2, Loader2 } from "lucide-react";
-import { getDashboardStatsAction } from "@/actions/stats-actions";
+import { getDashboardStatsAction, type DashboardStats } from "@/actions/stats-actions";
+import {
+  dedupeSessionRequest,
+  getCachedDashboardStats,
+  setCachedDashboardStats,
+} from "@/lib/cache/session-cache";
+import { useAuth } from "@/components/auth/auth-context";
 import type { DashboardTab } from "@/components/shared/app-header";
 
 interface StatsOverviewProps {
   activeTab?: DashboardTab | string;
 }
 
+const DEFAULT_STATS: DashboardStats = {
+  totalPacientes: 0,
+  pacientesAtivos: 0,
+  consultasHoje: 0,
+  proximosAtendimentos: 0,
+};
+
 export function StatsOverview({ activeTab = "pacientes" }: StatsOverviewProps) {
-  const [stats, setStats] = useState({
-    totalPacientes: 0,
-    pacientesAtivos: 0,
-    consultasHoje: 0,
-    proximosAtendimentos: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const roleScope = user?.id ? `${user.id}:${user.role}` : "anon";
+  const initialCached = user?.id ? getCachedDashboardStats(roleScope) : null;
+
+  const [stats, setStats] = useState<DashboardStats>(initialCached ?? DEFAULT_STATS);
+  const [loading, setLoading] = useState(!initialCached);
 
   useEffect(() => {
+    if (isAuthLoading || !user?.id) return;
+
+    const cached = getCachedDashboardStats(roleScope);
+    if (cached) {
+      setStats(cached);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
     async function fetchStats() {
       setLoading(true);
       try {
-        const res = await getDashboardStatsAction();
-        if (res.success && res.data) {
+        const res = await dedupeSessionRequest(
+          `stats:${roleScope}`,
+          () => getDashboardStatsAction()
+        );
+        if (!cancelled && res.success && res.data) {
+          setCachedDashboardStats(roleScope, res.data);
           setStats(res.data);
         }
       } catch (err) {
         console.error("Erro ao carregar estatísticas do dashboard:", err);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     fetchStats();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthLoading, user?.id, roleScope]);
 
   const isAgendamentos = activeTab === "agendamentos";
 

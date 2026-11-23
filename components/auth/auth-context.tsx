@@ -11,6 +11,7 @@ import {
   refreshCurrentUserAction,
 } from "@/actions/auth-actions";
 import { useToast } from "@/components/ui/toast";
+import { clearAllAppSessionCaches } from "@/lib/cache/session-cache";
 
 interface AuthContextType {
   user: User | null;
@@ -83,6 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(currentUser);
           }
         } else if (event === "SIGNED_OUT") {
+          clearAllAppSessionCaches();
           if (isMounted) {
             setUser(null);
           }
@@ -163,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await loginAction(credentials);
       if (response.success && response.user) {
+        clearAllAppSessionCaches();
         setUser(response.user);
         setIsAuthModalOpen(false);
         toast({
@@ -245,6 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn("Aviso ao executar signOut no cliente Supabase:", clientSignOutErr);
       }
 
+      clearAllAppSessionCaches();
       setUser(null);
       setIsAuthModalOpen(false);
 

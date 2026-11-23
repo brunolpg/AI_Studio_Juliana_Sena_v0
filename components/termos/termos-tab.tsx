@@ -13,6 +13,11 @@ import {
   Loader2,
 } from "lucide-react";
 import { getTermosModelos } from "@/app/actions/termos";
+import {
+  dedupeSessionRequest,
+  getCachedTermosModelos,
+  setCachedTermosModelos,
+} from "@/lib/cache/session-cache";
 import { useToast } from "@/components/ui/toast";
 import { TermoModeloModal } from "./termo-modelo-modal";
 import { TermoFormModal } from "./termo-form-modal";
@@ -49,8 +54,11 @@ export function TermosTab({
 }: TermosTabProps) {
   const { toast } = useToast();
 
-  const [modelos, setModelos] = useState<TermoModelo[]>([]);
-  const [procedimentos, setProcedimentos] = useState<TermoProcedimento[]>([]);
+  const initialCache = getCachedTermosModelos();
+  const [modelos, setModelos] = useState<TermoModelo[]>(initialCache?.modelos ?? []);
+  const [procedimentos, setProcedimentos] = useState<TermoProcedimento[]>(
+    initialCache?.procedimentos ?? []
+  );
   const [isLoadingModelos, setIsLoadingModelos] = useState(false);
 
   const [isModeloModalOpen, setIsModeloModalOpen] = useState(false);
@@ -70,10 +78,20 @@ export function TermosTab({
   }, [openNewTermoSignal]);
 
   const loadModelos = useCallback(async () => {
+    const cached = getCachedTermosModelos();
+    if (cached) {
+      setModelos(cached.modelos);
+      setProcedimentos(cached.procedimentos);
+      return;
+    }
+
     try {
       setIsLoadingModelos(true);
-      const res = await getTermosModelos();
+      const res = await dedupeSessionRequest("termos-modelos:default", () =>
+        getTermosModelos()
+      );
       if (res.success && res.data) {
+        setCachedTermosModelos(res.data.modelos, res.data.procedimentos);
         setModelos(res.data.modelos);
         setProcedimentos(res.data.procedimentos);
       } else if (res.error) {
@@ -107,9 +125,11 @@ export function TermosTab({
       const updated = exists
         ? prev.map((m) => (m.id === modeloSalvo.id ? modeloSalvo : m))
         : [...prev, modeloSalvo];
-      return updated.sort((a, b) =>
+      const sorted = updated.sort((a, b) =>
         a.titulo.localeCompare(b.titulo, "pt-BR", { sensitivity: "base" })
       );
+      setCachedTermosModelos(sorted, procedimentos);
+      return sorted;
     });
   };
 

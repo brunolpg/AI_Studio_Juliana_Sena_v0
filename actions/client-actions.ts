@@ -33,6 +33,168 @@ function formatZodErrors(errors: unknown): Record<string, string[]> {
   return { geral: ["Erro de validação nos dados fornecidos."] };
 }
 
+const PATIENT_LIST_COLUMNS = `
+  id,
+  nome,
+  data_nascimento,
+  idade,
+  email,
+  sexo,
+  telefone,
+  cpf,
+  cep,
+  logradouro,
+  numero,
+  complemento,
+  estado,
+  cidade,
+  profissao,
+  status,
+  observacoes,
+  created_at,
+  updated_at,
+  deleted_at
+`;
+
+const PATIENT_SELECTOR_COLUMNS = `
+  id,
+  nome,
+  data_nascimento,
+  idade,
+  email,
+  sexo,
+  telefone,
+  cpf,
+  cep,
+  logradouro,
+  numero,
+  complemento,
+  estado,
+  cidade,
+  profissao,
+  status,
+  observacoes,
+  created_at,
+  updated_at,
+  deleted_at
+`;
+
+function isStaffRole(role?: string | null): boolean {
+  const normalized = String(role || "").toLowerCase().trim();
+  return normalized === "profissional" || normalized === "administrador" || normalized === "admin";
+}
+
+function sanitizePostgrestSearch(raw: string): string {
+  return raw
+    .trim()
+    .replace(/[%_(),]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function formatSupabasePatientError(error: { code?: string; message?: string; hint?: string }, context: string): string {
+  const code = error.code || "";
+  const msg = error.message || "Erro desconhecido";
+  const isRlsOrPermission =
+    code === "42501" ||
+    code === "PGRST301" ||
+    /row-level security|permission denied|insufficient_privilege|not allowed|jwt/i.test(msg);
+
+  if (isRlsOrPermission) {
+    return `Permissão/RLS negada ao ${context} (${code || "RLS"}): ${msg}. Verifique as políticas SELECT de public.pacientes para o perfil profissional/administrador.`;
+  }
+
+  return `Erro ao ${context}: ${msg}${code ? ` (${code})` : ""}`;
+}
+
+async function resolveStaffClientContext(): Promise<
+  | {
+      authorized: true;
+      sessionUser: NonNullable<Awaited<ReturnType<typeof getSession>>>;
+      db: NonNullable<Awaited<ReturnType<typeof createClient>>>;
+      isAdminRole: boolean;
+    }
+  | { authorized: false; message: string }
+> {
+  const serverClient = await createClient();
+  if (!serverClient) {
+    return { authorized: false, message: "Banco de dados não disponível." };
+  }
+
+  const sessionUser = await getSession(serverClient);
+  if (!sessionUser) {
+    return {
+      authorized: false,
+      message: "Sessão expirada ou não autenticada. Faça login novamente para acessar a lista de pacientes.",
+    };
+  }
+
+  if (!isStaffRole(sessionUser.role)) {
+    return {
+      authorized: false,
+      message: "Acesso restrito aos perfis Profissional e Administrador.",
+    };
+  }
+
+  const adminClient = getSupabaseAdminClient();
+  const db = adminClient || serverClient;
+
+  return {
+    authorized: true,
+    sessionUser,
+    db,
+    isAdminRole: sessionUser.role === "administrador",
+  };
+}
+
+async function enrichPatientsWithProfileAvatars(
+  db: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  rows: Client[],
+  isAdminRole: boolean
+): Promise<Client[]> {
+  if (isAdminRole || rows.length === 0) {
+    return rows.map((c) => ({
+      ...c,
+      avatar_url: null,
+      foto_perfil: null,
+    }));
+  }
+
+  const emails = Array.from(
+    new Set(rows.map((c) => c.email?.toLowerCase().trim()).filter((e): e is string => Boolean(e)))
+  );
+
+  const profilesMap = new Map<string, string>();
+  if (emails.length > 0) {
+    try {
+      const { data: profiles } = await db
+        .from("profiles")
+        .select("email, avatar_url")
+        .in("email", emails);
+
+      if (profiles) {
+        for (const pr of profiles) {
+          if (pr.email && pr.avatar_url) {
+            profilesMap.set(pr.email.toLowerCase().trim(), pr.avatar_url);
+          }
+        }
+      }
+    } catch (profErr) {
+      console.warn("Falha ao buscar avatar_url em profiles:", profErr);
+    }
+  }
+
+  return rows.map((c) => {
+    const email = (c.email || "").toLowerCase().trim();
+    const avatar = c.avatar_url || profilesMap.get(email) || null;
+    return {
+      ...c,
+      avatar_url: avatar,
+      foto_perfil: undefined,
+    };
+  });
+}
+
 /**
  * 1. LISTAGEM COM BUSCA EM TEMPO REAL, FILTROS POR STATUS E PAGINAÇÃO
  */
@@ -49,19 +211,20 @@ export async function getClientsAction(
       };
     }
 
-    const { search, status, page, pageSize, sortBy, sortOrder } = filterParsed.data;
-    const supabase = getSupabaseAdminClient() || (await createClient());
-
-    if (!supabase) {
+    const auth = await resolveStaffClientContext();
+    if (!auth.authorized) {
       return {
         success: false,
-        message: "Banco de dados não disponível.",
+        message: auth.message,
       };
     }
 
-    let query = supabase.from("pacientes").select("*", { count: "exact" });
+    const { db, isAdminRole } = auth;
+    const { search, status, page, pageSize, sortBy, sortOrder } = filterParsed.data;
 
-    // Filtro de Soft Delete e Status
+    let query = db.from("pacientes").select(PATIENT_LIST_COLUMNS, { count: "exact" });
+
+    // Filtro de Soft Delete e Status (sempre deleted_at IS NULL exceto na Lixeira)
     if (status === "excluidos") {
       query = query.not("deleted_at", "is", null);
     } else {
@@ -71,77 +234,33 @@ export async function getClientsAction(
       }
     }
 
-    // Busca textual em tempo real (Nome, CPF ou E-mail)
-    if (search && search.trim().length > 0) {
-      const term = search.trim();
-      query = query.or(`nome.ilike.%${term}%,cpf.ilike.%${term}%,email.ilike.%${term}%`);
+    // Busca textual em tempo real (Nome, CPF, E-mail ou Cidade)
+    const sanitizedTerm = sanitizePostgrestSearch(search || "");
+    if (sanitizedTerm.length > 0) {
+      query = query.or(
+        `nome.ilike.%${sanitizedTerm}%,cpf.ilike.%${sanitizedTerm}%,email.ilike.%${sanitizedTerm}%,cidade.ilike.%${sanitizedTerm}%`
+      );
     }
 
-    // Ordenação
-    query = query.order(sortBy, { ascending: sortOrder === "asc" });
-
-    // Paginação
+    // Ordenação e paginação
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
-    query = query.range(from, to);
+    query = query.order(sortBy, { ascending: sortOrder === "asc" }).range(from, to);
 
     const { data, error, count } = await query;
 
     if (error) {
-      console.error("Erro Supabase getClients:", error);
+      console.error("Erro Supabase getClientsAction:", error);
       return {
         success: false,
-        message: `Erro ao consultar banco de dados: ${error.message}`,
+        message: formatSupabasePatientError(error, "listar pacientes"),
       };
     }
 
     const total = count ?? 0;
-    const totalPages = Math.ceil(total / pageSize);
-
-    const sessionUser = await getSession();
-    const isAdminRole = sessionUser?.role === "administrador";
-
-    const clientRows = (data as Client[]) || [];
-    const clientEmails = Array.from(
-      new Set(clientRows.map((c) => c.email?.toLowerCase().trim()).filter(Boolean))
-    );
-
-    const profilesMap = new Map<string, string>();
-    if (!isAdminRole && clientEmails.length > 0) {
-      try {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("email, avatar_url")
-          .in("email", clientEmails);
-
-        if (profiles) {
-          for (const pr of profiles) {
-            if (pr.email && pr.avatar_url) {
-              profilesMap.set(pr.email.toLowerCase().trim(), pr.avatar_url);
-            }
-          }
-        }
-      } catch (profErr) {
-        console.warn("Falha ao buscar avatar_url em profiles:", profErr);
-      }
-    }
-
-    const enrichedClients = clientRows.map((c) => {
-      if (isAdminRole) {
-        return {
-          ...c,
-          avatar_url: null,
-          foto_perfil: null,
-        };
-      }
-      const email = (c.email || "").toLowerCase().trim();
-      const avatar = c.avatar_url || profilesMap.get(email) || c.foto_perfil || null;
-      return {
-        ...c,
-        avatar_url: avatar,
-        foto_perfil: c.foto_perfil || avatar,
-      };
-    });
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const clientRows = (data as unknown as Client[]) || [];
+    const enrichedClients = await enrichPatientsWithProfileAvatars(db, clientRows, isAdminRole);
 
     return {
       success: true,
@@ -158,41 +277,97 @@ export async function getClientsAction(
     console.error("Erro inesperado em getClientsAction:", error);
     return {
       success: false,
-      message: "Ocorreu um erro interno ao processar a listagem.",
+      message: `Ocorreu um erro interno ao listar pacientes: ${(error as Error).message}`,
     };
   }
 }
 
 /**
- * 2. BUSCA POR ID
+ * 1B. LISTAGEM ENXUTA DE PACIENTES ATIVOS PARA SELETOR DE PRONTUÁRIOS
+ * Sem select("*") e sem carregar blobs base64 de foto_perfil.
  */
-export async function getClientByIdAction(id: string): Promise<ActionResponse<Client>> {
+export async function getActivePatientsForSelectorAction(): Promise<ActionResponse<Client[]>> {
   try {
-    const supabase = getSupabaseAdminClient() || (await createClient());
-
-    if (!supabase) {
+    const auth = await resolveStaffClientContext();
+    if (!auth.authorized) {
       return {
         success: false,
-        message: "Banco de dados não disponível.",
+        message: auth.message,
       };
     }
 
-    const { data, error } = await supabase
+    const { db, isAdminRole } = auth;
+
+    const { data, error } = await db
       .from("pacientes")
-      .select("*")
+      .select(PATIENT_SELECTOR_COLUMNS)
+      .is("deleted_at", null)
+      .order("nome", { ascending: true });
+
+    if (error) {
+      console.error("Erro Supabase getActivePatientsForSelectorAction:", error);
+      return {
+        success: false,
+        message: formatSupabasePatientError(error, "carregar lista de pacientes para prontuários"),
+      };
+    }
+
+    const rows = (data as unknown as Client[]) || [];
+    const enriched = await enrichPatientsWithProfileAvatars(db, rows, isAdminRole);
+
+    return {
+      success: true,
+      data: enriched,
+    };
+  } catch (error) {
+    console.error("Erro inesperado em getActivePatientsForSelectorAction:", error);
+    return {
+      success: false,
+      message: `Falha ao carregar lista de pacientes: ${(error as Error).message}`,
+    };
+  }
+}
+
+/**
+ * 2. BUSCA POR ID (inclui foto_perfil sob demanda para edição no perfil profissional)
+ */
+export async function getClientByIdAction(id: string): Promise<ActionResponse<Client>> {
+  try {
+    const auth = await resolveStaffClientContext();
+    if (!auth.authorized) {
+      return {
+        success: false,
+        message: auth.message,
+      };
+    }
+
+    const { db, isAdminRole } = auth;
+    const columns = isAdminRole
+      ? PATIENT_LIST_COLUMNS
+      : `${PATIENT_LIST_COLUMNS}, foto_perfil`;
+
+    const { data, error } = await db
+      .from("pacientes")
+      .select(columns)
       .eq("id", id)
       .single();
 
-    if (error || !data) {
+    if (error) {
+      console.error("Erro Supabase getClientByIdAction:", error);
+      return {
+        success: false,
+        message: formatSupabasePatientError(error, "buscar dados do paciente"),
+      };
+    }
+
+    if (!data) {
       return {
         success: false,
         message: "Cliente/Paciente não encontrado no banco de dados.",
       };
     }
 
-    const sessionUser = await getSession();
-    const isAdminRole = sessionUser?.role === "administrador";
-    const clientData = data as Client;
+    const clientData = data as unknown as Client;
 
     return {
       success: true,
@@ -215,12 +390,12 @@ export async function createClientAction(
   rawInput: unknown
 ): Promise<ActionResponse<Client>> {
   try {
-    // 0. Verificação de autorização baseada em sessão JWT
-    const sessionUser = await getSession();
-    if (!sessionUser) {
+    // 0. Verificação de autorização baseada em sessão JWT (profissional ou administrador)
+    const auth = await resolveStaffClientContext();
+    if (!auth.authorized) {
       return {
         success: false,
-        message: "Acesso não autorizado. É necessário fazer login para cadastrar pacientes.",
+        message: auth.message,
       };
     }
 
@@ -247,17 +422,10 @@ export async function createClientAction(
     }
     validData.idade = calculatedAge;
 
-    const supabase = getSupabaseAdminClient() || (await createClient());
-
-    if (!supabase) {
-      return {
-        success: false,
-        message: "Banco de dados não disponível.",
-      };
-    }
+    const { db, isAdminRole } = auth;
 
     // Verifica duplicidade de CPF ativo
-    const { data: existingCpf } = await supabase
+    const { data: existingCpf } = await db
       .from("pacientes")
       .select("id")
       .eq("cpf", validData.cpf)
@@ -272,27 +440,26 @@ export async function createClientAction(
       };
     }
 
-    const isAdminRole = sessionUser.role === "administrador";
     const insertPayload = isAdminRole
       ? { ...validData, foto_perfil: null, deleted_at: null }
-      : { ...validData, deleted_at: null };
+      : { ...validData, foto_perfil: validData.foto_perfil ?? null, deleted_at: null };
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("pacientes")
       .insert([insertPayload])
-      .select()
+      .select(PATIENT_LIST_COLUMNS)
       .single();
 
     if (error) {
       console.error("Erro Supabase createClient:", error);
       return {
         success: false,
-        message: `Erro ao salvar paciente no Supabase: ${error.message}`,
+        message: formatSupabasePatientError(error, "salvar paciente"),
       };
     }
 
     revalidatePath("/");
-    const createdClient = data as Client;
+    const createdClient = data as unknown as Client;
     return {
       success: true,
       message: "Paciente cadastrado com sucesso!",
@@ -321,12 +488,12 @@ export async function updateClientAction(
       return { success: false, message: "ID do paciente é obrigatório." };
     }
 
-    // 0. Verificação de autorização baseada em sessão JWT
-    const sessionUser = await getSession();
-    if (!sessionUser) {
+    // 0. Verificação de autorização baseada em sessão JWT (profissional ou administrador)
+    const auth = await resolveStaffClientContext();
+    if (!auth.authorized) {
       return {
         success: false,
-        message: "Acesso não autorizado. É necessário fazer login para editar dados de pacientes.",
+        message: auth.message,
       };
     }
 
@@ -353,17 +520,10 @@ export async function updateClientAction(
     }
     validData.idade = calculatedAge;
 
-    const supabase = getSupabaseAdminClient() || (await createClient());
-
-    if (!supabase) {
-      return {
-        success: false,
-        message: "Banco de dados não disponível.",
-      };
-    }
+    const { db, isAdminRole } = auth;
 
     // Verifica duplicidade de CPF com outro paciente ativo
-    const { data: existingCpf } = await supabase
+    const { data: existingCpf } = await db
       .from("pacientes")
       .select("id")
       .eq("cpf", validData.cpf)
@@ -379,28 +539,28 @@ export async function updateClientAction(
       };
     }
 
-    const isAdminRole = sessionUser.role === "administrador";
-    const { foto_perfil: _ignoredFotoPerfil, ...validDataWithoutPhoto } = validData;
-    const updatePayload = isAdminRole
-      ? { ...validDataWithoutPhoto, updated_at: new Date().toISOString() }
-      : { ...validData, updated_at: new Date().toISOString() };
+    const { foto_perfil, ...validDataWithoutPhoto } = validData;
+    const shouldUpdatePhoto = !isAdminRole && foto_perfil !== undefined;
+    const updatePayload = shouldUpdatePhoto
+      ? { ...validDataWithoutPhoto, foto_perfil, updated_at: new Date().toISOString() }
+      : { ...validDataWithoutPhoto, updated_at: new Date().toISOString() };
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("pacientes")
       .update(updatePayload)
       .eq("id", id)
-      .select()
+      .select(PATIENT_LIST_COLUMNS)
       .single();
 
     if (error) {
       return {
         success: false,
-        message: `Erro ao atualizar paciente: ${error.message}`,
+        message: formatSupabasePatientError(error, "atualizar paciente"),
       };
     }
 
     revalidatePath("/");
-    const updatedClient = data as Client;
+    const updatedClient = data as unknown as Client;
     return {
       success: true,
       message: "Dados do paciente atualizados com sucesso!",
@@ -427,26 +587,16 @@ export async function softDeleteClientAction(id: string): Promise<ActionResponse
       return { success: false, message: "ID do paciente é obrigatório." };
     }
 
-    // 0. Verificação de autorização baseada em sessão JWT
-    const sessionUser = await getSession();
-    if (!sessionUser) {
+    const auth = await resolveStaffClientContext();
+    if (!auth.authorized) {
       return {
         success: false,
-        message: "Acesso não autorizado. É necessário fazer login para mover pacientes para a lixeira.",
-      };
-    }
-
-    const supabase = getSupabaseAdminClient() || (await createClient());
-
-    if (!supabase) {
-      return {
-        success: false,
-        message: "Banco de dados não disponível.",
+        message: auth.message,
       };
     }
 
     const now = new Date().toISOString();
-    const { error } = await supabase
+    const { error } = await auth.db
       .from("pacientes")
       .update({
         deleted_at: now,
@@ -458,7 +608,7 @@ export async function softDeleteClientAction(id: string): Promise<ActionResponse
     if (error) {
       return {
         success: false,
-        message: `Erro ao inativar paciente: ${error.message}`,
+        message: formatSupabasePatientError(error, "inativar paciente"),
       };
     }
 
@@ -480,26 +630,16 @@ export async function softDeleteClientAction(id: string): Promise<ActionResponse
  */
 export async function restoreClientAction(id: string): Promise<ActionResponse<void>> {
   try {
-    // 0. Verificação de autorização baseada em sessão JWT
-    const sessionUser = await getSession();
-    if (!sessionUser) {
+    const auth = await resolveStaffClientContext();
+    if (!auth.authorized) {
       return {
         success: false,
-        message: "Acesso não autorizado. É necessário fazer login para restaurar pacientes.",
-      };
-    }
-
-    const supabase = getSupabaseAdminClient() || (await createClient());
-
-    if (!supabase) {
-      return {
-        success: false,
-        message: "Banco de dados não disponível.",
+        message: auth.message,
       };
     }
 
     const now = new Date().toISOString();
-    const { error } = await supabase
+    const { error } = await auth.db
       .from("pacientes")
       .update({
         deleted_at: null,
@@ -511,7 +651,7 @@ export async function restoreClientAction(id: string): Promise<ActionResponse<vo
     if (error) {
       return {
         success: false,
-        message: `Erro ao restaurar: ${error.message}`,
+        message: formatSupabasePatientError(error, "restaurar paciente"),
       };
     }
 
@@ -533,29 +673,19 @@ export async function restoreClientAction(id: string): Promise<ActionResponse<vo
  */
 export async function permanentDeleteClientAction(id: string): Promise<ActionResponse<void>> {
   try {
-    // 0. Verificação de autorização baseada em sessão JWT
-    const sessionUser = await getSession();
-    if (!sessionUser) {
+    const auth = await resolveStaffClientContext();
+    if (!auth.authorized) {
       return {
         success: false,
-        message: "Acesso não autorizado. É necessário fazer login para excluir registros permanentemente.",
+        message: auth.message,
       };
     }
 
-    const supabase = getSupabaseAdminClient() || (await createClient());
-
-    if (!supabase) {
-      return {
-        success: false,
-        message: "Banco de dados não disponível.",
-      };
-    }
-
-    const { error } = await supabase.from("pacientes").delete().eq("id", id);
+    const { error } = await auth.db.from("pacientes").delete().eq("id", id);
     if (error) {
       return {
         success: false,
-        message: `Erro ao excluir definitivamente: ${error.message}`,
+        message: formatSupabasePatientError(error, "excluir paciente permanentemente"),
       };
     }
 

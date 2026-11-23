@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSession } from "@/lib/auth/session";
 import { getClientsAction } from "@/actions/client-actions";
 import { getAppointmentsAction } from "@/actions/appointment-actions";
@@ -20,7 +21,8 @@ export interface DashboardStats {
  */
 export async function getDashboardStatsAction(): Promise<ActionResponse<DashboardStats>> {
   try {
-    const user = await getSession();
+    const serverClient = await createClient();
+    const user = await getSession(serverClient);
     if (!user || (user.role !== "profissional" && user.role !== "administrador")) {
       return {
         success: false,
@@ -34,9 +36,9 @@ export async function getDashboardStatsAction(): Promise<ActionResponse<Dashboar
       };
     }
 
-    const supabase = await createClient();
+    const db = getSupabaseAdminClient() || serverClient;
 
-    if (supabase) {
+    if (db) {
       const todayStr = new Intl.DateTimeFormat("en-CA", {
         timeZone: "America/Sao_Paulo",
       }).format(new Date());
@@ -47,23 +49,23 @@ export async function getDashboardStatsAction(): Promise<ActionResponse<Dashboar
         consultasHojeRes,
         proximosAtendimentosRes,
       ] = await Promise.all([
-        supabase
+        db
           .from("pacientes")
-          .select("*", { count: "exact", head: true })
+          .select("id", { count: "exact", head: true })
           .is("deleted_at", null),
-        supabase
+        db
           .from("pacientes")
-          .select("*", { count: "exact", head: true })
+          .select("id", { count: "exact", head: true })
           .is("deleted_at", null)
           .eq("status", "Ativo"),
-        supabase
+        db
           .from("appointments")
-          .select("*", { count: "exact", head: true })
+          .select("id", { count: "exact", head: true })
           .eq("data", todayStr)
           .neq("status", "Cancelado"),
-        supabase
+        db
           .from("appointments")
-          .select("*", { count: "exact", head: true })
+          .select("id", { count: "exact", head: true })
           .gte("data", todayStr)
           .not("status", "in", '("Cancelado","Concluído")'),
       ]);

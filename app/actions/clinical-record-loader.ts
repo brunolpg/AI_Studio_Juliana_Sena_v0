@@ -257,6 +257,32 @@ const PROPOSTAS_LIST_COLUMNS = `
   updated_at
 `;
 
+const HISTORICO_CLINICO_BASE_COLUMNS = `
+  id,
+  paciente_id,
+  alergias,
+  comorbidades,
+  medicamentos_uso_continuo,
+  acompanhamento_medico,
+  isotretinoina_6_meses,
+  lesoes_detalhes,
+  implantes_dispositivos,
+  ingestao_agua,
+  qualidade_sono,
+  funcionamento_intestino,
+  tipo_sanguineo,
+  historico_cirurgico,
+  historico_familiar,
+  tabagismo,
+  etilismo,
+  atividade_fisica,
+  observacoes_gerais,
+  updated_at
+`;
+
+const HISTORICO_CLINICO_COLUMNS_STAFF = `${HISTORICO_CLINICO_BASE_COLUMNS}, fotos_area_tratada`;
+const HISTORICO_CLINICO_COLUMNS_ADMIN = HISTORICO_CLINICO_BASE_COLUMNS;
+
 const AVALIACAO_FACIAL_COLUMNS = `
   id,
   paciente_id,
@@ -621,7 +647,11 @@ export async function getClinicalTabBundleAction(
       activeTabPromise = Promise.all([
         supabase
           .from("historico_clinico")
-          .select("*")
+          .select(
+            isAdminRole
+              ? HISTORICO_CLINICO_COLUMNS_ADMIN
+              : HISTORICO_CLINICO_COLUMNS_STAFF
+          )
           .eq("paciente_id", pacienteId)
           .maybeSingle(),
         supabase

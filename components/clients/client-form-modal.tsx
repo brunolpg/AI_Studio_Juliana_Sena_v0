@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useEffect, useTransition } from "react";
 import { X, UserCheck, AlertCircle, CheckCircle2, Calendar, MapPin, Phone, Mail, FileText, Search, Loader2, Lock } from "lucide-react";
 import { BRAZILIAN_STATES, CITIES_BY_STATE, formatCPF, formatPhone, formatCEP, isValidCPF, calculateAge, fetchAddressByCEP } from "@/lib/brazil-data";
-import { createClientAction, updateClientAction } from "@/actions/client-actions";
+import { createClientAction, getClientByIdAction, updateClientAction } from "@/actions/client-actions";
 import { clientSchema } from "@/lib/validations/client-schema";
 import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/components/auth/auth-context";
@@ -50,14 +50,31 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
 
   // Foto de Perfil & Corte (Crop 1:1) - bloqueado para administrador
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(
-    isAdmin ? null : (clientToEdit?.foto_perfil ?? null)
+    isAdmin ? null : (clientToEdit?.foto_perfil ?? clientToEdit?.avatar_url ?? null)
   );
+  const [isPhotoDirty, setIsPhotoDirty] = useState(false);
   const [tempImgSrc, setTempImgSrc] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [baseScale, setBaseScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Carrega foto_perfil sob demanda ao abrir edição quando a listagem omitiu o base64
+  useEffect(() => {
+    if (isAdmin || !clientToEdit?.id || clientToEdit.foto_perfil !== undefined) return;
+    let cancelled = false;
+    getClientByIdAction(clientToEdit.id)
+      .then((res) => {
+        if (!cancelled && res.success && res.data?.foto_perfil) {
+          setFotoPerfil((prev) => (isPhotoDirty ? prev : res.data?.foto_perfil ?? prev));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, clientToEdit?.id, clientToEdit?.foto_perfil, isPhotoDirty]);
 
   // Estado para erros de validação por campo
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -286,6 +303,7 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
 
       const croppedBase64 = canvas.toDataURL("image/jpeg", 0.85);
       setFotoPerfil(croppedBase64);
+      setIsPhotoDirty(true);
       setTempImgSrc(null);
     };
   };
@@ -311,7 +329,11 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
       profissao: profissao.trim() || null,
       status,
       observacoes: observacoes.trim() || null,
-      foto_perfil: isAdmin ? null : (fotoPerfil || null),
+      foto_perfil: isAdmin
+        ? undefined
+        : clientToEdit && !isPhotoDirty
+        ? undefined
+        : (fotoPerfil || null),
     };
 
     // Validação preliminar com Zod no cliente para feedback instantâneo
@@ -453,7 +475,10 @@ function ClientFormContent({ onClose, onSuccess, clientToEdit }: ClientFormConte
                   {fotoPerfil && (
                     <button
                       type="button"
-                      onClick={() => setFotoPerfil(null)}
+                      onClick={() => {
+                        setFotoPerfil(null);
+                        setIsPhotoDirty(true);
+                      }}
                       className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-full text-xs font-semibold leading-none bg-error-container text-on-error-container hover:bg-error-container/80 active:scale-[0.98] transition-all cursor-pointer shadow-xs md-state-layer shrink-0 whitespace-nowrap"
                     >
                       Remover foto

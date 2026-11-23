@@ -4,6 +4,21 @@ import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+const FORMULA_LIST_COLUMNS = `
+  id,
+  nome,
+  descricao,
+  via,
+  veiculo,
+  dosagem,
+  tipo_veiculo,
+  posologia,
+  orient_paciente,
+  orient_farmacia,
+  created_at,
+  updated_at
+`;
+
 export async function getFormulasAction() {
   try {
     const supabase = getSupabaseAdminClient() || (await createClient());
@@ -16,7 +31,7 @@ export async function getFormulasAction() {
     const res = await supabase
       .from("formulas")
       .select(`
-        *,
+        ${FORMULA_LIST_COLUMNS},
         formula_componentes (
           id,
           quantidade,
@@ -43,7 +58,7 @@ export async function getFormulasAction() {
       const fallbackRes = await supabase
         .from("formulas")
         .select(`
-          *,
+          ${FORMULA_LIST_COLUMNS},
           formula_componentes (
             id,
             quantidade,
@@ -68,7 +83,7 @@ export async function getFormulasAction() {
       console.warn("Tentando consulta simples na tabela formulas:", error?.message);
       const simpleRes = await supabase
         .from("formulas")
-        .select("*")
+        .select(FORMULA_LIST_COLUMNS)
         .order("nome", { ascending: true });
 
       if (simpleRes.data) {
@@ -135,10 +150,13 @@ export async function getComponentesAndUnidadesAction() {
     let componentesData: any[] = [];
     let unidadesData: any[] = [];
 
-    const compRes = await supabase
-      .from("componentes")
-      .select("id, nome, unidade_id, unidades(id, unidade)")
-      .order("nome", { ascending: true });
+    const [compRes, unRes] = await Promise.all([
+      supabase
+        .from("componentes")
+        .select("id, nome, unidade_id, unidades(id, unidade)")
+        .order("nome", { ascending: true }),
+      supabase.from("unidades").select("id, unidade").order("unidade", { ascending: true }),
+    ]);
 
     if (compRes.error) {
       const fallbackComp = await supabase
@@ -150,7 +168,6 @@ export async function getComponentesAndUnidadesAction() {
       componentesData = compRes.data || [];
     }
 
-    const unRes = await supabase.from("unidades").select("id, unidade").order("unidade", { ascending: true });
     unidadesData = unRes.data || [];
 
     const mappedComps = componentesData.map((c: any) => ({
