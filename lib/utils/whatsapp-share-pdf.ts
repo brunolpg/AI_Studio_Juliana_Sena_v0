@@ -396,6 +396,21 @@ function formatCpfValue(cpf?: string | null): string {
   return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6, 9)}-${clean.slice(9, 11)}`;
 }
 
+function isManualFillOfficeUse(
+  patientName?: string | null,
+  patientCpf?: string | null,
+  manualFill?: boolean
+): boolean {
+  if (manualFill) return true;
+  const normName = (patientName || "").trim().toLowerCase();
+  const normCpf = (patientCpf || "").trim().toLowerCase();
+  return (
+    normName === "uso em consultório" ||
+    normCpf === "uso interno / clínica" ||
+    normCpf === "não aplicável"
+  );
+}
+
 function formatCurrencyBR(val?: number | null): string {
   return (val || 0).toLocaleString("pt-BR", {
     style: "currency",
@@ -646,13 +661,65 @@ class PdfDocBuilder {
   }
 
   /** Bloco padrão de identificação do paciente (2 colunas: PACIENTE | CPF) */
-  drawSimplePatientCard(patientName: string, cpf?: string | null, ageSuffix?: string) {
-    const isOfficeUse = patientName.trim().toLowerCase() === "uso em consultório";
-    const displayName = isOfficeUse ? "USO EM CONSULTÓRIO" : patientName;
-    const cpfText = isOfficeUse ? "Uso Interno / Clínica" : formatCpfValue(cpf);
-    const cpfColW = isOfficeUse ? 150 : 130;
+  drawSimplePatientCard(
+    patientName: string,
+    cpf?: string | null,
+    ageSuffix?: string,
+    manualFill = false
+  ) {
+    const isManual = isManualFillOfficeUse(patientName, cpf, manualFill);
+    const cpfColW = 130;
+
+    if (isManual) {
+      const boxH = 48;
+      this.ensureGroup(boxH + 16);
+      this.drawRect({
+        x: MARGIN,
+        y: this.y - boxH,
+        w: CONTENT_W,
+        h: boxH,
+        r: 10,
+        color: PALETTE.slate50,
+        borderColor: PALETTE.slate200,
+      });
+
+      const lineY = this.y - boxH + 11;
+      const nameLineStartX = MARGIN + 14;
+      const nameLineEndX = MARGIN + CONTENT_W - cpfColW - 28;
+      const cpfLineEndX = MARGIN + CONTENT_W - 14;
+      const cpfLineStartX = cpfLineEndX - cpfColW;
+
+      this.text("PACIENTE", nameLineStartX, this.y - 15, {
+        font: this.bold,
+        size: 7.5,
+        color: PALETTE.slate500,
+      });
+      this.page.drawLine({
+        start: { x: nameLineStartX, y: lineY },
+        end: { x: nameLineEndX, y: lineY },
+        thickness: 0.7,
+        color: PALETTE.slate400,
+      });
+
+      this.text("CPF", cpfLineStartX, this.y - 15, {
+        font: this.bold,
+        size: 7.5,
+        color: PALETTE.slate500,
+      });
+      this.page.drawLine({
+        start: { x: cpfLineStartX, y: lineY },
+        end: { x: cpfLineEndX, y: lineY },
+        thickness: 0.7,
+        color: PALETTE.slate400,
+      });
+
+      this.y -= boxH + 16;
+      return;
+    }
+
+    const cpfText = formatCpfValue(cpf);
     const nameMaxW = CONTENT_W - 28 - cpfColW - 14;
-    const fullLabel = !isOfficeUse && ageSuffix ? `${displayName} (${ageSuffix})` : displayName;
+    const fullLabel = ageSuffix ? `${patientName} (${ageSuffix})` : patientName;
     const nameLines = wrapText(fullLabel, nameMaxW, this.bold, 11);
     const boxH = 26 + nameLines.length * 14 + 8;
 
@@ -817,6 +884,7 @@ export interface PrescriptionClientPdfInput {
   id?: string;
   patientName: string;
   patientCpf?: string | null;
+  manualFill?: boolean;
   dataPrescricao?: string | null;
   medicamento: string;
   via: string;
@@ -832,14 +900,17 @@ export interface PrescriptionClientPdfInput {
 export async function generatePrescriptionPdfClient(
   input: PrescriptionClientPdfInput
 ): Promise<File> {
+  const isManual = isManualFillOfficeUse(input.patientName, input.patientCpf, input.manualFill);
   const doc = await PdfDocBuilder.create({
-    title: `Receituário - ${input.patientName}`,
+    title: isManual
+      ? "Receituário Magistral - Uso em Consultório"
+      : `Receituário - ${input.patientName}`,
     subject: "Receituário / Prescrição Magistral",
   });
 
   const isOral = (input.via || "").toLowerCase() === "oral";
   doc.drawInstitutionalHeader("RECEITUÁRIO / PRESCRIÇÃO MAGISTRAL");
-  doc.drawSimplePatientCard(input.patientName, input.patientCpf);
+  doc.drawSimplePatientCard(input.patientName, input.patientCpf, undefined, isManual);
 
   // Fórmula + Tabela de ativos (grupo indivisível)
   const viaText = `Uso ${isOral ? "Oral" : "Tópico"}`;

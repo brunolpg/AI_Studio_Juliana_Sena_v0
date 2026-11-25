@@ -496,8 +496,9 @@ export function PrescriptionModal({
             "Receituario_Consultorio",
             finalNomeFormula.trim() || "Formula_Magistral"
           ),
-          patientName: "Uso em Consultório",
-          patientCpf: "Não aplicável",
+          patientName: "",
+          patientCpf: "",
+          manualFill: true,
           dataPrescricao: todayIso,
           medicamento: finalNomeFormula.trim(),
           via,
