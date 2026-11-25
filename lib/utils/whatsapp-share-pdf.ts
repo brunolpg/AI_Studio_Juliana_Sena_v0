@@ -647,10 +647,12 @@ class PdfDocBuilder {
 
   /** Bloco padrão de identificação do paciente (2 colunas: PACIENTE | CPF) */
   drawSimplePatientCard(patientName: string, cpf?: string | null, ageSuffix?: string) {
-    const cpfText = formatCpfValue(cpf);
-    const cpfColW = 130;
+    const isOfficeUse = patientName.trim().toLowerCase() === "uso em consultório";
+    const displayName = isOfficeUse ? "USO EM CONSULTÓRIO" : patientName;
+    const cpfText = isOfficeUse ? "Uso Interno / Clínica" : formatCpfValue(cpf);
+    const cpfColW = isOfficeUse ? 150 : 130;
     const nameMaxW = CONTENT_W - 28 - cpfColW - 14;
-    const fullLabel = ageSuffix ? `${patientName} (${ageSuffix})` : patientName;
+    const fullLabel = !isOfficeUse && ageSuffix ? `${displayName} (${ageSuffix})` : displayName;
     const nameLines = wrapText(fullLabel, nameMaxW, this.bold, 11);
     const boxH = 26 + nameLines.length * 14 + 8;
 

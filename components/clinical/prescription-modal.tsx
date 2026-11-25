@@ -13,12 +13,17 @@ import { useToast } from "@/components/ui/toast";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { Client } from "@/types/client";
 import { sanitizeVehicleText } from "@/lib/prescricoes/format";
+import {
+  generatePrescriptionPdfClient,
+  downloadPdfFile,
+  sanitizePdfFileName,
+} from "@/lib/utils/whatsapp-share-pdf";
 
 interface PrescriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (newPrescriptionId?: string, savedData?: any) => void;
-  client: Client;
+  onSuccess?: (newPrescriptionId?: string, savedData?: any) => void;
+  client?: Client | null;
   zIndex?: string;
   initialData?: any | null;
 }
@@ -81,6 +86,7 @@ export function PrescriptionModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedFormulaId, setSelectedFormulaId] = useState<string | null>(null);
+  const [isOfficeUse, setIsOfficeUse] = useState<boolean>(!client);
 
   const [unidadesList, setUnidadesList] = useState<string[]>([]);
 
@@ -229,6 +235,15 @@ export function PrescriptionModal({
       setSelectedFormulaId(null);
     }
   }, [isOpen, initialData, dbUnidades, dbComponentes]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialData) {
+      setIsOfficeUse(false);
+    } else {
+      setIsOfficeUse(!client);
+    }
+  }, [isOpen, initialData, client]);
 
   if (!isOpen) return null;
 
@@ -458,6 +473,62 @@ export function PrescriptionModal({
     setIsSubmitting(true);
 
     try {
+      if (isOfficeUse) {
+        const todayIso = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "America/Sao_Paulo",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).format(new Date());
+
+        const formattedDosagem =
+          via === "tópico"
+            ? `${dosagemValor.trim()} ${dosagemUnidade}`
+            : dosagemValor.trim();
+
+        const formattedTotal =
+          via === "oral"
+            ? `${totalVeiculo.trim()} ${tipoVeiculo || "dose(s)"}`.trim()
+            : totalVeiculo.trim();
+
+        const pdfFile = await generatePrescriptionPdfClient({
+          fileName: sanitizePdfFileName(
+            "Receituario_Consultorio",
+            finalNomeFormula.trim() || "Formula_Magistral"
+          ),
+          patientName: "Uso em Consultório",
+          patientCpf: "Não aplicável",
+          dataPrescricao: todayIso,
+          medicamento: finalNomeFormula.trim(),
+          via,
+          componentes: resolvedRows.map((c) => ({
+            nome: c.nome.trim(),
+            qtd: `${c.quantidade.trim()}${c.unidade_sigla}`,
+          })),
+          veiculo: sanitizeVehicleText(finalVeiculo),
+          dosagem: formattedDosagem,
+          total: formattedTotal,
+          posologia: finalPosologia.trim(),
+          orientPaciente: finalOrientPaciente.trim() || undefined,
+          orientFarmacia: finalOrientFarmacia.trim() || undefined,
+        });
+
+        downloadPdfFile(pdfFile);
+
+        toast({
+          type: "success",
+          title: "PDF de Uso em Consultório gerado!",
+          description: "O receituário magistral foi baixado sem vínculo a paciente.",
+        });
+        onClose();
+        return;
+      }
+
+      if (!client?.id) {
+        setErrorMsg("Nenhum paciente selecionado. Ative o modo 'Uso em Consultório' para gerar o PDF diretamente.");
+        return;
+      }
+
       const payload = {
         nome_formula: finalNomeFormula.trim(),
         descricao: finalDescricao.trim() || undefined,
@@ -499,7 +570,7 @@ export function PrescriptionModal({
             : `Receita gerada e salva com sucesso para ${client.nome}.`,
         });
         const createdPrescriptionId = res.data?.prescricao_id || res.data?.id;
-        onSuccess(createdPrescriptionId, res.data);
+        onSuccess?.(createdPrescriptionId, res.data);
         onClose();
       } else {
         setErrorMsg(res.message || "Erro ao salvar receita.");
@@ -519,32 +590,56 @@ export function PrescriptionModal({
         <div className="sm:hidden landscape:hidden w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mt-2.5 mb-1 shrink-0" />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-xs shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-5 sm:px-6 py-4 border-b border-outline-variant bg-surface-container-low shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-md-lg bg-primary text-on-primary flex items-center justify-center shadow-xs shrink-0">
               <Pill className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
+            <div className="min-w-0">
+              <h3 className="text-base font-bold text-on-surface leading-tight">
                 {initialData ? "Editar Prescrição Magistral" : "Nova Prescrição Magistral (SOAP)"}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Paciente: <strong className="text-slate-700 dark:text-slate-200">{client.nome}</strong>
-                {initialData && (
-                  <span className="ml-2 text-[11px] text-warning font-medium">
-                    (Versão anterior será arquivada como suspensa)
+              <p className="text-xs text-on-surface-variant">
+                {isOfficeUse ? (
+                  <span className="text-primary font-medium">
+                    Uso em Consultório • Emissão direta em PDF (sem vínculo a paciente)
                   </span>
+                ) : (
+                  <>
+                    Paciente: <strong className="text-on-surface">{client?.nome || "Não selecionado"}</strong>
+                    {initialData && (
+                      <span className="ml-2 text-[11px] text-warning font-medium">
+                        (Versão anterior será arquivada como suspensa)
+                      </span>
+                    )}
+                  </>
                 )}
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors md-state-layer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1 ml-auto shrink-0">
+            {!initialData && (
+              <label className="inline-flex items-center gap-2 px-3 py-1.5 min-h-[36px] rounded-full border border-outline-variant bg-surface-container-low hover:bg-surface-container cursor-pointer select-none transition-colors mr-2">
+                <input
+                  type="checkbox"
+                  checked={isOfficeUse}
+                  onChange={(e) => setIsOfficeUse(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <span className="w-8 h-4.5 rounded-full bg-outline-variant peer-checked:bg-primary relative transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-3.5 after:h-3.5 after:rounded-full after:bg-surface-container-lowest after:transition-transform peer-checked:after:translate-x-3.5" />
+                <span className="text-xs font-semibold text-on-surface whitespace-nowrap">
+                  Uso em Consultório
+                </span>
+              </label>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container cursor-pointer transition-colors md-state-layer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {errorMsg && (
@@ -915,8 +1010,14 @@ export function PrescriptionModal({
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>{initialData ? "Salvando Alterações..." : "Registrando Prescrição..."}</span>
+                  <div className="w-3.5 h-3.5 border-2 border-on-primary border-t-transparent rounded-full animate-spin" />
+                  <span>
+                    {isOfficeUse
+                      ? "Gerando PDF..."
+                      : initialData
+                        ? "Salvando Alterações..."
+                        : "Registrando Prescrição..."}
+                  </span>
                 </>
               ) : (
                 <>

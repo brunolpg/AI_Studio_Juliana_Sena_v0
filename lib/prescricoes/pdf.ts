@@ -405,12 +405,14 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
     italic = await pdf.embedFont(StandardFonts.HelveticaOblique);
   }
 
-  const paciente = input.paciente.nome?.trim() || "Paciente";
+  const rawPaciente = input.paciente.nome?.trim() || "Paciente";
+  const isOfficeUse = rawPaciente.toLowerCase() === "uso em consultório";
+  const paciente = isOfficeUse ? "USO EM CONSULTÓRIO" : rawPaciente;
   const item = input.item || {};
   const isOral = (item.via || "").toLowerCase() === "oral";
 
   // Metadados e marcador crítico para validação ICP-Brasil / VIDaaS (lib/prescricoes/signed-pdf.ts)
-  pdf.setTitle(sanitize(regular, `Receituário - ${paciente}`));
+  pdf.setTitle(sanitize(regular, `Receituário - ${rawPaciente}`));
   pdf.setAuthor(PROFISSIONAL.nome);
   pdf.setSubject("Receituário / Prescrição magistral");
   pdf.setKeywords([`${RX_MARKER_PREFIX}${input.id}`]);
@@ -556,8 +558,8 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
   // ==========================================================================
   // 2. IDENTIFICAÇÃO DO PACIENTE (Card arredondado dinâmico, sem colisão)
   // ==========================================================================
-  const cpfFormatted = formatCpf(input.paciente.cpf);
-  const cpfColW = 130;
+  const cpfFormatted = isOfficeUse ? "Uso Interno / Clínica" : formatCpf(input.paciente.cpf);
+  const cpfColW = isOfficeUse ? 150 : 130;
   const patientNameMaxW = CONTENT_W - 28 - cpfColW - 14;
   const patientNameLines = wrapText(paciente, bold, 11, patientNameMaxW);
   const patientBoxH = 26 + patientNameLines.length * 14 + 8;
