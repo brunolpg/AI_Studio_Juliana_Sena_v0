@@ -79,6 +79,90 @@ export const resolvePhotoUrl = (rawUrl?: string | null, _index = 0): string => {
   return `${supabaseUrl}/storage/v1/object/public/prontuarios-fotos/${cleanPath}`;
 };
 
+// Normalização segura de URLs de exames/laudos do bucket prontuarios-documentos
+export const resolveExamUrl = (rawUrl?: string | null): string => {
+  if (!rawUrl || typeof rawUrl !== "string") return "";
+  const trimmed = rawUrl.trim();
+  if (!trimmed || isInvalidStorageUrl(trimmed)) {
+    return "";
+  }
+
+  // Bloqueia esquemas potencialmente inseguros em links clicáveis
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) {
+    return "";
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    if (trimmed.includes("/storage/v1/object/public/")) {
+      if (trimmed.includes("localhost:54321") || trimmed.includes(".local")) {
+        if (!supabaseUrl) return "";
+        const pathAfter = trimmed.split("/storage/v1/object/public/")[1];
+        return `${supabaseUrl}/storage/v1/object/public/${pathAfter}`;
+      }
+    }
+    return trimmed;
+  }
+
+  if (!supabaseUrl) return "";
+  const cleanPath = trimmed.replace(/^(\.\/|\/)+/, "");
+  if (cleanPath.startsWith("prontuarios-documentos/")) {
+    return `${supabaseUrl}/storage/v1/object/public/${cleanPath}`;
+  }
+
+  return `${supabaseUrl}/storage/v1/object/public/prontuarios-documentos/${cleanPath}`;
+};
+
+// Constrói href seguro para abertura de exames em nova aba (suporta buckets públicos e privados via signed URL)
+export const buildExamViewerHref = (rawUrl?: string | null, clientId?: string | null): string => {
+  if (!rawUrl || typeof rawUrl !== "string") return "";
+  const trimmed = rawUrl.trim();
+  if (!trimmed || isInvalidStorageUrl(trimmed)) return "";
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) return "";
+
+  const isSupabaseDocumentRef =
+    trimmed.includes("/prontuarios-documentos/") ||
+    (!trimmed.startsWith("http://") && !trimmed.startsWith("https://"));
+
+  if (clientId && isSupabaseDocumentRef) {
+    return `/api/clinical/attachments?bucket=prontuarios-documentos&clientId=${encodeURIComponent(
+      clientId
+    )}&url=${encodeURIComponent(trimmed)}`;
+  }
+
+  return resolveExamUrl(trimmed);
+};
+
+// Extrai nome de arquivo legível a partir de URL ou path do Storage (removendo prefixo de timestamp)
+export const extractFileNameFromUrl = (rawUrl?: string | null, fallbackIndex?: number): string => {
+  const fallbackLabel =
+    fallbackIndex !== undefined ? `Exame anexo ${fallbackIndex + 1}` : "Exame anexo";
+
+  if (!rawUrl || typeof rawUrl !== "string") return fallbackLabel;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return fallbackLabel;
+
+  const withoutQuery = trimmed.split("?")[0].split("#")[0];
+  const lastSegment = withoutQuery.split("/").filter(Boolean).pop();
+  if (!lastSegment) return fallbackLabel;
+
+  let decoded = lastSegment;
+  try {
+    decoded = decodeURIComponent(lastSegment);
+  } catch {
+    decoded = lastSegment;
+  }
+
+  const withoutTimestamp = decoded.replace(/^\d{10,15}_/, "").trim();
+  return withoutTimestamp || decoded || fallbackLabel;
+};
+
+export const hasValidClinicalExams = (exames?: string[] | null): boolean => {
+  if (!exames || !Array.isArray(exames) || exames.length === 0) return false;
+  return exames.some((item) => !isInvalidStorageUrl(item));
+};
+
 // 3. Item de Miniatura da Grade com Tratamento Informativo Sem Placeholders de Terceiros
 function EvolutionPhotoItem({
   url,

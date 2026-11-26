@@ -68,7 +68,13 @@ import { MedicalHistoryModal } from "./medical-history-modal";
 import { PrescriptionModal } from "./prescription-modal";
 import { PrintPrescriptionModal } from "./print-prescription-modal";
 import { PrintEvolutionModal } from "./print-evolution-modal";
-import { EvolutionPhotosModal, hasValidClinicalPhoto } from "./evolution-photos-modal";
+import {
+  EvolutionPhotosModal,
+  hasValidClinicalPhoto,
+  buildExamViewerHref,
+  extractFileNameFromUrl,
+  isInvalidStorageUrl,
+} from "./evolution-photos-modal";
 import { AestheticEvaluationModal } from "./aesthetic-evaluation-modal";
 import { HomeCareCards } from "./home-care-cards";
 import { HomeCareModal } from "./home-care-modal";
@@ -1547,6 +1553,64 @@ export function PatientClinicalTabs({
                                 </div>
                               );
                             })()}
+
+                            {/* 7. Exames & Laudos Anexados */}
+                            {Array.isArray(evo.exames_anexos) && evo.exames_anexos.length > 0 && (
+                              <div className="pt-2 border-t border-outline-variant/60">
+                                <div className="flex items-center gap-1.5 mb-2">
+                                  <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+                                  <span className="font-bold text-on-surface uppercase tracking-wide text-[10px]">
+                                    Exames & Laudos Anexados ({evo.exames_anexos.length})
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {evo.exames_anexos.map((examUrl, examIdx) => {
+                                    const fileName = extractFileNameFromUrl(examUrl, examIdx);
+                                    const isInvalid = isInvalidStorageUrl(examUrl);
+                                    const viewerHref = isInvalid
+                                      ? ""
+                                      : buildExamViewerHref(examUrl, client.id);
+                                    const isPdf = fileName.toLowerCase().endsWith(".pdf");
+
+                                    if (isInvalid || !viewerHref) {
+                                      return (
+                                        <span
+                                          key={`${examUrl}-${examIdx}`}
+                                          className="inline-flex items-center gap-1.5 min-h-[36px] px-3 py-1.5 rounded-md-md bg-warning-container text-on-warning-container border border-warning/30 text-[11px] font-medium max-w-full"
+                                          title="Arquivo indisponível no armazenamento"
+                                        >
+                                          <AlertCircle className="w-3.5 h-3.5 text-warning shrink-0" />
+                                          <span className="truncate max-w-[200px] sm:max-w-[260px]">
+                                            {fileName} (indisponível)
+                                          </span>
+                                        </span>
+                                      );
+                                    }
+
+                                    return (
+                                      <a
+                                        key={`${examUrl}-${examIdx}`}
+                                        href={viewerHref}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 min-h-[36px] px-3 py-1.5 rounded-md-md bg-surface-container hover:bg-primary-container/60 text-on-surface hover:text-on-primary-container border border-outline-variant hover:border-primary/50 text-[11px] font-semibold transition-colors shadow-2xs max-w-full cursor-pointer md-state-layer"
+                                        title={`Abrir exame: ${fileName}`}
+                                      >
+                                        <FileText
+                                          className={`w-3.5 h-3.5 shrink-0 ${
+                                            isPdf ? "text-error" : "text-primary"
+                                          }`}
+                                        />
+                                        <span className="truncate max-w-[180px] sm:max-w-[260px]">
+                                          {fileName}
+                                        </span>
+                                        <ExternalLink className="w-3 h-3 text-on-surface-variant shrink-0" />
+                                      </a>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
 
                             {/* Selo Visual de Autenticidade e Assinatura Digital (Conformidade Jurídica) */}
                             {Boolean(evo.payload_hash && evo.assinado_em) && (() => {

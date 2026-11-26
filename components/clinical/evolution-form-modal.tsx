@@ -21,6 +21,7 @@ import {
   Plus,
   Trash2,
   Lock,
+  ExternalLink,
 } from "lucide-react";
 import {
   addClinicalEvolutionAction,
@@ -28,7 +29,12 @@ import {
   type PrescricaoParaEvolucao,
 } from "@/actions/clinical-actions";
 import { updateClinicalEvolutionAction } from "@/app/actions/clinical-evolution";
-import { resolvePhotoUrl } from "./evolution-photos-modal";
+import {
+  resolvePhotoUrl,
+  buildExamViewerHref,
+  extractFileNameFromUrl,
+  isInvalidStorageUrl,
+} from "./evolution-photos-modal";
 import { getPatientHomeCareFichas } from "@/app/actions/home-care";
 import type { HomeCareFichaCompleta } from "@/types/home-care";
 import { PrescriptionModal } from "./prescription-modal";
@@ -73,6 +79,7 @@ export function EvolutionFormModal({
   const [procedimentoId, setProcedimentoId] = useState<string>("");
   const [status, setStatus] = useState<string>("Ativo");
   const [existingFotosUrls, setExistingFotosUrls] = useState<string[]>([]);
+  const [existingExamesUrls, setExistingExamesUrls] = useState<string[]>([]);
   const [procedimentos, setProcedimentos] = useState<any[]>(PROCEDIMENTOS_CADASTRAIS);
   const [isLoadingProcedimentos, setIsLoadingProcedimentos] = useState(false);
 
@@ -100,23 +107,18 @@ export function EvolutionFormModal({
     };
   }, [fotosFiles]);
 
-  // Função helper resiliente de upload para o Supabase Storage
+  // Upload seguro para o Supabase Storage com fallback server-side via Admin Client (sem mascarar falhas)
   const uploadToSupabase = async (bucket: string, folder: string, file: File): Promise<string> => {
-    try {
-      const supabase = getSupabaseClient();
-      if (!supabase) throw new Error("Supabase não configurado.");
+    const sanitizedName = file.name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9._-]/g, "_");
+    const filePath = `${folder}/${Date.now()}_${sanitizedName}`;
 
-      // Garante a existência do bucket criando-o de forma resiliente ou pulando se houver erro de permissão
-      try {
-        await supabase.storage.createBucket(bucket, { public: true });
-      } catch (e) {
-        // Ignora erro se o bucket já existir ou se a conta de serviço não tiver permissão de criação direta
-      }
+    let clientErrorMsg = "";
+    const supabase = getSupabaseClient();
 
-      // Limpa caracteres especiais do nome do arquivo
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const filePath = `${folder}/${Date.now()}_${sanitizedName}`;
-
+    if (supabase) {
       const { error } = await supabase.storage
         .from(bucket)
         .upload(filePath, file, {
@@ -124,17 +126,41 @@ export function EvolutionFormModal({
           upsert: false,
         });
 
-      if (error) {
-        console.warn(`[Supabase Storage] Erro ao enviar arquivo para o bucket ${bucket}:`, error.message);
+      if (!error) {
+        const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+        if (urlData?.publicUrl) {
+          return urlData.publicUrl;
+        }
+        clientErrorMsg = "Não foi possível obter a URL pública do arquivo enviado.";
+      } else {
+        clientErrorMsg = error.message || "Falha no upload direto pelo navegador.";
+        console.warn(`[Supabase Storage] Upload client-side falhou no bucket ${bucket}:`, clientErrorMsg);
       }
-
-      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
-      return urlData.publicUrl;
-    } catch (err) {
-      console.error(`[Supabase Storage] Exceção no upload do arquivo ${file.name}:`, err);
-      // Fallback para não travar o salvamento da evolução SOAP
-      return `https://supabase-storage-fallback.local/${bucket}/${folder}/${file.name}`;
+    } else {
+      clientErrorMsg = "Cliente Supabase indisponível no navegador.";
     }
+
+    // Fallback seguro no servidor via API Route com getSupabaseAdminClient() (contorna RLS/criação de bucket)
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("bucket", bucket);
+    formData.append("clientId", folder);
+
+    const response = await fetch("/api/clinical/attachments", {
+      method: "POST",
+      body: formData,
+      credentials: "same-origin",
+    });
+
+    const payload = await response.json().catch(() => null);
+    if (response.ok && payload?.success && typeof payload.url === "string" && payload.url.trim()) {
+      return payload.url.trim();
+    }
+
+    const detail = payload?.message || clientErrorMsg || "Erro desconhecido no envio do arquivo.";
+    throw new Error(
+      `Falha ao enviar "${file.name}" para o bucket "${bucket}": ${detail}`
+    );
   };
 
   const [data, setData] = useState(todayStr);
@@ -315,6 +341,7 @@ export function EvolutionFormModal({
           setSelectedPrescricoesIds(initialData.prescricoes_ids || []);
           setSelectedHomeCareFichaId(initialData.home_care_ficha_id || "");
           setExistingFotosUrls(isAdmin ? [] : (initialData.fotos_paciente || []));
+          setExistingExamesUrls(initialData.exames_anexos || []);
           setFotosFiles([]);
           setExamesFiles([]);
         } else {
@@ -338,6 +365,7 @@ export function EvolutionFormModal({
           setSelectedPrescricoesIds([]);
           setSelectedHomeCareFichaId("");
           setExistingFotosUrls([]);
+          setExistingExamesUrls([]);
           setFotosFiles([]);
           setExamesFiles([]);
         }
@@ -497,9 +525,7 @@ export function EvolutionFormModal({
       }
 
       const finalFotosList = isAdmin ? [] : [...existingFotosUrls, ...fotosUrls];
-      const finalExamesList = initialData?.id
-        ? [...(initialData.exames_anexos || []), ...examesUrls]
-        : examesUrls;
+      const finalExamesList = [...existingExamesUrls, ...examesUrls];
 
       const res = initialData?.id
         ? await updateClinicalEvolutionAction(initialData.id, client.id, {
@@ -574,8 +600,17 @@ export function EvolutionFormModal({
         setErrorMsg(res.message || "Erro ao registrar evolução clínica.");
       }
     } catch (err) {
-      console.error(err);
-      setErrorMsg("Ocorreu um erro interno de conexão.");
+      console.error("Erro ao enviar anexos ou salvar evolução clínica:", err);
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : "Ocorreu um erro interno de conexão ao salvar a evolução clínica.";
+      setErrorMsg(message);
+      toast({
+        type: "error",
+        title: "Erro no envio de anexo",
+        description: message,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -1158,11 +1193,89 @@ export function EvolutionFormModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* 1. Exames Apresentados */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
-                  Exames Apresentados (PDF, PNG, JPG, JPEG, BMP)
-                </label>
-                <div className="border border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 rounded-xl p-4 bg-slate-50 dark:bg-slate-800/40 text-center relative transition-colors">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-bold text-on-surface block">
+                    Exames Apresentados (PDF, PNG, JPG, JPEG, BMP)
+                  </label>
+                  {(existingExamesUrls.length > 0 || examesFiles.length > 0) && (
+                    <span className="text-[11px] font-semibold text-primary shrink-0">
+                      Total: {existingExamesUrls.length + examesFiles.length} exame(s)
+                    </span>
+                  )}
+                </div>
+
+                {/* Lista de Exames Já Existentes no Prontuário (com visualização e remoção individual) */}
+                {existingExamesUrls.length > 0 && (
+                  <div className="p-3 rounded-md-lg bg-surface-container border border-outline-variant space-y-2">
+                    <span className="text-[11px] font-bold text-on-surface flex items-center gap-1.5">
+                      <span>Exames Anexados no Prontuário ({existingExamesUrls.length})</span>
+                    </span>
+                    <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                      {existingExamesUrls.map((url, idx) => {
+                        const fileName = extractFileNameFromUrl(url, idx);
+                        const isInvalid = isInvalidStorageUrl(url);
+                        const viewerHref = isInvalid ? "" : buildExamViewerHref(url, client.id);
+                        const isPdf = fileName.toLowerCase().endsWith(".pdf");
+
+                        return (
+                          <div
+                            key={`${url}-${idx}`}
+                            className="flex items-center justify-between gap-2 p-2 rounded-md-md bg-surface-container-lowest border border-outline-variant text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <FileText
+                                className={`w-4 h-4 shrink-0 ${
+                                  isInvalid
+                                    ? "text-warning"
+                                    : isPdf
+                                    ? "text-error"
+                                    : "text-primary"
+                                }`}
+                              />
+                              <span
+                                className="truncate font-medium text-on-surface"
+                                title={fileName}
+                              >
+                                {fileName}
+                              </span>
+                              {isInvalid && (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md-sm bg-warning-container text-on-warning-container shrink-0">
+                                  Indisponível
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {viewerHref && (
+                                <a
+                                  href={viewerHref}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-md-sm text-primary hover:bg-primary-container/50 transition-colors cursor-pointer"
+                                  title={`Abrir ${fileName} em nova aba`}
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExistingExamesUrls((prev) => prev.filter((_, i) => i !== idx))
+                                }
+                                className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-md-sm text-on-surface-variant hover:text-on-error-container hover:bg-error-container transition-colors cursor-pointer"
+                                title="Remover este exame da evolução"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="border border-dashed border-outline-variant hover:border-primary rounded-md-lg p-4 bg-surface-container text-center relative transition-colors">
                   <input
                     type="file"
                     multiple
@@ -1173,57 +1286,64 @@ export function EvolutionFormModal({
                         const validation = validateMultipleFiles(selectedFiles);
                         if (!validation.valid) {
                           toast({
-                            type: 'error',
-                            title: 'Anexos acima de 5MB',
+                            type: "error",
+                            title: "Anexos acima de 5MB",
                             description: validation.error,
                           });
-                          e.target.value = '';
+                          e.target.value = "";
                           return;
                         }
                         setExamesFiles((prev) => [...prev, ...selectedFiles]);
+                        e.target.value = "";
                       }
                     }}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                   />
                   <div className="space-y-1">
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Selecionar exames / laudos
+                    <p className="text-xs font-semibold text-on-surface">
+                      Selecionar novos exames / laudos
                     </p>
-                    <p className="text-[10px] text-slate-400">
-                      Arraste ou clique para selecionar múltiplos arquivos
+                    <p className="text-[10px] text-on-surface-variant">
+                      Arraste ou clique para selecionar múltiplos arquivos (até 5MB cada)
                     </p>
                   </div>
                 </div>
 
-                {/* Lista de arquivos anexados */}
+                {/* Lista de novos arquivos selecionados para envio */}
                 {examesFiles.length > 0 && (
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                    {examesFiles.map((file, idx) => {
-                      const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
-                      return (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-2 rounded-lg bg-slate-100/60 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs"
-                        >
-                          <div className="flex items-center gap-2 truncate">
-                            <FileText className={`w-4 h-4 shrink-0 ${isPdf ? "text-rose-500" : "text-blue-500"}`} />
-                            <span className="truncate font-medium text-slate-700 dark:text-slate-300" title={file.name}>
-                              {file.name}
-                            </span>
-                            <span className="text-[10px] text-slate-400 shrink-0">
-                              ({(file.size / 1024).toFixed(1)} KB)
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setExamesFiles((prev) => prev.filter((_, i) => i !== idx))}
-                            className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded transition-colors cursor-pointer"
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-bold text-primary">
+                      Novos exames para envio ({examesFiles.length}):
+                    </span>
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                      {examesFiles.map((file, idx) => {
+                        const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+                        return (
+                          <div
+                            key={`${file.name}-${idx}`}
+                            className="flex items-center justify-between gap-2 p-2 rounded-md-md bg-surface-container border border-primary/30 text-xs"
                           >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      );
-                    })}
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <FileText className={`w-4 h-4 shrink-0 ${isPdf ? "text-error" : "text-primary"}`} />
+                              <span className="truncate font-medium text-on-surface" title={file.name}>
+                                {file.name}
+                              </span>
+                              <span className="text-[10px] text-on-surface-variant shrink-0">
+                                ({(file.size / 1024).toFixed(1)} KB)
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setExamesFiles((prev) => prev.filter((_, i) => i !== idx))}
+                              className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-md-sm text-on-surface-variant hover:text-on-error-container hover:bg-error-container transition-colors cursor-pointer"
+                              title="Remover arquivo selecionado"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
