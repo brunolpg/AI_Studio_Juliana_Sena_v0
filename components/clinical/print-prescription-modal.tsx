@@ -86,18 +86,12 @@ export function PrintPrescriptionModal({
   const viaRaw = prescription.item?.via || prescription.via || "";
   const viaLabel = viaRaw.toLowerCase() === "oral" ? "Oral" : "Tópico";
   const patientName = client?.nome || "Paciente";
-  const isOfficeUse =
-    (client?.nome || "").trim().toLowerCase() === "uso em consultório" ||
-    (client?.cpf || "").trim().toLowerCase() === "uso interno / clínica" ||
-    (client?.cpf || "").trim().toLowerCase() === "não aplicável";
 
   const buildPrescriptionPdfFile = async (): Promise<File> => {
-    const fileName = isOfficeUse
-      ? sanitizePdfFileName("Receituario_Consultorio", prescription.medicamento || "Formula_Magistral")
-      : sanitizePdfFileName("Receituario", client.nome);
+    const fileName = sanitizePdfFileName("Receituario", client.nome);
     const targetId = (prescription as any).prescricao_id || prescription.id;
 
-    if (targetId && !isOfficeUse) {
+    if (targetId) {
       try {
         const res = await fetch(`/api/prescricoes/${targetId}/pdf`, {
           credentials: "same-origin",
@@ -114,9 +108,8 @@ export function PrintPrescriptionModal({
     return generatePrescriptionPdfClient({
       fileName,
       id: targetId,
-      patientName: isOfficeUse ? "" : client.nome,
-      patientCpf: isOfficeUse ? "" : client.cpf,
-      manualFill: isOfficeUse,
+      patientName: client.nome,
+      patientCpf: client.cpf,
       dataPrescricao: prescription.data || (prescription as any).data_prescricao || undefined,
       medicamento: prescription.medicamento,
       via: prescription.via,
@@ -447,41 +440,24 @@ export function PrintPrescriptionModal({
               </div>
 
               {/* Identificação do Paciente */}
-              {isOfficeUse ? (
-                <div className="flex items-end justify-between gap-6 p-4 sm:p-5 rounded-md-lg border border-outline-variant bg-surface-container-low w-full mb-6 print-avoid-break break-inside-avoid">
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider block mb-5">
-                      PACIENTE
-                    </span>
-                    <div className="w-full border-b border-outline" />
-                  </div>
-                  <div className="w-[150px] shrink-0">
-                    <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider block mb-5">
-                      CPF
-                    </span>
-                    <div className="w-full border-b border-outline" />
-                  </div>
+              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6 print-avoid-break break-inside-avoid">
+                <div>
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                    PACIENTE
+                  </span>
+                  <span className="text-base font-bold text-slate-900">
+                    {client.nome}
+                  </span>
                 </div>
-              ) : (
-                <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 w-full mb-6 print-avoid-break break-inside-avoid">
-                  <div>
-                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-                      PACIENTE
-                    </span>
-                    <span className="text-base font-bold text-slate-900">
-                      {client.nome}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-                      CPF
-                    </span>
-                    <span className="text-base font-bold text-slate-900">
-                      {formatCPF(client.cpf)}
-                    </span>
-                  </div>
+                <div className="text-right">
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                    CPF
+                  </span>
+                  <span className="text-base font-bold text-slate-900">
+                    {formatCPF(client.cpf)}
+                  </span>
                 </div>
-              )}
+              </div>
 
               {/* Corpo da Prescrição */}
               <div className="mt-8 space-y-6">

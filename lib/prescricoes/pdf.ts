@@ -69,7 +69,6 @@ export interface PrescriptionPdfInput {
   id: string;
   dataPrescricao?: string | null;
   observacoes?: string | null;
-  manualFill?: boolean;
   paciente: { nome?: string | null; cpf?: string | null };
   item: {
     nome_formula?: string | null;
@@ -406,24 +405,14 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
     italic = await pdf.embedFont(StandardFonts.HelveticaOblique);
   }
 
-  const rawPaciente = input.paciente.nome?.trim() || "";
-  const rawCpf = input.paciente.cpf?.trim() || "";
-  const isOfficeUse =
-    Boolean(input.manualFill) ||
-    rawPaciente.toLowerCase() === "uso em consultório" ||
-    rawCpf.toLowerCase() === "uso interno / clínica" ||
-    rawCpf.toLowerCase() === "não aplicável";
-  const paciente = rawPaciente || "Paciente";
+  const rawPaciente = input.paciente.nome?.trim() || "Paciente";
+  const isOfficeUse = rawPaciente.toLowerCase() === "uso em consultório";
+  const paciente = isOfficeUse ? "USO EM CONSULTÓRIO" : rawPaciente;
   const item = input.item || {};
   const isOral = (item.via || "").toLowerCase() === "oral";
 
   // Metadados e marcador crítico para validação ICP-Brasil / VIDaaS (lib/prescricoes/signed-pdf.ts)
-  pdf.setTitle(
-    sanitize(
-      regular,
-      isOfficeUse ? "Receituário Magistral - Uso em Consultório" : `Receituário - ${paciente}`
-    )
-  );
+  pdf.setTitle(sanitize(regular, `Receituário - ${rawPaciente}`));
   pdf.setAuthor(PROFISSIONAL.nome);
   pdf.setSubject("Receituário / Prescrição magistral");
   pdf.setKeywords([`${RX_MARKER_PREFIX}${input.id}`]);
@@ -569,87 +558,48 @@ export async function buildPrescriptionPdf(input: PrescriptionPdfInput): Promise
   // ==========================================================================
   // 2. IDENTIFICAÇÃO DO PACIENTE (Card arredondado dinâmico, sem colisão)
   // ==========================================================================
-  const cpfColW = 130;
-  if (isOfficeUse) {
-    const patientBoxH = 48;
-    ensureGroup(patientBoxH + 16);
-    drawRoundedRectangle(page, {
-      x: MARGIN,
-      y: y - patientBoxH,
-      width: CONTENT_W,
-      height: patientBoxH,
-      borderRadius: 10,
-      color: C.panel,
-      borderColor: C.line,
-      borderWidth: 0.8,
-    });
+  const cpfFormatted = isOfficeUse ? "Uso Interno / Clínica" : formatCpf(input.paciente.cpf);
+  const cpfColW = isOfficeUse ? 150 : 130;
+  const patientNameMaxW = CONTENT_W - 28 - cpfColW - 14;
+  const patientNameLines = wrapText(paciente, bold, 11, patientNameMaxW);
+  const patientBoxH = 26 + patientNameLines.length * 14 + 8;
 
-    const lineY = y - patientBoxH + 11;
-    const nameLineStartX = MARGIN + 14;
-    const nameLineEndX = MARGIN + CONTENT_W - cpfColW - 28;
-    const cpfLineEndX = MARGIN + CONTENT_W - 14;
-    const cpfLineStartX = cpfLineEndX - cpfColW;
+  ensureGroup(patientBoxH + 16);
+  drawRoundedRectangle(page, {
+    x: MARGIN,
+    y: y - patientBoxH,
+    width: CONTENT_W,
+    height: patientBoxH,
+    borderRadius: 10,
+    color: C.panel,
+    borderColor: C.line,
+    borderWidth: 0.8,
+  });
 
-    text("PACIENTE", nameLineStartX, y - 15, { font: bold, size: 7.5, color: C.muted });
-    page.drawLine({
-      start: { x: nameLineStartX, y: lineY },
-      end: { x: nameLineEndX, y: lineY },
-      thickness: 0.7,
-      color: C.faint,
-    });
+  text("PACIENTE", MARGIN + 14, y - 15, { font: bold, size: 7.5, color: C.muted });
+  drawLines(patientNameLines, MARGIN + 14, y - 21, {
+    font: bold,
+    size: 11,
+    color: C.ink,
+    leading: 14,
+  });
 
-    text("CPF", cpfLineStartX, y - 15, { font: bold, size: 7.5, color: C.muted });
-    page.drawLine({
-      start: { x: cpfLineStartX, y: lineY },
-      end: { x: cpfLineEndX, y: lineY },
-      thickness: 0.7,
-      color: C.faint,
-    });
+  text("CPF", MARGIN, y - 15, {
+    font: bold,
+    size: 7.5,
+    color: C.muted,
+    align: "right",
+    width: CONTENT_W - 14,
+  });
+  text(cpfFormatted, MARGIN, y - 32, {
+    font: bold,
+    size: 11,
+    color: C.ink,
+    align: "right",
+    width: CONTENT_W - 14,
+  });
 
-    y -= patientBoxH + 22;
-  } else {
-    const cpfFormatted = formatCpf(input.paciente.cpf);
-    const patientNameMaxW = CONTENT_W - 28 - cpfColW - 14;
-    const patientNameLines = wrapText(paciente, bold, 11, patientNameMaxW);
-    const patientBoxH = 26 + patientNameLines.length * 14 + 8;
-
-    ensureGroup(patientBoxH + 16);
-    drawRoundedRectangle(page, {
-      x: MARGIN,
-      y: y - patientBoxH,
-      width: CONTENT_W,
-      height: patientBoxH,
-      borderRadius: 10,
-      color: C.panel,
-      borderColor: C.line,
-      borderWidth: 0.8,
-    });
-
-    text("PACIENTE", MARGIN + 14, y - 15, { font: bold, size: 7.5, color: C.muted });
-    drawLines(patientNameLines, MARGIN + 14, y - 21, {
-      font: bold,
-      size: 11,
-      color: C.ink,
-      leading: 14,
-    });
-
-    text("CPF", MARGIN, y - 15, {
-      font: bold,
-      size: 7.5,
-      color: C.muted,
-      align: "right",
-      width: CONTENT_W - 14,
-    });
-    text(cpfFormatted, MARGIN, y - 32, {
-      font: bold,
-      size: 11,
-      color: C.ink,
-      align: "right",
-      width: CONTENT_W - 14,
-    });
-
-    y -= patientBoxH + 22;
-  }
+  y -= patientBoxH + 22;
 
   // ==========================================================================
   // 3 & 4. TÍTULO DA FÓRMULA + TABELA DE COMPONENTES (GRUPO INDIVISÍVEL)
